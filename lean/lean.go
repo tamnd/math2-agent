@@ -1,0 +1,196 @@
+// Package lean drives M2Extract, the Lean program that gives the facts about formal declarations that only Lean can give (spec 07.4 and 07.5).
+//
+// The source of M2Extract is in this directory as a Lake package. [Install] builds it with the toolchain of a Lake project. [Start] runs it in that project, so that it reads the modules of the project and of the dependencies of the project. A [Session] sends requests to the process and reads the answers. The process loads the modules one time and then answers many requests.
+//
+// The protocol is one line of JSON for each request and one line of JSON for each answer. The comment at the top of Main.lean gives the requests.
+package lean
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os/exec"
+	"slices"
+	"strings"
+
+	"github.com/zeebo/blake3"
+
+	"github.com/tamnd/math2-agent/node"
+)
+
+// Version is the version of the Lean toolchain that M2Extract runs on.
+type Version struct {
+	Lean    string `json:"lean"`    // for example "4.35.0"
+	Githash string `json:"githash"` // the commit of the toolchain
+}
+
+// Record is the extraction record of one declaration (spec 07.4).
+type Record struct {
+	Decl        string   `json:"decl"`
+	Kind        string   `json:"kind"`   // theorem, def, axiom, opaque, inductive, constructor, recursor or quot
+	Module      string   `json:"module"` // the module that declares Decl
+	LevelParams []string `json:"level_params"`
+
+	// Type and Value are the canonical forms of the type and of the value. Value is empty when the declaration has no value.
+	Type  string `json:"type"`
+	Value string `json:"value"`
+
+	// TypeHash and ValueHash are the hashes of Type and Value. ValueHash is empty when Value is empty.
+	TypeHash  string `json:"type_hash"`
+	ValueHash string `json:"value_hash"`
+
+	StatementPP    string `json:"statement_pp"`     // the type as Lean prints it
+	StatementPPAll string `json:"statement_pp_all"` // the type with pp.all, thus with full elaboration and no notation
+
+	Axioms             []string `json:"axioms"`               // the axioms, as #print axioms gives them, without the axioms of native_decide
+	NativeDecideAxioms []string `json:"native_decide_axioms"` // the auxiliary axioms that native_decide added
+
+	UsesDecls                []string `json:"uses_decls"`                  // the constants in the value
+	UsesBound                []string `json:"uses_bound"`                  // the bound declarations that the declaration reaches through declarations that are not bound
+	UsesConstantsInStatement []string `json:"uses_constants_in_statement"` // the constants in the type
+
+	Error string `json:"error,omitempty"` // the reason when Lean has no record, for example "unknown declaration"
+}
+
+// StandardAxioms are the axioms that E5 allows (spec 07.5).
+var StandardAxioms = []string{"Classical.choice", "Quot.sound", "propext"}
+
+// Hash returns the hash of a canonical form. It is "blake3:" and 64 lowercase hex characters.
+func Hash(canonical string) string {
+	sum := blake3.Sum256([]byte(canonical))
+	return node.HashPrefix + hex.EncodeToString(sum[:])
+}
+
+// A Session is a running M2Extract process. A Session is not safe for concurrent use.
+type Session struct {
+	cmd    *exec.Cmd
+	in     io.WriteCloser
+	out    *bufio.Reader
+	stderr bytes.Buffer
+}
+
+// Start runs the M2Extract program exe with "lake env" in the Lake project directory project. The process stops when ctx is done or when Close is called.
+func Start(ctx context.Context, exe, project string) (*Session, error) {
+	s := &Session{}
+	s.cmd = exec.CommandContext(ctx, "lake", "env", exe) // #nosec G204 -- the caller names the program, and no shell reads the arguments.
+	s.cmd.Dir = project
+	s.cmd.Stderr = &s.stderr
+	in, err := s.cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	out, err := s.cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	if err := s.cmd.Start(); err != nil {
+		return nil, fmt.Errorf("start m2extract: %w", err)
+	}
+	s.in, s.out = in, bufio.NewReader(out)
+	return s, nil
+}
+
+// Close stops the process.
+func (s *Session) Close() error {
+	_ = s.in.Close()
+	err := s.cmd.Wait()
+	if err != nil && s.stderr.Len() > 0 {
+		return fmt.Errorf("m2extract: %w: %s", err, strings.TrimSpace(s.stderr.String()))
+	}
+	return err
+}
+
+// call sends one request and decodes the answer into resp.
+func (s *Session) call(req, resp any) error {
+	line, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	if _, err := s.in.Write(append(line, '\n')); err != nil {
+		return s.died(err)
+	}
+	answer, err := s.out.ReadBytes('\n')
+	if err != nil {
+		return s.died(err)
+	}
+	var e struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(answer, &e); err != nil {
+		return fmt.Errorf("m2extract: %w", err)
+	}
+	if e.Error != "" {
+		return errors.New("m2extract: " + e.Error)
+	}
+	return json.Unmarshal(answer, resp)
+}
+
+func (s *Session) died(err error) error {
+	if msg := strings.TrimSpace(s.stderr.String()); msg != "" {
+		return fmt.Errorf("m2extract stopped: %w: %s", err, msg)
+	}
+	return fmt.Errorf("m2extract stopped: %w", err)
+}
+
+// Version returns the version of the Lean toolchain of the process.
+func (s *Session) Version() (Version, error) {
+	var v Version
+	err := s.call(map[string]any{"cmd": "version"}, &v)
+	return v, err
+}
+
+// Import loads the modules from the search path of the project. It replaces the modules that an earlier Import loaded.
+func (s *Session) Import(modules ...string) error {
+	var resp struct{}
+	return s.call(map[string]any{"cmd": "import", "modules": modules}, &resp)
+}
+
+// Extract returns one record for each declaration in decls, in the same order. bound is the list of all bound declarations. It sets the boundary of UsesBound. A declaration that Lean does not know has a record with an Error.
+func (s *Session) Extract(decls, bound []string) ([]Record, error) {
+	var resp struct {
+		Records []Record `json:"records"`
+	}
+	if err := s.call(map[string]any{"cmd": "extract", "decls": nonNil(decls), "bound": nonNil(bound)}, &resp); err != nil {
+		return nil, err
+	}
+	for i := range resp.Records {
+		r := &resp.Records[i]
+		if r.Error != "" {
+			continue
+		}
+		r.TypeHash = Hash(r.Type)
+		if r.Value != "" {
+			r.ValueHash = Hash(r.Value)
+		}
+	}
+	return resp.Records, nil
+}
+
+// Axioms returns the axioms of each declaration in decls, as "#print axioms" gives them, in order of name. A declaration that Lean does not know is not in the map.
+func (s *Session) Axioms(decls ...string) (map[string][]string, error) {
+	var resp struct {
+		Axioms map[string]*[]string `json:"axioms"`
+	}
+	if err := s.call(map[string]any{"cmd": "axioms", "decls": nonNil(decls)}, &resp); err != nil {
+		return nil, err
+	}
+	out := map[string][]string{}
+	for d, axs := range resp.Axioms {
+		if axs != nil {
+			out[d] = slices.Clone(*axs)
+		}
+	}
+	return out, nil
+}
+
+func nonNil(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}

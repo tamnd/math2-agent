@@ -1,0 +1,41 @@
+Fixture.add_comm_a theorem Fixture
+  type blake3:80e1fe22b447d3f0c45c0d93a6fb25325f8a564be38a7fd8cf49eeed3234d6cb
+  axioms [] native 0
+  uses_bound []
+Fixture.add_comm_b theorem Fixture
+  type blake3:80e1fe22b447d3f0c45c0d93a6fb25325f8a564be38a7fd8cf49eeed3234d6cb
+  axioms [] native 0
+  uses_bound []
+Fixture.id_u def Fixture
+  type blake3:34581e8d1d7ca1403c2fb80e7d21991a78c65e21aa4ae4624f6ac9a0520610cb
+  axioms [] native 0
+  uses_bound []
+Fixture.id_v def Fixture
+  type blake3:34581e8d1d7ca1403c2fb80e7d21991a78c65e21aa4ae4624f6ac9a0520610cb
+  axioms [] native 0
+  uses_bound []
+Fixture.inhabited_inst def Fixture
+  type blake3:d65e76a82f8e9fd570074a3bb7ea97defaea55856949c6a0c2497e594e0c84a1
+  axioms [] native 0
+  uses_bound []
+Fixture.inhabited_explicit def Fixture
+  type blake3:238f888c41242fc3df4bc6db3aa386cf26334fccfc7ffcfff6b8cbdaa0ecde84
+  axioms [] native 0
+  uses_bound []
+Fixture.em theorem Fixture
+  type blake3:99beb760e901d139f6262bf1ee7f65d3cf5ea441e9c5a0f814d16a195a1a1d50
+  axioms [Classical.choice Quot.sound propext] native 0
+  uses_bound []
+Fixture.native theorem Fixture
+  type blake3:266a8a3f221922762537b000554227bed4b487aeab84a68ec7d68c9b0e23ec9e
+  axioms [] native 1
+  uses_bound []
+Fixture.incomplete theorem Fixture
+  type blake3:69219de74d5b958fe0e5afee3dcdceb95a888bf3f319d55174e166c3d6e65509
+  axioms [sorryAx] native 0
+  uses_bound []
+Fixture.uses_a theorem Fixture
+  type blake3:f0caaf731633c9da1d2057fcda0ca94a458c79f112b563af34c0a9c9ef369c14
+  axioms [] native 0
+  uses_bound [Fixture.add_comm_a]
+Fixture.absent error "unknown declaration"

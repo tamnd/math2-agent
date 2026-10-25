@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G03 and G05 to G10. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G03 and G05 to G10. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms and the formal dependencies of each bound declaration. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -107,6 +107,7 @@ check/    the fast rules of m2 check: schema, body and links
 cli/      the command table
 format/   the canonical form of m2 fmt and the change from aliases to tags
 graph/    the graph of spec 05: edges, closure, cycles, CSR and Parquet
+lean/     M2Extract, its Lake package and the Go package that drives it
 node/     read node files, write the canonical form and compute the content hash
 schema/   check front matter against the node schema
 site/     build the wiki
@@ -117,7 +118,7 @@ spec/     the specification
 
 Each directory except `cmd/` and `spec/` is a Go package that other programs can import. For example, a bot can use `github.com/tamnd/math2-agent/node` to read and format node files. The packages follow the conventions of the Go standard library, and `go doc` shows an example for each main function.
 
-The full layout arrives with the milestones. The plan has these parts: `lean`, `compute`, `ingest`, `align`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `lean/M2Extract`, `prompts/`, `images/`, `web/` and `bench/`.
+The full layout arrives with the milestones. The plan has these parts: `compute`, `ingest`, `align`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `prompts/`, `images/`, `web/` and `bench/`.
 
 ## Contribute
 
