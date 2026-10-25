@@ -1,0 +1,1 @@
+nodes/5H/5H0B0A.md:6:1: G07: the hub family has 2 members, and a family needs at least 3. Link the members to each other instead

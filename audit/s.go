@@ -5,13 +5,13 @@ import (
 )
 
 // checkRules are the rules of m2 check that the audit takes from one run of a check.Checker.
-var checkRules = []string{"S01", "S02", "S03", "S04"}
+var checkRules = []string{"S01", "S02", "S03", "S04", "B01", "B02", "B03", "G01"}
 
-// fromCheck returns the function of the rule id. The function takes the result of id from a run of m2 check on the node files in scope (rules S01 to S04). The links resolve against every node in the tree.
+// fromCheck returns the function of the rule id. The function takes the result of id from a run of m2 check on the node files in scope (rules S01 to S04, B01 to B03 and G01). The links resolve against every node in the tree.
 func fromCheck(id string) func(*auditor) outcome {
 	return func(a *auditor) outcome {
 		if a.checkRun == nil {
-			c := check.Checker{Schema: a.schema, Only: checkRules}
+			c := check.Checker{Schema: a.schema, Macros: a.macros, Only: checkRules}
 			a.checkRun = c.Check(a.scope, a.ix)
 		}
 		var o outcome

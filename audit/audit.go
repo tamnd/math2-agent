@@ -159,6 +159,7 @@ type auditor struct {
 	pr       bool            // the audit is of a pull request
 	touched  map[string]bool // the shards and the files that changed, when pr is true
 	schema   *schema.Schema  // the schema of the tree
+	macros   check.Macros    // the macros of the tree
 	all      []check.File    // every node file in the tree
 	scope    []check.File    // the node files in scope
 	nodes    []*node.Node    // every node file that parses
@@ -174,6 +175,9 @@ func load(root string, opt Options) (*auditor, error) {
 	a := &auditor{root: root, ix: check.Index{}}
 	var err error
 	if a.schema, err = schema.Load(root); err != nil {
+		return nil, err
+	}
+	if a.macros, err = check.LoadMacros(root); err != nil {
 		return nil, err
 	}
 	if opt.Base != "" {
@@ -238,4 +242,16 @@ func lineCol(data []byte, offset int) (line, col int) {
 	line = 1 + strings.Count(string(before), "\n")
 	start := strings.LastIndexByte(string(before), '\n') + 1
 	return line, len([]rune(string(before[start:]))) + 1
+}
+
+// retired reports whether n is retired.
+func retired(n *node.Node) bool {
+	_, ok := n.Meta["retired"]
+	return ok
+}
+
+// str returns a string value, or "" for a value that is not a string.
+func str(v any) string {
+	s, _ := v.(string)
+	return s
 }

@@ -3,6 +3,7 @@ package check_test
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/node"
@@ -64,4 +65,23 @@ func ExampleLinks() {
 	}
 	// Output:
 	// 8:21 Statement "group" G5S1M9
+}
+
+func ExampleSections() {
+	src := "---\ntag: 3C53TD\nkind: statement\n---\n\n## Statement\n\nThe order of $H$ divides the order of $G$.\n\n## Explanations\n\n### L2 human\n\nCount the cosets.\n\n```\n## Not a heading\n```\n"
+	n, err := node.Parse("nodes/3C/3C53TD.md", []byte(src))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	for _, s := range check.Sections(n) {
+		fmt.Printf("%d %s: %d lines\n", s.Line, s.Name, strings.Count(s.Text, "\n")+1)
+		for _, h := range s.Headings {
+			fmt.Printf("  %d %d %s\n", h.Line, h.Level, h.Name)
+		}
+	}
+	// Output:
+	// 6 Statement: 3 lines
+	// 10 Explanations: 8 lines
+	//   12 3 L2 human
 }

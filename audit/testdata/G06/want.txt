@@ -1,0 +1,2 @@
+nodes/4M/4M0C1B.md:3:1: G06: the conjecture has no source. Add the source where it was posed
+nodes/4M/4M0C1B.md:3:1: G06: the conjecture does not name who posed it. Add history.posed_by
