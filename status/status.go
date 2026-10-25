@@ -68,16 +68,19 @@ type Replay struct {
 
 // Status is the computed status of one node.
 type Status struct {
-	Tag      string    `json:"tag"`
-	Kind     string    `json:"kind"`
-	Name     string    `json:"name"`
-	Retired  bool      `json:"retired,omitempty"` // the node is retired, and it has no levels
-	Evidence Level     `json:"evidence"`
-	Fidelity Fidelity  `json:"fidelity"`
-	Flags    []string  `json:"flags"`
-	Items    []Item    `json:"items"`
-	Bindings []Binding `json:"bindings"`
-	Reasons  []string  `json:"reasons"` // one sentence for each decision, in order
+	Tag     string `json:"tag"`
+	Kind    string `json:"kind"`
+	Name    string `json:"name"`
+	Retired bool   `json:"retired,omitempty"` // the node is retired, and it has no levels
+
+	// StatementHash is the hash of the section of the node that states the mathematics. A review records it as statement_hash. It is empty when the node has no such section.
+	StatementHash string    `json:"statement_hash,omitempty"`
+	Evidence      Level     `json:"evidence"`
+	Fidelity      Fidelity  `json:"fidelity"`
+	Flags         []string  `json:"flags"`
+	Items         []Item    `json:"items"`
+	Bindings      []Binding `json:"bindings"`
+	Reasons       []string  `json:"reasons"` // one sentence for each decision, in order
 }
 
 // Item is one item of evidence.
@@ -260,7 +263,7 @@ func retired(n *node.Node) Status {
 
 // base computes the status of n from its own evidence and from the evidence of its proofs.
 func base(in Input, g *graph.Graph, byTag map[string]*node.Node, n *node.Node) Status {
-	s := Status{Tag: n.ID, Kind: n.Kind(), Name: n.Name(), Fidelity: Unbound, Flags: []string{}, Items: []Item{}, Bindings: []Binding{}, Reasons: []string{}}
+	s := Status{Tag: n.ID, Kind: n.Kind(), Name: n.Name(), StatementHash: statementHash(n), Fidelity: Unbound, Flags: []string{}, Items: []Item{}, Bindings: []Binding{}, Reasons: []string{}}
 	hasLevel := slices.Contains(evidenceKinds, s.Kind)
 	open := slices.Contains(openKinds, s.Kind)
 	reason := func(format string, args ...any) { s.Reasons = append(s.Reasons, fmt.Sprintf(format, args...)) }

@@ -39,6 +39,9 @@ func TestStatusAgreesWithBuild(t *testing.T) {
 		if code != ExitOK || !strings.HasPrefix(stdout, want.Tag+" ") || !strings.Contains(stdout, "evidence") {
 			t.Errorf("m2 status %s exits with code %d and prints:\n%s", want.Tag, code, stdout)
 		}
+		if want.StatementHash != "" && !strings.Contains(stdout, "statement hash  "+want.StatementHash+"\n") {
+			t.Errorf("m2 status %s does not print the statement hash %s:\n%s", want.Tag, want.StatementHash, stdout)
+		}
 	}
 }
 
@@ -78,5 +81,32 @@ func TestStatusWithoutBuild(t *testing.T) {
 	}
 	if code, _, _ := run("status", "-root", valid); code != ExitUsage {
 		t.Errorf("no argument gives the code %d, want %d", code, ExitUsage)
+	}
+}
+
+// TestStatusStatementHash checks that the status of a statement has the hash that a review records, and that a node without a statement section has none.
+func TestStatusStatementHash(t *testing.T) {
+	out := t.TempDir()
+	if _, err := build.Run(context.Background(), build.Options{Root: valid, Out: out}); err != nil {
+		t.Fatal(err)
+	}
+	all, err := build.ReadStatus(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var with int
+	for _, s := range all {
+		if s.StatementHash != "" {
+			with++
+			if !strings.HasPrefix(s.StatementHash, "blake3:") {
+				t.Errorf("%s has the statement hash %q", s.Tag, s.StatementHash)
+			}
+		}
+		if s.Tag == "Q529ES" && s.StatementHash == "" {
+			t.Errorf("the statement Q529ES has no statement hash")
+		}
+	}
+	if with == len(all) {
+		t.Errorf("each of the %d nodes has a statement hash", len(all))
 	}
 }

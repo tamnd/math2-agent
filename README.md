@@ -110,7 +110,7 @@ m2 status m2://lean/Subgroup.card_subgroup_dvd_card
 m2 status -json 3C53TD
 ```
 
-The output gives the evidence level, the fidelity level, the flags, each item of evidence, each Lean binding with its type hash, its axioms, its reviews and its replay, and one reason for each decision. For an E5 result, it also gives the checker versions. A tag that is not in the build exits with code 1.
+The output gives the evidence level, the fidelity level, the flags, the statement hash, each item of evidence, each Lean binding with its type hash, its axioms, its reviews and its replay, and one reason for each decision. For an E5 result, it also gives the checker versions. A tag that is not in the build exits with code 1.
 
 ## Graph queries
 
