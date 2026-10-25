@@ -1,0 +1,21 @@
+# The labels of the papers in testdata/content. The papers are in the words of the test.
+# id	kind	role	deps	path
+2601.00001#D101	definition	-	-	source
+2601.00001#L101	statement	lemma	2601.00001#D101	source
+2601.00001#Q101	statement	proposition	2601.00001#D101 2601.00001#L101	source
+2601.00001#D102	definition	-	2601.00001#D101	source
+2601.00001#T101	statement	theorem	2601.00001#L102 2601.00001#L101 2601.00001#Q101 2601.00001#D102	source
+2601.00001#C101	conjecture	-	-	source
+2601.00001#X101	example	-	2601.00001#C101	source
+2601.00001#K101	statement	corollary	2601.00001#T101 2601.00001#Q101	source
+2601.00001#L102	statement	lemma	2601.00001#D102	source
+2601.00001#thm-2	statement	theorem	-	source
+2601.00002#D201	definition	-	-	render
+2601.00002#L201	statement	lemma	2601.00002#D201	render
+2601.00002#T201	statement	theorem	2601.00002#L201	render
+2601.00002#K201	statement	corollary	2601.00002#T201	render
+2601.00002#Q201	problem	-	-	render
+2601.00003#D301	definition	-	-	native
+2601.00003#T301	statement	theorem	-	native
+2601.00003#unmarked-1	statement	theorem	-	native
+2601.00003#L301	statement	lemma	2601.00003#D301	native

@@ -23,7 +23,7 @@ The code of M2 connects the graph to the world. The `store` package puts the gra
 
 Some acceptance items of M2 need time or people, and they stay open: three monthly bumps in a row, the releases of April to June 2027, the full harvests of zbMATH Open and arXiv for C0, and a test of the curation guide by a new curator.
 
-The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON, and the `mcp` package gives the same methods as MCP tools. The `sandbox` package runs a program with no network and with limits, and the `compute` package and `m2 compute` run the computations in it. The rules C01 to C05 check the computations and their runs. The `prov` package reads and writes the provenance log of each node (spec 04.8), and `m2 prov` shows, records, credits, quarantines and confirms the lines. The rules P01 to P04 check the logs and the agent runs.
+The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON, and the `mcp` package gives the same methods as MCP tools. The `sandbox` package runs a program with no network and with limits, and the `compute` package and `m2 compute` run the computations in it. The rules C01 to C05 check the computations and their runs. The `prov` package reads and writes the provenance log of each node (spec 04.8), and `m2 prov` shows, records, credits, quarantines and confirms the lines. The rules P01 to P04 check the logs and the agent runs. The `ingest/arxivresults` adapter reads the results of arXiv papers from the content plane of tamnd/arxiv, and `bench/extract` measures it.
 
 The audit report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
@@ -280,6 +280,7 @@ These sources have an adapter now:
 | Source | Package | Bulk channel | Licence | What a record keeps |
 |---|---|---|---|---|
 | `arxiv` | `ingest/arxiv` | the metadata plane of tamnd/arxiv, one JSONL file for each month | CC0 metadata; each paper has the licence of its last version | the mathematics papers only: title, authors, categories, MSC codes, DOI and the `ax://` locator. No text. |
+| `arxiv_results` | `ingest/arxivresults` | the git archive of tamnd/arxiv, the content plane `content/en/` | each result has the licence of its paper version; the papers with the access class record are skipped | the theorems, lemmas, propositions, corollaries, definitions, conjectures, problems and examples of the mathematics papers: the kind and role of spec 04.2, the heading as the title, the `ax://paper/<id>#<tag>` locator, the proofs, the dependencies inside the paper, the section, the source type and the MSC codes. The text of the statement only when the licence lets math2 store it. |
 | `erdosproblems` | `ingest/erdosproblems` | the git archive of teorth/erdosproblems, `data/problems.yaml` | Apache 2.0 | each problem: the number, the status and its date, the formal status, the prize, the OEIS sequences, the tags, the short name and Paul Erdős as the person who posed it (rule G06). No statement text, because the data file has none. |
 | `formal_conjectures` | `ingest/formalconjectures` | the git archive of google-deepmind/formal-conjectures, the Lean files under `FormalConjectures/` | Apache 2.0 | each theorem with a category attribute, except the category test: the full Lean name, the docstring as the text, the category, the AMS classes, the Lean statement, the link to a formal proof, the title and the links of the module docstring, and the Erdős, OEIS, MathOverflow and Wikipedia ids that the links name. The URL is the line of the theorem at the commit of the snapshot. |
 | `lmfdb` | `ingest/lmfdb` | a URL of the API of the LMFDB, with a table and filters. The default is the elliptic curves over Q of conductor at most 100 | CC BY-SA 4.0 | each object: the path of its page as the id, such as `EllipticCurve/Q/11.a2`, the label as the title and the table as the kind. The adapter knows the tables `ec_curvedata` and `nf_fields`. |
@@ -295,6 +296,8 @@ The formal-conjectures adapter reads the Lean files as text and does not build t
 The Palomar adapter follows the cursor of the listing with one request each second. When the registry changes during a fetch, the API answers 409 Conflict and the adapter starts again from the first page. When the listing abbreviates an entry, the adapter gets the complete record of the entry. The snapshot of 25 October 2026 (revision 517) gave 760 results in 43 seconds. 117 of them name a directory in their repository, and 85 entries have more than one version.
 
 The Stacks adapter reads the LaTeX as text, one line after the other, and joins each tag in `tags/tags` to its label. It does not compute the numbers of the book, such as Lemma 26.4.2, because the numbers come from the LaTeX build and the adapter cannot check them. The snapshot of 25 October 2026 (commit a04446e) gave 21,446 tags in less than 5 seconds: 12,587 lemmas, 3,299 sections, 1,721 definitions, 688 equations, 449 examples, 440 items, 386 exercises, 330 propositions, 214 theorems, 124 situations, 116 chapters, 35 subsections, 9 parts, 1,043 remarks and 5 lists of remarks. The records keep no text, only the fingerprints. With these records, rule L02 passes on the nodes of math2 and fails on a node that copies the statement of tag 01IS.
+
+The arxiv_results adapter does not extract results again. The extractor of tamnd/arxiv marks each object of a paper with an attribute block, such as `{#thm-1 .statement tag=3KH2 env=theorem}`, and the adapter reads these blocks. The extent of a result runs to the next block that is not an equation, as in the objects package of tamnd/arxiv-reader. A proof belongs to the result that its heading links to, or to the last result before it. The dependencies are the links to other results, and to the equations in them, from the statement and its proofs. The adapter does not read references in plain words, and it does not unfold results, because unfolding needs a model. The main branch of tamnd/arxiv at commit c818ec0, of 14 September 2026, has one paper, 2312.00752. It is in cs.LG, so it gives no results yet.
 
 When the bulk channel is a git repository, the snapshot is the git archive that GitHub gives for the branch, and the catalogue records the commit from the archive. An adapter uses `ingest.FetchArchive` and `ingest.WalkArchive` for this. A snapshot that has more than one file, such as an OAI-PMH harvest, is the files one after the other, compressed with gzip. The zbMATH adapter fails when the number of records is not the size of the list that zbMATH Open gives. The full zbMATH harvest has more than four million documents, so give a set to harvest one MSC class.
 
@@ -478,6 +481,27 @@ The precision of all the pairs is 0.991, thus the default threshold meets the ta
 
 The pairs do not cover all the sources yet. The Stacks project, the LMFDB, zbMATH, arXiv and Palomar state no exact matches that the bench can read: Wikidata has no Stacks property, the adapter does not read the zbMATH property, the LMFDB knowl values are not object ids, and the snapshot has no arXiv records for the Palomar papers. Pairs for these sources come from the decisions of people in `crosswalk.reg`.
 
+`bench/extract` measures the extraction of results from papers (spec 17.3.2). It reads a content plane with the arxiv_results adapter and compares the records with `labels.tsv`, where each line is a result id, its kind and role, its dependencies and the source type of its paper. The report gives the result recall and precision, the kind accuracy and the precision, recall and F1 of the dependency edges, for each source type. Without flags the test runs on four small papers in `testdata`, which we wrote ourselves. They have the hard cases on purpose: a proof in an appendix, a proof with no link, an equation inside a result, a custom environment, a reference in plain words, prose after a statement and a result that the extractor did not mark. On these 19 labelled results:
+
+```sh
+go test ./bench/extract -v -report extract.md
+```
+
+| Source type | Labelled | Extracted | Recall | Precision | Kind accuracy | Edge precision | Edge recall | Edge F1 |
+|---|---|---|---|---|---|---|---|---|
+| native | 4 | 2 | 0.50 | 1.00 | 1.00 | - | 0.00 | 0.00 |
+| render | 5 | 5 | 1.00 | 1.00 | 1.00 | 0.60 | 1.00 | 0.75 |
+| source | 10 | 10 | 1.00 | 1.00 | 0.90 | 1.00 | 0.92 | 0.96 |
+| all | 19 | 17 | 0.89 | 1.00 | 0.94 | 0.88 | 0.88 | 0.88 |
+
+The suite is small and we wrote it, so these numbers show the behaviour of the adapter on known cases, and they are not an estimate for arXiv. The misses are the results that the extractor did not mark or marked as a remark, a custom environment with no role, a reference in plain words, and links in the prose after a statement or in a question. Spec 17.3.2 asks for five hundred papers labelled by hand. To run the test on a checkout of tamnd/arxiv with labels by id:
+
+```sh
+go test ./bench/extract -root DIR -labels FILE -v -report extract.md
+```
+
+Unfolding fidelity is not measured yet, because the adapter does not unfold results.
+
 `bench/search` measures the quality of `m2 search` and of the premise search (spec 14.7). Each line of `bench/search/queries.tsv` is a query and the node or the Lean declaration that it must find. The concept queries describe a theorem in other words than the node. The formula queries give a formula of a node with other names for the variables. The formal queries give a Lean type, a goal or a list of constants. The paper queries are a short title and abstract. We wrote all the queries and the Lean records in `testdata/records.tsv` ourselves, and no tuning used them. The test also makes an identifier query from each `same_as` id, and a premise query from each record that uses other records. Each benchmark runs with all the channels and with each channel alone. `baseline.tsv` keeps the headline metric of each benchmark, and the test fails when a metric is more than 0.02 below it. On the 117 nodes of `testdata/nodes/valid` and 18 records:
 
 ```
@@ -524,7 +548,7 @@ cmd/m2/   the m2 binary
 align/    the aligner: candidates, scores, the curation queues and the register of decisions (spec 05.3, 05.4 and 16.3)
 api/      the read API of spec 11.2, its HTTP handler and its rate limit
 audit/    the audit rules of spec 15, with a fixture pair for each rule
-bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, and bench/search measures the quality of search
+bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, bench/extract measures the extraction of results from papers, and bench/search measures the quality of search
 bump/     the Mathlib bump: the pins, the breaks of a bump, the renames and the bump report (spec 07.9)
 build/    the steps of m2 build, their cache and the build manifest
 check/    the fast rules of m2 check: schema, body and links
