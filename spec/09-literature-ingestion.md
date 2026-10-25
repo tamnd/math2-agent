@@ -40,7 +40,7 @@ Sizes are from document 01, measured or reported in October 2026.
 | **Wikipedia** | article ids for crosswalk; short quoted text where useful | about 26k mathematics articles | dumps | CC BY-SA 4.0 | monthly |
 | **nLab** | page ids for crosswalk | about 19k pages | `nlab-content` git | link-only until the licence is confirmed | monthly |
 | **ProofWiki** | page ids for crosswalk; proofs and definitions as candidate sources | 30k proofs, 36k definitions | XML dump | CC BY-SA 3.0 | quarterly |
-| **Stacks Project, Kerodon** | tags, titles, dependency structure for `same_as` and `cites` | about 21k Stacks tags | git (`tags/tags`) | GFDL: **link only** | monthly |
+| **Stacks Project, Kerodon** | tags, titles, dependency structure for `same_as` and `cites` | 21,446 Stacks tags on 25 October 2026 (commit a04446e) | git (`tags/tags` and the LaTeX) | GFDL: **link only** | monthly |
 | **MathOverflow, Math.SE** | question ids, titles, per-post records for E1 claims and references | 169k and 1.7M questions | the Stack Exchange API, per post | CC BY-SA, per-post version (16.6) | on demand |
 | **Books** | records and locators (9.7) | n/a | catalogue metadata, open textbooks | per book | on demand |
 | **MathWorld, Encyclopedia of Mathematics, PlanetMath** | ids for crosswalk | n/a | n/a | MathWorld proprietary: link only; others CC BY-SA | quarterly |

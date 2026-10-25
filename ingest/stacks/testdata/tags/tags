@@ -1,0 +1,17 @@
+# List of current tags in the stacks project
+# Each line is of the form
+#	tag,full_label
+T001,book-part-preliminaries
+T002,sets-section-phantom
+T003,sets-section-introduction
+T004,sets-section-finite
+T005,sets-definition-finite
+T006,sets-lemma-pigeonhole
+T007,sets-equation-count
+T008,sets-subsection-unions
+T009,sets-lemma-wrong-prefix
+T00A,sets-lemma-items
+T00B,sets-item-union
+T00C,book-part-schemes
+T00D,spaces-section-phantom
+T00E,spaces-theorem-named
