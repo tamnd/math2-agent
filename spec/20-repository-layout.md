@@ -75,6 +75,7 @@ math2/
 
   reports/
     audit/                       committed audit reports (document 15)
+    bump/                        one report for each Mathlib bump: the breaks by kind, the time to green, the stale reviews (07.9)
     graph/                       graph health
     coverage/                    per-MSC coverage tables (document 18)
     releases/                    the full pre-release report per release
@@ -114,6 +115,7 @@ math2-agent/
   graph/                         derive edges, closure (AND–OR), CSR, Parquet writer (document 05)
   store/                         SQLite + DuckDB + CSR + vector serving store (05.7)
   build/                         the build graph: nodes → Lean → compute → graph → search → site
+  bump/                          the Mathlib bump: pins, breaks, renames and the bump report (07.9)
   compute/                       image runner, sandbox, certificate dispatch (document 08)
   ingest/                        source adapters (document 09), one subpackage per source
     arxiv/  zbmath/  crossref/  oeis/  lmfdb/  wikidata/  mardi/  nlab/  stacks/  proofwiki/  mathlib/  leanlibs/
