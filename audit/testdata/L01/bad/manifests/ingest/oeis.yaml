@@ -1,0 +1,8 @@
+# The import manifest of oeis. m2 ingest writes this file. Run m2 ingest oeis -snapshot blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc to make the same records again.
+source: oeis
+adapter: oeis/1
+snapshot: blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+records: 1
+hash: blake3:adbc64ca22b0496292324840531d38f26eb0ba478f0fc38b6daf1eec8c871d62
+classes:
+  open: 1

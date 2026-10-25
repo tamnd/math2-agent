@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). The command `m2 release` comes in M2. The first work of M2 is written: the `store` package puts the graph and the status of each node into one SQLite file, and `m2 graph` runs the neighbourhood, closure, reverse dependency, learning path and frontier queries on it. The `synth` package and `bench/graph` measure these queries on a synthetic graph. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). The command `m2 release` comes in M2. The first work of M2 is written: the `store` package puts the graph and the status of each node into one SQLite file, and `m2 graph` runs the neighbourhood, closure, reverse dependency, learning path and frontier queries on it. The `synth` package and `bench/graph` measure these queries on a synthetic graph. The `ingest` package and `m2 ingest` get pinned snapshots of external sources, apply the licence gate of spec 09.3 and write the records. The rules L01 to L04 check the licences. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -52,7 +52,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
-| `m2 ingest <source>` | Get a pinned snapshot of an external source. | M2 |
+| `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. | M2 |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release. | M2 |
 | `m2 release` | Cut, describe or verify a release. | M2 |
@@ -128,6 +128,26 @@ m2 graph frontier -open -topic T0NT01   # the open problems and the statements t
 
 `m2 graph neighbourhood` takes `-hops N`. `m2 graph frontier` also takes `-evidence E1`. A node that `needs` the node loses each alternative when the node is false. A node that `uses` the node uses it in at least one alternative. The learning path goes from `from` to `to` through the uses edges that end at a definition and the defines edges.
 
+## Ingest
+
+`m2 ingest` gets a snapshot of an external source through its bulk channel, records the snapshot in `manifests/sources.yaml` and writes the records to `build/records/<source>.jsonl`. The import manifest `manifests/ingest/<source>.yaml` names the snapshot, the adapter and the hash of the records. Thus two imports of the same snapshot give the same bytes, and anyone can check it.
+
+```sh
+m2 ingest oeis                       # a new snapshot from the bulk channel of the source
+m2 ingest oeis -snapshot blake3:...  # the recorded snapshot again, from the cache or from its URL
+```
+
+Each source has an access class: `open`, `share-alike-nc`, `verbatim`, `gfdl` or `record` (spec 09.3). The licence gate stores the text of an item only when its class is `open`. For the other classes it keeps the record, the locator and the fingerprints of the text. The fingerprints cannot give the text back. The audit uses them to find copied text:
+
+| Rule | What it checks |
+|---|---|
+| L01 | Each source names a licence and a class that agrees with it. Each import manifest names a recorded snapshot. The records agree with the manifest and store only the text that their class allows. |
+| L02 | No node body copies text from a source that is not `open`. |
+| L03 | Each share-alike source has an attribution line, and a node that uses its text names the item in `sources` or `same_as`. |
+| L04 | A node body that is similar to an item that it cites. A person checks it. |
+
+L02 to L04 need the records in `build/records/`. When they do not exist, the rules skip. Each source has an adapter in the package `ingest/<source>`. To add a source, write the adapter, register it with `ingest.Register`, and ask a maintainer to approve the class in `manifests/sources.yaml`.
+
 ## Benchmarks
 
 `bench/graph` measures the latency of the queries Q1 to Q7 on a synthetic graph from the `synth` package, and compares the 95th percentile with the targets of spec 05.6. The test runs with 20,000 nodes in CI. The `bench` workflow runs it each week with 1 million nodes and puts the table in the summary of the run. To run it at reference scale (5 million nodes), use a machine with at least 24 GB of memory and 6 GB of free disk:
@@ -181,6 +201,7 @@ check/    the fast rules of m2 check: schema, body and links
 cli/      the command table
 format/   the canonical form of m2 fmt and the change from aliases to tags
 graph/    the graph of spec 05: edges, closure, cycles, CSR and Parquet
+ingest/   the adapters of the external sources, the licence gate, the snapshots and the import manifests (spec 09)
 lean/     M2Extract, its Lake package and the Go package that drives it
 node/     read node files, write the canonical form and compute the content hash
 release/  the release manifest of spec 06.2 and the rebuild checks R01 and R02
@@ -197,7 +218,7 @@ spec/     the specification
 
 Each directory except `cmd/`, `bench/` and `spec/` is a Go package that other programs can import. For example, a bot can use `github.com/tamnd/math2-agent/node` to read and format node files. The packages follow the conventions of the Go standard library, and `go doc` shows an example for each main function.
 
-The full layout arrives with the milestones. The plan has these parts: `compute`, `ingest`, `align`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `prompts/`, `images/` and `web/`.
+The full layout arrives with the milestones. The plan has these parts: `compute`, `align`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `prompts/`, `images/` and `web/`.
 
 ## Contribute
 

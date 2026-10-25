@@ -1,0 +1,1 @@
+nodes/4M/4M0C1B.md:10:1: L02: the body shares 8 fingerprints with stacks 01H8, which has the class gfdl. Text of that class must not go into node prose. Write the text in your own words
