@@ -1,0 +1,145 @@
+// Package cli holds the m2 command table and runs one command.
+//
+// Each command that is not written yet names the milestone that delivers it. Such a command exits with ExitNotWritten. It does not exit zero, because a command that does nothing and exits zero looks like a command that worked.
+package cli
+
+import (
+	"fmt"
+	"io"
+	"strings"
+	"text/tabwriter"
+)
+
+// Exit codes.
+const (
+	ExitOK         = 0
+	ExitFailure    = 1
+	ExitUsage      = 2
+	ExitNotWritten = 3
+)
+
+// Milestone is one milestone of the project plan.
+type Milestone struct {
+	ID    string
+	Title string
+}
+
+// Milestones is the project plan, in order.
+var Milestones = []Milestone{
+	{"M0", "the skeleton"},
+	{"M1", "the seed and the trust core"},
+	{"M2", "the graph meets the world"},
+	{"M3", "open to readers"},
+	{"M4", "fidelity at scale"},
+	{"M5", "the research engine"},
+}
+
+type runFunc func(args []string, stdout, stderr io.Writer) int
+
+type command struct {
+	name      string
+	usage     string
+	summary   string
+	milestone string  // the milestone that delivers the command, or "" when the command is written
+	run       runFunc // nil when the command is not written yet
+}
+
+// commands is the command table. Keep it in the same order as the help output.
+var commands = []command{
+	{name: "new", usage: "m2 new <kind>", summary: "Make a node file with a provisional id.", milestone: "M0"},
+	{name: "fmt", usage: "m2 fmt [path...]", summary: "Make front matter canonical and change aliases to tags.", milestone: "M0"},
+	{name: "check", usage: "m2 check [path...]", summary: "Check schema, body and links on the working tree. This does not use Lean.", milestone: "M0"},
+	{name: "build", usage: "m2 build", summary: "Build everything: Lean, extraction, status, graph and search.", milestone: "M1"},
+	{name: "audit", usage: "m2 audit [-plane P] [-rule R] [-changed] [-release R]", summary: "Run the audit rules.", milestone: "M1"},
+	{name: "status", usage: "m2 status <tag>", summary: "Show the computed status of a node and the evidence for it.", milestone: "M1"},
+	{name: "graph", usage: "m2 graph closure|rdeps|path|frontier <tag>", summary: "Run a graph query.", milestone: "M2"},
+	{name: "ingest", usage: "m2 ingest <source> [-snapshot S]", summary: "Get a pinned snapshot of an external source.", milestone: "M2"},
+	{name: "align", usage: "m2 align <source>", summary: "Propose crosswalk edges to an external source.", milestone: "M2"},
+	{name: "bump", usage: "m2 bump", summary: "Make a branch that moves Lean and Mathlib to the next release.", milestone: "M2"},
+	{name: "release", usage: "m2 release cut|notes|verify", summary: "Cut, describe or verify a release.", milestone: "M2"},
+	{name: "search", usage: "m2 search <query>", summary: "Search the knowledge graph.", milestone: "M3"},
+	{name: "serve", usage: "m2 serve [-addr A]", summary: "Serve the API, the MCP server and the workspace.", milestone: "M3"},
+	{name: "compute", usage: "m2 compute run|verify <tag>", summary: "Run or verify a computation.", milestone: "M3"},
+	{name: "prov", usage: "m2 prov show|quarantine|credit|disclose <tag>", summary: "Show or change provenance.", milestone: "M3"},
+	{name: "review", usage: "m2 review <tag>", summary: "Review a formal statement against its informal statement.", milestone: "M4"},
+	{name: "autoform", usage: "m2 autoform <tag>", summary: "Make a formal statement for a node.", milestone: "M4"},
+	{name: "agent", usage: "m2 agent run <role> [-target T] [-budget B]", summary: "Do one agent run.", milestone: "M5"},
+	{name: "orchestrate", usage: "m2 orchestrate", summary: "Run the job scheduler.", milestone: "M5"},
+}
+
+// Run runs the command in args and returns the exit code.
+func Run(args []string, version string, stdout, stderr io.Writer) int {
+	if len(args) == 0 {
+		writeHelp(stderr)
+		return ExitUsage
+	}
+	switch name := args[0]; name {
+	case "help", "-h", "-help", "--help":
+		if len(args) > 1 {
+			return helpFor(args[1], stdout, stderr)
+		}
+		writeHelp(stdout)
+		return ExitOK
+	case "version", "-version", "--version":
+		fmt.Fprintf(stdout, "m2 %s\n", version)
+		return ExitOK
+	default:
+		c, ok := lookup(name)
+		if !ok {
+			fmt.Fprintf(stderr, "m2: unknown command %q. Run \"m2 help\" to see the commands.\n", name)
+			return ExitUsage
+		}
+		if c.run == nil {
+			m := milestone(c.milestone)
+			fmt.Fprintf(stderr, "m2 %s: this command is not written yet. It arrives in %s, %s.\n", c.name, m.ID, m.Title)
+			return ExitNotWritten
+		}
+		return c.run(args[1:], stdout, stderr)
+	}
+}
+
+func lookup(name string) (command, bool) {
+	for _, c := range commands {
+		if c.name == name {
+			return c, true
+		}
+	}
+	return command{}, false
+}
+
+func milestone(id string) Milestone {
+	for _, m := range Milestones {
+		if m.ID == id {
+			return m
+		}
+	}
+	return Milestone{ID: id, Title: "an unknown milestone"}
+}
+
+func helpFor(name string, stdout, stderr io.Writer) int {
+	c, ok := lookup(name)
+	if !ok {
+		fmt.Fprintf(stderr, "m2: unknown command %q.\n", name)
+		return ExitUsage
+	}
+	fmt.Fprintf(stdout, "Usage: %s\n\n%s\n", c.usage, c.summary)
+	if c.run == nil {
+		m := milestone(c.milestone)
+		fmt.Fprintf(stdout, "\nThis command is not written yet. It arrives in %s, %s.\n", m.ID, m.Title)
+	}
+	return ExitOK
+}
+
+func writeHelp(w io.Writer) {
+	var b strings.Builder
+	b.WriteString("m2 is the Math 2.0 toolchain.\n\nUsage: m2 <command> [arguments]\n\nCommands:\n")
+	tw := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
+	for _, c := range commands {
+		fmt.Fprintf(tw, "  %s\t%s\t%s\n", c.name, c.summary, c.milestone)
+	}
+	fmt.Fprintf(tw, "  help\tShow this help, or the help for one command.\n")
+	fmt.Fprintf(tw, "  version\tShow the m2 version.\n")
+	_ = tw.Flush()
+	b.WriteString("\nA command with a milestone is not written yet. It exits with code 3 and names the milestone that delivers it.\n")
+	_, _ = io.WriteString(w, b.String())
+}

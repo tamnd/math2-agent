@@ -1,0 +1,24 @@
+# The lint settings are in this file so that lint gives the same result on every machine and in CI.
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - misspell
+    - unconvert
+    - gosec
+    - revive
+  settings:
+    errcheck:
+      # A failed write to stdout or stderr is not something a command can act on.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+
+formatters:
+  enable:
+    - gofmt

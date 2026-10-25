@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Content problem
+    url: https://github.com/tamnd/math2/issues/new/choose
+    about: A problem with a node, a source, a binding or a review goes to tamnd/math2.
+  - name: Security problem
+    url: https://github.com/tamnd/math2-agent/security/advisories/new
+    about: Do not open a public issue. Use private vulnerability reporting.
