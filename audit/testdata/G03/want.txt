@@ -1,0 +1,2 @@
+nodes/3C/3C53TD.md:7:1: G03: the uses edges make a cycle that does not go through two different proofs: 3C53TD -> G5S1M9 -> 3C53TD
+nodes/7M/7M0N0D.md:5:1: G03: the specializes edges make a cycle: 7M0N0D -> 7S0G0P -> 7M0N0D

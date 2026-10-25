@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/schema"
 )
@@ -163,6 +164,7 @@ type auditor struct {
 	nodes    []*node.Node    // every node file that parses
 	ix       check.Index     // every node file that parses
 	checkRun *check.Report   // the run of m2 check on the scope, made when a rule needs it
+	graph    *graph.Graph    // the graph of every node file that parses, made when a rule needs it
 }
 
 func load(root string, opt Options) (*auditor, error) {

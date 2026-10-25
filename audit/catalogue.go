@@ -26,7 +26,7 @@ var catalogue = []entry{
 	{Rule{"B05", Nodes, false, "each explanation has a level and a human or agent marker"}, nil},
 	{Rule{"G01", Graph, true, "each edge target resolves"}, nil},
 	{Rule{"G02", Graph, true, "same_as is functional in the two directions in each external system"}, nil},
-	{Rule{"G03", Graph, true, "specializes has no cycle, and uses has no cycle except equivalence cycles through different proofs"}, nil},
+	{Rule{"G03", Graph, true, "specializes has no cycle, and uses has no cycle except equivalence cycles through different proofs"}, g03},
 	{Rule{"G04", Graph, false, "the formal dependencies of a bound proof are in its uses"}, nil},
 	{Rule{"G05", Graph, true, "each live statement has a source, a proof or a formal binding"}, nil},
 	{Rule{"G06", Graph, true, "each conjecture and problem has a source that names who posed it"}, nil},
