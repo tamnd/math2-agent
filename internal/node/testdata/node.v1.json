@@ -1,0 +1,1626 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tamnd/math2/blob/main/schema/node.v1.json",
+  "title": "math2 node, schema v1",
+  "description": "The front matter of a node file in nodes/. Spec 04.5 gives the form. Each kind has its own fields. The x-m2-sections keyword gives the body sections of each kind, in order. The x-m2-edges keyword lists the 23 edge types. The x-m2-order keyword gives the order of the top-level keys in the canonical form. Nested keys use the order of their properties in this file.",
+  "type": "object",
+  "required": [
+    "tag",
+    "kind",
+    "name"
+  ],
+  "properties": {
+    "tag": {
+      "$ref": "#/$defs/ref"
+    },
+    "kind": {
+      "enum": [
+        "concept",
+        "definition",
+        "statement",
+        "conjecture",
+        "problem",
+        "example",
+        "counterexample",
+        "object",
+        "proof",
+        "computation",
+        "topic"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/slug"
+      },
+      "uniqueItems": true
+    },
+    "msc": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/msc"
+      },
+      "uniqueItems": true
+    },
+    "topics": {
+      "description": "The topics that this node is part of. This is the part_of edge.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      },
+      "uniqueItems": true
+    },
+    "uses": {
+      "description": "The nodes that this node depends on. This is the uses edge.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      },
+      "uniqueItems": true
+    },
+    "analogous_to": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/analogous_to"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "same_as": {
+      "$ref": "#/$defs/same_as"
+    },
+    "close_to": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/close_to"
+      }
+    },
+    "aligned": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/aligned"
+      }
+    },
+    "history": {
+      "$ref": "#/$defs/history"
+    },
+    "retired": {
+      "$ref": "#/$defs/retired"
+    },
+    "resolved_by": {
+      "description": "The statements that settle this conjecture or problem. This is the resolved_by edge.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ref"
+      },
+      "uniqueItems": true
+    }
+  },
+  "x-m2-order": [
+    "tag",
+    "kind",
+    "role",
+    "name",
+    "aliases",
+    "msc",
+    "topics",
+    "about",
+    "defines",
+    "proves",
+    "instance_of",
+    "specializes",
+    "claim",
+    "engine",
+    "output",
+    "certificate",
+    "uses",
+    "methods",
+    "proofs",
+    "formal",
+    "implies",
+    "equivalent",
+    "refutes",
+    "resolves",
+    "resolved_by",
+    "generalizes",
+    "bounds",
+    "analogous_to",
+    "sources",
+    "same_as",
+    "close_to",
+    "aligned",
+    "history",
+    "retired"
+  ],
+  "propertyNames": {
+    "not": {
+      "enum": [
+        "status",
+        "verified",
+        "proved",
+        "evidence",
+        "fidelity",
+        "level",
+        "checked"
+      ]
+    },
+    "description": "Rule S03: status is computed. A node file never states it."
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "concept"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "specializes": {
+            "description": "Every instance of this concept is an instance of the target. This is the specializes edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          }
+        },
+        "x-m2-sections": {
+          "required": [
+            "Summary"
+          ],
+          "allowed": [
+            "Summary",
+            "Remarks",
+            "Explanations"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "definition"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "defines": {
+            "$ref": "#/$defs/ref",
+            "description": "The concept that this definition defines. This is the defines edge."
+          },
+          "formal": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/formal"
+            }
+          },
+          "equivalent": {
+            "description": "Definitions that are equivalent to this one. This is the equivalent edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/via_edge"
+            }
+          }
+        },
+        "x-m2-sections": {
+          "required": [
+            "Definition"
+          ],
+          "allowed": [
+            "Definition",
+            "Remarks",
+            "Explanations"
+          ]
+        },
+        "required": [
+          "defines"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "statement"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "about": {
+            "description": "The main subjects of this node. This is the about edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          },
+          "role": {
+            "enum": [
+              "theorem",
+              "lemma",
+              "proposition",
+              "corollary",
+              "fact",
+              "axiom"
+            ]
+          },
+          "proofs": {
+            "description": "The proof nodes, in the order that readers see them.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          },
+          "formal": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/formal"
+            }
+          },
+          "implies": {
+            "description": "This is the implies edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/via_edge"
+            }
+          },
+          "equivalent": {
+            "description": "This is the equivalent edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/via_edge"
+            }
+          },
+          "refutes": {
+            "description": "This is the refutes edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/via_edge"
+            }
+          },
+          "resolves": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "target",
+                "outcome"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/ref"
+                },
+                "outcome": {
+                  "enum": [
+                    "proved",
+                    "disproved",
+                    "settled"
+                  ]
+                },
+                "note": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "generalizes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "target",
+                "map"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/ref"
+                },
+                "map": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "bounds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "target",
+                "side",
+                "value",
+                "via"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "target": {
+                  "$ref": "#/$defs/ref"
+                },
+                "side": {
+                  "enum": [
+                    "lower",
+                    "upper"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "via": {
+                  "$ref": "#/$defs/ref"
+                }
+              }
+            }
+          }
+        },
+        "x-m2-sections": {
+          "required": [
+            "Statement"
+          ],
+          "allowed": [
+            "Statement",
+            "Remarks",
+            "History",
+            "Explanations"
+          ]
+        },
+        "required": [
+          "role"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "conjecture"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "about": {
+            "description": "The main subjects of this node. This is the about edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          },
+          "formal": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/formal"
+            }
+          }
+        },
+        "x-m2-sections": {
+          "required": [
+            "Statement"
+          ],
+          "allowed": [
+            "Statement",
+            "Remarks",
+            "History",
+            "Explanations"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "problem"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "about": {
+            "description": "The main subjects of this node. This is the about edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          },
+          "formal": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/formal"
+            }
+          }
+        },
+        "x-m2-sections": {
+          "required": [
+            "Problem"
+          ],
+          "allowed": [
+            "Problem",
+            "Remarks",
+            "History",
+            "Explanations"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "example"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "instance_of": {
+            "description": "This is the instance_of edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          },
+          "formal": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/formal"
+            }
+          }
+        },
+        "x-m2-sections": {
+          "required": [
+            "Example"
+          ],
+          "allowed": [
+            "Example",
+            "Remarks",
+            "Explanations"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "counterexample"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "refutes": {
+            "description": "This is the refutes edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/via_edge"
+            }
+          },
+          "formal": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/formal"
+            }
+          }
+        },
+        "x-m2-sections": {
+          "required": [
+            "Counterexample"
+          ],
+          "allowed": [
+            "Counterexample",
+            "Remarks",
+            "Explanations"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "object"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "instance_of": {
+            "description": "This is the instance_of edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          }
+        },
+        "x-m2-sections": {
+          "required": [
+            "Description"
+          ],
+          "allowed": [
+            "Description",
+            "Remarks",
+            "Explanations"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "proof"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "proves": {
+            "$ref": "#/$defs/ref",
+            "description": "The one statement that this proof proves. This is the proves edge."
+          },
+          "formal": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/formal"
+            }
+          },
+          "methods": {
+            "description": "The methods that the proof uses. This is the method edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          }
+        },
+        "x-m2-sections": {
+          "required": [],
+          "allowed": [
+            "Proof",
+            "Idea"
+          ]
+        },
+        "required": [
+          "proves"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "computation"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "claim": {
+            "type": "string",
+            "minLength": 1
+          },
+          "engine": {
+            "type": "object",
+            "required": [
+              "image",
+              "entry"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "image": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*@sha256:[0-9a-f]{64}$"
+              },
+              "entry": {
+                "type": "string",
+                "minLength": 1
+              },
+              "inputs": {
+                "type": "object"
+              },
+              "seed": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "resources": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "cpu": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "mem": {
+                    "type": "string"
+                  },
+                  "wall": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "output": {
+            "type": "object",
+            "required": [
+              "hash"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "hash": {
+                "type": "string",
+                "pattern": "^blake3:[0-9a-f]{64}$"
+              },
+              "summary": {
+                "type": "string"
+              }
+            }
+          },
+          "certificate": {
+            "type": "object",
+            "required": [
+              "kind",
+              "artefact",
+              "checker"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "artefact": {
+                "type": "string",
+                "pattern": "^blake3:[0-9a-f]{64}$"
+              },
+              "checker": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*@sha256:[0-9a-f]{64}$"
+              },
+              "checker_entry": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "x-m2-sections": {
+          "required": [
+            "Description"
+          ],
+          "allowed": [
+            "Description",
+            "Remarks"
+          ]
+        },
+        "required": [
+          "claim",
+          "engine"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "topic"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {},
+        "x-m2-sections": {
+          "required": [],
+          "allowed": [
+            "Summary",
+            "Remarks"
+          ]
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false,
+  "x-m2-edges": [
+    {
+      "name": "proves",
+      "group": "logical",
+      "from": "proof",
+      "to": "statement",
+      "field": "proves"
+    },
+    {
+      "name": "uses",
+      "group": "logical",
+      "from": "statement, proof, definition",
+      "to": "any",
+      "field": "uses"
+    },
+    {
+      "name": "implies",
+      "group": "logical",
+      "from": "statement",
+      "to": "statement",
+      "field": "implies"
+    },
+    {
+      "name": "equivalent",
+      "group": "logical",
+      "from": "statement or definition",
+      "to": "the same kind",
+      "field": "equivalent"
+    },
+    {
+      "name": "refutes",
+      "group": "logical",
+      "from": "counterexample or statement",
+      "to": "statement or conjecture",
+      "field": "refutes"
+    },
+    {
+      "name": "resolves",
+      "group": "logical",
+      "from": "statement",
+      "to": "conjecture or problem",
+      "field": "resolves"
+    },
+    {
+      "name": "generalizes",
+      "group": "logical",
+      "from": "statement",
+      "to": "statement",
+      "field": "generalizes"
+    },
+    {
+      "name": "bounds",
+      "group": "logical",
+      "from": "statement",
+      "to": "problem",
+      "field": "bounds"
+    },
+    {
+      "name": "defines",
+      "group": "conceptual",
+      "from": "definition",
+      "to": "concept",
+      "field": "defines"
+    },
+    {
+      "name": "instance_of",
+      "group": "conceptual",
+      "from": "example or object",
+      "to": "concept",
+      "field": "instance_of"
+    },
+    {
+      "name": "about",
+      "group": "conceptual",
+      "from": "statement, conjecture or problem",
+      "to": "concept",
+      "field": "about"
+    },
+    {
+      "name": "specializes",
+      "group": "conceptual",
+      "from": "concept",
+      "to": "concept",
+      "field": "specializes"
+    },
+    {
+      "name": "method",
+      "group": "conceptual",
+      "from": "proof",
+      "to": "concept in the methods topic",
+      "field": "methods"
+    },
+    {
+      "name": "analogous_to",
+      "group": "conceptual",
+      "from": "any",
+      "to": "any",
+      "field": "analogous_to"
+    },
+    {
+      "name": "part_of",
+      "group": "conceptual",
+      "from": "any",
+      "to": "topic",
+      "field": "topics"
+    },
+    {
+      "name": "formalizes",
+      "group": "record",
+      "from": "formal declaration",
+      "to": "node",
+      "field": "formal"
+    },
+    {
+      "name": "source",
+      "group": "record",
+      "from": "node",
+      "to": "record",
+      "field": "sources"
+    },
+    {
+      "name": "aligned",
+      "group": "record",
+      "from": "paper result",
+      "to": "node",
+      "field": "aligned"
+    },
+    {
+      "name": "same_as",
+      "group": "record",
+      "from": "node",
+      "to": "external id",
+      "field": "same_as"
+    },
+    {
+      "name": "close_to",
+      "group": "record",
+      "from": "node",
+      "to": "external id",
+      "field": "close_to"
+    },
+    {
+      "name": "cites",
+      "group": "record",
+      "from": "record",
+      "to": "record",
+      "field": null
+    },
+    {
+      "name": "resolved_by",
+      "group": "record",
+      "from": "conjecture or problem",
+      "to": "statement",
+      "field": "resolved_by"
+    },
+    {
+      "name": "successor",
+      "group": "record",
+      "from": "retired node",
+      "to": "node",
+      "field": "retired.successor"
+    }
+  ],
+  "$defs": {
+    "tag": {
+      "description": "A permanent tag: 6 characters of Crockford base32, without I, L, O and U.",
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{6}$"
+    },
+    "provisional": {
+      "description": "A provisional id: ~ and 8 lowercase hex characters. It is valid only before merge.",
+      "type": "string",
+      "pattern": "^~[0-9a-f]{8}$"
+    },
+    "ref": {
+      "description": "A reference to a node: a tag, or a provisional id inside its own pull request.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/tag"
+        },
+        {
+          "$ref": "#/$defs/provisional"
+        }
+      ]
+    },
+    "msc": {
+      "description": "An MSC2020 code, for example 20D60, 20Dxx, 20-XX or 20-01. Quote codes that contain E, such as \"20E05\".",
+      "type": "string",
+      "pattern": "^[0-9]{2}(-XX|-[0-9]{2}|[A-Z]xx|[A-Z][0-9]{2})$"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "via_edge": {
+      "description": "An edge that a proof or a computation supports. Rule G10 needs via.",
+      "type": "object",
+      "required": [
+        "target",
+        "via"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/ref"
+        },
+        "via": {
+          "$ref": "#/$defs/ref"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "source": {
+      "description": "Where the node is stated or proved. Give exactly one identifier and a locator.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "zbmath": {
+          "description": "zbMATH Open document id",
+          "type": "string",
+          "minLength": 1
+        },
+        "arxiv": {
+          "description": "arXiv id with version",
+          "type": "string",
+          "minLength": 1
+        },
+        "doi": {
+          "description": "DOI",
+          "type": "string",
+          "minLength": 1
+        },
+        "book": {
+          "description": "book identifier, for example isbn:9780471433347",
+          "type": "string",
+          "minLength": 1
+        },
+        "mr": {
+          "description": "MathSciNet MR number",
+          "type": "string",
+          "minLength": 1
+        },
+        "stacks": {
+          "description": "Stacks Project tag",
+          "type": "string",
+          "minLength": 1
+        },
+        "kerodon": {
+          "description": "Kerodon tag",
+          "type": "string",
+          "minLength": 1
+        },
+        "mathoverflow": {
+          "description": "MathOverflow question id",
+          "type": "string",
+          "minLength": 1
+        },
+        "mathse": {
+          "description": "Math Stack Exchange question id",
+          "type": "string",
+          "minLength": 1
+        },
+        "erdos": {
+          "description": "Erdős problem number",
+          "type": "string",
+          "minLength": 1
+        },
+        "formal_conjectures": {
+          "description": "formal-conjectures file and declaration",
+          "type": "string",
+          "minLength": 1
+        },
+        "palomar": {
+          "description": "Palomar registry entry id",
+          "type": "string",
+          "minLength": 1
+        },
+        "hexagon": {
+          "description": "Hexagon id and version",
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "description": "URL, only when no identifier exists",
+          "type": "string",
+          "minLength": 1
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "zbmath"
+          ]
+        },
+        {
+          "required": [
+            "arxiv"
+          ]
+        },
+        {
+          "required": [
+            "doi"
+          ]
+        },
+        {
+          "required": [
+            "book"
+          ]
+        },
+        {
+          "required": [
+            "mr"
+          ]
+        },
+        {
+          "required": [
+            "stacks"
+          ]
+        },
+        {
+          "required": [
+            "kerodon"
+          ]
+        },
+        {
+          "required": [
+            "mathoverflow"
+          ]
+        },
+        {
+          "required": [
+            "mathse"
+          ]
+        },
+        {
+          "required": [
+            "erdos"
+          ]
+        },
+        {
+          "required": [
+            "formal_conjectures"
+          ]
+        },
+        {
+          "required": [
+            "palomar"
+          ]
+        },
+        {
+          "required": [
+            "hexagon"
+          ]
+        },
+        {
+          "required": [
+            "url"
+          ]
+        }
+      ]
+    },
+    "formal": {
+      "description": "A binding to a declaration in a formal library. This is the formalizes edge.",
+      "type": "object",
+      "required": [
+        "system",
+        "decl",
+        "match"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "system": {
+          "enum": [
+            "lean4",
+            "isabelle",
+            "rocq",
+            "metamath",
+            "hol-light"
+          ]
+        },
+        "library": {
+          "type": "string"
+        },
+        "decl": {
+          "type": "string",
+          "minLength": 1
+        },
+        "match": {
+          "enum": [
+            "exact",
+            "stronger",
+            "weaker",
+            "variant",
+            "partial"
+          ]
+        },
+        "adapter": {
+          "type": "string",
+          "description": "The adapter in Math2/Meta/Match.lean for a match that is not exact."
+        },
+        "fidelity_reviews": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^r-([0-9A-HJKMNP-TV-Z]{6}|~[0-9a-f]{8})-[0-9]{2}$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "same_as": {
+      "description": "The same thing in another system. A null value means that somebody checked and no entry exists.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wikidata": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^Q[1-9][0-9]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mardi": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^Q[1-9][0-9]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oeis": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^A[0-9]{6}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stacks": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[0-9A-Z]{4}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kerodon": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[0-9A-Z]{4}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nlab": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "wikipedia": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proofwiki": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lmfdb": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "zbmath": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mr": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "arxiv": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "erdos": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "formal_conjectures": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "palomar": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mathoverflow": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mathse": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "theoremsearch": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hexagon": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pibase": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dart": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "findstat": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "house_of_graphs": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gap": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "atlas": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "close_to": {
+      "type": "object",
+      "required": [
+        "system",
+        "id",
+        "note"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "system": {
+          "enum": [
+            "wikidata",
+            "mardi",
+            "oeis",
+            "stacks",
+            "kerodon",
+            "nlab",
+            "wikipedia",
+            "proofwiki",
+            "lmfdb",
+            "zbmath",
+            "mr",
+            "arxiv",
+            "erdos",
+            "formal_conjectures",
+            "palomar",
+            "mathoverflow",
+            "mathse",
+            "theoremsearch",
+            "hexagon",
+            "pibase",
+            "dart",
+            "findstat",
+            "house_of_graphs",
+            "gap",
+            "atlas"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "aligned": {
+      "type": "object",
+      "required": [
+        "record",
+        "match"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "record": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9+.-]*://"
+        },
+        "match": {
+          "enum": [
+            "exact",
+            "stronger",
+            "weaker",
+            "variant",
+            "partial"
+          ]
+        }
+      }
+    },
+    "analogous_to": {
+      "type": "object",
+      "required": [
+        "target",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/ref"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "first_stated": {
+          "type": "string"
+        },
+        "posed_by": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "retired": {
+      "type": "object",
+      "required": [
+        "date",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "reason": {
+          "enum": [
+            "duplicate",
+            "false",
+            "out-of-scope",
+            "split",
+            "merged"
+          ]
+        },
+        "successor": {
+          "description": "The nodes that replace this node. This is the successor edge.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ref"
+          },
+          "uniqueItems": true
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
