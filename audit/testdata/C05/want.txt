@@ -1,0 +1,2 @@
+build/compute/ZNAZT5/amd64/run.json:1:1: C05: the run had the network "bridge". A computation runs with no network
+build/compute/ZNF0V2/arm64/stderr:2:14: C05: the log names the model API api.openai.com. A computation must not call a model

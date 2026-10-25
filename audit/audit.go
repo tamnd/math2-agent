@@ -168,6 +168,7 @@ type auditor struct {
 	graph    *graph.Graph    // the graph of every node file that parses, made when a rule needs it
 	last     *built          // the files of the last m2 build, read when a rule needs them
 	imp      *imports        // the catalogue, the import manifests and the records, read when a rule needs them
+	comp     *computations   // the computation records, the image manifest and the runs, read when a rule needs them
 }
 
 func load(root string, opt Options) (*auditor, error) {

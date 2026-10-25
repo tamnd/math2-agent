@@ -1,0 +1,3 @@
+nodes/RQ/RQ9C3D.md:13:3: C02: the two runs give the output blake3:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, and the record has blake3:5555555555555555555555555555555555555555555555555555555555555555
+nodes/ZN/ZNAZT5.md:7:1: C02: the output is blake3:1111111111111111111111111111111111111111111111111111111111111111 on amd64 and blake3:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee on arm64. A computation that is not deterministic cannot be E4
+nodes/ZN/ZNF0V2.md:7:1: C02: the computation has no run on arm64. Run m2 compute verify ZNF0V2 on an arm64 runner
