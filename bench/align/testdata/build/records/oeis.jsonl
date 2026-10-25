@@ -1,0 +1,18 @@
+{"id":"A900001","title":"Powers of two: a(n) = 2^n.","class":"open"}
+{"id":"A900002","title":"The squares: a(n) = n^2.","class":"open"}
+{"id":"A900003","title":"The cubes: a(n) = n^3.","class":"open"}
+{"id":"A900004","title":"Numbers that are the sum of two squares.","class":"open"}
+{"id":"A900005","title":"Triangular numbers: a(n) = n(n+1)/2.","class":"open"}
+{"id":"A900006","title":"Numbers whose decimal digits are all odd.","class":"open"}
+{"id":"A900007","title":"Primes that are one more than a square.","class":"open"}
+{"id":"A900008","title":"Primes that are one less than a cube.","class":"open"}
+{"id":"A900009","title":"Pentagonal numbers: a(n) = n(3n-1)/2.","class":"open"}
+{"id":"A900010","title":"Hexagonal numbers: a(n) = n(2n-1).","class":"open"}
+{"id":"A900011","title":"Numbers with an even number of divisors.","class":"open"}
+{"id":"A900012","title":"Numbers with an odd number of divisors.","class":"open"}
+{"id":"A900013","title":"Lucky numbers.","class":"open"}
+{"id":"A900014","title":"Lucky numbers of Euler: n such that k^2 + k + n is prime for k from 0 to n - 2.","class":"open"}
+{"id":"A900015","title":"Fibonacci numbers: F(n) = F(n-1) + F(n-2) with F(0) = 0 and F(1) = 1.","class":"open"}
+{"id":"A900016","title":"Catalan numbers: C(n) = binomial(2n, n)/(n+1).","class":"open"}
+{"id":"A900017","title":"Perfect numbers.","class":"open"}
+{"id":"A900018","title":"Numbers that are the sum of three squares.","class":"open"}

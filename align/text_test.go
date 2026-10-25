@@ -11,6 +11,8 @@ func TestKey(t *testing.T) {
 		{"Lagrange’s Theorem", "lagrange theorem"},
 		{"Erdős–Szekeres theorem", "erdos szekeres theorem"},
 		{"The theorem of Lagrange", "theorem lagrange"},
+		{"Triangular numbers", "triangular number"},
+		{"Gauss sums", "Gauss sum"},
 	} {
 		if key(tc.a) != key(tc.b) {
 			t.Errorf("the keys of %q and %q are %q and %q, want one key", tc.a, tc.b, key(tc.a), key(tc.b))
@@ -19,6 +21,8 @@ func TestKey(t *testing.T) {
 	for _, tc := range []struct{ a, b string }{
 		{"A-group", "group"},
 		{"Lagrange's theorem", "Lagrange's identity"},
+		{"Gauss", "Gaus"},
+		{"torus", "toru"},
 	} {
 		if key(tc.a) == key(tc.b) {
 			t.Errorf("%q and %q have the key %q", tc.a, tc.b, key(tc.a))

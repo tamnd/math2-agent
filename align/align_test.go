@@ -374,3 +374,54 @@ func TestHash(t *testing.T) {
 		t.Error("the vector of an empty text is not zero")
 	}
 }
+
+func TestPick(t *testing.T) {
+	c := func(scores ...float64) []align.Candidate {
+		var out []align.Candidate
+		for i, s := range scores {
+			out = append(out, align.Candidate{Record: ingest.Record{ID: string(rune('a' + i))}, Score: s})
+		}
+		return out
+	}
+	var o align.Options
+	for _, tc := range []struct {
+		cands []align.Candidate
+		ok    bool
+	}{
+		{nil, false},
+		{c(0.95), true},
+		{c(0.89), false},
+		{c(0.95, 0.9), true}, // the difference is 0.05 to three places
+		{c(0.95, 0.91), false},
+		{c(1, 1), false},
+	} {
+		if got, ok := o.Pick(tc.cands); ok != tc.ok || ok && got.Record.ID != "a" {
+			t.Errorf("Pick of %v gives %v, %v", tc.cands, got.Record.ID, ok)
+		}
+	}
+}
+
+func TestMatchWords(t *testing.T) {
+	x, err := align.NewIndex("oeis", []ingest.Record{
+		{ID: "A1", Title: "Graphs of strength 3."},
+		{ID: "A2", Title: "Factorials of double factorials."},
+		{ID: "A3", Title: "Graphs of the plane."},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, id string
+		max      float64
+	}{
+		{"graphs of strength 2", "A1", 0}, // other numbers
+		{"double factorial", "A2", 0.99},  // a word two times in the record
+		{"graphs of strength 3", "A1", 1},
+	} {
+		for _, c := range x.Match(align.Item{Names: []string{tc.name}}, 5) {
+			if c.Record.ID == tc.id && c.Channels[align.ChannelName] > tc.max {
+				t.Errorf("%s: the name channel of %s is %v, want %v or less", tc.name, tc.id, c.Channels[align.ChannelName], tc.max)
+			}
+		}
+	}
+}

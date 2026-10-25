@@ -17,7 +17,7 @@ var stop = map[string]bool{
 // possessive matches the s of a possessive at the end of a word, as in Lagrange's theorem.
 var possessive = regexp.MustCompile(`['’]s\b`)
 
-// words returns the words of s in lowercase, without accents and without the s of a possessive, with each run of letters and digits as one word. It drops a word in stop only when the word stands alone, thus the a of A-group stays.
+// words returns the words of s in lowercase, without accents, without the s of a possessive and in the singular, with each run of letters and digits as one word. It drops a word in stop only when the word stands alone, thus the a of A-group stays.
 func words(s string) []string {
 	var out []string
 	for chunk := range strings.FieldsSeq(possessive.ReplaceAllString(fold(s), "")) {
@@ -25,9 +25,23 @@ func words(s string) []string {
 		if len(parts) == 1 && stop[parts[0]] {
 			continue
 		}
-		out = append(out, parts...)
+		for _, w := range parts {
+			out = append(out, singular(w))
+		}
 	}
 	return out
+}
+
+// singular returns the word without the s of a plural: numbers is number, and primes is prime. It keeps the s after s, u or i, as in Gauss, torus and basis, and it keeps a word of three letters or less. Both the item and the record go through singular, thus a word that is not a plural, such as series, changes on both sides and still matches.
+func singular(w string) string {
+	if len(w) <= 3 || !strings.HasSuffix(w, "s") {
+		return w
+	}
+	switch w[len(w)-2] {
+	case 's', 'u', 'i':
+		return w
+	}
+	return w[:len(w)-1]
 }
 
 // fold returns s in lowercase and without the marks of accents, thus Erdős and erdos are the same.
