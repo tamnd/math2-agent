@@ -1,0 +1,2 @@
+nodes/3C/3C53TD.md:1:1: T05: the tag 3C53TD is not in registers/tags.reg. Only the mint workflow gives tags
+nodes/G5/G5S1M9.md:1:1: T05: the kind is concept, and registers/tags.reg gives definition

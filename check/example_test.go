@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/node"
 )
 
 func ExampleChecker_Check() {
@@ -50,4 +51,17 @@ func ExampleParseMacros() {
 	}
 	fmt.Println(m["ip"], m["Z"])
 	// Output: 2 0
+}
+
+func ExampleLinks() {
+	n, err := node.Parse("nodes/3C/3C53TD.md", []byte("---\ntag: 3C53TD\nkind: statement\n---\n\n## Statement\n\nLet $G$ be a finite [[group|G5S1M9]]. The text `[[a|B]]` is code.\n"))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	for _, l := range check.Links(n) {
+		fmt.Printf("%d:%d %s %q %s\n", l.Line, l.Col, l.Section, l.Text, l.Target)
+	}
+	// Output:
+	// 8:21 Statement "group" G5S1M9
 }

@@ -105,7 +105,7 @@ jobs:
           test "$("$RUNNER_TEMP/m2" version)" = "m2 ci"
       - name: a command that is not written yet exits with code 3
         run: |
-          for cmd in build audit graph search serve review agent; do
+          for cmd in build status graph search serve review agent; do
             code=0
             "$RUNNER_TEMP/m2" "$cmd" 2> err.txt || code=$?
             if [ "$code" != 3 ]; then
@@ -156,6 +156,18 @@ jobs:
             exit 1
           fi
           "$RUNNER_TEMP/m2" check -root "$tree" -q
+      - name: m2 audit passes a good tree and fails a bad tree
+        run: |
+          tree="$RUNNER_TEMP/audit"
+          cp -R audit/testdata/T05/good "$tree"
+          "$RUNNER_TEMP/m2" audit -root "$tree" -plane nodes -q
+          test -s "$tree/reports/audit/nodes.txt"
+          test -s "$tree/reports/audit/nodes.json"
+          cp -R audit/testdata/T05/bad "$tree-bad"
+          code=0
+          "$RUNNER_TEMP/m2" audit -root "$tree-bad" -rule T05 > findings.txt || code=$?
+          test "$code" = 1
+          test "$(grep -c ': T05: ' findings.txt)" = 2
       - name: an unknown command exits with code 2
         run: |
           code=0
