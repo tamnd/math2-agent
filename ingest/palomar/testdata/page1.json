@@ -1,0 +1,145 @@
+{
+ "schema_version": 1,
+ "revision": 517,
+ "release": "2c870e81b9b104e5857f0201e8617e211b237637431ad260cdeea46f1d580e4a",
+ "totals": {
+  "results": 760,
+  "projects": 599
+ },
+ "entries": [
+  {
+   "abbreviated": true,
+   "abstract": "Every homeomorphism between arbitrary subsets of completely …",
+   "authors": [
+    {
+     "name": "Arthur Freitas Ramos"
+    },
+    {
+     "name": "David Barros Hulak"
+    },
+    {
+     "name": "Ruy Jose Guerra Barretto de Queiroz"
+    }
+   ],
+   "classification": {
+    "arxiv": [
+     "math.GN"
+    ],
+    "msc2020": [
+     "54C20",
+     "54E50",
+     "54H05"
+    ]
+   },
+   "formalization": {
+    "theorem_names": [
+     "Lavrentieff.extensionDomain_isGδ",
+     "Lavrentieff.subset_extensionDomain"
+    ]
+   },
+   "id": "PALOMAR-2026-10-23-000018",
+   "path": "entries/PALOMAR-2026-10-23-000018-v1.json",
+   "preservation": {
+    "repositories": [
+     {
+      "commit": "a8c08adf51ec122bff60955a260a3b2f772ea0ac",
+      "fork_repository": "PalomarArchive/Arthur742Ramos--Math-Formalization--4c88ddbef95a",
+      "source_repository": "Arthur742Ramos/Math-Formalization"
+     }
+    ]
+   },
+   "preview": {
+    "artifact_tree_sha256": "876697327ad86b5b60b649eb34a1c4d7b39ed6ba21f37030121992857d849801",
+    "version": 1
+   },
+   "published_at": "2026-10-23T20:31:04Z",
+   "source": {
+    "commit": "a8c08adf51ec122bff60955a260a3b2f772ea0ac",
+    "project_path": "topology/lavrentieff-extension",
+    "repository": "Arthur742Ramos/Math-Formalization"
+   },
+   "source_omitted": false,
+   "status": "registered",
+   "title": "Lavrentieff's Gδ homeomorphism extension theorem",
+   "trust": {
+    "level": "high"
+   },
+   "version": 1,
+   "versions": 1
+  },
+  {
+   "abbreviated": false,
+   "abstract": "Lean formalization of spanning-tree maximization over finite connected induced subgraphs of the square lattice. The development establishes edge isoperimetry of every maximizer, the maximum count and all maximizing lattice-isometry classes at every positive cardinality, and uniqueness of the canonical corner-strip domain for N >= 18. Nonuniqueness occurs exactly at N = 3, 8, 10, 13; the canonical count has exceptions at N = 7, 14, 17. It also establishes the sharp square-cardinality stability inequality, an exact scalar product formula and rational recurrence for corner-strip counts, the global extremal asymptotic expansion with O(N^(-1/2)) remainder, and the appendix's exact strip-energy Fourier identity, rectangular remainders, Green estimates, and explicit bounds.",
+   "authors": [
+    {
+     "name": "Jiechen Zhang"
+    }
+   ],
+   "classification": {
+    "arxiv": [
+     "math.CO",
+     "cs.DM"
+    ],
+    "msc2020": [
+     "05C05",
+     "05C35",
+     "05C50",
+     "05A16"
+    ]
+   },
+   "formalization": {
+    "theorem_names": [
+     "SpanningTreeChallenge.maximizer_isoperimetric",
+     "SpanningTreeChallenge.maximum_value",
+     "SpanningTreeChallenge.maximizer_iff",
+     "SpanningTreeChallenge.nonuniqueness_iff",
+     "SpanningTreeChallenge.unique_large",
+     "SpanningTreeChallenge.sharp_stability",
+     "SpanningTreeChallenge.coefficient_optimal",
+     "SpanningTreeChallenge.scalar_resolvent",
+     "SpanningTreeChallenge.scalar_series",
+     "SpanningTreeChallenge.hankel_minor",
+     "SpanningTreeChallenge.scalar_chain",
+     "SpanningTreeChallenge.cornerStrip_product",
+     "SpanningTreeChallenge.cornerStrip_recurrence",
+     "SpanningTreeChallenge.extremal_count_asymptotic",
+     "SpanningTreeChallenge.strip_fourier_identity",
+     "SpanningTreeChallenge.strip_energy_bound"
+    ]
+   },
+   "id": "PALOMAR-2026-10-23-000017",
+   "path": "entries/PALOMAR-2026-10-23-000017-v1.json",
+   "preservation": {
+    "repositories": [
+     {
+      "commit": "ab2ab3932cfad3eeac9a9f75d29c8982cffad54d",
+      "fork_repository": "PalomarArchive/novou--spanning-tree-isoperimetry-lean--e49031630410",
+      "source_repository": "novou/spanning-tree-isoperimetry-lean"
+     }
+    ]
+   },
+   "preview": {
+    "artifact_tree_sha256": "d8bdf387dbee577c6223f639888312110a0d8b2ebf73c104dd14f37a70c93ac5",
+    "version": 1
+   },
+   "published_at": "2026-10-23T20:22:20Z",
+   "source": {
+    "commit": "ab2ab3932cfad3eeac9a9f75d29c8982cffad54d",
+    "project_path": null,
+    "repository": "novou/spanning-tree-isoperimetry-lean"
+   },
+   "source_omitted": false,
+   "status": "registered",
+   "title": "Spanning-Tree Maximization Forces Isoperimetry in the Square Lattice",
+   "trust": {
+    "level": "high"
+   },
+   "version": 1,
+   "versions": 1
+  }
+ ],
+ "previous": null,
+ "next": "YzI=",
+ "dropped": 0,
+ "message": null
+}

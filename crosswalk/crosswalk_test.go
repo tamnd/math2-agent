@@ -25,7 +25,7 @@ func TestCheck(t *testing.T) {
 		"pibase":          {"S000001", "P000016"},
 		"findstat":        {"St000001", "Mp00001"},
 		"house_of_graphs": {"660"},
-		"palomar":         {"any entry/1"},
+		"palomar":         {"PALOMAR-2026-10-23-000018"},
 	}
 	for sys, ids := range good {
 		for _, id := range ids {
@@ -43,7 +43,7 @@ func TestCheck(t *testing.T) {
 		"arxiv":    {"1311.460", "arXiv:1311.4600", "1311.4600v0"},
 		"nlab":     {"group#section", "[[group]]"},
 		"erdos":    {"0", "#1"},
-		"palomar":  {"a\nb"},
+		"palomar":  {"a\nb", "PALOMAR-2026-10-23-18", "palomar-2026-10-23-000018", "PALOMAR-2026-10-23-000018-v1"},
 		"mathse":   {"q/4"},
 	}
 	for sys, ids := range bad {

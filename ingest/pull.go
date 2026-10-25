@@ -159,7 +159,7 @@ func getter(opt Options) Getter {
 		}
 		if resp.StatusCode != http.StatusOK {
 			_ = resp.Body.Close()
-			return nil, fmt.Errorf("GET %s: %s", url, resp.Status)
+			return nil, &StatusError{URL: url, Code: resp.StatusCode, Status: resp.Status}
 		}
 		return resp.Body, nil
 	}
