@@ -105,7 +105,7 @@ jobs:
           test "$("$RUNNER_TEMP/m2" version)" = "m2 ci"
       - name: a command that is not written yet exits with code 3
         run: |
-          for cmd in build status graph search serve review agent; do
+          for cmd in status graph search serve review agent; do
             code=0
             "$RUNNER_TEMP/m2" "$cmd" 2> err.txt || code=$?
             if [ "$code" != 3 ]; then
@@ -114,6 +114,12 @@ jobs:
             fi
             grep -q "It arrives in M" err.txt
           done
+      - name: two builds of the valid fixtures give the same output hash
+        run: |
+          a=$("$RUNNER_TEMP/m2" build -root testdata/nodes/valid -out "$RUNNER_TEMP/b1" | tail -n 1)
+          b=$("$RUNNER_TEMP/m2" build -root testdata/nodes/valid -out "$RUNNER_TEMP/b2" | tail -n 1)
+          echo "$a"
+          test "$a" = "$b"
       - name: m2 check passes the valid fixtures and fails the broken fixtures
         run: |
           "$RUNNER_TEMP/m2" check -root testdata/nodes/valid
@@ -209,7 +215,7 @@ jobs:
           test: false
           lint: false
       - name: test the fixtures, the seed and the Mathlib sample
-        run: M2_MATH2_LEAN="$GITHUB_WORKSPACE/math2/lean" go test -count=1 -v ./lean
+        run: M2_MATH2_LEAN="$GITHUB_WORKSPACE/math2/lean" go test -count=1 -v ./lean ./build
 
   workflows:
     name: workflow lint

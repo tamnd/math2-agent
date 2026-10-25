@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G03 and G05 to G10. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms and the formal dependencies of each bound declaration. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G03 and G05 to G10. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms and the formal dependencies of each bound declaration. `m2 build` runs `lake build`, runs M2Extract on each binding and writes the graph, with a cache for each step. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -48,7 +48,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
 | `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
-| `m2 build` | Build everything: Lean, extraction, status, graph and search. | M1 |
+| `m2 build` | Build the derived data: Lean, extraction and graph. Status and search come later. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | M1 |
 | `m2 graph` | Run a graph query: closure, reverse dependencies, path or frontier. | M2 |
@@ -78,6 +78,20 @@ Each node gets a page with an infobox, its links and its backlinks. KaTeX render
 
 To preview the site with the local server above, set `-url http://localhost:8000`.
 
+## The build
+
+`m2 build` makes the derived data of a math2 working tree in `build/`. Run it in the root of the tree. It needs elan for the Lean steps.
+
+```sh
+m2 build                # all the steps
+m2 build -only lean     # only lake build
+m2 build -json          # write the manifest as JSON
+```
+
+The steps are `lean`, `extract` and `graph`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `graph` step writes the graph as Parquet to `build/graph/`. A tree without `lean/` has only the `graph` step.
+
+`build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json` and `graph/`. Two builds of the same commit give the same output hash (rule R01).
+
 ## Rules that the toolchain keeps
 
 1. The files in tamnd/math2 are the truth. Each database, index and site comes from these files, and you can make it again from them.
@@ -103,6 +117,7 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 ```
 cmd/m2/   the m2 binary
 audit/    the audit rules of spec 15, with a fixture pair for each rule
+build/    the steps of m2 build, their cache and the build manifest
 check/    the fast rules of m2 check: schema, body and links
 cli/      the command table
 format/   the canonical form of m2 fmt and the change from aliases to tags
