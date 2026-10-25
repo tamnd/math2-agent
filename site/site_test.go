@@ -38,7 +38,7 @@ func newContent(t *testing.T) string {
 	return root
 }
 
-func build(t *testing.T, content, spec string) string {
+func buildSite(t *testing.T, content, spec string) string {
 	t.Helper()
 	out := filepath.Join(t.TempDir(), "site")
 	opt := Options{Content: content, Spec: spec, Out: out, URL: "https://example.org/math2", Repo: "o/math2", AgentRepo: "o/math2-agent", Version: "test", Current: "M0",
@@ -80,7 +80,7 @@ A group. $\nosuch{x}$
 ` + "```markdown\n[[not a link|7K3QX2]]\n```\n"
 
 func TestEmptyTree(t *testing.T) {
-	out := build(t, t.TempDir(), "")
+	out := buildSite(t, t.TempDir(), "")
 	for _, f := range []string{"index.html", "404.html", ".nojekyll", "nodes/index.html", "msc/index.html", "msc/20/index.html", "search/index.html", "agents/index.html", "llms.txt", "llms-full.txt", "sitemap.xml", "robots.txt", "api/nodes.json", "api/search.json", "assets/site.css", "assets/site.js"} {
 		if _, err := os.Stat(filepath.Join(out, f)); err != nil {
 			t.Errorf("the site has no %s", f)
@@ -102,7 +102,7 @@ func TestDocs(t *testing.T) {
 	content := newContent(t)
 	writeFile(t, content, "CONTRIBUTING.md", "# Contributing\n\nRead [the guide](CURATION.md) and [the readme](README.md).\n")
 	writeFile(t, content, "CURATION.md", "# Curation of alignment proposals\n\nRead [CONTRIBUTING.md](./CONTRIBUTING.md) first.\n")
-	out := build(t, content, "")
+	out := buildSite(t, content, "")
 	contribute := readFile(t, out, "contribute/index.html")
 	if !strings.Contains(contribute, `href="/math2/curate/"`) || !strings.Contains(contribute, `href="https://github.com/o/math2/blob/main/README.md"`) {
 		t.Errorf("the Contribute page does not link to the Curation page and the readme:\n%s", contribute)
@@ -122,7 +122,7 @@ func TestNodes(t *testing.T) {
 	content := newContent(t)
 	writeFile(t, content, "nodes/7K/7K3QX2.md", statement)
 	writeFile(t, content, "nodes/1H/1H8D2C.md", concept)
-	out := build(t, content, "")
+	out := buildSite(t, content, "")
 
 	page := readFile(t, out, "node/7K3QX2/index.html")
 	for _, want := range []string{
@@ -185,7 +185,7 @@ func TestSpec(t *testing.T) {
 	spec := t.TempDir()
 	writeFile(t, spec, "00-README.md", "# Overview\n\nRead [the goal](02-the-goal.md#scope) and [a file](../README.md).\n")
 	writeFile(t, spec, "02-the-goal.md", "# 02. The goal\n\n## Scope\n\nAll of it.\n")
-	out := build(t, newContent(t), spec)
+	out := buildSite(t, newContent(t), spec)
 	page := readFile(t, out, "spec/00-README/index.html")
 	if !strings.Contains(page, `href="/math2/spec/02-the-goal/#scope"`) {
 		t.Error("the link to another spec document is not rewritten")

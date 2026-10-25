@@ -90,6 +90,10 @@ python3 -m http.server -d _site 8000
 
 Each node gets a page with an infobox, its links and its backlinks. The build renders the math to HTML and MathML with KaTeX and the macros of math2, so a reader can read each node with JavaScript off. The site serves the KaTeX style sheet and fonts itself, so it loads nothing from a CDN. Each page also has a copy for programs: `node/<TAG>.md`, `api/node/<TAG>.json`, `api/nodes.json`, `llms.txt` and `llms-full.txt`. The pages Contribute and Curation come from CONTRIBUTING.md and CURATION.md in the math2 tree. A build with no `-date` flag gives the same bytes each time.
 
+Each page also shows what its node needs and what depends on it. The closure of a node is a layered figure, with the foundations at the top, and an ordered reading list with the same nodes. A topic page shows a blueprint: the members of the topic and each node that they need. The Frontier page lists the statements with no proof and the open conjectures and problems. These views come from the graph, so they need no build.
+
+Give `-build DIR` to show the evidence level, the fidelity and the flags of each node from the store of a build in DIR. The bar on each box of a figure shows the evidence level in colour, and the box also gives the level as text. With no `-build` flag, a statement page says that the site has no build data.
+
 To preview the site with the local server above, set `-url http://localhost:8000`.
 
 ## The build

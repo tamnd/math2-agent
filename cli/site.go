@@ -13,7 +13,7 @@ import (
 
 func runSite(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 || args[0] != "build" {
-		fmt.Fprintln(stderr, "Usage: m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-commit C] [-date now]")
+		fmt.Fprintln(stderr, "Usage: m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-build DIR] [-commit C] [-date now]")
 		return ExitUsage
 	}
 	fs := flag.NewFlagSet("m2 site build", flag.ContinueOnError)
@@ -25,6 +25,7 @@ func runSite(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.URL, "url", "https://tamnd.github.io/math2", "the public URL of the site")
 	fs.StringVar(&opt.Repo, "repo", "tamnd/math2", "the content repository on GitHub")
 	fs.StringVar(&opt.AgentRepo, "agent-repo", "tamnd/math2-agent", "the toolchain repository on GitHub")
+	fs.StringVar(&opt.Build, "build", "", "the output directory of m2 build for the tree. The pages then show the status that the build computed. Leave it empty for no status.")
 	fs.StringVar(&opt.Commit, "commit", "", "the content commit")
 	date := fs.String("date", "", "the build date: now, or empty for no date. SOURCE_DATE_EPOCH also sets it.")
 	if err := fs.Parse(args[1:]); err != nil {
