@@ -38,7 +38,7 @@
     });
   });
 
-  // Search. The index is api/search.json. A match on the tag or the name ranks first.
+  // Search. The index is api/search.json. A page on disk cannot read it, so the offline archive sets window.m2Search instead. A match on the tag or the name ranks first.
   var box = document.getElementById("q");
   if (!box) return;
   var list = document.getElementById("results");
@@ -70,7 +70,8 @@
     var q = box.value.trim();
     var url = new URL(location.href);
     if (q) url.searchParams.set("q", q); else url.searchParams.delete("q");
-    history.replaceState(null, "", url);
+    // A browser can refuse this for a page on disk.
+    try { history.replaceState(null, "", url); } catch (e) { /* keep the old URL */ }
     list.textContent = "";
     if (!q) { status.textContent = "Type to search the nodes and the spec documents."; return; }
     if (!index) { status.textContent = "Loading the index."; return; }
@@ -83,7 +84,7 @@
     hits.forEach(function (h) {
       var li = document.createElement("li");
       var a = document.createElement("a");
-      a.href = h.e.u;
+      a.href = /^(\/|[a-z]+:)/.test(h.e.u) ? h.e.u : base + h.e.u;
       a.textContent = h.e.n;
       var meta = document.createElement("span");
       meta.className = "meta";
@@ -96,7 +97,8 @@
 
   box.value = new URL(location.href).searchParams.get("q") || "";
   box.addEventListener("input", show);
-  fetch(base + "api/search.json").then(function (r) { return r.json(); }).then(function (data) {
+  var load = window.m2Search ? Promise.resolve(window.m2Search) : fetch(base + "api/search.json").then(function (r) { return r.json(); });
+  load.then(function (data) {
     index = data;
     show();
   }).catch(function () { status.textContent = "The search index did not load."; });

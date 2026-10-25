@@ -1,6 +1,6 @@
 // Package site builds the math2 wiki: a static site for GitHub Pages.
 //
-// The site has one page for each node, each MSC class, each spec document and each kind. People read the HTML pages. Agents read the same content as JSON in api/, as Markdown next to each page and through llms.txt. The site works with no server. Search runs in the browser from api/search.json. The build renders the math of each node to HTML and MathML with the katex package and the macros of the content repository, so a reader can read each node with JavaScript off.
+// The site has one page for each node, each MSC class, each spec document and each kind. People read the HTML pages. Agents read the same content as JSON in api/, as Markdown next to each page and through llms.txt. The site works with no server. Search runs in the browser from api/search.json. Archive writes the site as a zip file that works from disk, with no network. The build renders the math of each node to HTML and MathML with the katex package and the macros of the content repository, so a reader can read each node with JavaScript off.
 package site
 
 import (

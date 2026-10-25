@@ -63,6 +63,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
 | `m2 site check` | Test the wiki against the size, MathML, no-JavaScript, figure and offline targets. | written |
 | `m2 site serve` | Preview the wiki with gzip, as GitHub Pages serves it. | written |
+| `m2 site archive` | Write the wiki as a zip file that works offline. | written |
 | `m2 build` | Build the derived data: Lean, extraction, replay, status, graph, store and the search index. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
@@ -98,6 +99,16 @@ Each page also shows what its node needs and what depends on it. The closure of 
 Give `-build DIR` to show the evidence level, the fidelity and the flags of each node from the store of a build in DIR. The bar on each box of a figure shows the evidence level in colour, and the box also gives the level as text. With no `-build` flag, a statement page says that the site has no build data.
 
 `m2 site serve` serves the site at http://localhost:8000/math2 by default. Give the same `-url` to the build and to the server.
+
+## The offline archive
+
+`m2 site archive` writes a built site to a zip file that a reader can open from disk, with no network and no server. Each release of math2 attaches this archive, and Pages publishes the same build.
+
+```sh
+go run ./cmd/m2 site archive -url https://tamnd.github.io/math2 -o math2-2026.11-site.zip _site
+```
+
+Give the URL that the site was built with. In each page, each link into the site becomes a relative link, and a link to a directory names its index.html. A browser does not let a page on disk read `api/search.json`, so the archive also has the index as `assets/search.js`, and search works offline. Two archives of the same site are the same bytes.
 
 ## The site targets
 
