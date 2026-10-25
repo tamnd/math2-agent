@@ -28,8 +28,15 @@ func Toolchain(dir string) (string, error) {
 	return strings.TrimSpace(string(b)), nil
 }
 
-// Install builds M2Extract with the toolchain of the Lake project in project, and returns the path of the program. It builds in a new directory in cache, with the source of M2Extract and the lean-toolchain file of the project. When that directory has a program, Install does not build again. Thus a change to the source or to the toolchain gives a new build. Install needs lake on the PATH.
+// Install builds M2Extract with the toolchain of the Lake project in project, and returns the path of the program. It builds in a new directory in cache, with the source of M2Extract and the lean-toolchain file of the project. When that directory has a program, Install does not build again. Thus a change to the source or to the toolchain gives a new build. An empty cache means m2 in the user cache directory. Install needs lake on the PATH.
 func Install(ctx context.Context, project, cache string) (string, error) {
+	if cache == "" {
+		dir, err := os.UserCacheDir()
+		if err != nil {
+			return "", err
+		}
+		cache = filepath.Join(dir, "m2")
+	}
 	toolchain, err := Toolchain(project)
 	if err != nil {
 		return "", err
