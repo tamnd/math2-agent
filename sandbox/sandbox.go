@@ -30,7 +30,8 @@ const (
 
 // The paths in the sandbox.
 const (
-	WorkDir    = "/work"    // the read-only copy of Spec.Dir
+	WorkDir    = "/work"    // the read-only mount of Spec.Dir
+	OutDir     = "/out"     // the writable mount of Spec.Out
 	ScratchDir = "/scratch" // the writable scratch area, and the working directory of the program
 )
 
@@ -39,6 +40,7 @@ type Spec struct {
 	Image   string            // the image by digest: name@sha256:HEX, a registry path with @sha256:HEX, or an image id sha256:HEX
 	Command []string          // the program and its arguments, as paths in the image
 	Dir     string            // a directory of the host that the program reads at /work, or ""
+	Out     string            // a directory of the host that the program writes at /out, or "". The user 65534 must be able to write to it.
 	Env     map[string]string // the environment. HOME is /scratch.
 	CPU     int               // the number of CPUs. 0 means 1.
 	Memory  int64             // the memory in bytes. 0 means DefaultMemory.
@@ -67,6 +69,11 @@ var (
 
 // ValidImage reports whether image names an image by its digest. A tag such as python:3 can change, so it is not valid.
 func ValidImage(image string) bool { return digestRe.MatchString(image) }
+
+// Sandbox runs a Spec. Docker is the Sandbox of the toolchain. A test can use another.
+type Sandbox interface {
+	Run(ctx context.Context, s Spec) (*Result, error)
+}
 
 // Docker runs a Spec with the docker CLI.
 type Docker struct {
@@ -101,8 +108,10 @@ func (d *Docker) Args(s Spec, name string) ([]string, error) {
 	if len(s.Command) == 0 {
 		return nil, errors.New("sandbox: the spec has no command")
 	}
-	if s.Dir != "" && (strings.ContainsAny(s.Dir, ",:") || !strings.HasPrefix(s.Dir, "/")) {
-		return nil, fmt.Errorf("sandbox: the directory %q is not an absolute path without a comma or a colon", s.Dir)
+	for _, dir := range []string{s.Dir, s.Out} {
+		if dir != "" && (strings.ContainsAny(dir, ",:") || !strings.HasPrefix(dir, "/")) {
+			return nil, fmt.Errorf("sandbox: the directory %q is not an absolute path without a comma or a colon", dir)
+		}
 	}
 	cpu := max(s.CPU, 1)
 	mem := cmpOr(s.Memory, DefaultMemory)
@@ -128,6 +137,9 @@ func (d *Docker) Args(s Spec, name string) ([]string, error) {
 	}
 	if s.Dir != "" {
 		args = append(args, "--mount", "type=bind,source="+s.Dir+",target="+WorkDir+",readonly")
+	}
+	if s.Out != "" {
+		args = append(args, "--mount", "type=bind,source="+s.Out+",target="+OutDir)
 	}
 	keys := make([]string, 0, len(s.Env))
 	for k := range s.Env {
