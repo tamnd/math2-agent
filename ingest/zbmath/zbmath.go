@@ -52,8 +52,9 @@ func (Adapter) Version() string { return "zbmath/1" }
 // Dump returns the URL of the full harvest.
 func (Adapter) Dump() string { return Endpoint + "?verb=ListRecords&metadataPrefix=oai_zb_preview" }
 
-// Fetch harvests the OAI-PMH list at u, one page at a time, and follows the resumption tokens to the last page. The snapshot is the pages one after the other, compressed with gzip.
-func (Adapter) Fetch(ctx context.Context, u string, get ingest.Getter, w io.Writer) error {
+// Fetch harvests the OAI-PMH list at req.URL, one page at a time, and follows the resumption tokens to the last page. The snapshot is the pages one after the other, compressed with gzip.
+func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) error {
+	u, get := req.URL, req.Get
 	base, _, _ := strings.Cut(u, "?")
 	zw := gzip.NewWriter(w)
 	for next := u; next != ""; {

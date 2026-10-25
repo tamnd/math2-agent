@@ -47,8 +47,9 @@ func (Adapter) Version() string { return "arxiv/1" }
 // Dump returns the URL of the metadata plane on the main branch.
 func (Adapter) Dump() string { return Contents + "?ref=main" }
 
-// Fetch gets the metadata plane. When u names one .jsonl file, Fetch gets that file. In other cases u is a GitHub contents API listing, and Fetch gets each .jsonl file of the listing in the order of the names. The snapshot is the files one after the other, compressed with gzip.
-func (Adapter) Fetch(ctx context.Context, u string, get ingest.Getter, w io.Writer) error {
+// Fetch gets the metadata plane. When req.URL names one .jsonl file, Fetch gets that file. In other cases req.URL is a GitHub contents API listing, and Fetch gets each .jsonl file of the listing in the order of the names. The snapshot is the files one after the other, compressed with gzip.
+func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) error {
+	u, get := req.URL, req.Get
 	files := []string{u}
 	if path, _, _ := strings.Cut(u, "?"); !strings.HasSuffix(path, ".jsonl") {
 		var err error

@@ -1,6 +1,7 @@
 import Lean
 import M2Extract.Record
 import M2Extract.Checks
+import M2Extract.Library
 
 /-!
 # m2extract
@@ -12,6 +13,7 @@ import M2Extract.Checks
 * `{"cmd":"extract","decls":[...],"bound":[...]}` gives one record for each declaration in `decls`. `bound` is the list of all bound declarations.
 * `{"cmd":"axioms","decls":[...]}` gives the axioms of each declaration, as `#print axioms` gives them.
 * `{"cmd":"checks","decls":[...],"heartbeats":N}` runs the degenerate-statement checks on each theorem in `decls`. Each tactic has a limit of `N` thousand heartbeats.
+* `{"cmd":"library","root":"Mathlib","offset":0,"limit":1000}` gives the library records of the declarations of the modules under `root`, from the position `offset` in the order of the names, and the number of declarations in `total`.
 * `{"cmd":"bindings"}` gives each declaration that has the attribute `@[m2 "TAG"]` of tamnd/math2, and its tag.
 
 An answer with the field `error` tells that the request failed.
@@ -28,7 +30,10 @@ def strs (j : Json) (k : String) : Except String (Array Name) := do
   let a ← j.getObjValAs? (Array String) k
   return a.map String.toName
 
-def handle (env? : IO.Ref (Option Environment)) (req : Json) : IO Json := do
+/-- The declarations of the last `library` request, for its root. The next page does not sort them again. -/
+abbrev LibraryCache := IO.Ref (Option (Name × Array Name))
+
+def handle (env? : IO.Ref (Option Environment)) (lib : LibraryCache) (req : Json) : IO Json := do
   let cmd := (req.getObjValAs? String "cmd").toOption.getD ""
   let needEnv : IO Environment := do
     let some env ← env?.get | throw <| IO.userError "no modules are loaded"
@@ -40,6 +45,7 @@ def handle (env? : IO.Ref (Option Environment)) (req : Json) : IO Json := do
     let ms ← IO.ofExcept (strs req "modules")
     let env ← importModules (ms.map fun m => { module := m }) {} (loadExts := true)
     env?.set env
+    lib.set none
     return Json.mkObj [("modules", env.header.moduleNames.size), ("constants", toJson (env.constants.fold (fun (n : Nat) _ _ => n + 1) 0))]
   | "extract" =>
     let env ← needEnv
@@ -47,6 +53,17 @@ def handle (env? : IO.Ref (Option Environment)) (req : Json) : IO Json := do
     let bound := (← IO.ofExcept (strs req "bound")).foldl NameSet.insert {}
     runMeta env do
       return Json.mkObj [("records", Json.arr (← ds.mapM (record bound)))]
+  | "library" =>
+    let env ← needEnv
+    let root := ((req.getObjValAs? String "root").toOption.getD "Mathlib").toName
+    let offset := (req.getObjValAs? Nat "offset").toOption.getD 0
+    let limit := (req.getObjValAs? Nat "limit").toOption.getD 1000
+    let ds ← match ← lib.get with
+      | some (r, ds) => if r == root then pure ds else pure (libraryDecls env root)
+      | none => pure (libraryDecls env root)
+    lib.set (some (root, ds))
+    let page := ds.extract offset (offset + limit)
+    return Json.mkObj [("total", ds.size), ("records", Json.arr (← page.mapM (libraryRecord env)))]
   | "bindings" =>
     let env ← needEnv
     let bs ← unsafe bindings env
@@ -76,13 +93,14 @@ unsafe def main : IO UInt32 := do
   let stdin ← IO.getStdin
   let stdout ← IO.getStdout
   let env? ← IO.mkRef none
+  let lib ← IO.mkRef none
   repeat
     let line ← stdin.getLine
     if line.isEmpty then break
     if line.all Char.isWhitespace then continue
     let resp ← try
         let req ← IO.ofExcept (Json.parse line)
-        handle env? req
+        handle env? lib req
       catch e => pure (Json.mkObj [("error", toString e)])
     stdout.putStrLn resp.compress
     stdout.flush
