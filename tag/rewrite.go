@@ -23,8 +23,8 @@ type Minted struct {
 // textExts are the file types that can refer to a node.
 var textExts = map[string]bool{".md": true, ".yaml": true, ".yml": true, ".lean": true}
 
-// contentDirs are the directories of the working tree that can refer to a node (spec 20). Text in other files, for example a provisional id in README.md, is not a reference.
-var contentDirs = []string{"nodes", "topics", "reviews", "compute", "lean"}
+// ContentDirs returns the directories of the working tree that can refer to a node (spec 20). Text in other files, for example a provisional id in README.md, is not a reference.
+func ContentDirs() []string { return []string{"nodes", "topics", "reviews", "compute", "lean"} }
 
 // skipDirs are the directories in a content directory that Rewrite does not read.
 var skipDirs = map[string]bool{".git": true, ".lake": true, "node_modules": true}
@@ -102,7 +102,7 @@ func Rewrite(root string, r io.Reader, commit string) ([]Minted, error) {
 		}
 		return nil
 	}
-	for _, dir := range contentDirs {
+	for _, dir := range ContentDirs() {
 		err := filepath.WalkDir(filepath.Join(root, dir), walk)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return nil, err

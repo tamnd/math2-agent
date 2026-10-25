@@ -1,0 +1,3 @@
+registers/aliases.reg:2:1: T06: the alias g5slm9 looks like the tag G5S1M9
+registers/aliases.reg:3:1: T06: the alias a000001 looks like an OEIS A-number
+registers/aliases.reg:4:1: T06: the alias 20d60 looks like an MSC code

@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06 and S01 to S04. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -49,7 +49,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
 | `m2 build` | Build everything: Lean, extraction, status, graph and search. | M1 |
-| `m2 audit` | Run the audit rules. | M1 |
+| `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | M1 |
 | `m2 graph` | Run a graph query: closure, reverse dependencies, path or frontier. | M2 |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source. | M2 |
@@ -102,6 +102,7 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 
 ```
 cmd/m2/   the m2 binary
+audit/    the audit rules of spec 15, with a fixture pair for each rule
 check/    the fast rules of m2 check: schema, body and links
 cli/      the command table
 format/   the canonical form of m2 fmt and the change from aliases to tags
@@ -115,7 +116,7 @@ spec/     the specification
 
 Each directory except `cmd/` and `spec/` is a Go package that other programs can import. For example, a bot can use `github.com/tamnd/math2-agent/node` to read and format node files. The packages follow the conventions of the Go standard library, and `go doc` shows an example for each main function.
 
-The full layout arrives with the milestones. The plan has these parts: `graph`, `lean`, `compute`, `ingest`, `align`, `search`, `audit`, `api`, `mcp`, `orchestrator`, `agent`, `lean/M2Extract`, `prompts/`, `images/`, `web/` and `bench/`.
+The full layout arrives with the milestones. The plan has these parts: `graph`, `lean`, `compute`, `ingest`, `align`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `lean/M2Extract`, `prompts/`, `images/`, `web/` and `bench/`.
 
 ## Contribute
 
