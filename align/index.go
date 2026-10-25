@@ -287,7 +287,7 @@ func (x *Index) idf(w string) float64 {
 	return math.Log(1 + float64(len(x.recs))/float64(max(1, len(x.post[w]))))
 }
 
-// nameScore returns 1 when the item and the record have a name in common, and else the highest share of the weight of the words that two names have in common.
+// nameScore returns 1 when the item and the record have a name in common, and else the highest share of the weight of the words that two names have in common. A word counts as many times as it is in a name, thus double factorial is not all of factorial of double factorial. Two names with different numbers in them have nothing in common, as strength 2 and strength 3.
 func (x *Index) nameScore(a, b []string) float64 {
 	best := 0.0
 	for _, p := range a {
@@ -296,17 +296,23 @@ func (x *Index) nameScore(a, b []string) float64 {
 				return 1
 			}
 			wp, wq := strings.Fields(p), strings.Fields(q)
+			if np, nq := numbers(wp), numbers(wq); len(np) > 0 && len(nq) > 0 && !slices.Equal(np, nq) {
+				continue
+			}
+			left := map[string]int{}
+			for _, w := range wq {
+				left[w]++
+			}
 			var both, all float64
 			for _, w := range wp {
 				all += x.idf(w)
-				if slices.Contains(wq, w) {
+				if left[w] > 0 {
+					left[w]--
 					both += x.idf(w)
 				}
 			}
-			for _, w := range wq {
-				if !slices.Contains(wp, w) {
-					all += x.idf(w)
-				}
+			for w, n := range left {
+				all += float64(n) * x.idf(w)
 			}
 			if all > 0 {
 				best = max(best, both/all)
@@ -314,6 +320,18 @@ func (x *Index) nameScore(a, b []string) float64 {
 		}
 	}
 	return best
+}
+
+// numbers returns the words that are numbers, sorted.
+func numbers(ws []string) []string {
+	var out []string
+	for _, w := range ws {
+		if strings.Trim(w, "0123456789") == "" {
+			out = append(out, w)
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 // jaccard returns the share of the elements of a and b that are in both.

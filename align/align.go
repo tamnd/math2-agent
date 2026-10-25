@@ -48,6 +48,15 @@ func (o Options) defaults() Options {
 	return o
 }
 
+// Pick returns the candidate that gets a same_as proposal, and reports whether one does. The candidates are in the order of Match. The first candidate gets the proposal when its score is at the threshold or above, and the second candidate is lower by the margin or more, to three places. Propose and the evaluation in bench/align use Pick, thus the two agree.
+func (o Options) Pick(cands []Candidate) (Candidate, bool) {
+	o = o.defaults()
+	if len(cands) == 0 || cands[0].Score < o.Threshold || len(cands) > 1 && round(cands[0].Score-cands[1].Score) < o.Margin {
+		return Candidate{}, false
+	}
+	return cands[0], true
+}
+
 // A Result is the output of one run of Propose on one source.
 type Result struct {
 	Source     string
@@ -160,8 +169,9 @@ func Propose(root, source string, opt Options) (*Result, error) {
 			}
 			continue
 		}
-		for i, c := range cands {
-			best := i == 0 && !set && c.Score >= opt.Threshold && (len(cands) == 1 || c.Score-cands[1].Score >= opt.Margin)
+		pick, ok := opt.Pick(cands)
+		for _, c := range cands {
+			best := ok && !set && c.Record.ID == pick.Record.ID
 			if other, ok := claimed[c.Record.ID]; ok && other != n.ID && c.Score >= opt.Threshold {
 				duplicate(n.ID, other, c.Score)
 				best = false

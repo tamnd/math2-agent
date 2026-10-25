@@ -1,0 +1,19 @@
+# split	source	id	target	target_id	label	origin
+test	wikidata	Q900001	oeis	A900001	same	test
+test	wikidata	Q900002	oeis	A900002	same	test
+dev	wikidata	Q900003	oeis	A900003	same	test
+test	wikidata	Q900004	oeis	A900004	same	test
+test	wikidata	Q900005	oeis	A900005	same	test
+test	wikidata	Q900006	oeis	A900006	same	test
+test	wikidata	Q900007	oeis	A900007	same	test
+test	wikidata	Q900008	oeis	A900008	same	test
+test	wikidata	Q900009	oeis	A900009	same	test
+test	wikidata	Q900010	oeis	A900010	same	test
+test	wikidata	Q900011	oeis	A900012	same	test
+test	wikidata	Q900012	oeis	A900011	same	test
+test	wikidata	Q900008	oeis	A900007	different	test
+test	wikidata	Q900013	oeis	A900014	same	test
+test	wikidata	Q900014	oeis	A900015	same	test
+test	wikidata	Q900015	oeis	A900016	same	test
+dev	wikidata	Q900016	oeis	A900017	same	test
+test	wikidata	Q900017	oeis	A900018	same	test
