@@ -48,7 +48,7 @@ type command struct {
 
 // commands is the command table. Keep it in the same order as the help output.
 var commands = []command{
-	{name: "new", usage: "m2 new <kind>", summary: "Make a node file with a provisional id.", milestone: "M0"},
+	{name: "new", usage: "m2 new [-root DIR] <kind>", summary: "Make a node file with a provisional id.", run: runNew},
 	{name: "fmt", usage: "m2 fmt [-root DIR] [-check] [path...]", summary: "Make front matter canonical and change aliases to tags.", run: runFmt},
 	{name: "check", usage: "m2 check [-root DIR] [-rule R,...] [-json] [-q] [path...]", summary: "Check schema, body and links on the working tree. This does not use Lean.", run: runCheck},
 	{name: "site", usage: "m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-commit C] [-date now]", summary: "Build the wiki: a static site for people and agents.", run: runSite},

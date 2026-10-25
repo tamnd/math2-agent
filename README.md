@@ -43,7 +43,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 
 | Command | What it does | Milestone |
 |---|---|---|
-| `m2 new <kind>` | Make a node file with a provisional id. | M0 |
+| `m2 new <kind>` | Make a node file with a provisional id. | written |
 | `m2 fmt` | Make front matter canonical and change aliases to tags. | written |
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |

@@ -2,6 +2,7 @@ package schema
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -192,5 +193,62 @@ func TestNodeFixtures(t *testing.T) {
 		if got := Embedded().Validate(n); len(got) != 0 {
 			t.Errorf("%s: %v", f, got)
 		}
+	}
+}
+
+func TestTemplate(t *testing.T) {
+	s := Embedded()
+	for _, k := range s.Kinds() {
+		data, err := s.Template(k, "~0123abcd")
+		if err != nil {
+			t.Fatalf("%s: %v", k, err)
+		}
+		path := "nodes/~/~0123abcd.md"
+		if ok, err := node.Canonical(path, data, s.Order); !ok || err != nil {
+			t.Errorf("%s: the template is not canonical (%v):\n%s", k, err, data)
+		}
+		n, err := node.Parse(path, data)
+		if err != nil {
+			t.Fatalf("%s: %v", k, err)
+		}
+		req, _ := s.Required(k)
+		var want []string
+		for _, f := range req {
+			if f != "tag" && f != "kind" {
+				want = append(want, fmt.Sprintf("S01: the field %q has no value", f))
+			}
+		}
+		var got []string
+		for _, f := range s.Validate(n) {
+			got = append(got, f.Rule+": "+f.Msg)
+		}
+		slices.Sort(got)
+		slices.Sort(want)
+		if !slices.Equal(got, want) {
+			t.Errorf("%s: the findings are %q, want %q", k, got, want)
+		}
+		if !strings.Contains(string(data), "\n## ") {
+			t.Errorf("%s: the template has no section:\n%s", k, data)
+		}
+	}
+	if _, err := s.Template("lemma", "~0123abcd"); err == nil || !strings.Contains(err.Error(), `"lemma" is not a kind`) {
+		t.Errorf("the error is %v", err)
+	}
+}
+
+func TestRequired(t *testing.T) {
+	s := Embedded()
+	cases := map[string][]string{
+		"concept":     {"tag", "kind", "name"},
+		"statement":   {"tag", "kind", "role", "name"},
+		"computation": {"tag", "kind", "name", "claim", "engine"},
+	}
+	for k, want := range cases {
+		if got, ok := s.Required(k); !ok || !slices.Equal(got, want) {
+			t.Errorf("%s: got %v, want %v", k, got, want)
+		}
+	}
+	if _, ok := s.Required("lemma"); ok {
+		t.Error("Required knows the kind lemma")
 	}
 }
