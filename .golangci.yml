@@ -19,6 +19,13 @@ linters:
         - fmt.Fprintf
         - fmt.Fprintln
 
+  exclusions:
+    rules:
+      # Tests write and read files in a temporary directory. The gosec file rules do not apply there.
+      - path: _test\.go
+        linters:
+          - gosec
+
 formatters:
   enable:
     - gofmt
