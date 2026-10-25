@@ -274,3 +274,32 @@ func TestParquet(t *testing.T) {
 		t.Errorf("record edges = %+v", rows)
 	}
 }
+
+func TestNew(t *testing.T) {
+	g := Build(loadSeed(t))
+	rev := slices.Clone(g.Nodes)
+	slices.Reverse(rev)
+	h := New(rev, append(slices.Clone(g.Edges), g.Edges...))
+	if h.Hash() != g.Hash() {
+		t.Errorf("New gives the hash %s, and Build gives %s", h.Hash(), g.Hash())
+	}
+	if _, ok := h.Node("3C53TD"); !ok {
+		t.Error("the graph of New has no node 3C53TD")
+	}
+}
+
+func TestQueriesUnknown(t *testing.T) {
+	g := Build(parse(t, "5S0000 statement\nuses: [5T0000]"))
+	if got := g.Needs("5T0000"); got != nil {
+		t.Errorf("Needs of a tag that is not a node gives %v", got)
+	}
+	if got := g.Dependents("5Z0000"); got != nil {
+		t.Errorf("Dependents of a tag that is not in the graph gives %v", got)
+	}
+	if _, ok := g.Path("5S0000", "5Z0000"); ok {
+		t.Error("Path finds a path to a tag that is not in the graph")
+	}
+	if p, ok := g.Path("5S0000", "5S0000"); !ok || len(p) != 1 {
+		t.Errorf("Path from a node to itself gives %v, %v", p, ok)
+	}
+}

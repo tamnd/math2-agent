@@ -1,6 +1,6 @@
 // Package build makes the derived data of a math2 working tree (spec 07.6).
 //
-// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The search and site steps come in later issues.
+// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The store step writes the serving store, store.db, from the nodes, status.json and the aliases (spec 05.7). The search and site steps come in later issues.
 //
 // Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, status and graph steps. Two builds of the same tree give the same output hash (rule R01).
 package build
@@ -24,11 +24,13 @@ import (
 
 	"github.com/zeebo/blake3"
 
+	"github.com/tamnd/math2-agent/format"
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/replay"
 	"github.com/tamnd/math2-agent/status"
+	"github.com/tamnd/math2-agent/store"
 )
 
 // The steps, in the order that Run runs them.
@@ -38,10 +40,11 @@ const (
 	Replay  = "replay"
 	Status  = "status"
 	Graph   = "graph"
+	Store   = "store"
 )
 
 // Steps returns the names of the steps in order.
-func Steps() []string { return []string{Lean, Extract, Replay, Status, Graph} }
+func Steps() []string { return []string{Lean, Extract, Replay, Status, Graph, Store} }
 
 // The files of the build, from the output directory.
 const (
@@ -50,6 +53,7 @@ const (
 	ReplayFile   = "replay.json"
 	StatusFile   = "status.json"
 	GraphDir     = "graph"
+	StoreFile    = "store.db"
 )
 
 // Checkers are the programs of the Lean toolchain that check an environment again (spec 07.7). The manifest records the hash of each one that the toolchain has.
@@ -161,6 +165,7 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 		{Replay, true, b.replay},
 		{Status, false, b.status},
 		{Graph, false, b.graph},
+		{Store, false, b.store},
 	}
 	for _, s := range steps {
 		if opt.Only != "" && s.name != opt.Only {
@@ -649,6 +654,33 @@ func (b *builder) graph(_ context.Context, nodes []*node.Node) (Step, error) {
 		return Step{}, err
 	}
 	out, err := HashTree(dir, all)
+	return Step{Input: input, Output: out}, err
+}
+
+// store writes the serving store from the nodes, status.json and the aliases. The input is the output of the status and graph steps and the hash of registers/aliases.reg. The aliases of the nodes are in the node hashes, thus in the output of the graph step.
+func (b *builder) store(_ context.Context, nodes []*node.Node) (Step, error) {
+	reg, err := os.ReadFile(filepath.Join(b.opt.Root, filepath.FromSlash(format.AliasRegister))) // #nosec G304 -- the caller names the root of the tree.
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return Step{}, err
+	}
+	input := hashString(strings.Join([]string{"status " + b.output(Status), "graph " + b.output(Graph), "aliases " + hashString(string(reg))}, "\n"))
+	if out, err := hashFiles(b.opt.Out, []string{StoreFile}); err == nil {
+		if s, ok := b.cached(Store, input, out); ok {
+			return s, nil
+		}
+	}
+	st, err := ReadStatus(b.opt.Out)
+	if err != nil {
+		return Step{}, err
+	}
+	aliases, err := format.ReadAliases(b.opt.Root, nodes)
+	if err != nil {
+		return Step{}, err
+	}
+	if err := store.Write(filepath.Join(b.opt.Out, StoreFile), store.Input{Nodes: nodes, Status: st, Aliases: aliases}); err != nil {
+		return Step{}, err
+	}
+	out, err := hashFiles(b.opt.Out, []string{StoreFile})
 	return Step{Input: input, Output: out}, err
 }
 

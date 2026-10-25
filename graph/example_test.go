@@ -74,3 +74,33 @@ func ExampleGraph_Hash() {
 	// Output:
 	// blake3: 71
 }
+
+func ExampleGraph_Needs() {
+	g := graph.Build(nodes(
+		"tag: 5S0000\nkind: statement\nproofs: [5P1000, 5P2000]",
+		"tag: 5P1000\nkind: proof\nproves: 5S0000\nuses: [5A0000, 5M0000]",
+		"tag: 5P2000\nkind: proof\nproves: 5S0000\nuses: [5M0000]",
+		"tag: 5M0000\nkind: statement\nuses: [5A0000]",
+		"tag: 5A0000\nkind: concept",
+	))
+	fmt.Println(g.Needs("5M0000"))
+	fmt.Println(g.Needs("5A0000"))
+	fmt.Println(g.Dependents("5A0000"))
+	// Output:
+	// [5P1000 5P2000 5S0000]
+	// [5M0000 5P1000 5P2000 5S0000]
+	// [5M0000 5P1000 5P2000 5S0000]
+}
+
+func ExampleGraph_Path() {
+	g := graph.Build(nodes(
+		"tag: 3C53TD\nkind: statement\nname: Lagrange's theorem\nuses: [5D0000]",
+		"tag: 5D0000\nkind: definition\nname: Subgroup\nuses: [5G0000]",
+		"tag: 5G0000\nkind: definition\nname: Group\ndefines: G5S1M9",
+		"tag: G5S1M9\nkind: concept\nname: Group",
+	))
+	path, ok := g.Path("G5S1M9", "3C53TD")
+	fmt.Println(path, ok)
+	// Output:
+	// [G5S1M9 5G0000 5D0000 3C53TD] true
+}
