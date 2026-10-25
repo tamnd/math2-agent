@@ -8,14 +8,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/tamnd/math2-agent/audit"
+	"github.com/tamnd/math2-agent/release"
 )
-
-var releaseRE = regexp.MustCompile(`^[0-9]{4}\.[0-9]{2}$`)
 
 func runAudit(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 audit", flag.ContinueOnError)
@@ -25,7 +23,7 @@ func runAudit(args []string, stdout, stderr io.Writer) int {
 	only := fs.String("rule", "", "the rules to run, separated by commas. Empty means all the rules.")
 	changed := fs.Bool("changed", false, "audit only the shards and the files that changed since the merge base of -base and HEAD")
 	base := fs.String("base", "origin/main", "the revision that the changes of -changed start from")
-	release := fs.String("release", "", "run the full audit before the release R, for example 2027.03, and write reports/releases/R.txt")
+	rel := fs.String("release", "", "run the full audit before the release R, for example 2027.03, and write reports/releases/R.txt")
 	asJSON := fs.Bool("json", false, "write the report as JSON")
 	quiet := fs.Bool("q", false, "do not write the findings, only the table of rule states")
 	if err := fs.Parse(args); err != nil {
@@ -53,9 +51,9 @@ func runAudit(args []string, stdout, stderr io.Writer) int {
 	if *changed {
 		opt.Base = *base
 	}
-	if *release != "" {
-		if !releaseRE.MatchString(*release) {
-			fmt.Fprintf(stderr, "m2 audit: %q is not a release. A release has the form YYYY.MM\n", *release)
+	if *rel != "" {
+		if !release.IsName(*rel) {
+			fmt.Fprintf(stderr, "m2 audit: %q is not a release. A release has the form YYYY.MM or YYYY.MM.N\n", *rel)
 			return ExitUsage
 		}
 		if *changed || *plane != "" || *only != "" {
@@ -81,8 +79,8 @@ func runAudit(args []string, stdout, stderr io.Writer) int {
 	}
 	data = append(data, '\n')
 	reports := map[string][]byte{}
-	if *release != "" {
-		reports[filepath.Join("reports", "releases", *release+".txt")] = text.Bytes()
+	if *rel != "" {
+		reports[filepath.Join("reports", "releases", *rel+".txt")] = text.Bytes()
 	} else {
 		name := scope(opt)
 		reports[filepath.Join("reports", "audit", name+".txt")] = text.Bytes()

@@ -78,6 +78,10 @@ The rules:
 3. **Releases are archived outside the project.** Software Heritage gets the git tag (a SWHID). Zenodo gets the manifest and the graph Parquet (a DOI). If the project disappears, a 2026.11 citation still resolves.
 4. **The release notes are generated, then edited.** `m2 release notes 2026.10..2026.11` makes these items: counts per topic, nodes that moved evidence level, newly resolved conjectures, retired tags with successors, and binding changes that Mathlib renames caused. A person edits the prose. A release cannot change counts if the notes do not say so (rule `R03`).
 
+A release has two more files next to its manifest. `2026.11.levels` gives the evidence level and the fidelity level of each live node, one line for each node, thus the notes of the next release can list the nodes that moved evidence level without a build of an old commit. `2026.11.md` has the notes. Their counts table has one row for each count of the manifest that changed: the count, the number before, the number after, the change and the cause. `m2 release notes` writes the cause from the node files: the new nodes, the retired nodes and the nodes that moved between kinds or levels. When the node files do not give the change, the cause is empty, and a person writes it.
+
+`m2 release cut` cuts a release in two runs. The first run builds the tree and commits the three files. Then a person writes the summary of the notes, and a second machine runs `m2 release verify -record` to fill the rebuild check. The second run refuses when a file outside `manifests/releases/` and `reports/` changed after the commit of the manifest, runs the full audit, and makes the tag only when the audit passes.
+
 ### Citing math2
 
 The citation form is `m2://<tag>@<release>`. We also print it as a DOI-backed URL. A paper can cite `m2://7K3QX2@2026.11`. In 2040 a reader can resolve it to the exact text, formal statement, evidence and status as of November 2026. This is true even if the node was retired in 2029.
@@ -130,7 +134,7 @@ Provenance is in `prov/<shard>/<tag>.jsonl`, with one JSON object per line. Each
 
 - **git:** GitHub is primary. Codeberg and a self-hosted bare repository are mirrors. Each release is archived to Software Heritage.
 - **Artefact store:** two providers. Keep releases forever. Keep builds of `main` for 90 days. Keep agent run records in full for 2 years, and keep their summaries (cost, outcome, the produced diff) forever.
-- **Restore drill:** each quarter, CI rebuilds the latest release on a clean machine. It uses only the Software Heritage copy and the second artefact mirror. Then it checks the manifest hashes. A failed drill blocks the next release (rule `R04`).
+- **Restore drill:** each quarter, CI rebuilds the latest release on a clean machine. It uses only the Software Heritage copy and the second artefact mirror. Then it checks the manifest hashes. A failed drill blocks the next release (rule `R04`). Each drill writes a record to `reports/restore/YYYY-MM-DD.yaml` with the fields `date`, `release`, `runner`, `passed` and `note`. Rule `R04` reads the last record. It fails when that drill failed, or when the drill is more than one quarter (92 days) older than the month of the last release.
 
 ## 6.7 Sizes
 

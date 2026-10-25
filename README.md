@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M2. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). The command `m2 release` comes in M2. The first work of M2 is written: the `store` package puts the graph and the status of each node into one SQLite file, and `m2 graph` runs the neighbourhood, closure, reverse dependency, learning path and frontier queries on it. The `synth` package and `bench/graph` measure these queries on a synthetic graph. The `ingest` package and `m2 ingest` get pinned snapshots of external sources, apply the licence gate of spec 09.3 and write the records. The adapters of arXiv, zbMATH Open, Mathlib, the OEIS, Wikidata, the LMFDB, the Erdős problems, formal-conjectures, Palomar and the Stacks Project are written. The rules L01 to L04 check the licences. Rule A01 checks that each `same_as` id has the syntax of its system, with the `crosswalk` package. The `align` package and `m2 align` propose `same_as`, `close_to` and `aligned` edges to the records of a source, and a person accepts or rejects each proposal. The rules A02 to A04 check these edges over time. `bench/align` measures the precision and the recall of the aligner on labelled pairs. The `bump` package and `m2 bump` move the tree to a newer Mathlib release on a new branch. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M2. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). `m2 release` cuts a release, writes its notes and verifies it, and the rules R03 to R05 check the notes, the restore drills and the pins. The first work of M2 is written: the `store` package puts the graph and the status of each node into one SQLite file, and `m2 graph` runs the neighbourhood, closure, reverse dependency, learning path and frontier queries on it. The `synth` package and `bench/graph` measure these queries on a synthetic graph. The `ingest` package and `m2 ingest` get pinned snapshots of external sources, apply the licence gate of spec 09.3 and write the records. The adapters of arXiv, zbMATH Open, Mathlib, the OEIS, Wikidata, the LMFDB, the Erdős problems, formal-conjectures, Palomar and the Stacks Project are written. The rules L01 to L04 check the licences. Rule A01 checks that each `same_as` id has the syntax of its system, with the `crosswalk` package. The `align` package and `m2 align` propose `same_as`, `close_to` and `aligned` edges to the records of a source, and a person accepts or rejects each proposal. The rules A02 to A04 check these edges over time. `bench/align` measures the precision and the recall of the aligner on labelled pairs. The `bump` package and `m2 bump` move the tree to a newer Mathlib release on a new branch. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -55,7 +55,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
-| `m2 release` | Cut, describe or verify a release. | M2 |
+| `m2 release` | Cut a release with its manifest, levels and notes, write the release notes, or rebuild a release from its manifest. | written |
 | `m2 search <query>` | Search the knowledge graph. | M3 |
 | `m2 serve` | Serve the API, the MCP server and the workspace. | M3 |
 | `m2 compute` | Run or verify a computation. | M3 |
@@ -228,6 +228,32 @@ On the nodes of math2 and the Wikidata records of 25 October 2026, the aligner p
 
 The exit code is 0 when the build and the audit pass with the new pins. It is 1 when they do not. The branch and the report are there in both cases, thus a workflow can open a pull request for each bump. `m2 bump -master` builds Mathlib master as an early warning. Do not merge such a branch. `m2 bump -n` shows the tag of the bump and stops.
 
+## Releases
+
+A release of math2 has a name, `YYYY.MM` for the monthly release or `YYYY.MM.N` for a patch release (spec 06.2). It has three files in `manifests/releases/` and a git tag:
+
+| File | What it has |
+|---|---|
+| `YYYY.MM.yaml` | The manifest: the commit, the pins, the hash of each artefact, the counts and the rebuild check. |
+| `YYYY.MM.levels` | The evidence level and the fidelity level of each live node. The notes of the next release read it, thus they need no build of an old commit. |
+| `YYYY.MM.md` | The release notes. A person writes the summary. `m2 release notes` writes the other sections. |
+
+A cut has two runs of `m2 release cut`:
+
+1. The first run builds the tree, writes the three files and commits them. The name is the month of today, or the next patch release when the month has a release. The manifest must pin one stable Lean toolchain and one Mathlib commit.
+2. A person writes the summary of the notes. On a second machine, `m2 release verify -oleans DIR -record RUNNER NAME` rebuilds the graph and the `.olean` files from the commit and writes the result into the manifest. With `-against DIR`, it also lists each `.olean` file that is different, and a person writes the reason of each one.
+3. The second run checks that only the files of the release changed after the commit of the manifest, runs the full audit, and makes the tag when the audit passes. Push the tag with `git push origin NAME`.
+
+`m2 release notes FROM..TO` writes the notes of TO again and keeps its summary. Without FROM, it uses the release before TO. The notes have these sections: the counts that changed with the cause of each change, the topics whose number of nodes changed, the nodes that moved evidence level, the conjectures and problems that a statement resolves now, the retired nodes with their successors, and the bindings that a Mathlib rename or refactor changed.
+
+| Rule | What it checks |
+|---|---|
+| R01 | The graph rebuilds from the commit of the manifest to the same hash. |
+| R02 | The `.olean` files rebuild to the same hash, or the manifest gives the reason of each different file. |
+| R03 | The counts table of the notes gives each count that changed since the release before, with the same numbers and a cause. |
+| R04 | The last restore drill in `reports/restore/` passed, and it is not older than one quarter at the last release. |
+| R05 | The manifest pins one stable Lean toolchain and one full Mathlib commit, the Lake project of the commit has the same pins, and the last bump report to that commit is green. |
+
 ## Benchmarks
 
 `bench/graph` measures the latency of the queries Q1 to Q7 on a synthetic graph from the `synth` package, and compares the 95th percentile with the targets of spec 05.6. The test runs with 20,000 nodes in CI. The `bench` workflow runs it each week with 1 million nodes and puts the table in the summary of the run. To run it at reference scale (5 million nodes), use a machine with at least 24 GB of memory and 6 GB of free disk:
@@ -307,7 +333,7 @@ graph/    the graph of spec 05: edges, closure, cycles, CSR and Parquet
 ingest/   the adapters of the external sources, the licence gate, the snapshots and the import manifests (spec 09)
 lean/     M2Extract, its Lake package and the Go package that drives it
 node/     read node files, write the canonical form and compute the content hash
-release/  the release manifest of spec 06.2 and the rebuild checks R01 and R02
+release/  the release manifest, the levels and the notes of spec 06.2, and the rebuild checks R01 and R02
 replay/   the replay of a declaration in the comparator and the independent kernels
 schema/   check front matter against the node schema
 site/     build the wiki

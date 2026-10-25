@@ -1,0 +1,4 @@
+date: 2026-12-01
+release: "2026.12"
+runner: ubuntu-24.04/x86_64/4c/16G
+passed: true
