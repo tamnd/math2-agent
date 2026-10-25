@@ -41,3 +41,9 @@ func hashBody(body string) string {
 	}
 	return out + "\n"
 }
+
+// HashText returns the hash of a text, for example one section of a body. The text has the form that Hash uses for the body: Unicode NFC, LF line endings, no trailing spaces or tabs on a line, and no empty lines at the start or at the end.
+func HashText(text string) string {
+	sum := blake3.Sum256([]byte(hashBody(text)))
+	return HashPrefix + hex.EncodeToString(sum[:])
+}
