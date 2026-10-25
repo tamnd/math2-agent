@@ -164,6 +164,9 @@ func printStatus(w io.Writer, s status.Status, m *build.Manifest) {
 	}
 	fmt.Fprintf(tw, "fidelity\t%s\n", fidelity)
 	fmt.Fprintf(tw, "flags\t%s\n", list(s.Flags))
+	if s.StatementHash != "" {
+		fmt.Fprintf(tw, "statement hash\t%s\n", s.StatementHash)
+	}
 	for _, it := range s.Items {
 		detail := it.Detail
 		if it.Kind == "resolution" || it.Kind == "refutation" {
