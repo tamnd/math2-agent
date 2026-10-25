@@ -350,6 +350,25 @@ The precision of all the pairs is 0.991, thus the default threshold meets the ta
 
 The pairs do not cover all the sources yet. The Stacks project, the LMFDB, zbMATH, arXiv and Palomar state no exact matches that the bench can read: Wikidata has no Stacks property, the adapter does not read the zbMATH property, the LMFDB knowl values are not object ids, and the snapshot has no arXiv records for the Palomar papers. Pairs for these sources come from the decisions of people in `crosswalk.reg`.
 
+`bench/search` measures the quality of `m2 search` and of the premise search (spec 14.7). Each line of `bench/search/queries.tsv` is a query and the node or the Lean declaration that it must find. The concept queries describe a theorem in other words than the node. The formula queries give a formula of a node with other names for the variables. The formal queries give a Lean type, a goal or a list of constants. The paper queries are a short title and abstract. We wrote all the queries and the Lean records in `testdata/records.tsv` ourselves, and no tuning used them. The test also makes an identifier query from each `same_as` id, and a premise query from each record that uses other records. Each benchmark runs with all the channels and with each channel alone. `baseline.tsv` keeps the headline metric of each benchmark, and the test fails when a metric is more than 0.02 below it. On the 117 nodes of `testdata/nodes/valid` and 18 records:
+
+```
+go test ./bench/search -v -report search.md
+```
+
+| Benchmark | Queries | Metric | m2 | lexical | formula | formal | embedding |
+|---|---|---|---|---|---|---|---|
+| concept | 50 | MRR | 0.679 | 0.680 | 0.000 | 0.000 | 0.620 |
+| concept | 50 | R@10 | 0.840 | 0.820 | 0.000 | 0.000 | 0.860 |
+| formula | 16 | nDCG@10 | 0.977 | 0.116 | 1.000 | 0.000 | 0.338 |
+| formal | 15 | R@1 | 0.867 | 0.000 | 0.000 | 1.000 | 0.000 |
+| formal | 15 | R@10 | 1.000 | 0.000 | 0.000 | 1.000 | 0.000 |
+| paper | 16 | R@10 | 0.938 | 0.875 | 0.000 | 0.000 | 0.938 |
+| identifier | 18 | R@1 | 1.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| premise | 7 | R@10 | 1.000 | | | | |
+
+The fused search does not beat the best channel alone yet. On the concept and paper queries it is equal to the best channel, within one query. On the formula and formal queries the fusion moves an exact match down by one or two ranks, because the lexical and embedding channels add other nodes. The concept misses are paraphrases with no word in common with the node, such as "the derivative equals the slope of the secant line" for the mean value theorem. The hash embedder cannot find these. A learned embedder, behind the same interface, is the next step. The test does not run LeanSearch, Moogle, Loogle or the other tools of spec 14.7, because it would send each query to the service of the tool.
+
 ## Rules that the toolchain keeps
 
 1. The files in tamnd/math2 are the truth. Each database, index and site comes from these files, and you can make it again from them.
@@ -376,7 +395,7 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 cmd/m2/   the m2 binary
 align/    the aligner: candidates, scores, the curation queues and the register of decisions (spec 05.3, 05.4 and 16.3)
 audit/    the audit rules of spec 15, with a fixture pair for each rule
-bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, and bench/align measures the precision of the aligner
+bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, and bench/align measures the precision of the aligner, and bench/search measures the quality of search
 bump/     the Mathlib bump: the pins, the breaks of a bump, the renames and the bump report (spec 07.9)
 build/    the steps of m2 build, their cache and the build manifest
 check/    the fast rules of m2 check: schema, body and links

@@ -1,0 +1,8 @@
+# benchmark	metric	m2
+# The headline metric of each benchmark for m2 on the testdata. go test ./bench/search -update writes this file.
+concept	MRR	0.679
+formula	nDCG@10	0.977
+formal	R@1	0.867
+paper	R@10	0.938
+identifier	R@1	1.000
+premise	R@10	1.000
