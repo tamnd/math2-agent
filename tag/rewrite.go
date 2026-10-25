@@ -33,6 +33,15 @@ var skipDirs = map[string]bool{".git": true, ".lake": true, "node_modules": true
 //
 // Rewrite changes nothing if a file refers to a provisional id that has no file in nodes/~/ (rule T03).
 func Rewrite(root string, r io.Reader, commit string) ([]Minted, error) {
+	return rewrite(root, r, commit, Mint)
+}
+
+// RewriteSeed is Rewrite with tags that start with 0, as MintSeed draws them. Use it only for the nodes of the M1 seed.
+func RewriteSeed(root string, r io.Reader, commit string) ([]Minted, error) {
+	return rewrite(root, r, commit, MintSeed)
+}
+
+func rewrite(root string, r io.Reader, commit string, mint func(io.Reader, func(string) bool) (string, error)) ([]Minted, error) {
 	regs := filepath.Join(root, "registers")
 	used, err := ReadUsed(filepath.Join(regs, "tags.reg"), filepath.Join(regs, "retired.reg"))
 	if err != nil {
@@ -58,7 +67,7 @@ func Rewrite(root string, r io.Reader, commit string) ([]Minted, error) {
 		if err != nil {
 			return nil, err
 		}
-		t, err := Mint(r, func(s string) bool { return used[s] })
+		t, err := mint(r, func(s string) bool { return used[s] })
 		if err != nil {
 			return nil, err
 		}

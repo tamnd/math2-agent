@@ -73,6 +73,28 @@ func TestMintTwoNodes(t *testing.T) {
 	}
 }
 
+func TestMintSeed(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "nodes/~/~00000001.md", mintConcept)
+	writeFile(t, root, "nodes/~/~00000002.md", mintSub)
+	code, stdout, stderr := run("mint", "-root", root, "-commit", "c0ffee1", "-seed")
+	if code != ExitOK {
+		t.Fatalf("exit code %d, stderr %q", code, stderr)
+	}
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("stdout must have 2 lines:\n%s", stdout)
+	}
+	for _, l := range lines {
+		if f := strings.Fields(l); len(f) != 3 || !tag.IsSeed(f[1]) {
+			t.Errorf("the line %q has no seed tag", l)
+		}
+	}
+	if code, stdout, _ := run("check", "-root", root, "-q"); code != ExitOK {
+		t.Errorf("m2 check fails after m2 mint -seed:\n%s", stdout)
+	}
+}
+
 func TestMintUnknownProvisional(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, "nodes/~/~00000002.md", mintSub)
