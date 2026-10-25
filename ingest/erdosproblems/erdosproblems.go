@@ -95,7 +95,7 @@ type problem struct {
 // Read reads a git archive of the repository and emits one record for each problem in the data file. Read fails when the archive has no data file, on a number that does not pass crosswalk.Check, on a problem with no status and on a data file with no problems.
 func (Adapter) Read(r io.Reader, emit func(ingest.Record) error) error {
 	found := false
-	err := ingest.WalkArchive(r, func(name string, f io.Reader) error {
+	_, err := ingest.WalkArchive(r, func(name string, f io.Reader) error {
 		if name != Data {
 			return nil
 		}

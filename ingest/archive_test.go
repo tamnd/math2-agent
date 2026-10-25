@@ -66,7 +66,7 @@ func ExampleWalkArchive() {
 	if err != nil {
 		panic(err)
 	}
-	err = ingest.WalkArchive(zr, func(name string, f io.Reader) error {
+	commit, err := ingest.WalkArchive(zr, func(name string, f io.Reader) error {
 		b, err := io.ReadAll(f)
 		fmt.Printf("%s: %q\n", name, strings.TrimSpace(string(b)))
 		return err
@@ -74,7 +74,9 @@ func ExampleWalkArchive() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("commit", commit)
 	// Output:
 	// README.md: "# Erdős problem database"
 	// data/problems.yaml: "- number: \"1\""
+	// commit 4d22d408cbafe9ecf5b2b1223e689783eaf76803
 }

@@ -42,16 +42,19 @@ func FetchArchive(ctx context.Context, req *Request, w io.Writer) error {
 	return err
 }
 
-// WalkArchive calls fn for each regular file of a tar archive, in the order of the archive. The name that fn gets is the path of the file without its first directory, because a git archive puts all the files in one directory, such as erdosproblems-main/. WalkArchive returns the first error from fn.
-func WalkArchive(r io.Reader, fn func(name string, file io.Reader) error) error {
+// WalkArchive calls fn for each regular file of a tar archive, in the order of the archive, and returns the commit of the archive. The name that fn gets is the path of the file without its first directory, because a git archive puts all the files in one directory, such as erdosproblems-main/. The commit is empty when the archive does not record one. WalkArchive returns the first error from fn.
+func WalkArchive(r io.Reader, fn func(name string, file io.Reader) error) (commit string, err error) {
 	tr := tar.NewReader(r)
 	for {
 		h, err := tr.Next()
 		if errors.Is(err, io.EOF) {
-			return nil
+			return commit, nil
 		}
 		if err != nil {
-			return fmt.Errorf("the archive: %w", err)
+			return "", fmt.Errorf("the archive: %w", err)
+		}
+		if h.Typeflag == tar.TypeXGlobalHeader && commitID.MatchString(h.PAXRecords["comment"]) {
+			commit = h.PAXRecords["comment"]
 		}
 		if h.Typeflag != tar.TypeReg {
 			continue
@@ -61,7 +64,7 @@ func WalkArchive(r io.Reader, fn func(name string, file io.Reader) error) error 
 			name = h.Name
 		}
 		if err := fn(name, tr); err != nil {
-			return err
+			return "", err
 		}
 	}
 }
