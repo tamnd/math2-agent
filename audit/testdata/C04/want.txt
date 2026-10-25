@@ -1,0 +1,4 @@
+nodes/RQ/RQ9C3D.md:14:1: C04: the certificate has no checker_entry. Name the checker program in compute/RQ9C3D/
+nodes/RQ/RQ9C3D.md:17:3: C04: the checker m2-sat is not a fixed checker of witness. The fixed checkers of witness are m2-lean, m2-python
+nodes/ZN/ZNAZT5.md:16:3: C04: "witness-tabel" is not a certificate kind of spec 08.3. The kinds are witness, witness-table, lrat, smt-proof, primality, interval, lp-dual, sos, group-id
+nodes/ZN/ZNF0V2.md:16:3: C04: a group-id certificate needs a checker in a second system, and the checker m2-gap is the image of the computation

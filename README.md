@@ -23,7 +23,7 @@ The code of M2 connects the graph to the world. The `store` package puts the gra
 
 Some acceptance items of M2 need time or people, and they stay open: three monthly bumps in a row, the releases of April to June 2027, the full harvests of zbMATH Open and arXiv for C0, and a test of the curation guide by a new curator.
 
-The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON, and the `mcp` package gives the same methods as MCP tools.
+The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON, and the `mcp` package gives the same methods as MCP tools. The `sandbox` package runs a program with no network and with limits, and the `compute` package and `m2 compute` run the computations in it. The rules C01 to C05 check the computations and their runs.
 
 The audit report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
@@ -152,6 +152,18 @@ m2 compute verify -all      # each computation of the tree
 The `compute` package reads the record and the image manifest `manifests/images.yaml`. A record names an image by the digest of one architecture, and the runner runs the digest of the same image for its own architecture. The program reads `compute/TAG/` at `/work`, gets the inputs as JSON in `M2_INPUTS` and the seed in `M2_SEED`, and writes a certificate to `/out/certificate`. The output hash is the BLAKE3 hash of the standard output.
 
 The run writes `run.json`, `stdout` and `stderr` to `build/compute/TAG/ARCH/`. A verified run exits with the code 0 in time, and its output has the hash of the record. When the record has a certificate, the certificate has the hash of the record, and the fixed checker of its kind (spec 08.8) accepts it. `compute.Checkers` is the table of the fixed checkers. A change to it needs the review of a person.
+
+The rules C01 to C05 of `m2 audit` check the computations:
+
+| Rule | It checks |
+|---|---|
+| C01 | the image of each record is in the manifest, the entry point exists in `compute/TAG/`, and the record is valid |
+| C02 | each E4 candidate has a run on amd64 and a run on arm64, the two runs give the same output and the same certificate, and these are the hashes of the record |
+| C03 | the image and the checker image of each record are the current digests of the manifest. This rule is soft, because an old digest stays valid, and the next release runs the computation again |
+| C04 | the certificate kind is known, the checker image is the fixed checker of the kind, and the checker program exists |
+| C05 | each run in `build/compute/` had no network, and its logs name no model API |
+
+C02 and C05 read the runs in `build/compute/`. C02 skips when the directory does not exist. An E4 candidate is a computation with a certificate that is not an experiment.
 
 ## The sandbox
 

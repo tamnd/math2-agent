@@ -1,0 +1,13 @@
+images:
+  - name: m2-python
+    contents: the python tools
+    amd64: sha256:7777777777777777777777777777777777777777777777777777777777777777
+    arm64: sha256:8888888888888888888888888888888888888888888888888888888888888888
+  - name: m2-gap
+    contents: the gap tools
+    amd64: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    arm64: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  - name: m2-sage
+    contents: the sage tools
+    amd64: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+    arm64: sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd

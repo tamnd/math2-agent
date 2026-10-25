@@ -1,0 +1,13 @@
+{
+  "tag": "ZNF0V2",
+  "image": "m2-gap@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "entry": "groups16.g",
+  "arch": "arm64",
+  "runtime": "runsc",
+  "network": "none",
+  "exit_code": 0,
+  "seconds": 1.5,
+  "output": "blake3:3333333333333333333333333333333333333333333333333333333333333333",
+  "certificate": "blake3:4444444444444444444444444444444444444444444444444444444444444444"
+}
