@@ -1,0 +1,17 @@
+---
+tag: RQ9C3D
+kind: computation
+name: Fermat's little theorem for primes below 1000
+topics: [3EYFQZ]
+claim: For each prime p < 1000 and each a with 1 <= a < p, a^(p-1) mod p = 1.
+engine:
+  image: m2-python@sha256:7777777777777777777777777777777777777777777777777777777777777777
+  entry: fermat.py
+  inputs:
+    limit: 1000
+uses: [X5X1EQ]
+---
+
+## Description
+
+The program checks $a^{p-1} \bmod p = 1$ for each prime $p < 1000$ and each $a$ with $1 \leq a < p$.

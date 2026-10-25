@@ -1,0 +1,22 @@
+---
+tag: V19EFA
+kind: statement
+name: There are infinitely many primes
+msc: [11A41]
+topics: [3EYFQZ]
+uses: [FZ24AA]
+proofs: [59WCW3]
+formal:
+  - system: lean4
+    library: mathlib
+    decl: Nat.exists_infinite_primes
+    match: exact
+same_as:
+  wikidata: Q1506253
+history:
+  first_stated: Euclid, Elements IX.20
+---
+
+## Statement
+
+For each natural number $n$ there is a [[prime|NKCASP]] $p > n$.

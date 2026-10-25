@@ -1,0 +1,13 @@
+---
+tag: 2F3WPS
+kind: proof
+name: Proof that cosets partition a group
+proves: BFBKVM
+uses: [7SW3MR]
+---
+
+## Proof
+
+The relation $a \sim b$ when $a^{-1}b \in H$ is an equivalence relation, and its classes are the left cosets. The map $h \mapsto gh$ is a bijection from $H$ to $gH$.
+
+See [[this result|3CH1ZP]].
