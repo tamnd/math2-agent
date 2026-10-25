@@ -25,6 +25,9 @@ type Run struct {
 	OnBehalfOf string            `json:"on_behalf_of"`         // the person, project or schedule that started the run
 	Started    string            `json:"started"`              // the start time, RFC 3339
 	Outcome    string            `json:"outcome"`              // success, failure or partial
+	Targets    []string          `json:"targets,omitempty"`    // the nodes that the job of the run named, so that a run with no output still counts as an attempt
+	Seconds    float64           `json:"seconds,omitempty"`    // the wall time of the run, or 0 when the summary does not record it
+	SpendUSD   float64           `json:"spend_usd,omitempty"`  // the spend of the run in US dollars, or 0 when the summary does not record it
 	Transcript string            `json:"transcript,omitempty"` // the hash of the full record in the artefact store, blake3:HEX
 }
 

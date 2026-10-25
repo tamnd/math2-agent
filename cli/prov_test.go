@@ -99,11 +99,51 @@ func TestProvUsage(t *testing.T) {
 			t.Errorf("%s: exit code %d, want %d", name, code, ExitUsage)
 		}
 	}
-	if code, _, _ := run("prov", "disclose"); code != ExitNotWritten {
-		t.Errorf("disclose gives the exit code %d", code)
+	if code, _, _ := run("prov", "disclose"); code != ExitUsage {
+		t.Errorf("disclose with no tag gives the exit code %d", code)
 	}
 	root := provTree(t)
 	if code, _, stderr := run("prov", "record", "-root", root, "-agent", "m2-agent/explain@1.2.0"); code != ExitFailure || !strings.Contains(stderr, "run") {
 		t.Errorf("record by an agent with no run: exit code %d, stderr %q", code, stderr)
+	}
+}
+
+func TestProvDisclose(t *testing.T) {
+	root := provTree(t)
+	code, stdout, stderr := run("prov", "disclose", "-root", root, "G5S1M9")
+	if code != ExitOK || !strings.Contains(stdout, "m2://G5S1M9, Group at the commit ") || !strings.Contains(stdout, "has no provenance log") {
+		t.Fatalf("disclose: exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	if code, _, stderr := run("prov", "disclose", "-root", root, "-yaml", "G5S1M9"); code != ExitFailure || !strings.Contains(stderr, "no formal binding") {
+		t.Errorf("disclose -yaml of a node with no binding: exit code %d, stderr %q", code, stderr)
+	}
+
+	path := filepath.Join(root, "nodes", "G5", "G5S1M9.md")
+	text := strings.Replace(provNode, "name: Group", "name: Group\nformal:\n  - system: lean4\n    library: mathlib\n    decl: Group\n    match: exact", 1)
+	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, stderr := run("prov", "record", "-root", root, "-agent", "m2-agent/formalize@0.9.1", "-run", "r-2026-10-26-1", "-model", "claude-opus-5-5", "-prompt", "formalize/3", "-at", "2026-10-26T10:00:00Z"); code != ExitOK {
+		t.Fatalf("record: exit code %d, stderr %q", code, stderr)
+	}
+	run1 := &prov.Run{ID: "r-2026-10-26-1", Agent: "m2-agent/formalize@0.9.1", Prompt: "formalize/3", Models: []string{"claude-opus-5-5"}, OnBehalfOf: "github:writer", Started: "2026-10-26T09:50:00Z", Outcome: "success", Seconds: 600, SpendUSD: 1.5}
+	if err := prov.WriteRun(filepath.Join(root, "build", prov.RunsDir), run1); err != nil {
+		t.Fatal(err)
+	}
+	st := `[{"tag":"G5S1M9","kind":"definition","name":"Group","evidence":"","fidelity":"F2","flags":[],"items":[],"bindings":[{"decl":"Group","match":"exact","checked":"Group","type_hash":"","axioms":["propext"],"fidelity":"F2","reviews":[{"id":"r-G5S1M9-01","reviewer":"orcid:0000-0002-1825-0097","state":"counts"}],"level":"E5","reason":""}],"reasons":[]}]`
+	if err := os.WriteFile(filepath.Join(root, "build", "status.json"), []byte(st), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr = run("prov", "disclose", "-root", root, "G5S1M9")
+	for _, want := range []string{"on behalf of github:writer", "The runs took 10 minutes and spent 1.50 US dollars in all.", "the evidence level E5 and the fidelity level F2, with reviews by orcid:0000-0002-1825-0097."} {
+		if code != ExitOK || !strings.Contains(stdout, want) {
+			t.Errorf("disclose: exit code %d, stderr %q, no %q in %q", code, stderr, want, stdout)
+		}
+	}
+	code, stdout, stderr = run("prov", "disclose", "-root", root, "-yaml", "G5S1M9")
+	for _, want := range []string{"version: v0.4\n", "- github:writer\n", "method: agent\n", "spend_usd: 1.5\n", "status: peer-reviewed\n", "relationship: formalizes\n"} {
+		if code != ExitOK || !strings.Contains(stdout, want) {
+			t.Errorf("disclose -yaml: exit code %d, stderr %q, no %q in:\n%s", code, stderr, want, stdout)
+		}
 	}
 }
