@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tamnd/math2-agent/build"
 	"github.com/tamnd/math2-agent/status"
 	"go.yaml.in/yaml/v3"
 )
@@ -232,4 +233,70 @@ func lastChanges(root string) (map[string]string, error) {
 		}
 	}
 	return last, nil
+}
+
+// v02 checks the independence of each binding at F3 in status.json (rule V02). Two of the reviews that count must have reviewers with a record in registers/reviewers.reg and no shared affiliation, and neither reviewer can be the author of the binding in registers/bindings.reg.
+func v02(a *auditor) outcome {
+	var o outcome
+	b := a.lastBuild()
+	if reason := cmp.Or(b.noStatus, b.noReviews); reason != "" {
+		o.reason = reason
+		return o
+	}
+	reviewers, err := status.LoadReviewers(a.root)
+	if err != nil {
+		o.add("registers/reviewers.reg", 1, 1, "%v", err)
+		return o
+	}
+	authors, err := status.LoadAuthors(a.root)
+	if err != nil {
+		o.add("registers/bindings.reg", 1, 1, "%v", err)
+		return o
+	}
+	for _, n := range a.scopeNodes() {
+		s, ok := b.statuses[n.ID]
+		if !ok || retired(n) {
+			continue
+		}
+		for _, sb := range s.Bindings {
+			if sb.Fidelity != status.F3 {
+				continue
+			}
+			o.checked++
+			line, col := bindingPos(n, sb.Decl)
+			author := authors[status.Key{Tag: n.ID, Decl: sb.Decl}]
+			var ok []status.Reviewer
+			for _, rs := range sb.Reviews {
+				if rs.State != status.Counts {
+					continue
+				}
+				who := b.reviews[rs.ID].Reviewer
+				r, registered := reviewers[who]
+				switch {
+				case !registered:
+					o.add(n.Path, line, col, "the reviewer %s of %s has no record in registers/reviewers.reg", who, rs.ID)
+				case who == author:
+					o.add(n.Path, line, col, "the reviewer %s of %s is the author of the binding %s", who, rs.ID, sb.Decl)
+				default:
+					ok = append(ok, r)
+				}
+			}
+			if !independent(ok) {
+				o.add(n.Path, line, col, "build/%s gives F3 to %s, and it has no two independent reviews. Two reviewers must share no affiliation, and neither can be the author. Run m2 build", build.StatusFile, sb.Checked)
+			}
+		}
+	}
+	return o
+}
+
+// independent reports whether two of the reviewers are independent.
+func independent(rs []status.Reviewer) bool {
+	for i := range rs {
+		for _, r := range rs[i+1:] {
+			if rs[i].Independent(r) {
+				return true
+			}
+		}
+	}
+	return false
 }

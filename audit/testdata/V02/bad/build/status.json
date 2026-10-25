@@ -1,0 +1,70 @@
+[
+  {
+    "tag": "3C53TD",
+    "kind": "statement",
+    "name": "3C53TD",
+    "evidence": "",
+    "fidelity": "F3",
+    "flags": [],
+    "items": [],
+    "bindings": [
+      {
+        "decl": "Subgroup.card_subgroup_dvd_card",
+        "match": "exact",
+        "checked": "Subgroup.card_subgroup_dvd_card",
+        "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "axioms": [],
+        "fidelity": "F3",
+        "reviews": [
+          {
+            "id": "r-3C53TD-01",
+            "reviewer": "github:a",
+            "state": "counts"
+          },
+          {
+            "id": "r-3C53TD-02",
+            "reviewer": "github:e",
+            "state": "counts"
+          }
+        ],
+        "level": "",
+        "reason": ""
+      }
+    ],
+    "reasons": []
+  },
+  {
+    "tag": "7Q2K1B",
+    "kind": "statement",
+    "name": "7Q2K1B",
+    "evidence": "",
+    "fidelity": "F3",
+    "flags": [],
+    "items": [],
+    "bindings": [
+      {
+        "decl": "Subgroup.card_mul_index",
+        "match": "exact",
+        "checked": "Subgroup.card_mul_index",
+        "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "axioms": [],
+        "fidelity": "F3",
+        "reviews": [
+          {
+            "id": "r-7Q2K1B-01",
+            "reviewer": "github:b",
+            "state": "counts"
+          },
+          {
+            "id": "r-7Q2K1B-02",
+            "reviewer": "github:x",
+            "state": "counts"
+          }
+        ],
+        "level": "",
+        "reason": ""
+      }
+    ],
+    "reasons": []
+  }
+]

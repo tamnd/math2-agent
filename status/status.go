@@ -4,7 +4,7 @@
 //
 // The rules for the sources are the rules of M1. A book source with a locator is a textbook source. A doi, zbmath or mr source with a locator is a refereed source. Each other source is a claim. The record plane of M2 makes these rules more exact with the type of each venue.
 //
-// A review counts for a binding when the binding lists its id in fidelity_reviews, the review read the declaration that the kernel checks, the verdict is faithful or faithful-with-conventions, and the two hashes of the review are the hashes of the build: the hash of the statement section and the elaborated-type hash. When one of the hashes changed, the review is stale and does not count (rule F02).
+// A review counts for a binding when the binding lists its id in fidelity_reviews, the review read the declaration that the kernel checks, the verdict is faithful or faithful-with-conventions, and the two hashes of the review are the hashes of the build: the hash of the statement section and the elaborated-type hash. When one of the hashes changed, the review is stale and does not count (rule F02). The reviewer must also have a record in registers/reviewers.reg, and must not be the author of the binding in registers/bindings.reg. One review that counts gives F2. Two reviews that count give F3 when the two reviewers share no affiliation (rule V02).
 package status
 
 import (
@@ -42,6 +42,8 @@ const (
 	OtherDecl     = "other_declaration" // the review read a different declaration
 	NotFaithfulRv = "not_faithful"      // the verdict is not-faithful
 	Unchecked     = "unchecked"         // the build has no record of the declaration, so the hashes cannot be compared
+	Unregistered  = "unregistered"      // the reviewer has no record in registers/reviewers.reg
+	ByAuthor      = "author"            // the reviewer wrote the binding
 )
 
 // Input is the evidence of a build.
@@ -51,6 +53,9 @@ type Input struct {
 	Reviews map[string]Review      // the reviews by id
 	Replays map[string]Replay      // the replay result of each declaration. It is empty until the checker stack runs.
 	Battery map[string]bool        // the result of the machine checks of each declaration (spec 10.4). It is empty until M4.
+
+	Reviewers map[string]Reviewer // the reviewers of registers/reviewers.reg, by id
+	Authors   map[Key]string      // the author of each binding, from registers/bindings.reg
 }
 
 // Replay is the result of the independent replay and the comparator check of one declaration (spec 07.7).
@@ -263,7 +268,7 @@ func base(in Input, g *graph.Graph, byTag map[string]*node.Node, n *node.Node) S
 	// The bindings and the fidelity level.
 	stmt := statementHash(n)
 	for _, f := range formals(n) {
-		b := binding(in, f, stmt)
+		b := binding(in, f, n.ID, stmt)
 		if b.Fidelity > s.Fidelity {
 			s.Fidelity = b.Fidelity
 		}
@@ -379,7 +384,7 @@ func formals(n *node.Node) []formal {
 }
 
 // binding computes the fidelity level and the kernel level of one binding.
-func binding(in Input, f formal, stmt string) Binding {
+func binding(in Input, f formal, tag, stmt string) Binding {
 	b := Binding{Decl: f.decl, Adapter: f.adapter, Match: f.match, Checked: cmp.Or(f.adapter, f.decl), Fidelity: F0, Axioms: []string{}, Reviews: []ReviewState{}}
 	rec, ok := in.Records[b.Checked]
 	known := ok && rec.Error == ""
@@ -388,7 +393,8 @@ func binding(in Input, f formal, stmt string) Binding {
 		b.Axioms = slices.Clone(rec.Axioms)
 		b.native = len(rec.NativeDecideAxioms) > 0
 	}
-	reviewers := map[string]bool{}
+	author := in.Authors[Key{tag, f.decl}]
+	var counted []Reviewer
 	for _, id := range f.reviews {
 		r, ok := in.Reviews[id]
 		st := ReviewState{ID: id, Reviewer: r.Reviewer}
@@ -403,16 +409,20 @@ func binding(in Input, f formal, stmt string) Binding {
 			st.State = Unchecked
 		case r.StatementHash != stmt || r.TypeHash != rec.TypeHash:
 			st.State = Stale
+		case in.Reviewers[r.Reviewer].ID == "":
+			st.State = Unregistered
+		case r.Reviewer == author:
+			st.State = ByAuthor
 		default:
 			st.State = Counts
-			reviewers[r.Reviewer] = true
+			counted = append(counted, in.Reviewers[r.Reviewer])
 		}
 		b.Reviews = append(b.Reviews, st)
 	}
 	switch {
-	case len(reviewers) >= 2:
+	case independentPair(counted):
 		b.Fidelity = F3
-	case len(reviewers) == 1:
+	case len(counted) > 0:
 		b.Fidelity = F2
 	case in.Battery[b.Checked]:
 		b.Fidelity = F1
@@ -581,4 +591,16 @@ func StatementHash(n *node.Node) string { return statementHash(n) }
 func str(v any) string {
 	s, _ := v.(string)
 	return s
+}
+
+// independentPair reports whether two of the reviewers are independent.
+func independentPair(rs []Reviewer) bool {
+	for i := range rs {
+		for j := i + 1; j < len(rs); j++ {
+			if rs[i].Independent(rs[j]) {
+				return true
+			}
+		}
+	}
+	return false
 }
