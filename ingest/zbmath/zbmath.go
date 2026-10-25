@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -28,6 +29,30 @@ import (
 
 // Endpoint is the OAI-PMH interface of zbMATH Open.
 const Endpoint = "https://oai.zbmath.org/v1/"
+
+// API is the REST interface of zbMATH Open.
+const API = "https://api.zbmath.org/v1/"
+
+// CountURL returns the URL of a search of the REST interface for the documents that have an MSC code that starts with prefix, for example 11 or 11A. The answer has one document and the number of documents that match.
+func CountURL(prefix string) string {
+	return API + "document/_search?" + url.Values{"search_string": {"cc:" + prefix}, "page": {"0"}, "results_per_page": {"1"}}.Encode()
+}
+
+// Count reads the answer to a search of the REST interface and returns the number of documents that match.
+func Count(r io.Reader) (int, error) {
+	var a struct {
+		Status struct {
+			Total *int `json:"nr_total_results"`
+		} `json:"status"`
+	}
+	if err := json.NewDecoder(r).Decode(&a); err != nil {
+		return 0, fmt.Errorf("zbmath: read the count: %w", err)
+	}
+	if a.Status.Total == nil || *a.Status.Total < 0 {
+		return 0, errors.New("zbmath: the answer has no count")
+	}
+	return *a.Status.Total, nil
+}
 
 // Adapter is the adapter of zbMATH Open.
 type Adapter struct{}

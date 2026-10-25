@@ -74,6 +74,7 @@ math2/
     sources.yaml                 every external snapshot used: URL, hash, date, licence (document 09)
     images.yaml                  computational images by digest
     ingest/                      per-source import manifests
+    coverage/expected.yaml       the pinned number of documents in each MSC2020 class, the denominator of C0 (18.2)
 
   reports/
     audit/                       committed audit reports (document 15)

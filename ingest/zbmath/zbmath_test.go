@@ -124,3 +124,11 @@ func TestSource(t *testing.T) {
 		t.Error("the adapter is not registered")
 	}
 }
+
+func TestCountErrors(t *testing.T) {
+	for _, s := range []string{``, `{"status": {}}`, `{"status": {"nr_total_results": -1}}`, `<html>`} {
+		if _, err := zbmath.Count(strings.NewReader(s)); err == nil {
+			t.Errorf("Count(%q) gives no error", s)
+		}
+	}
+}
