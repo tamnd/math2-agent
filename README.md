@@ -59,7 +59,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
 | `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. `m2 mint -seed` gives tags that start with `0` to the nodes of the M1 seed. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
-| `m2 build` | Build the derived data: Lean, extraction, replay, status, graph and store. Search comes later. | written |
+| `m2 build` | Build the derived data: Lean, extraction, replay, status, graph, store and the search index. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
@@ -68,7 +68,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
 | `m2 release` | Cut a release with its manifest, levels and notes, write the release notes, or rebuild a release from its manifest. | written |
-| `m2 search <query>` | Search the knowledge graph. | M3 |
+| `m2 search <query>` | Search the knowledge graph with the identifier resolver and the lexical, formula, formal and embedding channels. `m2 search -premises <goal>` ranks the Lean declarations that can help to prove a goal. | written |
 | `m2 serve` | Serve the API, the MCP server and the workspace. | M3 |
 | `m2 compute` | Run or verify a computation. | M3 |
 | `m2 prov` | Show or change provenance. | M3 |
@@ -101,9 +101,9 @@ m2 build -json          # write the manifest as JSON
 m2 build -no-sandbox    # run the checkers without the sandbox, for example on macOS
 ```
 
-The steps are `lean`, `extract`, `replay`, `status`, `graph` and `store`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `replay` step checks each binding that passes each check of E5 except the replay, and writes `build/replay.json`. The `status` step computes the evidence level and the fidelity level of each node from the nodes, `build/extract.json`, `build/replay.json` and the reviews in `reviews/`, and writes `build/status.json`. The `graph` step writes the graph as Parquet to `build/graph/`. The `store` step writes the graph, the status of each node and the aliases to the SQLite file `build/store.db`, for `m2 graph`. A tree without `lean/` has only the `status`, `graph` and `store` steps.
+The steps are `lean`, `extract`, `replay`, `status`, `graph`, `store` and `search`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `replay` step checks each binding that passes each check of E5 except the replay, and writes `build/replay.json`. The `status` step computes the evidence level and the fidelity level of each node from the nodes, `build/extract.json`, `build/replay.json` and the reviews in `reviews/`, and writes `build/status.json`. The `graph` step writes the graph as Parquet to `build/graph/`. The `store` step writes the graph, the status of each node and the aliases to the SQLite file `build/store.db`, for `m2 graph`. The `search` step writes the search index to `build/search.db`, for `m2 search`. A tree without `lean/` has only the `status`, `graph`, `store` and `search` steps.
 
-`build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `replay.json`, `status.json`, `graph/` and `store.db`.
+`build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `replay.json`, `status.json`, `graph/`, `store.db` and `search.db`.
 
 ## The replay of a proof
 
@@ -139,6 +139,34 @@ m2 graph frontier -open -topic T0NT01   # the open problems and the statements t
 ```
 
 `m2 graph neighbourhood` takes `-hops N`. `m2 graph frontier` also takes `-evidence E1`. A node that `needs` the node loses each alternative when the node is false. A node that `uses` the node uses it in at least one alternative. The learning path goes from `from` to `to` through the uses edges that end at a definition and the defines edges.
+
+## Search
+
+`m2 search` runs a query on `build/search.db` from the last `m2 build` (spec 14). A query can be words, a LaTeX formula, a Lean type or goal, an identifier, or a mix of these. Put the flags before the query.
+
+```sh
+m2 search finite subgroup of the multiplicative group of a field
+m2 search '\sum_{d \mid n} \varphi(d) = n'
+m2 search 'Subgroup _ → Finite _ → IsCyclic _'
+m2 search 'IsCyclic, Units, Field'
+m2 search Q180967                        # a Wikidata item, an alias, a tag, a Lean name or an m2:// URI
+m2 search -kind statement,concept -k 20 group
+m2 search -open -channel lexical,embedding prime gaps
+m2 search -premises -tag 3C53TD 'G : Type
+inst : Group G
+⊢ IsCyclic G'
+```
+
+The identifier resolver runs first. A node that it finds comes first. Then four channels run, and reciprocal rank fusion combines their lists:
+
+- **lexical**: BM25 in SQLite FTS5 over the names, the aliases, the statements and the other sections.
+- **formula**: each formula in `$...$` or `\(...\)`, or a query with `^`, `_`, `=` or `\`, becomes an operator tree. The channel finds candidates by the paths from leaf to root, and ranks them by the size of the largest common subtree, with a consistent change of the names of the variables. Thus `|Y| = |H|^{q-1}` finds `|X| = |G|^{p-1}`.
+- **formal**: a Lean type pattern, a goal or a list of constants is matched against the head of the conclusion, the heads of the hypotheses and the constants of each extracted declaration. A declaration that no node binds comes back as `lean:DECL`, with no node yet.
+- **embedding**: the cosine between the query and the name and statement, the Lean statements and the explanations of each node. The vectors are int8. The default embedder runs on the local machine and needs no model. The index never gives out the vectors, only the neighbours and their scores.
+
+Each result shows the channels that found it and its rank in each one, for example `lexical#1 formula#3`. Statements and concepts rank a little above proofs, and E5, E3 and E2 above E1. With `-open`, the open problems and the weak evidence rank first. A retired node folds into its live successor. `-json` writes the results as JSON.
+
+`m2 search -premises` ranks the Lean declarations that can help to prove a goal (spec 14.5). It fuses the formal channel, the declarations that the proofs of near declarations use, the declarations of the nodes that the node of `-tag` uses, and the embedding similarity. The learned reranker comes with the run records of the agents.
 
 ## Ingest
 
@@ -362,6 +390,7 @@ node/     read node files, write the canonical form and compute the content hash
 release/  the release manifest, the levels and the notes of spec 06.2, and the rebuild checks R01 and R02
 replay/   the replay of a declaration in the comparator and the independent kernels
 schema/   check front matter against the node schema
+search/   the search index: the identifier resolver, the four channels, the fusion and the premise selection (spec 14)
 site/     build the wiki
 store/    the serving store: the graph and the status of each node in SQLite, and the queries of spec 05.6
 status/   the evidence level, the fidelity level and the flags of each node (spec 04.7), and the reviews
@@ -373,7 +402,7 @@ spec/     the specification
 
 Each directory except `cmd/`, `bench/` and `spec/` is a Go package that other programs can import. For example, a bot can use `github.com/tamnd/math2-agent/node` to read and format node files. The packages follow the conventions of the Go standard library, and `go doc` shows an example for each main function.
 
-The full layout arrives with the milestones. The plan has these parts: `compute`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `prompts/`, `images/` and `web/`.
+The full layout arrives with the milestones. The plan has these parts: `compute`, `api`, `mcp`, `orchestrator`, `agent`, `prompts/`, `images/` and `web/`.
 
 ## Contribute
 

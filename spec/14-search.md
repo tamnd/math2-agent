@@ -86,3 +86,14 @@ math2 measures search quality and does not only claim it. `bench/search/` holds 
 | **external baselines** | the same queries run against LeanSearch v2, Lean Finder, TheoremSearch, zbMATH formula search, where an API allows | the same metrics | none |
 
 The external baseline row is important. On each type of query, the search of math2 should be better than the best single-purpose tool for that type. If it is not better, the release notes say so, and the workspace gives a link to the better tool for that query type.
+
+## 14.8 The first version
+
+The first version of the search package (M3) has all four channels, the identifier resolver, the fusion and the premise selection. It is simpler than the design above in these ways. The benchmarks of 14.7 decide what to change first.
+
+- The index is one SQLite file, `build/search.db`, that `m2 build` writes in the `search` step. Two builds of the same tree give the same file.
+- The formula channel has the operator-tree paths and the structural re-score. It has no symbol layout trees and no canonical forms from SymPy yet.
+- The formal channel matches the head of the conclusion, the heads of the hypotheses and the constants of each declaration. It reads them from the canonical type forms of M2Extract, and it has no discrimination tree yet. It knows the declarations of extract.json, thus the bound declarations and the declarations that the tree names. The full pinned Mathlib comes with the import of its declarations.
+- The embedding channel uses the local hash embedder of the aligner (16.3) and a flat scan of int8 vectors. The HNSW index and the pinned embedding model come when the benchmark has chosen a model. The index records the name and the length of the embedder, and it refuses to open with another one.
+- The fusion multiplies the reciprocal rank term of each channel by a factor from one half to one. The factor is the score of the result divided by the score of rank 1 in the same channel. Thus an exact match far above the next result keeps its margin, and the kind and status priors only order results that are near.
+- The channel weights are fixed: 1 for each channel and 0.5 for the embedding channel. The benchmark learns them later.

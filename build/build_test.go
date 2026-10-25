@@ -25,11 +25,20 @@ func TestGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(m.Steps) != 3 || m.Steps[0].Name != build.Status || m.Steps[1].Name != build.Graph || m.Steps[2].Name != build.Store || m.Steps[0].Cached || m.Steps[1].Cached || m.Steps[2].Cached {
-		t.Fatalf("the steps are %+v, and only the status, graph and store steps must run", m.Steps)
+	var names []string
+	for _, s := range m.Steps {
+		names = append(names, s.Name)
+		if s.Cached {
+			t.Errorf("the first build has the cached step %s", s.Name)
+		}
 	}
-	if _, err := os.Stat(filepath.Join(out, build.StoreFile)); err != nil {
-		t.Error(err)
+	if want := []string{build.Status, build.Graph, build.Store, build.Search}; !slices.Equal(names, want) {
+		t.Fatalf("the steps are %+v, and only the steps %v must run", m.Steps, want)
+	}
+	for _, f := range []string{build.StoreFile, build.SearchFile} {
+		if _, err := os.Stat(filepath.Join(out, f)); err != nil {
+			t.Error(err)
+		}
 	}
 	if m.Counts.Nodes == 0 || m.Counts.Edges == 0 {
 		t.Errorf("the counts are %+v", m.Counts)
@@ -41,7 +50,7 @@ func TestGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !again.Steps[0].Cached || !again.Steps[1].Cached || !again.Steps[2].Cached || again.Output != m.Output {
+	if slices.ContainsFunc(again.Steps, func(s build.Step) bool { return !s.Cached }) || again.Output != m.Output {
 		t.Errorf("the second build is %+v, and it must be cached with the output %s", again.Steps, m.Output)
 	}
 	other, err := build.Run(ctx, build.Options{Root: fixture, Out: t.TempDir()})
