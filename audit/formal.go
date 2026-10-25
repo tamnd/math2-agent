@@ -70,7 +70,8 @@ func (a *auditor) lastBuild() *built {
 // binding is one Lean binding in the front matter of a node.
 type binding struct {
 	decl, adapter, match string
-	line, col            int // the position of the item in the formal list
+	reviews              []string // the ids in fidelity_reviews
+	line, col            int      // the position of the item in the formal list
 }
 
 // checked returns the declaration that the kernel checks: the adapter, or the declaration.
@@ -101,6 +102,10 @@ func leanBindings(n *node.Node) []binding {
 			continue
 		}
 		b := binding{decl: str(m["decl"]), adapter: str(m["adapter"]), match: str(m["match"]), line: line, col: col}
+		rs, _ := m["fidelity_reviews"].([]any)
+		for _, r := range rs {
+			b.reviews = append(b.reviews, str(r))
+		}
 		if i < len(items) {
 			b.line, b.col = items[i].Line, items[i].Column
 		}
