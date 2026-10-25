@@ -5,3 +5,4 @@ coverage.out
 .DS_Store
 /lean/.lake/
 /replay/testdata/fixture/.lake/
+/.github/lighthouse/node_modules/

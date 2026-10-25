@@ -1,0 +1,9 @@
+{
+  "name": "m2-lighthouse",
+  "private": true,
+  "description": "The pinned Lighthouse CI that the site job of the ci workflow runs.",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@lhci/cli": "0.15.1"
+  }
+}

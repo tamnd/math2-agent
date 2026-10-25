@@ -61,6 +61,8 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
 | `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. `m2 mint -seed` gives tags that start with `0` to the nodes of the M1 seed. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
+| `m2 site check` | Test the wiki against the size, MathML, no-JavaScript, figure and offline targets. | written |
+| `m2 site serve` | Preview the wiki with gzip, as GitHub Pages serves it. | written |
 | `m2 build` | Build the derived data: Lean, extraction, replay, status, graph, store and the search index. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
@@ -84,8 +86,9 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 `m2 site build` makes the wiki at https://tamnd.github.io/math2 from a math2 working tree and the spec. The math2 repository runs it on each push to `main` and each night, and GitHub Pages serves the result.
 
 ```sh
-go run ./cmd/m2 site build -content ../math2 -spec spec -out _site
-python3 -m http.server -d _site 8000
+go run ./cmd/m2 site build -content ../math2 -spec spec -out _site -url http://localhost:8000/math2
+go run ./cmd/m2 site check -url http://localhost:8000/math2 _site
+go run ./cmd/m2 site serve _site
 ```
 
 Each node gets a page with an infobox, its links and its backlinks. The build renders the math to HTML and MathML with KaTeX and the macros of math2, so a reader can read each node with JavaScript off. The site serves the KaTeX style sheet and fonts itself, so it loads nothing from a CDN. Each page also has a copy for programs: `node/<TAG>.md`, `api/node/<TAG>.json`, `api/nodes.json`, `llms.txt` and `llms-full.txt`. The pages Contribute and Curation come from CONTRIBUTING.md and CURATION.md in the math2 tree. A build with no `-date` flag gives the same bytes each time.
@@ -94,7 +97,21 @@ Each page also shows what its node needs and what depends on it. The closure of 
 
 Give `-build DIR` to show the evidence level, the fidelity and the flags of each node from the store of a build in DIR. The bar on each box of a figure shows the evidence level in colour, and the box also gives the level as text. With no `-build` flag, a statement page says that the site has no build data.
 
-To preview the site with the local server above, set `-url http://localhost:8000`.
+`m2 site serve` serves the site at http://localhost:8000/math2 by default. Give the same `-url` to the build and to the server.
+
+## The site targets
+
+Spec 13.7 sets these targets for each page of the wiki:
+
+- A page takes less than 50 KB on the network before math fonts, with gzip.
+- Each formula has MathML.
+- A reader can read each page with JavaScript off.
+- Each figure has a list with the same data.
+- A page loads files from the site only, so an archive of the site works offline.
+- Each page passes each accessibility audit of Lighthouse.
+- The first paint and the largest paint come in less than 1 s on a mid-range phone on 4G.
+
+`m2 site check` tests the first five targets on each page of a built site. It prints the heaviest page and each problem, and exits with code 1 when a page misses a target. The last two targets need a browser. The CI job `site targets` builds the site of the fixtures, runs `m2 site check`, and runs Lighthouse CI on one page of each template through `m2 site serve`. It puts the report in the summary of the run. Each release has the same report as `site-report.md`. See [.github/lighthouse](.github/lighthouse/README.md) for the profile and for a local run.
 
 ## The build
 

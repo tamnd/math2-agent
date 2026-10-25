@@ -94,7 +94,7 @@ func TestSVGRows(t *testing.T) {
 	for i := range 12 {
 		layer = append(layer, &dagItem{link: link{Tag: string(rune('A' + i)), Text: "x", URL: "/x"}})
 	}
-	s := string(svg("c", [][]*dagItem{layer}))
+	s := string(svg("c", [][]*dagItem{layer}, 5))
 	// 12 boxes in rows of 5 give 3 rows.
 	want := `viewBox="0 0 952 218"`
 	if !strings.Contains(s, want) {

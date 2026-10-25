@@ -1,0 +1,65 @@
+{
+  "ci": {
+    "collect": {
+      "url": [
+        "http://127.0.0.1:8000/math2/",
+        "http://127.0.0.1:8000/math2/node/Q529ES/",
+        "http://127.0.0.1:8000/math2/node/ZZZJE6/",
+        "http://127.0.0.1:8000/math2/node/5T2YC8/",
+        "http://127.0.0.1:8000/math2/node/DSG7KN/",
+        "http://127.0.0.1:8000/math2/nodes/",
+        "http://127.0.0.1:8000/math2/kind/statement/",
+        "http://127.0.0.1:8000/math2/msc/",
+        "http://127.0.0.1:8000/math2/msc/20/",
+        "http://127.0.0.1:8000/math2/search/",
+        "http://127.0.0.1:8000/math2/explore/frontier/",
+        "http://127.0.0.1:8000/math2/spec/",
+        "http://127.0.0.1:8000/math2/spec/13-research-workspace/",
+        "http://127.0.0.1:8000/math2/contribute/",
+        "http://127.0.0.1:8000/math2/agents/",
+        "http://127.0.0.1:8000/math2/404.html"
+      ],
+      "numberOfRuns": 1,
+      "settings": {
+        "chromeFlags": "--headless=new --no-sandbox",
+        "onlyCategories": [
+          "performance",
+          "accessibility"
+        ],
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 60,
+          "throughputKbps": 9000,
+          "uploadThroughputKbps": 1500,
+          "cpuSlowdownMultiplier": 4
+        }
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:accessibility": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "first-contentful-paint": [
+          "error",
+          {
+            "maxNumericValue": 1000
+          }
+        ],
+        "largest-contentful-paint": [
+          "error",
+          {
+            "maxNumericValue": 1000
+          }
+        ]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": "lighthouse-report"
+    }
+  }
+}
