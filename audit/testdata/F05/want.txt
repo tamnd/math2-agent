@@ -1,0 +1,1 @@
+nodes/3C/3C53TD.md:8:5: F05: the binding Subgroup.card_subgroup_dvd_card is at E5. E5 needs the versions of two kernels, and the replay records 1

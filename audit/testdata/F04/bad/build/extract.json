@@ -1,0 +1,23 @@
+{
+  "lean": {
+    "lean": "4.35.0",
+    "githash": ""
+  },
+  "bindings": [],
+  "records": [
+    {
+      "decl": "Subgroup.card_subgroup_dvd_card",
+      "kind": "theorem",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "native_decide_axioms": [
+        "Subgroup.card_subgroup_dvd_card._native.native_decide.ax_1"
+      ],
+      "uses_bound": []
+    }
+  ]
+}

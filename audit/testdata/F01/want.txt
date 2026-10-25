@@ -1,0 +1,2 @@
+nodes/3C/3C53TD.md:8:5: F01: Subgroup.card_subgroup_dvd_card does not resolve at the pinned commit: unknown declaration. Correct the name, or record the rename in registers/bindings.reg
+nodes/3C/3C53TD.md:8:5: F01: build/extract.json has no record of Math2.Match.lagrange. Run m2 build
