@@ -1,0 +1,18 @@
+release: "2027.03"
+commit: 9e43339bcf705097893948bcad0cdb398bc0bb7a
+toolchain:
+  m2: v0.2.0
+  lean: leanprover/lean4:v4.35.0
+  mathlib: 0123456789abcdef0123456789abcdef01234567
+artefacts:
+  graph:
+    hash: blake3:0000000000000000000000000000000000000000000000000000000000000000
+    size: 9000
+counts:
+  nodes_live: 2
+  by_kind: {concept: 1, statement: 1}
+  by_evidence: {E1: 1}
+rebuild_check:
+  runner: ubuntu-24.04/x86_64/4c/16G
+  graph_hash_reproduced: false
+  oleans_hash_reproduced: true

@@ -1,0 +1,3 @@
+manifests/releases/2027.03.yaml:1:1: R02: the manifest of 2027.03 has no rebuild check. Rebuild the release on a second machine and record the result
+manifests/releases/2027.04.yaml:8:1: R02: the rebuild of 2027.04 gives a different Math2.ir, and the manifest gives no reason
+manifests/releases/2027.05.yaml:4:1: R02: the manifest of 2027.05 has no oleans artefact

@@ -322,14 +322,14 @@ func (b *builder) toolchain(ctx context.Context) error {
 
 // lean runs lake build. The input is the source of the Lake project, and the output is its .olean files.
 func (b *builder) lean(ctx context.Context, _ []*node.Node) (Step, error) {
-	input, err := hashTree(b.project, func(rel string) bool {
+	input, err := HashTree(b.project, func(rel string) bool {
 		return strings.HasSuffix(rel, ".lean") || strings.HasPrefix(rel, "lakefile.") || rel == "lean-toolchain" || rel == "lake-manifest.json"
 	})
 	if err != nil {
 		return Step{}, err
 	}
 	oleans := func() (string, error) {
-		return hashTree(filepath.Join(b.project, ".lake", "build", "lib", "lean"), func(rel string) bool { return strings.HasSuffix(rel, ".olean") })
+		return HashTree(filepath.Join(b.project, ".lake", "build", "lib", "lean"), func(rel string) bool { return strings.HasSuffix(rel, ".olean") })
 	}
 	if out, err := oleans(); err == nil {
 		if s, ok := b.cached(Lean, input, out); ok {
@@ -578,7 +578,7 @@ func (b *builder) status(_ context.Context, nodes []*node.Node) (Step, error) {
 	for _, n := range nodes {
 		lines = append(lines, n.ID+" "+node.Hash(n))
 	}
-	reviews, err := hashTree(filepath.Join(b.opt.Root, "reviews"), func(rel string) bool { return strings.HasSuffix(rel, ".yaml") })
+	reviews, err := HashTree(filepath.Join(b.opt.Root, "reviews"), func(rel string) bool { return strings.HasSuffix(rel, ".yaml") })
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return Step{}, err
 	}
@@ -637,7 +637,7 @@ func (b *builder) graph(_ context.Context, nodes []*node.Node) (Step, error) {
 	all := func(string) bool { return true }
 	g := graph.Build(nodes)
 	b.m.Counts.Nodes, b.m.Counts.Edges = len(g.Nodes), len(g.Edges)
-	if out, err := hashTree(dir, all); err == nil {
+	if out, err := HashTree(dir, all); err == nil {
 		if s, ok := b.cached(Graph, input, out); ok {
 			return s, nil
 		}
@@ -648,7 +648,7 @@ func (b *builder) graph(_ context.Context, nodes []*node.Node) (Step, error) {
 	if _, err := g.WriteParquet(dir); err != nil {
 		return Step{}, err
 	}
-	out, err := hashTree(dir, all)
+	out, err := HashTree(dir, all)
 	return Step{Input: input, Output: out}, err
 }
 
@@ -674,8 +674,8 @@ func hashString(s string) string {
 	return node.HashPrefix + hex.EncodeToString(sum[:])
 }
 
-// hashTree hashes the files below dir for which keep is true. It does not go into the .lake directory of a Lake project unless dir is in it. It hashes the path from dir and the bytes of each file, in path order.
-func hashTree(dir string, keep func(rel string) bool) (string, error) {
+// HashTree returns the hash of the files below dir for which keep is true. The graph step and the release manifest use it. It does not go into the .lake directory of a Lake project unless dir is in it. It hashes the path from dir and the bytes of each file, in path order.
+func HashTree(dir string, keep func(rel string) bool) (string, error) {
 	var rels []string
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
