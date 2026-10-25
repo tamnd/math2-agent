@@ -165,6 +165,8 @@ The rules C01 to C05 of `m2 audit` check the computations:
 
 C02 and C05 read the runs in `build/compute/`. C02 skips when the directory does not exist. An E4 candidate is a computation with a certificate that is not an experiment.
 
+`m2 build` reads the same runs for the status. A computation is E1. It is E4 when it has a certificate, it is not an experiment, and the verified runs on amd64 and on arm64 agree with each other and with the record. The page of a computation on the site has a "Run this" panel. It gives the command that runs the record again, the image, the entry point, the inputs, the seed and the recorded hashes, and it shows the runs of the build next to the recorded output hash.
+
 ## The sandbox
 
 The `sandbox` package runs a program in a container image with the isolation of spec 08.6. The image is named by its digest. The program runs with no network, on a read-only image, as the user `nobody`, with no capabilities. It reads its inputs at `/work`, which is read-only, and writes only to `/scratch` and `/tmp`, which are small tmpfs mounts. The run has limits on the CPU, the memory, the processes, the wall clock and the output. When the Docker daemon has the gVisor runtime `runsc`, `Docker.Detect` selects it.

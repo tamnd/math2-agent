@@ -24,6 +24,7 @@ import (
 
 	"github.com/zeebo/blake3"
 
+	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/format"
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/lean"
@@ -57,6 +58,7 @@ const (
 	GraphDir     = "graph"
 	StoreFile    = "store.db"
 	SearchFile   = "search.db"
+	ComputeDir   = "compute" // the runs of m2 compute, in TAG/ARCH/
 )
 
 // Checkers are the programs of the Lean toolchain that check an environment again (spec 07.7). The manifest records the hash of each one that the toolchain has.
@@ -471,7 +473,7 @@ func formalDecls(nodes []*node.Node) []string {
 	return slices.Compact(out)
 }
 
-// input returns the evidence of the build for the status: the nodes, the records of extract.json, the reviews, the reviewers and the authors of the bindings. It has the results of replay.json when replays is set.
+// input returns the evidence of the build for the status: the nodes, the records of extract.json, the reviews, the reviewers, the authors of the bindings and the runs of the computations. It has the results of replay.json when replays is set.
 func (b *builder) input(nodes []*node.Node, replays bool) (status.Input, error) {
 	in := status.Input{Nodes: nodes, Records: map[string]lean.Record{}, Replays: map[string]status.Replay{}}
 	var err error
@@ -492,6 +494,9 @@ func (b *builder) input(nodes []*node.Node, replays bool) (status.Input, error) 
 		for _, r := range x.Records {
 			in.Records[r.Decl] = r
 		}
+	}
+	if in.Runs, err = compute.ReadRuns(filepath.Join(b.opt.Out, ComputeDir)); err != nil {
+		return in, err
 	}
 	if replays && b.output(Replay) != "" {
 		rs, err := ReadReplays(b.opt.Out)
@@ -592,6 +597,11 @@ func (b *builder) status(_ context.Context, nodes []*node.Node) (Step, error) {
 		return Step{}, err
 	}
 	lines = append(lines, "reviews "+reviews)
+	runs, err := HashTree(filepath.Join(b.opt.Out, ComputeDir), func(rel string) bool { return strings.HasSuffix(rel, "/"+compute.RunFile) })
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return Step{}, err
+	}
+	lines = append(lines, "compute "+runs)
 	for _, reg := range []string{"reviewers.reg", "bindings.reg"} {
 		data, err := os.ReadFile(filepath.Join(b.opt.Root, "registers", reg)) // #nosec G304 -- the caller names the root of the tree.
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {

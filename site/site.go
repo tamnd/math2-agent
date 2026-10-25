@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/katex"
 	"github.com/tamnd/math2-agent/node"
@@ -112,6 +113,7 @@ type nodeView struct {
 	Retired                                map[string]any
 	Status                                 *status.Status // nil when the site has no build
 	Closure, Blueprint                     *dagView
+	Run                                    *runView // the "run this" panel of a computation
 	UsedBy                                 []link
 	HTML                                   template.HTML
 	URL, MarkdownURL, JSONURL, EditURL     string
@@ -131,7 +133,8 @@ type builder struct {
 	specs   []*specDoc
 	katex   *katex.Renderer
 	graph   *graph.Graph
-	status  map[string]status.Status // nil when the site has no build
+	status  map[string]status.Status           // nil when the site has no build
+	runs    map[string]map[string]*compute.Run // the runs of the computations in the build, by tag and architecture
 	tmpl    *template.Template
 	pages   []string // the paths of the HTML pages, for the sitemap
 	nodeMD  *markdown
@@ -217,6 +220,9 @@ func (b *builder) load() error {
 	}
 	b.graph = graph.Build(nodes)
 	if err := b.loadStatus(); err != nil {
+		return err
+	}
+	if err := b.loadRuns(); err != nil {
 		return err
 	}
 	b.explore()

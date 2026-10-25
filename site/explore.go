@@ -260,6 +260,7 @@ func clip(s string, n int) string {
 func (b *builder) explore() {
 	for _, v := range b.order {
 		v.Status = b.statusOf(v.Tag)
+		v.Run = b.runOf(v)
 		if alt, ok := b.graph.Closure(v.Tag, graph.MinDepth); ok && len(alt.Nodes) > 1 {
 			v.Closure = b.dag("closure-caption", alt.Nodes, v.Tag, nil, false)
 			for _, p := range alt.Proofs {

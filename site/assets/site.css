@@ -304,6 +304,9 @@ a.kind:visited { color: var(--muted); }
 .reading li.root > a { font-weight: 600; }
 .ev-text { font-family: var(--mono); font-size: 0.85em; color: var(--muted); }
 .cols { columns: 18rem; }
+.run td code { overflow-wrap: anywhere; }
+.run table { margin: 0.6rem 0; }
+.run th { text-align: left; padding-right: 1rem; }
 .reasons { margin: 1rem 0; }
 .reasons summary { cursor: pointer; color: var(--link); }
 @media (forced-colors: active) {
