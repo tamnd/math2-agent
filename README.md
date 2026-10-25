@@ -76,7 +76,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 search <query>` | Search the knowledge graph with the identifier resolver and the lexical, formula, formal and embedding channels. `m2 search -premises <goal>` ranks the Lean declarations that can help to prove a goal. | written |
 | `m2 serve` | Serve the read API over HTTP with JSON, and the MCP server over HTTP or stdio, from the last build. | written |
 | `m2 compute run\|verify <tag>` | Run a computation in the sandbox, or verify its output and its certificate. | written |
-| `m2 prov` | Show, record, credit, quarantine and confirm provenance. `m2 prov disclose` arrives later in M3. | written |
+| `m2 prov` | Show, record, credit, quarantine, confirm and disclose provenance. | written |
 | `m2 review <tag>` | Review a formal statement against its informal statement. | M4 |
 | `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
 | `m2 agent run <role>` | Do one agent run. | M5 |
@@ -363,13 +363,17 @@ m2 prov credit -from 2027-01-01 -to 2027-12-31 orcid:0000-0002-1825-0097
 m2 prov quarantine -model claude-opus-5-5 -prompt explain/7
 m2 prov quarantine -model claude-opus-5-5 -prompt explain/7 -by github:octocat
 m2 prov confirm -by github:octocat 3C53TD body.explanations.L1
+m2 prov disclose 3C53TD               # the disclosure paragraph of a node
+m2 prov disclose -yaml 3C53TD > formalization.yaml
 ```
 
 `m2 prov record` compares the node files with a revision, `HEAD` by default, and it skips a field that has a new line since that revision already. `m2 prov credit` lists the changes of a person in the CRediT roles, with the changes of the agent runs that worked on behalf of the person. `m2 prov quarantine` lists the fields that an agent wrote with a model and a prompt version, and that no person changed or confirmed since (spec 06.5). With `-by`, it puts the fields in quarantine. A person clears a field when they change it or run `m2 prov confirm`. `m2 align accept` and `m2 align confirm` write the lines of their decisions. `m2 mint` moves the log of a provisional id to its tag.
 
 The site shows the history of each node from its log. It names the fields that an agent wrote and that no person checked yet. It hides each field in quarantine on the page, in the Markdown copy and in the JSON view, and the headings stay with a notice.
 
-The summary of each agent run is in `build/runs/<id>.json`, with the agent, the prompt version, the models, the tools, the images, the person or schedule that the run worked on behalf of, and the outcome.
+The summary of each agent run is in `build/runs/<id>.json`, with the agent, the prompt version, the models, the tools, the images, the person or schedule that the run worked on behalf of, and the outcome. It can also give the nodes that the job named, the wall time in seconds and the spend in US dollars.
+
+`m2 prov disclose` writes the disclosure of a node from its log, the run summaries and the last build (spec 16.5). The paragraph names the people, and for each agent run it gives the model, the prompt, the person or schedule, the outcome, the time and the spend. It also counts the runs on the node that did not succeed, gives the kind of agent contribution, names the fields that no person checked and the fields in quarantine, and gives the evidence level, the fidelity level and the reviewers of each binding. When the record does not have a value, the paragraph says so. With `-yaml`, the command writes the `formalization.yaml` of the node in the form v0.4 of the [Mathlib Initiative](https://github.com/mathlib-initiative/formalization.yaml), so that a person can register the binding in the Palomar registry. The file makes the node a source, makes the repository a thin wrapper of Mathlib at its commit when each binding is in Mathlib, gives one automation method for the people and one for each agent run, and maps the node to each declaration in `alignment`. A node with no formal binding has no such file. A project disclosure needs the project data of the workspace, so it comes later.
 
 | Rule | What it checks |
 |---|---|

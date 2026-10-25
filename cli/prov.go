@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -15,8 +16,11 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/bump"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/prov"
+	"github.com/tamnd/math2-agent/status"
 	"github.com/tamnd/math2-agent/tag"
 )
 
@@ -25,7 +29,7 @@ m2 prov record [-root DIR] [-base REV] [-commit C] [-at TIME] [-source S] [-n] -
 m2 prov credit [-root DIR] [-runs DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json] <person>
 m2 prov quarantine [-root DIR] [-runs DIR] -model M [-prompt P] [-by PERSON] [-json]
 m2 prov confirm [-root DIR] -by PERSON <tag> <field>...
-m2 prov disclose <tag|project>`
+m2 prov disclose [-root DIR] [-runs DIR] [-out DIR] [-repo URL] [-license SPDX] [-yaml] <tag>`
 
 func runProv(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 {
@@ -41,8 +45,7 @@ func runProv(args []string, stdout, stderr io.Writer) int {
 		case "confirm":
 			return runProvConfirm(args[1:], stdout, stderr)
 		case "disclose":
-			fmt.Fprintln(stderr, "m2 prov disclose: this command is not written yet. It arrives in M3, open to readers.")
-			return ExitNotWritten
+			return runProvDisclose(args[1:], stdout, stderr)
 		}
 	}
 	fmt.Fprintln(stderr, "usage: "+provUsage)
@@ -468,5 +471,80 @@ func writeJSON(stdout, stderr io.Writer, cmd string, v any) int {
 		fmt.Fprintf(stderr, "%s: %v\n", cmd, err)
 		return ExitFailure
 	}
+	return ExitOK
+}
+
+func runProvDisclose(args []string, stdout, stderr io.Writer) int {
+	flags, root := provFlags("disclose", stderr)
+	runsDir := flags.String("runs", "", "the run summaries. Empty means build/runs in the tree.")
+	out := flags.String("out", "", "the output directory of m2 build. Empty means build/ in the tree.")
+	repo := flags.String("repo", "https://github.com/tamnd/math2", "the URL of the content repository")
+	license := flags.String("license", "Apache-2.0", "the SPDX licence of the formal code")
+	asYAML := flags.Bool("yaml", false, "write the formalization.yaml of the node, and not the paragraph")
+	if err := parseInterleaved(flags, args); err != nil {
+		return ExitUsage
+	}
+	if flags.NArg() != 1 || !tag.IsTag(flags.Arg(0)) {
+		fmt.Fprintln(stderr, "usage: m2 prov disclose [-root DIR] [-runs DIR] [-out DIR] [-repo URL] [-license SPDX] [-yaml] <tag>")
+		return ExitUsage
+	}
+	fail := func(err error) int {
+		fmt.Fprintf(stderr, "m2 prov disclose: %v\n", err)
+		return ExitFailure
+	}
+	t := flags.Arg(0)
+	path := "nodes/" + tag.Shard(t) + "/" + t + ".md"
+	data, err := os.ReadFile(filepath.Join(*root, filepath.FromSlash(path))) // #nosec G304 -- the tag is checked above, thus the path is in the tree.
+	if err != nil {
+		return fail(err)
+	}
+	n, err := node.Parse(path, data)
+	if err != nil {
+		return fail(err)
+	}
+	f := prov.Facts{Node: n, Repo: *repo, License: *license}
+	if f.Log, err = prov.Read(*root, t); err != nil {
+		return fail(err)
+	}
+	if f.Runs, err = readRuns(*root, *runsDir); err != nil {
+		return fail(err)
+	}
+	if *out == "" {
+		*out = filepath.Join(*root, "build")
+	}
+	all, err := build.ReadStatus(*out)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+	case err != nil:
+		return fail(err)
+	default:
+		f.Build = map[string]prov.Binding{}
+		if i := slices.IndexFunc(all, func(s status.Status) bool { return s.Tag == t }); i >= 0 {
+			for _, b := range all[i].Bindings {
+				pb := prov.Binding{Level: cmp.Or(b.Level.String(), "None"), Axioms: b.Axioms, Fidelity: b.Fidelity.String()}
+				for _, r := range b.Reviews {
+					if r.State == status.Counts && r.Reviewer != "" {
+						pb.Reviewers = append(pb.Reviewers, r.Reviewer)
+					}
+				}
+				f.Build[b.Decl] = pb
+			}
+		}
+	}
+	if pins, err := bump.ReadPins(filepath.Join(*root, "lean")); err == nil {
+		f.Mathlib = pins.Commit
+	}
+	if c, err := git(*root, "rev-parse", "HEAD"); err == nil {
+		f.Commit = strings.TrimSpace(c)
+	}
+	if !*asYAML {
+		fmt.Fprint(stdout, prov.Disclose(f))
+		return ExitOK
+	}
+	y, err := prov.Formalization(f)
+	if err != nil {
+		return fail(err)
+	}
+	_, _ = stdout.Write(y)
 	return ExitOK
 }
