@@ -1,0 +1,15 @@
+---
+tag: S1EY9H
+kind: problem
+name: Inverse Galois problem
+msc: [12F12]
+topics: [BB2PHH]
+uses: [GY1XDB]
+sources:
+  - book: isbn:9783540628900
+    locator: Introduction
+---
+
+# Problem
+
+Is each finite group the Galois group of a Galois extension of $\Q$?

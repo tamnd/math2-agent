@@ -1,0 +1,19 @@
+---
+tag: NJMJNC
+kind: statement
+role: theorem
+name: Fundamental theorem of arithmetic
+msc: [11A51]
+topics: [3EYFQZ]
+uses: [FZ24AA]
+proofs: [RYKYXR]
+formal:
+  - system: lean4
+    library: mathlib
+    decl: Nat.factors_unique
+    match: partial
+---
+
+## Statement
+
+Each integer $n > 1$ is a product of primes, and the factors are unique up to their order.

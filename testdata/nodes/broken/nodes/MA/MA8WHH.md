@@ -1,0 +1,10 @@
+---
+tag: MA8WHH
+kind: proof
+name: Proof of the intermediate value theorem
+uses: [HMXENA]
+---
+
+## Proof
+
+Suppose $f(a) < y < f(b)$. Let $c = \sup \{x \in [a, b] : f(x) < y\}$. Continuity at $c$ gives $f(c) \leq y$ and $f(c) \geq y$.

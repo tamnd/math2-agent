@@ -1,0 +1,18 @@
+---
+tag: AK1TNW
+kind: statement
+role: corollary
+name: The number of odd-degree vertices is even
+topics: [3STR6E]
+uses: [V21CR0]
+proofs: [J5PYF2]
+formal:
+  - system: lean4
+    library: mathlib
+    decl: SimpleGraph.even_card_odd_degree_vertices
+    match: exact
+---
+
+## Statement
+
+In each finite graph, the number of vertices of odd degree is even.

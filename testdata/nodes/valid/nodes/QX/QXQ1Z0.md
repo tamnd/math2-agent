@@ -1,0 +1,19 @@
+---
+tag: QXQ1Z0
+kind: statement
+role: theorem
+name: Wilson's theorem
+msc: [11A07]
+topics: [3EYFQZ]
+uses: [FZ24AA, XE3D9F]
+proofs: [WQ33T7]
+formal:
+  - system: lean4
+    library: mathlib
+    decl: Nat.prime_iff_fac_equiv_neg_one
+    match: exact
+---
+
+## Statement
+
+An integer $p > 1$ is prime if and only if $(p-1)! \equiv -1 \pmod{p}$.

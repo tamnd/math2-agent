@@ -1,0 +1,20 @@
+---
+tag: 44YDXQ
+kind: statement
+role: theorem
+name: Rank-nullity theorem
+msc: [15A03]
+topics: [XM6NGM]
+uses: [BE43Y5]
+proofs: [ZZ1F3H]
+formal:
+  - system: lean4
+    library: mathlib
+    decl: LinearMap.finrank_range_add_finrank_ker
+    match: exact
+status: proved
+---
+
+## Statement
+
+Let $f : V \to W$ be a linear map and $V$ finite-dimensional. Then $\dim V = \dim \ker f + \dim \im f$.

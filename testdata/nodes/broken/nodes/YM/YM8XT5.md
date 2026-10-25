@@ -1,0 +1,15 @@
+---
+tag: YM8XT5
+kind: proof
+name: Proof of Lagrange's theorem by cosets
+uses: [BFBKVM]
+methods: [XQGRZH]
+---
+
+## Proof
+
+The left cosets of $H$ partition $G$, and each has $|H|$ elements ([[lemma|BFBKVM]]). Thus $|G| = [G : H] \, |H|$.
+
+## Idea
+
+Count the elements of $G$ one coset at a time. An [[older proof|DTT8HP]] counts orbits instead.

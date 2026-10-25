@@ -1,0 +1,19 @@
+---
+tag: T4R3TD
+kind: statement
+role: lemma
+name: Handshake lemma
+msc: [05C07]
+topics: [3STR6E]
+uses: [ADEDGA]
+proofs: [MZBWF0]
+formal:
+  - system: lean4
+    library: mathlib
+    decl: SimpleGraph.sum_degrees_eq_twice_card_edges
+    match: exact
+---
+
+## statement
+
+In each finite [[graph|KRRWAZ]], the sum of the degrees of the vertices is twice the number of edges.

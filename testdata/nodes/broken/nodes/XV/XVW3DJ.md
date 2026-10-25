@@ -1,0 +1,20 @@
+---
+tag: XVW3DJ
+kind: statement
+role: proposition
+name: A subgroup of index 2 is normal
+topics: [BB2PHH]
+uses: [KADX7Q, 7SW3MR]
+proofs: [F5P6HY]
+formal:
+  - system: lean4
+    library: mathlib
+    decl: Subgroup.normal_of_index_eq_two
+    match: exact
+---
+
+## Statement
+
+Let $H$ be a subgroup of $G$ with exactly two left cosets. Then $H$ is a [[normal subgroup|DVT1KF]] of $G$.
+
+$$\begin{aligned} a &= b$$

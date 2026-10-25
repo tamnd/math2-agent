@@ -1,0 +1,1002 @@
+# Each broken node has one planted error. The entry gives the rule that catches it and the line of the error.
+# Each broken node is a copy of a node in ../valid, and from gives the tag of that node. The other nodes that a broken node links to are in ../valid.
+- file: nodes/13/13876N.md
+  rule: B02
+  line: 14
+  from: B5FJGH
+  planted: the link target group is not a tag
+- file: nodes/13/138Z3D.md
+  rule: G01
+  line: 7
+  from: MZ6EY9
+  planted: the topics target HNKV11 is not a node
+- file: nodes/13/13V3JQ.md
+  rule: B03
+  line: 10
+  from: MZBWF0
+  planted: text comes before the first section heading
+- file: nodes/16/16AET7.md
+  rule: S03
+  line: 11
+  from: 1ATNDT
+  planted: the field fidelity states a status
+- file: nodes/1B/1B7R9H.md
+  rule: B01
+  line: 15
+  from: 303VTA
+  planted: \bbox is in MathJax but not in KaTeX
+- file: nodes/1B/1BWC1P.md
+  rule: S02
+  line: 2
+  from: V21CR0
+  planted: the field role is missing
+- file: nodes/1E/1EYXY6.md
+  rule: S02
+  line: 2
+  from: 2R5WVM
+  planted: the field proves is missing
+- file: nodes/1K/1K9HZ2.md
+  rule: S01
+  line: 2
+  from: 40DMZ8
+  planted: the name field is missing
+- file: nodes/1R/1R0S6R.md
+  rule: B02
+  line: 19
+  from: PTM26N
+  planted: a Markdown link to a URL is in the Statement section
+- file: nodes/1W/1WS5YS.md
+  rule: B01
+  line: 14
+  from: XCYCNZ
+  planted: \htmlClass is in KaTeX but not in MathJax
+- file: nodes/24/2407C6.md
+  rule: B02
+  line: 16
+  from: CGTJQV
+  planted: a Markdown link to a URL is in the Statement section
+- file: nodes/25/25146Y.md
+  rule: B01
+  line: 12
+  from: BB2PHH
+  planted: \bbox is in MathJax but not in KaTeX
+- file: nodes/2F/2F3WPS.md
+  rule: B02
+  line: 13
+  from: Z106G5
+  planted: the link target 3CH1ZP is not a node
+- file: nodes/2H/2HFPKF.md
+  rule: B01
+  line: 13
+  from: SQ1HR8
+  planted: the command \foo is not in KaTeX, MathJax or the macros
+- file: nodes/2Q/2Q2PKF.md
+  rule: B02
+  line: 18
+  from: 40DMZ8
+  planted: the link target group is not a tag
+- file: nodes/2R/2R96MJ.md
+  rule: B02
+  line: 22
+  from: 5R3ZAF
+  planted: the link target is retired and has no successor
+- file: nodes/30/30HN7H.md
+  rule: B02
+  line: 24
+  from: ZNR9M8
+  planted: a Markdown link to a URL is in the Statement section
+- file: nodes/32/329QZB.md
+  rule: B01
+  line: 33
+  from: Q529ES
+  planted: the body changes a macro with \renewcommand
+- file: nodes/36/362NHJ.md
+  rule: B02
+  line: 12
+  from: CD2MSY
+  planted: the link target is a URL
+- file: nodes/3D/3DERNR.md
+  rule: B02
+  line: 16
+  from: X7J0XA
+  planted: the link target 3CH1ZP is not a node
+- file: nodes/3G/3GWDKA.md
+  rule: S01
+  line: 5
+  from: B5FJGH
+  planted: the field notes is not in the schema
+- file: nodes/3H/3H14NT.md
+  rule: B02
+  line: 18
+  from: BP30YM
+  planted: a URL is in the Statement section
+- file: nodes/3N/3N63EV.md
+  rule: S04
+  line: 1
+  from: 5666B5
+  planted: the file is larger than 64 KB
+- file: nodes/44/44YDXQ.md
+  rule: S03
+  line: 15
+  from: 3F81K4
+  planted: the field status states a status
+- file: nodes/48/48EMD0.md
+  rule: S03
+  line: 7
+  from: C1P35K
+  planted: the field evidence states a status
+- file: nodes/48/48MBAV.md
+  rule: S01
+  line: 8
+  from: 42NXAX
+  planted: the engine image has no sha256 digest
+- file: nodes/4M/4MCQYK.md
+  rule: S03
+  line: 12
+  from: 40DMZ8
+  planted: the field checked states a status
+- file: nodes/4Q/4QP7HT.md
+  rule: B01
+  line: 13
+  from: W2DJ7A
+  planted: \bbox is in MathJax but not in KaTeX
+- file: nodes/4R/4R324X.md
+  rule: B03
+  line: 20
+  from: DSG7KN
+  planted: the section Remarks comes two times
+- file: nodes/4R/4R6W4K.md
+  rule: B01
+  line: 18
+  from: ENS73X
+  planted: the body changes a macro with \renewcommand
+- file: nodes/4T/4THC34.md
+  rule: B03
+  line: 18
+  from: HMXENA
+  planted: the section Definition comes after Remarks
+- file: nodes/4Z/4ZHH8B.md
+  rule: B01
+  line: 19
+  from: M8XBZ4
+  planted: the body defines a macro with \def
+- file: nodes/4Z/4ZYA3N.md
+  rule: B02
+  line: 16
+  from: 2J2QXT
+  planted: the link target is retired and has no successor
+- file: nodes/50/50228P.md
+  rule: S02
+  line: 2
+  from: MZBWF0
+  planted: the field proves is missing
+- file: nodes/5A/5AAXDJ.md
+  rule: B01
+  line: 13
+  from: KRRWAZ
+  planted: an inline math span is not closed
+- file: nodes/5C/5CGR04.md
+  rule: B01
+  line: 12
+  from: XM6NGM
+  planted: the body defines a macro with \def
+- file: nodes/5G/5GYZKZ.md
+  rule: S02
+  line: 2
+  from: ZNAZT5
+  planted: the field engine is missing
+- file: nodes/62/62YT93.md
+  rule: S02
+  line: 2
+  from: 40DMZ8
+  planted: the field defines is missing
+- file: nodes/63/632K2Z.md
+  rule: G01
+  line: 8
+  from: ZNR9M8
+  planted: the uses target SC7YQS is not a node
+- file: nodes/6B/6BDSH4.md
+  rule: B03
+  line: 11
+  from: Q9FKYJ
+  planted: text comes before the first section heading
+- file: nodes/6B/6BRTCB.md
+  rule: G01
+  line: 7
+  from: CXXMNB
+  planted: the uses target SC7YQS is not a node
+- file: nodes/6B/6BW4WP.md
+  rule: S03
+  line: 10
+  from: 2J2QXT
+  planted: the field status states a status
+- file: nodes/6J/6JW2QG.md
+  rule: G01
+  line: 8
+  from: BFBKVM
+  planted: the proofs target RYKYXR is not a node
+- file: nodes/72/7236Z0.md
+  rule: S01
+  line: 6
+  from: VTPHZM
+  planted: an item of uses is in lowercase, so it is not a tag
+- file: nodes/72/72SQR5.md
+  rule: B02
+  line: 14
+  from: 7SW3MR
+  planted: the link has no tag after |
+- file: nodes/73/73YVJ8.md
+  rule: B03
+  line: 13
+  from: HRGAZT
+  planted: the section Proofs is not in the schema
+- file: nodes/79/79VX0G.md
+  rule: S01
+  line: 6
+  from: GY1XDB
+  planted: the front matter uses a YAML anchor
+- file: nodes/7A/7AA6AF.md
+  rule: S01
+  line: 5
+  from: HRGAZT
+  planted: the MSC code 20D6 has too few characters
+- file: nodes/7D/7DP7K4.md
+  rule: S01
+  line: 8
+  from: RQ9C3D
+  planted: the engine image has no sha256 digest
+- file: nodes/7S/7S2DY3.md
+  rule: B03
+  line: 16
+  from: DSG7KN
+  planted: the section Summary comes after Remarks
+- file: nodes/87/87YAMW.md
+  rule: B03
+  line: 21
+  from: VP2HXT
+  planted: the section Remarks comes two times
+- file: nodes/88/88QV33.md
+  rule: B01
+  line: 21
+  from: 261PJE
+  planted: a brace is not closed
+- file: nodes/88/88VAD4.md
+  rule: B02
+  line: 20
+  from: 5T2YC8
+  planted: the link target group is not a tag
+- file: nodes/89/8995VZ.md
+  rule: B03
+  line: 22
+  from: X5X1EQ
+  planted: the section Proof is for proof nodes only
+- file: nodes/89/89P5X6.md
+  rule: S01
+  line: 3
+  from: 3EYFQZ
+  planted: the kind theme is not one of the 11 kinds
+- file: nodes/8K/8KKTK3.md
+  rule: S02
+  line: 2
+  from: 586J26
+  planted: the field claim is missing
+- file: nodes/8Y/8YY9V3.md
+  rule: S01
+  line: 2
+  from: J5PYF2
+  planted: the tag field is not the same as the file name
+- file: nodes/93/93PPA4.md
+  rule: G01
+  line: 6
+  from: GY1XDB
+  planted: the topics target HNKV11 is not a node
+- file: nodes/98/98ZPRC.md
+  rule: B01
+  line: 13
+  from: 37APWX
+  planted: a closing brace has no opening brace
+- file: nodes/9J/9JT47N.md
+  rule: S03
+  line: 11
+  from: ZNF0V2
+  planted: the field checked states a status
+- file: nodes/9R/9RGW7X.md
+  rule: B01
+  line: 20
+  from: 5XGYQ6
+  planted: the macro \ip needs two arguments
+- file: nodes/9R/9RZFTN.md
+  rule: S02
+  line: 2
+  from: GY1XDB
+  planted: the field defines is missing
+- file: nodes/9T/9T6JVY.md
+  rule: S01
+  line: 3
+  from: 3EYFQZ
+  planted: the kind theme is not one of the 11 kinds
+- file: nodes/9X/9XMA4G.md
+  rule: S03
+  line: 9
+  from: 2GJPBC
+  planted: the field evidence states a status
+- file: nodes/9Y/9YCH64.md
+  rule: S02
+  line: 2
+  from: MZ6EY9
+  planted: the field role is missing
+- file: nodes/A7/A7K87A.md
+  rule: S01
+  line: 4
+  from: 3EYFQZ
+  planted: the name has a colon and a space and no quotes, so the YAML is not valid
+- file: nodes/A9/A90RT5.md
+  rule: B01
+  line: 25
+  from: 200AK3
+  planted: the environment aligned has no \end
+- file: nodes/AH/AHAT9Q.md
+  rule: G01
+  line: 6
+  from: 40DMZ8
+  planted: the defines target W96C20 is not a node
+- file: nodes/AT/ATXMY0.md
+  rule: S01
+  line: 2
+  from: Q65MX2
+  planted: the tag field is not the same as the file name
+- file: nodes/B3/B3DCAF.md
+  rule: S02
+  line: 2
+  from: 40DMZ8
+  planted: the field defines is missing
+- file: nodes/BT/BTB6EJ.md
+  rule: S04
+  line: 1
+  from: 200AK3
+  planted: the file is larger than 64 KB
+- file: nodes/BW/BWY3A0.md
+  rule: B03
+  line: 23
+  from: Q529ES
+  planted: the required section Statement is missing
+- file: nodes/CC/CCNQRC.md
+  rule: B03
+  line: 12
+  from: HMXENA
+  planted: the required section Definition is missing
+- file: nodes/CN/CN381Z.md
+  rule: S01
+  line: 2
+  from: 7XW8N7
+  planted: the name field is missing
+- file: nodes/CQ/CQPBS0.md
+  rule: B02
+  line: 20
+  from: E18G47
+  planted: the link target is a URL
+- file: nodes/CV/CV915Y.md
+  rule: S03
+  line: 9
+  from: 303VTA
+  planted: the field verified states a status
+- file: nodes/CX/CXWD76.md
+  rule: S01
+  line: 11
+  from: HMXENA
+  planted: the formal match value same is not in the list
+- file: nodes/CZ/CZSYC6.md
+  rule: S02
+  line: 2
+  from: Z8MFFQ
+  planted: the field proves is missing
+- file: nodes/D2/D29D9A.md
+  rule: S02
+  line: 2
+  from: AK1TNW
+  planted: the field role is missing
+- file: nodes/D2/D29RK3.md
+  rule: B01
+  line: 19
+  from: 42NXAX
+  planted: \htmlClass is in KaTeX but not in MathJax
+- file: nodes/D4/D4QG2R.md
+  rule: S01
+  line: 6
+  from: 3ZW5SS
+  planted: the MSC code 20D6 has too few characters
+- file: nodes/D9/D95HHV.md
+  rule: S01
+  line: 7
+  from: X7J0XA
+  planted: an item of uses is in lowercase, so it is not a tag
+- file: nodes/DG/DGVPQ9.md
+  rule: S02
+  line: 2
+  from: X5X1EQ
+  planted: the field role is missing
+- file: nodes/DK/DK8FHH.md
+  rule: S03
+  line: 10
+  from: 5T2YC8
+  planted: the field level states a status
+- file: nodes/DP/DP1GQF.md
+  rule: S03
+  line: 9
+  from: DXV0XZ
+  planted: the field level states a status
+- file: nodes/DT/DTV4QD.md
+  rule: B03
+  line: 13
+  from: C1P35K
+  planted: the section Proofs is not in the schema
+- file: nodes/DV/DV72AZ.md
+  rule: G01
+  line: 7
+  from: Q65MX2
+  planted: the provisional id ~deadbeef is not a node in this tree
+- file: nodes/E3/E38Q6P.md
+  rule: B01
+  line: 21
+  from: WM41VS
+  planted: the body defines a macro with \newcommand
+- file: nodes/E6/E6V87N.md
+  rule: S02
+  line: 2
+  from: GY1XDB
+  planted: the field defines is missing
+- file: nodes/ED/EDBPY9.md
+  rule: S01
+  line: 2
+  from: 1ATNDT
+  planted: the name field is missing
+- file: nodes/EG/EG8K3M.md
+  rule: S01
+  line: 5
+  from: 2G7V0Q
+  planted: the name has a colon and a space and no quotes, so the YAML is not valid
+- file: nodes/ER/ERPP97.md
+  rule: B01
+  line: 12
+  from: 4PJHVA
+  planted: an inline math span is not closed
+- file: nodes/ET/ETS2YY.md
+  rule: S03
+  line: 13
+  from: RQ9C3D
+  planted: the field proved states a status
+- file: nodes/EX/EX6Z8D.md
+  rule: S01
+  line: 4
+  from: 6DGAKV
+  planted: the name has a colon and a space and no quotes, so the YAML is not valid
+- file: nodes/EY/EYM2D6.md
+  rule: S02
+  line: 2
+  from: 40DMZ8
+  planted: the field defines is missing
+- file: nodes/F7/F797JK.md
+  rule: S01
+  line: 18
+  from: ZNR9M8
+  planted: a source has two identifiers, book and doi
+- file: nodes/FA/FAD8MS.md
+  rule: S01
+  line: 4
+  from: 5666B5
+  planted: the name has a colon and a space and no quotes, so the YAML is not valid
+- file: nodes/FA/FAXP3E.md
+  rule: S01
+  line: 6
+  from: HX0H8H
+  planted: the field notes is not in the schema
+- file: nodes/FJ/FJAJR4.md
+  rule: S01
+  line: 6
+  from: Z106G5
+  planted: an item of uses is in lowercase, so it is not a tag
+- file: nodes/FN/FN5B80.md
+  rule: S01
+  line: 14
+  from: QXQ1Z0
+  planted: the formal match value same is not in the list
+- file: nodes/FP/FPDCHR.md
+  rule: S04
+  line: 1
+  from: 7XW8N7
+  planted: the file is larger than 64 KB
+- file: nodes/FW/FWYZRA.md
+  rule: B01
+  line: 20
+  from: GJX121
+  planted: the command \foo is not in KaTeX, MathJax or the macros
+- file: nodes/FY/FYT99D.md
+  rule: G01
+  line: 7
+  from: 2G7V0Q
+  planted: the uses target SC7YQS is not a node
+- file: nodes/G0/G0RR8K.md
+  rule: B03
+  line: 9
+  from: FEXXFE
+  planted: the section heading uses # and not ##
+- file: nodes/GD/GDVPGS.md
+  rule: S02
+  line: 2
+  from: HX0H8H
+  planted: the field role is missing
+- file: nodes/GH/GH9QKS.md
+  rule: B01
+  line: 18
+  from: WK975W
+  planted: a closing brace has no opening brace
+- file: nodes/GH/GHPA2X.md
+  rule: B03
+  line: 10
+  from: GJX121
+  planted: the required section Definition is missing
+- file: nodes/GK/GKQ5HP.md
+  rule: B03
+  line: 18
+  from: BFBKVM
+  planted: the section Proof is for proof nodes only
+- file: nodes/GS/GSDH0N.md
+  rule: G01
+  line: 7
+  from: GY1XDB
+  planted: the defines target W96C20 is not a node
+- file: nodes/GX/GXGA1E.md
+  rule: B01
+  line: 19
+  from: J2WMPY
+  planted: the body defines a macro with \newcommand
+- file: nodes/GY/GYKTAM.md
+  rule: S01
+  line: 5
+  from: BE43Y5
+  planted: the front matter uses a YAML anchor
+- file: nodes/H1/H1X0MY.md
+  rule: S03
+  line: 11
+  from: 2GJGRJ
+  planted: the field verified states a status
+- file: nodes/H6/H6T178.md
+  rule: G01
+  line: 5
+  from: 59WCW3
+  planted: the proves target GPS96W is not a node
+- file: nodes/HH/HHWNE1.md
+  rule: S01
+  line: 5
+  from: G1Z9FQ
+  planted: the field notes is not in the schema
+- file: nodes/HM/HMW0AW.md
+  rule: S03
+  line: 6
+  from: 3EYFQZ
+  planted: the field status states a status
+- file: nodes/HP/HPA0CH.md
+  rule: B01
+  line: 13
+  from: Z8MFFQ
+  planted: the macro \ip needs two arguments
+- file: nodes/HQ/HQHDVG.md
+  rule: B03
+  line: 19
+  from: FZ24AA
+  planted: the section Proofs is not in the schema
+- file: nodes/HQ/HQHMAS.md
+  rule: S01
+  line: 3
+  from: 3EYFQZ
+  planted: the kind theme is not one of the 11 kinds
+- file: nodes/HR/HRK4YZ.md
+  rule: G01
+  line: 5
+  from: F5P6HY
+  planted: the proves target GPS96W is not a node
+- file: nodes/J0/J0PSGY.md
+  rule: S04
+  line: 1
+  from: BP30YM
+  planted: the file is larger than 64 KB
+- file: nodes/J8/J8T112.md
+  rule: S03
+  line: 12
+  from: CGTJQV
+  planted: the field fidelity states a status
+- file: nodes/J8/J8VERH.md
+  rule: S03
+  line: 6
+  from: 3EYFQZ
+  planted: the field evidence states a status
+- file: nodes/JT/JTNBFK.md
+  rule: B02
+  line: 14
+  from: MZ6EY9
+  planted: a URL is in the Statement section
+- file: nodes/JZ/JZ2EYH.md
+  rule: B02
+  line: 17
+  from: 1ATNDT
+  planted: the link target group is not a tag
+- file: nodes/K9/K92TC4.md
+  rule: S01
+  line: 12
+  from: KADX7Q
+  planted: the formal match value same is not in the list
+- file: nodes/K9/K9KMX2.md
+  rule: S01
+  line: 8
+  from: PTM26N
+  planted: an item of uses is in lowercase, so it is not a tag
+- file: nodes/K9/K9SARV.md
+  rule: B03
+  line: 22
+  from: HMXENA
+  planted: the section Remarks comes two times
+- file: nodes/MA/MA8WHH.md
+  rule: S02
+  line: 2
+  from: 7XW8N7
+  planted: the field proves is missing
+- file: nodes/MM/MMCY3S.md
+  rule: S01
+  line: 5
+  from: E18G47
+  planted: the field notes is not in the schema
+- file: nodes/MP/MP5AHE.md
+  rule: B01
+  line: 24
+  from: CM1BRG
+  planted: \htmlClass is in KaTeX but not in MathJax
+- file: nodes/MZ/MZD0WG.md
+  rule: B03
+  line: 10
+  from: HKFZ3X
+  planted: the section heading uses # and not ##
+- file: nodes/N0/N0TNF3.md
+  rule: B01
+  line: 13
+  from: Q2KZ4T
+  planted: the environment tikzcd is not in KaTeX or MathJax
+- file: nodes/N7/N7JCCS.md
+  rule: S02
+  line: 2
+  from: 42NXAX
+  planted: the field engine is missing
+- file: nodes/NB/NBPMXX.md
+  rule: B02
+  line: 16
+  from: 5R3ZAF
+  planted: a Markdown link to a URL is in the Statement section
+- file: nodes/NJ/NJMJNC.md
+  rule: G01
+  line: 9
+  from: 261PJE
+  planted: the proofs target RYKYXR is not a node
+- file: nodes/NT/NTCDY6.md
+  rule: B02
+  line: 21
+  from: PTM26N
+  planted: the link target FV7Y5F is not a node
+- file: nodes/NX/NXZAAR.md
+  rule: S03
+  line: 8
+  from: KHR6N3
+  planted: the field status states a status
+- file: nodes/NY/NYG1M7.md
+  rule: S02
+  line: 2
+  from: ZNF0V2
+  planted: the field claim is missing
+- file: nodes/P7/P7Y7W2.md
+  rule: B03
+  line: 16
+  from: GJX121
+  planted: the section Definition comes after Remarks
+- file: nodes/PG/PG7P2F.md
+  rule: B02
+  line: 14
+  from: KHR6N3
+  planted: the link target FV7Y5F is not a node
+- file: nodes/PM/PM7XR4.md
+  rule: S01
+  line: 13
+  from: BP30YM
+  planted: the formal match value same is not in the list
+- file: nodes/PT/PTXREQ.md
+  rule: B02
+  line: 13
+  from: 2R5WVM
+  planted: the link target group is not a tag
+- file: nodes/PW/PWJ271.md
+  rule: S03
+  line: 7
+  from: 5666B5
+  planted: the field checked states a status
+- file: nodes/PY/PYAY9W.md
+  rule: S01
+  line: 5
+  from: 5R3ZAF
+  planted: the MSC code 20D6 has too few characters
+- file: nodes/Q0/Q0BJEF.md
+  rule: S01
+  line: 2
+  from: 5T2YC8
+  planted: the name field is missing
+- file: nodes/Q2/Q2V35X.md
+  rule: B01
+  line: 17
+  from: J191EC
+  planted: a closing brace has no opening brace
+- file: nodes/Q5/Q5CWCH.md
+  rule: S01
+  line: 10
+  from: BFBKVM
+  planted: a source has two identifiers, book and doi
+- file: nodes/Q5/Q5NV9F.md
+  rule: S02
+  line: 2
+  from: 40DMZ8
+  planted: the field defines is missing
+- file: nodes/Q7/Q7MWH2.md
+  rule: S02
+  line: 2
+  from: J5PYF2
+  planted: the field proves is missing
+- file: nodes/Q9/Q9E7ZP.md
+  rule: S03
+  line: 7
+  from: ZS36YF
+  planted: the field fidelity states a status
+- file: nodes/QM/QMD17N.md
+  rule: S03
+  line: 7
+  from: G1Z9FQ
+  planted: the field level states a status
+- file: nodes/QX/QX1XFK.md
+  rule: S02
+  line: 2
+  from: GY1XDB
+  planted: the field defines is missing
+- file: nodes/QX/QXKBEP.md
+  rule: S03
+  line: 11
+  from: VTPHZM
+  planted: the field proved states a status
+- file: nodes/R8/R83KC6.md
+  rule: S01
+  line: 9
+  from: J8S24E
+  planted: a source has two identifiers, book and doi
+- file: nodes/RA/RA3EBW.md
+  rule: S02
+  line: 2
+  from: XCYCNZ
+  planted: the field proves is missing
+- file: nodes/RK/RKJ2EA.md
+  rule: B03
+  line: 21
+  from: 3F81K4
+  planted: the section Proof is for proof nodes only
+- file: nodes/RQ/RQN6VM.md
+  rule: B01
+  line: 19
+  from: ETCDHB
+  planted: the macro \ip needs two arguments
+- file: nodes/RY/RYA8V7.md
+  rule: S03
+  line: 11
+  from: J191EC
+  planted: the field proved states a status
+- file: nodes/S1/S1EY9H.md
+  rule: B03
+  line: 13
+  from: J8S24E
+  planted: the section heading uses # and not ##
+- file: nodes/S4/S4GVB6.md
+  rule: B03
+  line: 10
+  from: DSG7KN
+  planted: the required section Summary is missing
+- file: nodes/S5/S5P0B3.md
+  rule: B01
+  line: 16
+  from: GG6BXV
+  planted: a brace is not closed
+- file: nodes/SC/SCCSRZ.md
+  rule: S01
+  line: 2
+  from: 2R5WVM
+  planted: the name field is missing
+- file: nodes/SH/SHT0H1.md
+  rule: G01
+  line: 9
+  from: 2J2QXT
+  planted: the via target 1MHE6E is not a node
+- file: nodes/SM/SM49BG.md
+  rule: B02
+  line: 19
+  from: 3ZW5SS
+  planted: a URL is in the Statement section
+- file: nodes/SN/SN0K3E.md
+  rule: B03
+  line: 29
+  from: Q529ES
+  planted: the section Statement comes after Remarks
+- file: nodes/SX/SXQSV2.md
+  rule: B02
+  line: 21
+  from: VTPHZM
+  planted: the link target 3CH1ZP is not a node
+- file: nodes/T4/T45119.md
+  rule: S01
+  line: 5
+  from: ZZZJE6
+  planted: the MSC code 20D6 has too few characters
+- file: nodes/T4/T4R3TD.md
+  rule: B03
+  line: 17
+  from: V21CR0
+  planted: the section heading statement is in lowercase
+- file: nodes/T7/T75BZK.md
+  rule: B01
+  line: 20
+  from: ZNAZT5
+  planted: the environment tikzcd is not in KaTeX or MathJax
+- file: nodes/T9/T9DAVN.md
+  rule: S03
+  line: 16
+  from: GY1XDB
+  planted: the field proved states a status
+- file: nodes/TF/TFMGP2.md
+  rule: B02
+  line: 21
+  from: HX0H8H
+  planted: the link target is a URL
+- file: nodes/V1/V19EFA.md
+  rule: S02
+  line: 2
+  from: 200AK3
+  planted: the field role is missing
+- file: nodes/V7/V790FN.md
+  rule: B03
+  line: 15
+  from: DXV0XZ
+  planted: the section Proofs is not in the schema
+- file: nodes/V9/V9VJ8F.md
+  rule: S03
+  line: 7
+  from: 77KXRY
+  planted: the field verified states a status
+- file: nodes/VG/VG5WN4.md
+  rule: B01
+  line: 14
+  from: 88GKYV
+  planted: the command \foo is not in KaTeX, MathJax or the macros
+- file: nodes/VH/VHXPDF.md
+  rule: S03
+  line: 16
+  from: GY1XDB
+  planted: the field evidence states a status
+- file: nodes/VJ/VJ7AN7.md
+  rule: S02
+  line: 2
+  from: 5XGYQ6
+  planted: the field role is missing
+- file: nodes/VX/VX0TR6.md
+  rule: B03
+  line: 9
+  from: WQ33T7
+  planted: the section heading proof is in lowercase
+- file: nodes/W2/W2H091.md
+  rule: B02
+  line: 21
+  from: 3ZW5SS
+  planted: the link target is retired and has no successor
+- file: nodes/W3/W3NYNA.md
+  rule: S01
+  line: 2
+  from: MZ6EY9
+  planted: the tag field is not the same as the file name
+- file: nodes/W9/W92Y10.md
+  rule: B02
+  line: 13
+  from: G1Z9FQ
+  planted: the link target is a URL
+- file: nodes/WA/WAT5ND.md
+  rule: B01
+  line: 19
+  from: XE3D9F
+  planted: an inline math span is not closed
+- file: nodes/WD/WD2TZH.md
+  rule: B01
+  line: 18
+  from: CGTJQV
+  planted: the body defines a macro with \def
+- file: nodes/WE/WEXCQQ.md
+  rule: B01
+  line: 13
+  from: RDXM71
+  planted: the environment aligned has no \end
+- file: nodes/WP/WP46JP.md
+  rule: B01
+  line: 17
+  from: ZNF0V2
+  planted: the body changes a macro with \renewcommand
+- file: nodes/X3/X365VR.md
+  rule: S01
+  line: 5
+  from: CD2MSY
+  planted: the field notes is not in the schema
+- file: nodes/X9/X9FPMA.md
+  rule: B02
+  line: 12
+  from: RBG1TM
+  planted: the link target FV7Y5F is not a node
+- file: nodes/XA/XA1CAX.md
+  rule: B01
+  line: 13
+  from: 6ABAJH
+  planted: the environment tikzcd is not in KaTeX or MathJax
+- file: nodes/XC/XCTZEN.md
+  rule: B02
+  line: 13
+  from: ZZZJE6
+  planted: the link target is retired and has no successor
+- file: nodes/XV/XVW3DJ.md
+  rule: B01
+  line: 20
+  from: 9CYH85
+  planted: the environment aligned has no \end
+- file: nodes/Y0/Y0799Q.md
+  rule: B02
+  line: 20
+  from: AK1TNW
+  planted: the link has no tag after |
+- file: nodes/YH/YH0TWA.md
+  rule: S01
+  line: 6
+  from: CXXMNB
+  planted: the front matter uses a YAML anchor
+- file: nodes/YM/YM8XT5.md
+  rule: S02
+  line: 2
+  from: ENS73X
+  planted: the field proves is missing
+- file: nodes/YY/YYFJ5Y.md
+  rule: G01
+  line: 6
+  from: 9ZQEPQ
+  planted: the uses target SC7YQS is not a node
+- file: nodes/Z5/Z5GH3X.md
+  rule: B02
+  line: 13
+  from: 7XW8N7
+  planted: the link target group is not a tag
+- file: nodes/ZH/ZHSQ54.md
+  rule: B01
+  line: 16
+  from: B9PW71
+  planted: the body defines a macro with \newcommand
+- file: nodes/ZK/ZKJYJM.md
+  rule: G01
+  line: 8
+  from: WM41VS
+  planted: the provisional id ~deadbeef is not a node in this tree
+- file: nodes/ZN/ZNSQCS.md
+  rule: B02
+  line: 15
+  from: 1ATNDT
+  planted: a Markdown link to a URL is in the Statement section
+- file: nodes/ZV/ZVDHMH.md
+  rule: S03
+  line: 15
+  from: QVZP7N
+  planted: the field verified states a status
+- file: nodes/ZX/ZX215Y.md
+  rule: B01
+  line: 19
+  from: RQ9C3D
+  planted: a brace is not closed
