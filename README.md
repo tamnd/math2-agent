@@ -103,6 +103,7 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 cmd/m2/          the m2 binary
 internal/cli/    the command table
 internal/node/   read node files, write the canonical form and compute the content hash
+internal/schema/ check front matter against the node schema
 internal/site/   build the wiki
 internal/tag/    tags, provisional ids and the tag register
 internal/uri/    m2:// URIs
