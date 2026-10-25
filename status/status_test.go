@@ -440,3 +440,39 @@ func TestLoadRegisters(t *testing.T) {
 		t.Error("a record with two fields gives no error")
 	}
 }
+
+// TestStaleStatement changes the statement section of a node after the review. The review stops to count. A change of a section that does not state the mathematics keeps the review.
+func TestStaleStatement(t *testing.T) {
+	src := func(body string) []*node.Node {
+		f := "---\ntag: 1A0000\nkind: statement\nname: 1A0000\nformal:\n  - system: lean4\n    library: math2\n    decl: X.thm\n    match: exact\n    fidelity_reviews: [r-1A0000-01]\n---\n\n" + body
+		n, err := node.Parse("nodes/1A/1A0000.md", []byte(f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return []*node.Node{n}
+	}
+	rec := theorem("X.thm", lean.StandardAxioms...)
+	before := src("## Statement\n\nEach finite group has an order.\n")
+	in := Input{
+		Nodes:     before,
+		Records:   map[string]lean.Record{"X.thm": rec},
+		Reviews:   map[string]Review{"r-1A0000-01": review("r-1A0000-01", "github:a", "X.thm", before[0], rec)},
+		Reviewers: registered,
+		Replays:   map[string]Replay{"X.thm": {Passed: true}},
+	}
+	if s := find(t, Compute(in), "1A0000"); s.Evidence != Kernel || s.Fidelity != F2 {
+		t.Fatalf("before the change: %s %s, want E5 F2", s.Evidence, s.Fidelity)
+	}
+	in.Nodes = src("## Statement\n\nEach finite group has an order.\n\n## Remarks\n\nThe order is a natural number.\n")
+	if s := find(t, Compute(in), "1A0000"); s.Fidelity != F2 {
+		t.Errorf("after a new remark: %s, want F2", s.Fidelity)
+	}
+	in.Nodes = src("## Statement\n\nEach group has an order.\n")
+	s := find(t, Compute(in), "1A0000")
+	if s.Evidence != Claimed || s.Fidelity != F0 || !slices.Contains(s.Flags, StaleReview) {
+		t.Fatalf("after the change: %s %s %q, want E1 F0 with %s", s.Evidence, s.Fidelity, s.Flags, StaleReview)
+	}
+	if got := s.Bindings[0].Reviews[0].State; got != Stale {
+		t.Errorf("review state %q, want %q", got, Stale)
+	}
+}
