@@ -1,11 +1,12 @@
 // Package build makes the derived data of a math2 working tree (spec 07.6).
 //
-// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The status, search and site steps come in later issues.
+// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The search and site steps come in later issues.
 //
-// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract and graph steps. Two builds of the same tree give the same output hash (rule R01).
+// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, status and graph steps. Two builds of the same tree give the same output hash (rule R01).
 package build
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -24,22 +25,25 @@ import (
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/status"
 )
 
 // The steps, in the order that Run runs them.
 const (
 	Lean    = "lean"
 	Extract = "extract"
+	Status  = "status"
 	Graph   = "graph"
 )
 
 // Steps returns the names of the steps in order.
-func Steps() []string { return []string{Lean, Extract, Graph} }
+func Steps() []string { return []string{Lean, Extract, Status, Graph} }
 
 // The files of the build, from the output directory.
 const (
 	ManifestFile = "manifest.json"
 	ExtractFile  = "extract.json"
+	StatusFile   = "status.json"
 	GraphDir     = "graph"
 )
 
@@ -66,7 +70,7 @@ type Manifest struct {
 	Checkers    map[string]string `json:"checkers"`     // the hash of each checker program of the toolchain
 	Steps       []Step            `json:"steps"`
 	Counts      Counts            `json:"counts"`
-	Output      string            `json:"output"` // the hash of the files of the extract and graph steps
+	Output      string            `json:"output"` // the hash of the files of the extract, status and graph steps
 }
 
 // Step is the record of one step.
@@ -141,6 +145,7 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 	}{
 		{Lean, true, b.lean},
 		{Extract, true, b.extract},
+		{Status, false, b.status},
 		{Graph, false, b.graph},
 	}
 	for _, s := range steps {
@@ -194,6 +199,19 @@ func ReadManifest(out string) (*Manifest, error) {
 		return nil, fmt.Errorf("build: %s: %w", ManifestFile, err)
 	}
 	return m, nil
+}
+
+// ReadStatus reads status.json of the build in the output directory out. It holds the status of each node, in tag order.
+func ReadStatus(out string) ([]status.Status, error) {
+	data, err := os.ReadFile(filepath.Join(out, StatusFile)) // #nosec G304 -- the caller names the output directory.
+	if err != nil {
+		return nil, err
+	}
+	var st []status.Status
+	if err := json.Unmarshal(data, &st); err != nil {
+		return nil, fmt.Errorf("build: %s: %w", StatusFile, err)
+	}
+	return st, nil
 }
 
 // ReadExtraction reads extract.json of the build in the output directory out.
@@ -316,12 +334,7 @@ func (b *builder) extract(ctx context.Context, nodes []*node.Node) (Step, error)
 		return Step{}, err
 	}
 	decls := formalDecls(nodes)
-	olean := b.old[Lean].Output
-	for _, s := range b.m.Steps {
-		if s.Name == Lean {
-			olean = s.Output
-		}
-	}
+	olean := b.output(Lean)
 	input := hashString(strings.Join(append([]string{olean, filepath.ToSlash(prog), strings.Join(b.opt.Modules, " ")}, decls...), "\n"))
 	path := filepath.Join(b.opt.Out, ExtractFile)
 	if out, err := hashFiles(b.opt.Out, []string{ExtractFile}); err == nil {
@@ -403,6 +416,62 @@ func formalDecls(nodes []*node.Node) []string {
 	}
 	slices.Sort(out)
 	return slices.Compact(out)
+}
+
+// status computes the status of each node and writes status.json. The step is fast, so it always runs, and the input hash only records the inputs: the output of the extract step, the content hash of each node and the reviews. The step is cached when status.json does not change, so that a new version of the rules always gives a new status.
+func (b *builder) status(_ context.Context, nodes []*node.Node) (Step, error) {
+	lines := []string{"extract " + b.output(Extract)}
+	for _, n := range nodes {
+		lines = append(lines, n.ID+" "+node.Hash(n))
+	}
+	reviews, err := hashTree(filepath.Join(b.opt.Root, "reviews"), func(rel string) bool { return strings.HasSuffix(rel, ".yaml") })
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return Step{}, err
+	}
+	lines = append(lines, "reviews "+reviews)
+	input := hashString(strings.Join(lines, "\n"))
+
+	in := status.Input{Nodes: nodes, Records: map[string]lean.Record{}}
+	if in.Reviews, err = status.LoadReviews(b.opt.Root); err != nil {
+		return Step{}, err
+	}
+	if b.output(Extract) != "" {
+		x, err := ReadExtraction(b.opt.Out)
+		if err != nil {
+			return Step{}, err
+		}
+		for _, r := range x.Records {
+			in.Records[r.Decl] = r
+		}
+	}
+	data, err := json.MarshalIndent(status.Compute(in), "", "  ")
+	if err != nil {
+		return Step{}, err
+	}
+	data = append(data, '\n')
+	path := filepath.Join(b.opt.Out, StatusFile)
+	if old, err := os.ReadFile(path); err == nil && bytes.Equal(old, data) { // #nosec G304 -- the caller names the output directory.
+		if out, err := hashFiles(b.opt.Out, []string{StatusFile}); err == nil {
+			if s, ok := b.cached(Status, input, out); ok {
+				return s, nil
+			}
+		}
+	}
+	if err := write(path, data); err != nil {
+		return Step{}, err
+	}
+	out, err := hashFiles(b.opt.Out, []string{StatusFile})
+	return Step{Input: input, Output: out}, err
+}
+
+// output returns the output hash of the step name in this build, or in the last build when the step did not run in this build.
+func (b *builder) output(name string) string {
+	for _, s := range b.m.Steps {
+		if s.Name == name {
+			return s.Output
+		}
+	}
+	return b.old[name].Output
 }
 
 // graph derives the graph and writes it as Parquet. The input is the content hash of each node.

@@ -8,7 +8,7 @@ import (
 	"github.com/tamnd/math2-agent/build"
 )
 
-// A tree without a lean/ directory has only the graph step.
+// A tree without a lean/ directory has only the status and graph steps.
 func ExampleRun() {
 	out, err := os.MkdirTemp("", "build")
 	if err != nil {
@@ -23,5 +23,6 @@ func ExampleRun() {
 		fmt.Println(s.Name, s.Cached)
 	}
 	// Output:
+	// status false
 	// graph false
 }
