@@ -230,6 +230,28 @@ func TestRewriteUnknownProvisional(t *testing.T) {
 	}
 }
 
+func TestRewriteSeed(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "nodes/~/~00000001.md", node("~00000001", "concept", "A concept."))
+	write(t, root, "nodes/~/~00000002.md", node("~00000002", "statement", "It uses [[the concept|~00000001]]."))
+	minted, err := RewriteSeed(root, nil, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(minted) != 2 {
+		t.Fatalf("minted %d tags, want 2", len(minted))
+	}
+	for _, m := range minted {
+		if !IsSeed(m.Tag) {
+			t.Errorf("%s gets %s, and that is not a seed tag", m.Provisional, m.Tag)
+		}
+	}
+	data, err := os.ReadFile(filepath.Join(root, "nodes", Shard(minted[1].Tag), minted[1].Tag+".md"))
+	if err != nil || !strings.Contains(string(data), "|"+minted[0].Tag+"]]") {
+		t.Errorf("the link to the first node is not rewritten: %v\n%s", err, data)
+	}
+}
+
 func TestRewriteContentDirs(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, "nodes/~/~00000001.md", node("~00000001", "statement", "~00000001 [[this node|~00000001]]"))

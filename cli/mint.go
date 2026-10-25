@@ -15,11 +15,12 @@ func runMint(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	root := fs.String("root", ".", "the math2 working tree")
 	commit := fs.String("commit", "", "the commit that goes into registers/tags.reg. Empty means the HEAD commit of the working tree.")
+	seed := fs.Bool("seed", false, "mint tags that start with 0, for the nodes of the M1 seed")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(stderr, "usage: m2 mint [-root DIR] [-commit C]")
+		fmt.Fprintln(stderr, "usage: m2 mint [-root DIR] [-commit C] [-seed]")
 		return ExitUsage
 	}
 	if *commit == "" {
@@ -34,7 +35,11 @@ func runMint(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "m2 mint: the commit %q has a space\n", *commit)
 		return ExitUsage
 	}
-	minted, err := tag.Rewrite(*root, nil, *commit)
+	rewrite := tag.Rewrite
+	if *seed {
+		rewrite = tag.RewriteSeed
+	}
+	minted, err := rewrite(*root, nil, *commit)
 	if err != nil {
 		fmt.Fprintf(stderr, "m2 mint: %v\n", err)
 		return ExitFailure

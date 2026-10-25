@@ -46,7 +46,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 new <kind>` | Make a node file with a provisional id. | written |
 | `m2 fmt` | Make front matter canonical and change aliases to tags. | written |
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
-| `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. | written |
+| `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. `m2 mint -seed` gives tags that start with `0` to the nodes of the M1 seed. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
 | `m2 build` | Build the derived data: Lean, extraction, replay, status, graph and store. Search comes later. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
