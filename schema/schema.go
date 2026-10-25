@@ -40,6 +40,7 @@ type Schema struct {
 	Source    string     // the file that the schema came from, or "embedded"
 	Order     node.Order // the key order of the canonical form
 	Forbidden []string   // the field names that state a status (rule S03)
+	Refs      []string   // the field names whose values are references to other nodes, in byte order
 	sections  map[string]Sections
 	fields    map[string][]string // the fields that the branch of each kind adds
 	compiled  *jsonschema.Schema
@@ -128,7 +129,42 @@ func Parse(data []byte, source string) (*Schema, error) {
 	if len(s.sections) == 0 {
 		return nil, fmt.Errorf("%s: the schema gives no sections for any kind", source)
 	}
+	s.Refs = refs(root)
 	return s, nil
+}
+
+// refDef is the definition of a node reference in the schema.
+const refDef = "#/$defs/ref"
+
+// refs returns the names of the properties whose schema is a node reference or a list of node references. It looks in each properties keyword of the schema, also in $defs and in the branches of the kinds. A name is in the list once, also when more than one kind has it. The tag field is not in the list, because it names the node itself and not another node.
+func refs(root map[string]any) []string {
+	var out []string
+	var walk func(v any)
+	walk = func(v any) {
+		switch v := v.(type) {
+		case []any:
+			for _, x := range v {
+				walk(x)
+			}
+		case map[string]any:
+			for k, x := range v {
+				props, ok := x.(map[string]any)
+				if k != "properties" || !ok {
+					walk(x)
+					continue
+				}
+				for name, p := range props {
+					if dig(p, "$ref") == refDef || dig(p, "items", "$ref") == refDef {
+						out = append(out, name)
+					}
+					walk(p)
+				}
+			}
+		}
+	}
+	walk(root)
+	slices.Sort(out)
+	return slices.DeleteFunc(slices.Compact(out), func(name string) bool { return name == "tag" })
 }
 
 // dig returns the value at a path of object keys, or nil.

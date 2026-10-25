@@ -44,7 +44,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | Command | What it does | Milestone |
 |---|---|---|
 | `m2 new <kind>` | Make a node file with a provisional id. | M0 |
-| `m2 fmt` | Make front matter canonical and change aliases to tags. | M0 |
+| `m2 fmt` | Make front matter canonical and change aliases to tags. | written |
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
 | `m2 build` | Build everything: Lean, extraction, status, graph and search. | M1 |
@@ -103,10 +103,11 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 cmd/m2/   the m2 binary
 check/    the fast rules of m2 check: schema, body and links
 cli/      the command table
+format/   the canonical form of m2 fmt and the change from aliases to tags
 node/     read node files, write the canonical form and compute the content hash
 schema/   check front matter against the node schema
 site/     build the wiki
-tag/      tags, provisional ids and the tag register
+tag/      tags, provisional ids, the tag register and the alias register
 uri/      m2:// URIs
 spec/     the specification
 ```

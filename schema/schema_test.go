@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -49,6 +50,10 @@ func TestEmbedded(t *testing.T) {
 	}
 	if len(s.Forbidden) == 0 || s.Order[""][0] != "tag" {
 		t.Errorf("forbidden = %v, order = %v", s.Forbidden, s.Order[""])
+	}
+	want := []string{"about", "defines", "instance_of", "methods", "proofs", "proves", "resolved_by", "specializes", "successor", "target", "topics", "uses", "via"}
+	if !slices.Equal(s.Refs, want) {
+		t.Errorf("refs = %v, want %v", s.Refs, want)
 	}
 }
 

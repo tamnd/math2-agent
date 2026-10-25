@@ -27,3 +27,8 @@ func ExampleSchema_Sections() {
 	fmt.Println(s.Required, s.Allowed)
 	// Output: [Statement] [Statement Remarks History Explanations]
 }
+
+func ExampleSchema_Refs() {
+	fmt.Println(schema.Embedded().Refs[:4])
+	// Output: [about defines instance_of methods]
+}

@@ -16,6 +16,7 @@ type Entry struct {
 	Kind   string
 }
 
+// String returns the entry as one register line.
 func (e Entry) String() string { return e.Tag + " " + e.Commit + " " + e.Kind }
 
 // ReadUsed returns the tags in each register file. The first field of each line is a tag. Blank lines and lines that start with # are not records. A file that does not exist has no tags.

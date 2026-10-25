@@ -35,3 +35,20 @@ func ExampleExcluded() {
 	fmt.Println(tag.Excluded("123456"), tag.Excluded("20D60X"), tag.Excluded("7K3QX2"))
 	// Output: true true false
 }
+
+func ExampleIsAlias() {
+	for _, s := range []string{"lagrange-theorem-groups", "7K3QX2", "Compact-Space", "compact--space"} {
+		fmt.Println(s, tag.IsAlias(s))
+	}
+	// Output:
+	// lagrange-theorem-groups true
+	// 7K3QX2 false
+	// Compact-Space false
+	// compact--space false
+}
+
+func ExampleAlias_String() {
+	a := tag.Alias{Name: "compact-space", Tag: "7K3QX2", From: "2026-05-01", Until: tag.Current}
+	fmt.Println(a)
+	// Output: compact-space 7K3QX2 2026-05-01 -
+}

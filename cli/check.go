@@ -87,23 +87,24 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 
 // readPaths reads the node files at paths. A directory gives each .md file below it. The path of each file is relative to root when the file is in root.
 func readPaths(root string, paths []string) ([]check.File, error) {
-	var files []check.File
-	add := func(path string) error {
-		data, err := os.ReadFile(path) // #nosec G304 G122 -- the user names the path on the command line.
-		if err != nil {
-			return err
-		}
-		name := path
-		if abs, err := filepath.Abs(path); err == nil {
-			if absRoot, err := filepath.Abs(root); err == nil {
-				if rel, err := filepath.Rel(absRoot, abs); err == nil && !strings.HasPrefix(rel, "..") {
-					name = rel
-				}
-			}
-		}
-		files = append(files, check.File{Path: filepath.ToSlash(name), Data: data})
-		return nil
+	disk, err := nodeFiles(paths)
+	if err != nil {
+		return nil, err
 	}
+	files := make([]check.File, 0, len(disk))
+	for _, path := range disk {
+		data, err := os.ReadFile(path) // #nosec G304 -- the user names the path on the command line.
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, check.File{Path: treePath(root, path), Data: data})
+	}
+	return files, nil
+}
+
+// nodeFiles returns the files at paths. A directory gives each .md file below it, in path order. A file gives itself, also when it is not a .md file.
+func nodeFiles(paths []string) ([]string, error) {
+	var out []string
 	for _, p := range paths {
 		err := filepath.WalkDir(p, func(path string, d fs.DirEntry, err error) error {
 			switch {
@@ -114,11 +115,24 @@ func readPaths(root string, paths []string) ([]check.File, error) {
 			case path != p && filepath.Ext(path) != ".md":
 				return nil
 			}
-			return add(path)
+			out = append(out, path)
+			return nil
 		})
 		if err != nil {
 			return nil, err
 		}
 	}
-	return files, nil
+	return out, nil
+}
+
+// treePath returns the path of a file relative to root, with forward slashes, when the file is in root. Otherwise it returns the path with forward slashes.
+func treePath(root, path string) string {
+	if abs, err := filepath.Abs(path); err == nil {
+		if absRoot, err := filepath.Abs(root); err == nil {
+			if rel, err := filepath.Rel(absRoot, abs); err == nil && !strings.HasPrefix(rel, "..") {
+				path = rel
+			}
+		}
+	}
+	return filepath.ToSlash(path)
 }
