@@ -1,0 +1,18 @@
+{{define "subject"}}
+<header class="page-head">
+  <p class="kicker"><a href="{{url "msc/"}}">Subjects</a></p>
+  <h1>{{.Code}} {{.Name}}</h1>
+  <p class="lead"><a href="https://zbmath.org/classification/?q=cc%3A{{.Code}}">See MSC {{.Code}} on zbMATH Open.</a></p>
+</header>
+{{with .Nodes}}
+<table class="list">
+  <thead><tr><th>Name</th><th>Tag</th><th>Kind</th><th>MSC</th></tr></thead>
+  <tbody>
+  {{range .}}<tr><td><a href="{{.URL}}">{{.Name}}</a></td><td><span class="tag">{{.Tag}}</span></td><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td><td>{{join .MSC ", "}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<p class="notice">This subject has no nodes yet. To add one, read <a href="{{url "contribute/"}}">Contribute</a>.</p>
+{{end}}
+{{end}}

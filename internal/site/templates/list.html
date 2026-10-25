@@ -1,0 +1,19 @@
+{{define "list"}}
+<header class="page-head">
+  <h1>{{.Title}}</h1>
+  {{with .Text}}<p class="lead">{{.}}</p>{{end}}
+</header>
+<ul class="chips">{{range .Kinds}}<li><a href="{{.URL}}">{{.Plural}}</a> <span class="count">{{.Count}}</span></li>{{end}}</ul>
+{{with .Nodes}}
+<input class="filter" type="search" placeholder="Filter this list" aria-label="Filter this list">
+<table class="list">
+  <thead><tr><th>Name</th><th>Tag</th><th>Kind</th><th>MSC</th></tr></thead>
+  <tbody>
+  {{range .}}<tr><td><a href="{{.URL}}">{{.Name}}</a>{{with .Aliases}} <span class="muted">{{join . ", "}}</span>{{end}}</td><td><span class="tag">{{.Tag}}</span></td><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td><td>{{join .MSC ", "}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<p class="notice">This list has no nodes yet. The seed arrives in M1. To add a node, read <a href="{{url "contribute/"}}">Contribute</a>.</p>
+{{end}}
+{{end}}

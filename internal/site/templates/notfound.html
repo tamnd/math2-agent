@@ -1,0 +1,10 @@
+{{define "notfound"}}
+<header class="page-head">
+  <h1>Page not found</h1>
+</header>
+<p>This page does not exist. If you followed a link to a node, the node can be retired or not written yet.</p>
+<form class="search-box big" action="{{url "search/"}}" role="search">
+  <input type="search" name="q" placeholder="Search" aria-label="Search">
+</form>
+<p><a href="{{url ""}}">Go to the main page.</a></p>
+{{end}}

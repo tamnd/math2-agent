@@ -1,0 +1,63 @@
+{{define "home"}}
+<section class="hero">
+  <h1>Math 2.0</h1>
+  <p class="lead">A free knowledge graph of all mathematics. Each node has a permanent tag, its sources, typed links to other nodes and a status that the build computes from the evidence. People read the pages. Agents read the same content as JSON and Markdown.</p>
+  <form class="search-box big" action="{{url "search/"}}" role="search">
+    <input type="search" name="q" placeholder="Search {{.Total}} nodes and {{len .Specs}} spec documents" aria-label="Search" autocomplete="off">
+  </form>
+</section>
+
+{{if eq .Total 0}}
+<div class="notice">
+  <p><b>The graph has no nodes yet.</b> The project is at milestone {{.Current}}. The schema, the checks and this site are ready. The seed of about 2,000 nodes arrives in M1. Each merge to <code>main</code> in the content repository rebuilds this site. To add the first node, read <a href="{{url "contribute/"}}">Contribute</a>.</p>
+</div>
+{{end}}
+
+<div class="cards">
+  <section class="card">
+    <h2>Browse by kind</h2>
+    <table class="plain">
+      {{range .Kinds}}<tr><td><a href="{{.URL}}">{{.Plural}}</a></td><td class="num">{{.Count}}</td><td class="muted">{{.Text}}</td></tr>
+      {{end}}
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>For agents</h2>
+    <p>Each page has a machine copy. You do not need to parse HTML.</p>
+    <ul>
+      <li><a href="{{url "llms.txt"}}"><code>llms.txt</code></a> and <a href="{{url "llms-full.txt"}}"><code>llms-full.txt</code></a></li>
+      <li><a href="{{url "api/nodes.json"}}"><code>api/nodes.json</code></a>, the index of all nodes</li>
+      <li><code>api/node/&lt;TAG&gt;.json</code> and <code>node/&lt;TAG&gt;.md</code> for each node</li>
+      <li><a href="{{url "schema/node.v1.json"}}"><code>schema/node.v1.json</code></a>, the JSON Schema</li>
+    </ul>
+    <p><a href="{{url "agents/"}}">Read more about the agent interface.</a></p>
+  </section>
+</div>
+
+{{with .Recent}}
+<section>
+  <h2>Nodes</h2>
+  <ul class="node-list">
+    {{range .}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="tag">{{.Tag}}</span> <span class="kind kind-{{.Kind}}">{{.Kind}}</span></li>
+    {{end}}
+  </ul>
+  <p><a href="{{url "nodes/"}}">See all nodes.</a></p>
+</section>
+{{end}}
+
+<section>
+  <h2>Subjects</h2>
+  <p>The graph uses the <a href="https://msc2020.org/">Mathematics Subject Classification</a> (MSC2020). <a href="{{url "msc/"}}">See all 63 classes.</a></p>
+  {{with .Groups}}<ul class="chips">{{range .}}<li><a href="{{.URL}}">{{.Code}} {{.Name}}</a> <span class="count">{{len .Nodes}}</span></li>{{end}}</ul>{{end}}
+</section>
+
+<section>
+  <h2>The plan</h2>
+  <ol class="milestones">
+    {{range .Milestones}}<li{{if eq .ID $.Current}} class="current"{{end}}><a href="{{.URL}}"><b>{{.ID}}</b> {{.Title}}</a>{{with .Dates}} <span class="muted">{{.}}</span>{{end}}{{if eq .ID $.Current}} <span class="badge">now</span>{{end}}</li>
+    {{end}}
+  </ol>
+  {{with .Specs}}<p>The full design is in the <a href="{{url "spec/"}}">specification</a>.</p>{{end}}
+</section>
+{{end}}

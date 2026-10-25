@@ -1,0 +1,39 @@
+{{define "node"}}
+<article class="node">
+<header class="page-head">
+  <p class="kicker"><a href="{{url (print "kind/" .Kind "/")}}" class="kind kind-{{.Kind}}">{{.Kind}}</a>{{with .Role}} <span class="muted">{{.}}</span>{{end}}</p>
+  <h1>{{.Name}}</h1>
+</header>
+{{with .Retired}}<div class="notice warn"><p><b>This node is retired.</b> The reason is: {{.reason}}.{{with .note}} {{.}}{{end}}</p></div>{{end}}
+<aside class="infobox" aria-label="Facts">
+  <table>
+    <caption>{{.Name}}</caption>
+    <tr><th>Tag</th><td><code class="copy" title="Click to copy">{{.Tag}}</code></td></tr>
+    {{with .URI}}<tr><th>URI</th><td><code class="copy" title="Click to copy">{{.}}</code></td></tr>{{end}}
+    {{with .Aliases}}<tr><th>Aliases</th><td>{{range $i, $a := .}}{{if $i}}, {{end}}<code>{{$a}}</code>{{end}}</td></tr>{{end}}
+    <tr><th>Kind</th><td>{{.Kind}}{{with .Role}}, {{.}}{{end}}</td></tr>
+    {{with .MSC}}<tr><th>MSC</th><td>{{range $i, $c := .}}{{if $i}}, {{end}}<a href="{{url (print "msc/" (top $c) "/")}}" title="{{mscName (top $c)}}">{{$c}}</a>{{end}}</td></tr>{{end}}
+    {{if or (eq .Kind "statement") (eq .Kind "conjecture")}}<tr><th>Status</th><td><span class="muted">Not computed yet. The build computes it from M1.</span></td></tr>{{end}}
+    {{range .Refs}}<tr><th>{{.Label}}</th><td>{{range $i, $l := .Links}}{{if $i}}, {{end}}<a href="{{$l.URL}}"{{if $l.Missing}} class="missing" title="This node does not exist yet"{{end}}>{{$l.Text}}</a>{{with $l.Note}} <span class="muted">({{.}})</span>{{end}}{{end}}</td></tr>
+    {{end}}
+    {{with .Formal}}<tr><th>Formal</th><td>{{range .}}<div>{{if .URL}}<a href="{{.URL}}"><code>{{.Text}}</code></a>{{else}}<code>{{.Text}}</code>{{end}} <span class="muted">{{.Note}}</span></div>{{end}}</td></tr>{{end}}
+    {{with .SameAs}}<tr><th>Same as</th><td>{{range .}}<div>{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{with .Note}} <span class="muted">{{.}}</span>{{end}}</div>{{end}}</td></tr>{{end}}
+  </table>
+  <p class="formats"><a href="{{.MarkdownURL}}">Markdown</a> · <a href="{{.JSONURL}}">JSON</a> · <a href="{{.EditURL}}">Edit</a></p>
+</aside>
+<div class="prose">
+{{.HTML}}
+</div>
+{{with .Sources}}
+<section class="sources">
+  <h2>Sources</h2>
+  <ol>{{range .}}<li>{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{with .Note}}, {{.}}{{end}}</li>{{end}}</ol>
+</section>
+{{end}}
+<section class="backlinks">
+  <h2>What links here</h2>
+  {{range .Backlinks}}<h3>{{.Label}}</h3><ul>{{range .Links}}<li><a href="{{.URL}}">{{.Text}}</a> <span class="tag">{{.Tag}}</span></li>{{end}}</ul>
+  {{else}}<p class="muted">No node links to this node yet.</p>{{end}}
+</section>
+</article>
+{{end}}

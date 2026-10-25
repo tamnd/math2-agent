@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M0. No command is written yet. `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M0. `m2 site build` is written. `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -46,6 +46,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 new <kind>` | Make a node file with a provisional id. | M0 |
 | `m2 fmt` | Make front matter canonical and change aliases to tags. | M0 |
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | M0 |
+| `m2 site build` | Build the wiki: a static site for people and agents. | written |
 | `m2 build` | Build everything: Lean, extraction, status, graph and search. | M1 |
 | `m2 audit` | Run the audit rules. | M1 |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | M1 |
@@ -62,6 +63,19 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
 | `m2 agent run <role>` | Do one agent run. | M5 |
 | `m2 orchestrate` | Run the job scheduler. | M5 |
+
+## The wiki
+
+`m2 site build` makes the wiki at https://tamnd.github.io/math2 from a math2 working tree and the spec. The math2 repository runs it on each push to `main` and each night, and GitHub Pages serves the result.
+
+```sh
+go run ./cmd/m2 site build -content ../math2 -spec spec -out _site
+python3 -m http.server -d _site 8000
+```
+
+Each node gets a page with an infobox, its links and its backlinks. KaTeX renders the math in the browser with the macros of math2. Each page also has a copy for programs: `node/<TAG>.md`, `api/node/<TAG>.json`, `api/nodes.json`, `llms.txt` and `llms-full.txt`. A build with no `-date` flag gives the same bytes each time.
+
+To preview the site with the local server above, set `-url http://localhost:8000`.
 
 ## Rules that the toolchain keeps
 
@@ -88,9 +102,14 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 ```
 cmd/m2/          the m2 binary
 internal/cli/    the command table
+internal/node/   read node files
+internal/site/   build the wiki
+internal/tag/    tags, provisional ids and the tag register
+internal/uri/    m2:// URIs
+spec/            the specification
 ```
 
-The full layout arrives with the milestones. The plan has these parts: `internal/node`, `internal/tag`, `internal/graph`, `internal/lean`, `internal/compute`, `internal/ingest`, `internal/align`, `internal/search`, `internal/audit`, `internal/api`, `internal/mcp`, `internal/orchestrator`, `internal/agent`, `lean/M2Extract`, `prompts/`, `images/`, `web/` and `bench/`.
+The full layout arrives with the milestones. The plan has these parts: `internal/graph`, `internal/lean`, `internal/compute`, `internal/ingest`, `internal/align`, `internal/search`, `internal/audit`, `internal/api`, `internal/mcp`, `internal/orchestrator`, `internal/agent`, `lean/M2Extract`, `prompts/`, `images/`, `web/` and `bench/`.
 
 ## Contribute
 

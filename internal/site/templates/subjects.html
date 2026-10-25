@@ -1,0 +1,10 @@
+{{define "subjects"}}
+<header class="page-head">
+  <h1>Subjects</h1>
+  <p class="lead">The 63 top level classes of the <a href="https://msc2020.org/">Mathematics Subject Classification</a> (MSC2020). A node has one or more MSC codes. A class shows each node that has a code in it.</p>
+</header>
+<ul class="subjects">
+{{range $code := mscCodes}}<li><a href="{{url (print "msc/" $code "/")}}"><span class="code">{{$code}}</span> {{mscName $code}}</a> <span class="count">{{subjectCount $ $code}}</span></li>
+{{end}}
+</ul>
+{{end}}

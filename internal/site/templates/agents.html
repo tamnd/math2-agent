@@ -1,0 +1,40 @@
+{{define "agents"}}
+<article class="prose">
+<h1>For agents</h1>
+<p>This site is for people and for programs. Each page has a copy in a format that a program can read. The files are static, so you can fetch them with any HTTP client. Each nightly build and each merge to <code>main</code> updates them. The site has {{.Count}} nodes now.</p>
+
+<h2>Start here</h2>
+<ul>
+<li><a href="{{.LLMs}}"><code>{{.LLMs}}</code></a> lists the data, the specification and each node, in the <a href="https://llmstxt.org/">llms.txt</a> format.</li>
+<li><a href="{{.LLMsFull}}"><code>{{.LLMsFull}}</code></a> has the full text of each spec document and each node in one file.</li>
+</ul>
+
+<h2>Files</h2>
+<table>
+<thead><tr><th>Path</th><th>Content</th></tr></thead>
+<tbody>
+<tr><td><a href="{{.Nodes}}"><code>api/nodes.json</code></a></td><td>The index: tag, kind, role, name, aliases, MSC codes and URLs of each node.</td></tr>
+<tr><td><code>api/node/&lt;TAG&gt;.json</code></td><td>One node: the front matter as it is in the file, the body as Markdown, the outgoing links and the backlinks.</td></tr>
+<tr><td><code>node/&lt;TAG&gt;.md</code></td><td>The node file, byte for byte.</td></tr>
+<tr><td><a href="{{.Search}}"><code>api/search.json</code></a></td><td>The search index of this site.</td></tr>
+<tr><td><a href="{{.Spec}}"><code>api/spec.json</code></a></td><td>The spec documents. Each one is also at <code>spec/&lt;slug&gt;.md</code>.</td></tr>
+<tr><td><a href="{{.Schema}}"><code>schema/node.v1.json</code></a></td><td>The JSON Schema 2020-12 for the front matter.</td></tr>
+<tr><td><a href="{{.Macros}}"><code>macros/m2.katex.json</code></a></td><td>The TeX macros of the node bodies, for KaTeX or MathJax.</td></tr>
+</tbody>
+</table>
+
+<h2>Identifiers</h2>
+<p>A tag has 6 characters of Crockford base32, for example <code>{{.Example}}</code>. A tag does not change. The URI of a node is <code>m2://{{.Example}}</code>, and its page is <code>{{.URL}}node/{{.Example}}/</code>. A retired node keeps its tag and points to the nodes that replace it.</p>
+
+<h2>Rules</h2>
+<ul>
+<li>The status of a statement is computed by the build. The status is <code>null</code> until M1. Do not read a status from the prose.</li>
+<li>Cite a node by its tag and the commit in <code>api/nodes.json</code>.</li>
+<li>The prose is under CC BY-SA 4.0. The metadata is under CC0 1.0.</li>
+<li>An agent that proposes a change opens a pull request on <a href="{{repo}}">{{repo}}</a>. The checks are the gate. Read <a href="{{url "contribute/"}}">Contribute</a>.</li>
+</ul>
+
+<h2>Coming next</h2>
+<p>A query API and an MCP server arrive in M3 with <code>m2 serve</code>. Until then, this static interface is the stable one.</p>
+</article>
+{{end}}
