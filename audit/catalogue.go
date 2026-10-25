@@ -27,7 +27,7 @@ var catalogue = []entry{
 	{Rule{"G01", Graph, true, "each edge target resolves"}, fromCheck("G01")},
 	{Rule{"G02", Graph, true, "same_as is functional in the two directions in each external system"}, g02},
 	{Rule{"G03", Graph, true, "specializes has no cycle, and uses has no cycle except equivalence cycles through different proofs"}, g03},
-	{Rule{"G04", Graph, false, "the formal dependencies of a bound proof are in its uses"}, nil},
+	{Rule{"G04", Graph, false, "the formal dependencies of a bound proof are in its uses"}, g04},
 	{Rule{"G05", Graph, true, "each live statement has a source, a proof or a formal binding"}, g05},
 	{Rule{"G06", Graph, true, "each conjecture and problem has a source that names who posed it"}, g06},
 	{Rule{"G07", Graph, false, "each hub family has at least three members"}, g07},

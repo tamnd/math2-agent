@@ -1,0 +1,1 @@
+nodes/3C/3C53TD.md:7:1: G04: the formal declaration Subgroup.card_subgroup_dvd_card uses Subgroup.card_mul_index, which 7Q2K1B binds, and 7Q2K1B is not in uses. Add 7Q2K1B to uses

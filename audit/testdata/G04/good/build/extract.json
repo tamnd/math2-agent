@@ -1,0 +1,8 @@
+{
+  "lean": {"lean": "4.35.0", "githash": ""},
+  "bindings": [],
+  "records": [
+    {"decl": "Subgroup.card_mul_index", "kind": "theorem", "uses_bound": []},
+    {"decl": "Subgroup.card_subgroup_dvd_card", "kind": "theorem", "uses_bound": ["Subgroup.card_mul_index"]}
+  ]
+}
