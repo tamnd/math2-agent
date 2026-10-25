@@ -1,0 +1,11 @@
+{
+  "id": "r-2026-09-01-2",
+  "agent": "m2-agent/explain@1.2.0",
+  "prompt": "explain/7",
+  "models": [
+    "claude-opus-5-5"
+  ],
+  "on_behalf_of": "m2-agent/plan@1.0.0",
+  "started": "2026-09-01T09:00:00Z",
+  "outcome": "success"
+}

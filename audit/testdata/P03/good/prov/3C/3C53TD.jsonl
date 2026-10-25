@@ -1,0 +1,3 @@
+{"field":"*","op":"add","agent":null,"human":"github:writer","at":"2026-09-01T10:00:00Z"}
+{"field":"body.explanations.L1","op":"add","agent":"m2-agent/explain@1.2.0","run":"r-2026-09-01-1","human":null,"at":"2026-09-01T10:00:00Z"}
+{"field":"body.explanations.L2","op":"add","agent":"m2-agent/explain@1.2.0","run":"r-2026-09-01-2","human":null,"at":"2026-09-01T10:00:00Z"}

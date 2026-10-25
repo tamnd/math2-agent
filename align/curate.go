@@ -18,6 +18,7 @@ import (
 	"github.com/tamnd/math2-agent/crosswalk"
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/prov"
 	"github.com/tamnd/math2-agent/schema"
 )
 
@@ -141,7 +142,7 @@ func (r Review) check() error {
 	return nil
 }
 
-// Accept writes the edge of the proposal with the id into the front matter of its node, records the decision in the register and takes the proposal out of the queue. A Duplicate changes no node: the person merges the two nodes or keeps them apart in a later change.
+// Accept writes the edge of the proposal with the id into the front matter of its node with a line in its provenance log, records the decision in the register and takes the proposal out of the queue. A Duplicate changes no node: the person merges the two nodes or keeps them apart in a later change.
 func Accept(root, id string, r Review) (Proposal, error) {
 	p, err := find(root, id)
 	if err != nil {
@@ -164,6 +165,13 @@ func Accept(root, id string, r Review) (Proposal, error) {
 		if err := edit(root, p, r); err != nil {
 			return p, err
 		}
+		field := p.Edge
+		if p.Edge == SameAs {
+			field += "." + p.System
+		}
+		if err := prov.Append(root, p.Node, prov.Line{Field: field, Op: prov.Add, Human: r.Person, Source: p.Source, At: r.Date + "T00:00:00Z"}); err != nil {
+			return p, err
+		}
 	}
 	return p, decide(root, p, Accepted, r)
 }
@@ -180,7 +188,7 @@ func Reject(root, id string, r Review) (Proposal, error) {
 	return p, decide(root, p, Rejected, r)
 }
 
-// Confirm records that a person checked the same_as value of the node in the system. It is for a value that a person or an agent wrote in the node without the queue. Rule A02 then stops reporting it, and rule A03 compares the record with the one at this date.
+// Confirm records that a person checked the same_as value of the node in the system, in the register and in the provenance log of the node. It is for a value that a person or an agent wrote in the node without the queue. Rule A02 then stops reporting it, and rule A03 compares the record with the one at this date.
 func Confirm(root, tag, system string, r Review) error {
 	if err := r.check(); err != nil {
 		return err
@@ -196,6 +204,9 @@ func Confirm(root, tag, system string, r Review) error {
 		v, ok := SameAsOf(n)[system]
 		if !ok || v == "" {
 			return fmt.Errorf("align: %s has no same_as value in %s", tag, system)
+		}
+		if err := prov.Append(root, tag, prov.Line{Field: SameAs + "." + system, Op: prov.Confirm, Human: r.Person, At: r.Date + "T00:00:00Z"}); err != nil {
+			return err
 		}
 		return appendDecision(root, Decision{tag, SameAs, system, v, Confirmed, r.Person, r.Date, recordHash(root, system, v)})
 	}

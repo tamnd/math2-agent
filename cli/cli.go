@@ -65,7 +65,7 @@ var commands = []command{
 	{name: "search", usage: searchUsage, summary: "Search the knowledge graph, or rank the premises of a Lean goal.", run: runSearch},
 	{name: "serve", usage: serveUsage, summary: "Serve the read API over HTTP with JSON, and the MCP server over HTTP or stdio.", run: runServe},
 	{name: "compute", usage: "m2 compute run|verify [-root DIR] [-out DIR] [-runtime R] [-json] <tag>...|-all", summary: "Run a computation in the sandbox, or verify its output and its certificate.", run: runCompute},
-	{name: "prov", usage: "m2 prov show|quarantine|credit|disclose <tag>", summary: "Show or change provenance.", milestone: "M3"},
+	{name: "prov", usage: provUsage, summary: "Show, record, credit, quarantine and confirm provenance.", run: runProv},
 	{name: "review", usage: "m2 review <tag>", summary: "Review a formal statement against its informal statement.", milestone: "M4"},
 	{name: "autoform", usage: "m2 autoform <tag>", summary: "Make a formal statement for a node.", milestone: "M4"},
 	{name: "agent", usage: "m2 agent run <role> [-target T] [-budget B]", summary: "Do one agent run.", milestone: "M5"},
