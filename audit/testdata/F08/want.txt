@@ -1,0 +1,1 @@
+nodes/3C/3C53TD.md:8:5: F08: Subgroup.card_subgroup_dvd_card is deprecated since 2026-09-01. Bind Subgroup.card_dvd_card, and record the rename in registers/bindings.reg

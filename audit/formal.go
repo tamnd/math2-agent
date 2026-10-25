@@ -16,7 +16,7 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// The rules F01 to F05 and F07 read the files of the last m2 build in build/. A rule skips when a file that it needs does not exist.
+// The rules F01 to F05 and F07 to F09 read the files of the last m2 build in build/. A rule skips when a file that it needs does not exist.
 
 // built holds the files of the last build.
 type built struct {
@@ -341,6 +341,77 @@ func f07(a *auditor) outcome {
 			if sb.Level != status.None {
 				line, col := bindingPos(n, sb.Decl)
 				o.add(n.Path, line, col, "the statement-only binding %s (match: partial) is at %s in build/%s. A statement without a proof never gives E4 or E5. Run m2 build", sb.Checked, sb.Level, build.StatusFile)
+			}
+		}
+	}
+	return o
+}
+
+// f08 reports each bound declaration and adapter that Mathlib deprecates, with the new name (rule F08).
+func f08(a *auditor) outcome {
+	var o outcome
+	b := a.lastBuild()
+	if b.noExtract != "" {
+		o.reason = b.noExtract
+		return o
+	}
+	for _, n := range a.scopeNodes() {
+		if retired(n) {
+			continue
+		}
+		for _, bd := range leanBindings(n) {
+			for _, d := range []string{bd.decl, bd.adapter} {
+				r, ok := b.records[d]
+				if d == "" || !ok || r.Error != "" {
+					continue
+				}
+				o.checked++
+				dep := r.Deprecated
+				if dep == nil {
+					continue
+				}
+				since := ""
+				if dep.Since != "" {
+					since = " since " + dep.Since
+				}
+				if dep.NewName != "" {
+					o.add(n.Path, bd.line, bd.col, "%s is deprecated%s. Bind %s, and record the rename in registers/bindings.reg", d, since, dep.NewName)
+				} else {
+					o.add(n.Path, bd.line, bd.col, "%s is deprecated%s, and Mathlib gives no new name: %s", d, since, cmp.Or(dep.Text, "no message"))
+				}
+			}
+		}
+	}
+	return o
+}
+
+// f09 checks that each binding at F1 or higher in status.json passes the checks for degenerate statements in extract.json (rule F09, spec 10.4). The hypotheses must not prove False, and automation must not prove the negation. The rule does not fail on a statement that automation proves, because a trivial statement can be the correct one. Spec 10.4 puts such a statement in the review packet.
+func f09(a *auditor) outcome {
+	var o outcome
+	b := a.lastBuild()
+	if reason := cmp.Or(b.noExtract, b.noStatus); reason != "" {
+		o.reason = reason
+		return o
+	}
+	for _, n := range a.scopeNodes() {
+		s, ok := b.statuses[n.ID]
+		if !ok || retired(n) {
+			continue
+		}
+		for _, sb := range s.Bindings {
+			r, ok := b.records[sb.Checked]
+			if sb.Fidelity < status.F1 || !ok || r.Error != "" || r.Kind != "theorem" {
+				continue
+			}
+			o.checked++
+			line, col := bindingPos(n, sb.Decl)
+			switch c := r.Checks; {
+			case c == nil:
+				o.add(n.Path, line, col, "build/%s has no checks for %s. Run m2 build", build.ExtractFile, sb.Checked)
+			case c.Vacuous != "":
+				o.add(n.Path, line, col, "%s proves False from the hypotheses of %s, thus the statement is vacuous. Correct the hypotheses", c.Vacuous, sb.Checked)
+			case c.Refuted != "":
+				o.add(n.Path, line, col, "%s proves the negation of %s, thus the statement is false. Correct the statement", c.Refuted, sb.Checked)
 			}
 		}
 	}

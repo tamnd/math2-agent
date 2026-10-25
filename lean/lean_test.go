@@ -146,7 +146,43 @@ func TestFixture(t *testing.T) {
 	if r := by["absent"]; r.Error == "" {
 		t.Error("an unknown declaration has no error")
 	}
+	if r := by["add_comm_a"]; r.Deprecated != nil {
+		t.Errorf("add_comm_a has the deprecation %+v", r.Deprecated)
+	}
+	old, err := s.Extract([]string{"Fixture.add_comm_old"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := old[0].Deprecated; d == nil || *d != (lean.Deprecation{NewName: "Fixture.add_comm_a", Since: "2026-01-01"}) {
+		t.Errorf("add_comm_old has the deprecation %+v", d)
+	}
 	golden(t, "fixture.golden", summary(rs))
+}
+
+func TestChecks(t *testing.T) {
+	s := start(t, local(t), ".", "Fixture")
+	decls := []string{"vacuous", "small", "false_claim", "em", "id_u", "absent"}
+	for i, d := range decls {
+		decls[i] = "Fixture." + d
+	}
+	got, err := s.Checks(lean.CheckHeartbeats, decls...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]lean.Checks{
+		"Fixture.vacuous":     {Vacuous: "omega", Trivial: "grind"},
+		"Fixture.small":       {Trivial: "rfl"},
+		"Fixture.false_claim": {Refuted: "decide"},
+		"Fixture.em":          {Trivial: "grind"},
+	}
+	if len(got) != len(want) {
+		t.Errorf("Checks gives %d results, and it must give %d: %v", len(got), len(want), got)
+	}
+	for d, w := range want {
+		if got[d] != w {
+			t.Errorf("%s: Checks gives %+v, and it must give %+v", d, got[d], w)
+		}
+	}
 }
 
 func TestErrors(t *testing.T) {

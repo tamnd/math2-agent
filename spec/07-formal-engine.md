@@ -77,6 +77,8 @@ axioms: [propext, Classical.choice, Quot.sound]
 native_decide_axioms: []
 uses_decls: [IsCyclic, Subgroup, Units, Field, Finite, instIsCyclicSubtypeMemSubgroupUnitsOfFinite, …]
 uses_constants_in_statement: [IsCyclic, Subgroup, Units, Field, Finite]
+deprecated: null                   # or {new_name, since, text} from the @[deprecated] attribute
+checks: {}                         # or {vacuous, trivial, refuted}, each the tactic that closed the goal
 heartbeats: 1840
 ```
 
@@ -84,6 +86,8 @@ heartbeats: 1840
 - **Dependencies.** `uses_decls` comes from the value of the declaration. It is each constant that the proof term mentions, closed transitively at the boundary of other bound declarations. Formal dependencies between bound declarations become `uses` evidence in the graph. Rule `G04` reports each formal dependency that the `uses` of the node does not show.
 - **Statement constants.** `uses_constants_in_statement` drives the review tool. A reviewer must see each non-trivial definition that the statement relies on (16.3).
 - **Pretty-printing.** We print the statement normally, and also with full elaboration and with notation off. Reviewers see both forms.
+- **Deprecation.** `deprecated` copies the entry of the `@[deprecated]` attribute. Rule `F08` reports each bound declaration that has one, with the new name. The bump agent (07.9) uses the same data to propose the rename.
+- **Degenerate statements.** For each theorem, `checks` gives the result of the checks 4, 5 and 6 of 10.4. Automation tries to prove `False` from the hypotheses (`vacuous`), to prove the statement without the theorem itself (`trivial`) and to prove the negation (`refuted`). Each tactic has a limit of 10 million heartbeats, which is 5 percent of the default limit of Lean, and the record keeps the first tactic that closed the goal. Rule `F09` fails on `vacuous` and on `refuted`. A `trivial` result does not fail, because a trivial statement can be the correct one.
 
 Extraction runs in the same pinned environment as the build. Its output is a build artefact, with its hash as its address. The extraction code is part of the trusted base (15.1). Thus it is small, and we test it against golden files in `M2Extract/test/`.
 

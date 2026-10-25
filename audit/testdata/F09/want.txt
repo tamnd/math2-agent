@@ -1,0 +1,2 @@
+nodes/3C/3C53TD.md:7:1: F09: decide proves the negation of Math2.Match.lagrange, thus the statement is false. Correct the statement
+nodes/3C/3C53TD.md:8:5: F09: omega proves False from the hypotheses of Subgroup.card_subgroup_dvd_card, thus the statement is vacuous. Correct the hypotheses

@@ -54,8 +54,30 @@ type Record struct {
 	UsesBound                []string `json:"uses_bound"`                  // the bound declarations that the declaration reaches through declarations that are not bound
 	UsesConstantsInStatement []string `json:"uses_constants_in_statement"` // the constants in the type
 
+	Deprecated *Deprecation `json:"deprecated,omitempty"` // the entry of the @[deprecated] attribute. It is nil when the declaration is not deprecated.
+
+	// Checks is the result of the degenerate-statement checks. It is nil when no check ran, for example on a declaration that is not a theorem.
+	Checks *Checks `json:"checks,omitempty"`
+
 	Error string `json:"error,omitempty"` // the reason when Lean has no record, for example "unknown declaration"
 }
+
+// Deprecation is the entry of the @[deprecated] attribute of a declaration.
+type Deprecation struct {
+	NewName string `json:"new_name,omitempty"` // the replacement, for example Nat.add_comm. It is empty when the entry names no replacement.
+	Since   string `json:"since,omitempty"`    // the date of the deprecation, as the entry gives it
+	Text    string `json:"text,omitempty"`     // the message of the entry
+}
+
+// Checks is the result of the degenerate-statement checks 4, 5 and 6 of spec 10.4 on one theorem. Each field is the first tactic that closed the goal, or empty when no tactic closed it.
+type Checks struct {
+	Vacuous string `json:"vacuous,omitempty"` // the tactic that proves False from the hypotheses
+	Trivial string `json:"trivial,omitempty"` // the tactic that proves the statement without the theorem itself
+	Refuted string `json:"refuted,omitempty"` // the tactic that proves the negation of the statement
+}
+
+// CheckHeartbeats is the limit of each tactic in [Session.Checks], in thousands of heartbeats. It is 5 percent of the default limit of Lean.
+const CheckHeartbeats = 10000
 
 // StandardAxioms are the axioms that E5 allows (spec 07.5).
 var StandardAxioms = []string{"Classical.choice", "Quot.sound", "propext"}
@@ -169,6 +191,27 @@ func (s *Session) Extract(decls, bound []string) ([]Record, error) {
 		}
 	}
 	return resp.Records, nil
+}
+
+// Checks runs the degenerate-statement checks on each theorem in decls (spec 10.4, checks 4 to 6). Each tactic stops after heartbeats thousand heartbeats. The map has a result for each theorem that Lean knows. A declaration that is not a theorem is not in the map.
+func (s *Session) Checks(heartbeats int, decls ...string) (map[string]Checks, error) {
+	var resp struct {
+		Checks []struct {
+			Checks
+			Decl  string `json:"decl"`
+			Error string `json:"error"`
+		} `json:"checks"`
+	}
+	if err := s.call(map[string]any{"cmd": "checks", "decls": nonNil(decls), "heartbeats": heartbeats}, &resp); err != nil {
+		return nil, err
+	}
+	out := map[string]Checks{}
+	for _, c := range resp.Checks {
+		if c.Error == "" {
+			out[c.Decl] = c.Checks
+		}
+	}
+	return out, nil
 }
 
 // Binding is a declaration with the attribute @[m2 "TAG"] of the Math2 package.

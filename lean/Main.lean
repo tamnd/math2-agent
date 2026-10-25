@@ -1,5 +1,6 @@
 import Lean
 import M2Extract.Record
+import M2Extract.Checks
 
 /-!
 # m2extract
@@ -10,6 +11,7 @@ import M2Extract.Record
 * `{"cmd":"import","modules":["Mathlib"]}` loads the modules from the search path.
 * `{"cmd":"extract","decls":[...],"bound":[...]}` gives one record for each declaration in `decls`. `bound` is the list of all bound declarations.
 * `{"cmd":"axioms","decls":[...]}` gives the axioms of each declaration, as `#print axioms` gives them.
+* `{"cmd":"checks","decls":[...],"heartbeats":N}` runs the degenerate-statement checks on each theorem in `decls`. Each tactic has a limit of `N` thousand heartbeats.
 * `{"cmd":"bindings"}` gives each declaration that has the attribute `@[m2 "TAG"]` of tamnd/math2, and its tag.
 
 An answer with the field `error` tells that the request failed.
@@ -49,6 +51,12 @@ def handle (env? : IO.Ref (Option Environment)) (req : Json) : IO Json := do
     let env ← needEnv
     let bs ← unsafe bindings env
     return Json.mkObj [("bindings", Json.arr (bs.map fun b => Json.mkObj [("decl", b.decl.toString), ("tag", b.tag)]))]
+  | "checks" =>
+    let env ← needEnv
+    let ds ← IO.ofExcept (strs req "decls")
+    let hb := (req.getObjValAs? Nat "heartbeats").toOption.getD 10000
+    runMeta env do
+      return Json.mkObj [("checks", Json.arr (← ds.mapM (checks hb)))]
   | "axioms" =>
     let env ← needEnv
     let ds ← IO.ofExcept (strs req "decls")

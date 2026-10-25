@@ -35,4 +35,17 @@ theorem uses_a (m n : Nat) : (m + n) + 0 = n + m := by
   rw [Nat.add_zero]
   exact add_comm_a m n
 
+/-- Contradictory hypotheses. The check `vacuous` must find a tactic. -/
+theorem vacuous (n : Nat) (h₁ : n > 0) (h₂ : n = 0) : n * n = 7 := by omega
+
+/-- A statement that `decide` proves. The check `trivial` must find a tactic. -/
+theorem small : 2 + 2 = 4 := rfl
+
+/-- A false statement with a proof that uses `sorry`. The check `refuted` must find a tactic. -/
+theorem false_claim : 2 + 2 = 5 := sorry
+
+/-- A deprecated alias of `add_comm_a`. -/
+@[deprecated add_comm_a (since := "2026-01-01")]
+theorem add_comm_old (m n : Nat) : m + n = n + m := add_comm_a m n
+
 end Fixture
