@@ -47,6 +47,7 @@ func Pull(ctx context.Context, a Adapter, opt Options) (*Result, error) {
 		}
 		opt.Cache = filepath.Join(dir, "m2")
 	}
+	base := opt.Cache
 	opt.Cache = filepath.Join(opt.Cache, "snapshots")
 	cat, err := ReadCatalogue(opt.Root)
 	if err != nil {
@@ -73,7 +74,7 @@ func Pull(ctx context.Context, a Adapter, opt Options) (*Result, error) {
 		}
 		res.Snapshot = *sn
 		if path, err = cached(opt.Cache, sn.Hash); errors.Is(err, fs.ErrNotExist) {
-			path, _, err = download(ctx, opt, a, sn.URL, sn.Hash)
+			path, _, _, err = download(ctx, opt, base, a, sn.URL, sn.Hash)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("ingest %s: %w", id, err)
@@ -83,8 +84,8 @@ func Pull(ctx context.Context, a Adapter, opt Options) (*Result, error) {
 		if url == "" {
 			url = a.Dump()
 		}
-		var hash string
-		if path, hash, err = download(ctx, opt, a, url, ""); err != nil {
+		var hash, commit string
+		if path, hash, commit, err = download(ctx, opt, base, a, url, ""); err != nil {
 			return nil, fmt.Errorf("ingest %s: %w", id, err)
 		}
 		if sn := src.Snapshot(hash); sn != nil {
@@ -94,7 +95,7 @@ func Pull(ctx context.Context, a Adapter, opt Options) (*Result, error) {
 			if date == "" {
 				date = time.Now().UTC().Format(time.DateOnly)
 			}
-			res.Snapshot = Snapshot{URL: url, Hash: hash, Date: date}
+			res.Snapshot = Snapshot{URL: url, Hash: hash, Date: date, Commit: commit}
 			res.New = true
 			src.Snapshots = append(src.Snapshots, res.Snapshot)
 		}
@@ -164,21 +165,23 @@ func getter(opt Options) Getter {
 	}
 }
 
-// download gets the bulk channel at url into the cache and returns the path and the hash of the bytes. When the adapter is a Fetcher, Fetch makes the snapshot. When want is not empty, the hash must be want.
-func download(ctx context.Context, opt Options, a Adapter, url, want string) (path, hash string, err error) {
+// download gets the bulk channel at url into the cache and returns the path, the hash of the bytes and the commit of the source when the adapter gives one. When the adapter is a Fetcher, Fetch makes the snapshot, and base is the m2 cache directory of the request. When want is not empty, the hash must be want.
+func download(ctx context.Context, opt Options, base string, a Adapter, url, want string) (path, hash, commit string, err error) {
 	if err := os.MkdirAll(opt.Cache, 0o750); err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	tmp, err := os.CreateTemp(opt.Cache, ".download-*")
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	defer func() { _ = os.Remove(tmp.Name()) }()
 	h := blake3.New()
 	w := io.MultiWriter(tmp, h)
 	get := getter(opt)
 	if f, ok := a.(Fetcher); ok {
-		err = f.Fetch(ctx, url, get, w)
+		req := &Request{URL: url, Root: opt.Root, Cache: base, Get: get}
+		err = f.Fetch(ctx, req, w)
+		commit = req.Commit
 	} else {
 		var body io.ReadCloser
 		if body, err = get(ctx, url); err == nil {
@@ -190,12 +193,12 @@ func download(ctx context.Context, opt Options, a Adapter, url, want string) (pa
 		err = cerr
 	}
 	if err != nil {
-		return "", "", fmt.Errorf("fetch %s: %w", url, err)
+		return "", "", "", fmt.Errorf("fetch %s: %w", url, err)
 	}
 	hash = "blake3:" + hex.EncodeToString(h.Sum(nil))
 	if want != "" && hash != want {
-		return "", "", fmt.Errorf("fetch %s: the bytes have the hash %s, and the catalogue has %s", url, hash, want)
+		return "", "", "", fmt.Errorf("fetch %s: the bytes have the hash %s, and the catalogue has %s", url, hash, want)
 	}
 	path = filepath.Join(opt.Cache, strings.TrimPrefix(hash, "blake3:"))
-	return path, hash, os.Rename(tmp.Name(), path)
+	return path, hash, commit, os.Rename(tmp.Name(), path)
 }

@@ -246,6 +246,44 @@ func (s *Session) Axioms(decls ...string) (map[string][]string, error) {
 	return out, nil
 }
 
+// Decl is the library record of one declaration: the facts that the record plane keeps about each declaration of a library such as Mathlib (spec 09.2).
+type Decl struct {
+	Decl     string   `json:"decl"`
+	Kind     string   `json:"kind"`      // as in [Record]
+	Module   string   `json:"module"`    // the module that declares Decl
+	TypeHash string   `json:"type_hash"` // the hash of the canonical form of the type
+	Uses     []string `json:"uses"`      // the constants in the value, in order of name
+	Doc      string   `json:"doc,omitempty"`
+	Error    string   `json:"error,omitempty"` // the reason when Lean has no record
+}
+
+// Library returns the library records of the declarations of the loaded modules whose first component is root, for example Mathlib. The declarations are in the order of their names, and Library returns at most limit of them from the position offset. It also returns the number of declarations under root. Internal names, such as auxiliary definitions, are not in the list.
+func (s *Session) Library(root string, offset, limit int) ([]Decl, int, error) {
+	var resp struct {
+		Total   int `json:"total"`
+		Records []struct {
+			Decl
+			Type string  `json:"type"`
+			Doc  *string `json:"doc"`
+		} `json:"records"`
+	}
+	if err := s.call(map[string]any{"cmd": "library", "root": root, "offset": offset, "limit": limit}, &resp); err != nil {
+		return nil, 0, err
+	}
+	out := make([]Decl, len(resp.Records))
+	for i, r := range resp.Records {
+		out[i] = r.Decl
+		if r.Doc != nil {
+			out[i].Doc = *r.Doc
+		}
+		if r.Error == "" {
+			out[i].TypeHash = Hash(r.Type)
+			out[i].Uses = nonNil(r.Uses)
+		}
+	}
+	return out, resp.Total, nil
+}
+
 func nonNil(s []string) []string {
 	if s == nil {
 		return []string{}

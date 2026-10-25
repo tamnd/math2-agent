@@ -136,6 +136,7 @@ m2 graph frontier -open -topic T0NT01   # the open problems and the statements t
 m2 ingest arxiv                        # a new snapshot from the bulk channel of the source
 m2 ingest arxiv -snapshot blake3:...   # the recorded snapshot again, from the cache or from its URL
 m2 ingest zbmath -url 'https://oai.zbmath.org/v1/?verb=ListRecords&metadataPrefix=oai_zb_preview&set=11'
+m2 ingest mathlib                      # the declarations of Mathlib at the commit that lean/lake-manifest.json pins
 ```
 
 These sources have an adapter now:
@@ -143,9 +144,12 @@ These sources have an adapter now:
 | Source | Package | Bulk channel | Licence | What a record keeps |
 |---|---|---|---|---|
 | `arxiv` | `ingest/arxiv` | the metadata plane of tamnd/arxiv, one JSONL file for each month | CC0 metadata; each paper has the licence of its last version | the mathematics papers only: title, authors, categories, MSC codes, DOI and the `ax://` locator. No text. |
+| `mathlib` | `ingest/mathlib` | M2Extract in the Lake project `lean/` of the tree, at the pinned commit of Mathlib | Apache 2.0 | each declaration of Mathlib: kind, module, the hash of the canonical type, the constants that the value uses, the docstring as text and the link to the documentation. |
 | `zbmath` | `ingest/zbmath` | the OAI-PMH interface of zbMATH Open, `oai_zb_preview` | CC BY-SA 4.0 | each document: title, authors, MSC codes, Zbl number, DOI, the source as the locator and the ids of the references. No review text. |
 
 A snapshot that has more than one file, such as an OAI-PMH harvest, is the files one after the other, compressed with gzip. The zbMATH adapter fails when the number of records is not the size of the list that zbMATH Open gives. The full zbMATH harvest has more than four million documents, so give a set to harvest one MSC class.
+
+The Mathlib adapter downloads nothing. It runs M2Extract on the .olean files of the tree, so run `m2 build` first. The catalogue records the commit of Mathlib with the snapshot. When the tree moves to a new tag of Mathlib, run `m2 ingest mathlib` again to get the records of the new tag. At the commit 56a0058 of Mathlib, for Lean 4.35.0, the adapter gives 358,102 records in less than 5 minutes on a laptop. Of these, 90,326 have a docstring. The snapshot is 50 MB.
 
 Each source has an access class: `open`, `share-alike-nc`, `verbatim`, `gfdl` or `record` (spec 09.3). The licence gate stores the text of an item only when its class is `open`. For the other classes it keeps the record, the locator and the fingerprints of the text. The fingerprints cannot give the text back. The audit uses them to find copied text:
 

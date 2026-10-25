@@ -22,12 +22,23 @@ type Adapter interface {
 	Read(snapshot io.Reader, emit func(Record) error) error
 }
 
-// Fetcher is an Adapter whose bulk channel is more than one file, for example an OAI-PMH harvest in pages or a set of monthly files. For a new snapshot, Pull calls Fetch in place of one download. The bytes that Fetch writes to w are the snapshot, and Read must accept them.
+// Fetcher is an Adapter whose bulk channel is more than one file, for example an OAI-PMH harvest in pages, a set of monthly files or the declarations of a Lean library. For a new snapshot, Pull calls Fetch in place of one download. The bytes that Fetch writes to w are the snapshot, and Read must accept them.
 type Fetcher interface {
 	Adapter
 
-	// Fetch gets the bulk channel at url with get and writes the snapshot to w.
-	Fetch(ctx context.Context, url string, get Getter, w io.Writer) error
+	// Fetch gets the bulk channel at req.URL and writes the snapshot to w.
+	Fetch(ctx context.Context, req *Request, w io.Writer) error
+}
+
+// Request is one fetch of a new snapshot.
+type Request struct {
+	URL   string // the bulk channel
+	Root  string // the math2 working tree
+	Cache string // the m2 cache directory, for the programs that a fetch builds
+	Get   Getter // gets one URL
+
+	// Commit is the commit of the source that the snapshot comes from. Fetch sets it when the source has commits, and Pull records it in the catalogue.
+	Commit string
 }
 
 // Getter gets the body of one URL. The body is nil when the error is not nil, and the caller closes it.

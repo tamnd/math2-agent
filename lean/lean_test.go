@@ -185,6 +185,44 @@ func TestChecks(t *testing.T) {
 	}
 }
 
+func TestLibrary(t *testing.T) {
+	s := start(t, local(t), ".", "Fixture")
+	all, total, err := s.Library("Fixture", 0, 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != len(all) || total != 14 {
+		t.Fatalf("Library gives %d records and a total of %d", len(all), total)
+	}
+	by := map[string]lean.Decl{}
+	for i, d := range all {
+		if i > 0 && all[i-1].Decl >= d.Decl {
+			t.Errorf("%s comes after %s", d.Decl, all[i-1].Decl)
+		}
+		if d.Error != "" || d.Module != "Fixture" || !strings.HasPrefix(d.TypeHash, "blake3:") {
+			t.Errorf("the record of %s is %+v", d.Decl, d)
+		}
+		by[d.Decl] = d
+	}
+	a, b := by["Fixture.add_comm_a"], by["Fixture.add_comm_b"]
+	if a.Kind != "theorem" || a.TypeHash != b.TypeHash || !strings.Contains(a.Doc, "other binder names") || b.Doc != "" {
+		t.Errorf("add_comm_a is %+v and add_comm_b is %+v", a, b)
+	}
+	if !slices.Contains(by["Fixture.uses_a"].Uses, "Fixture.add_comm_a") {
+		t.Errorf("uses_a uses %v", by["Fixture.uses_a"].Uses)
+	}
+	page, total2, err := s.Library("Fixture", 2, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total2 != total || len(page) != 3 || page[0].Decl != all[2].Decl {
+		t.Errorf("the page from 2 is %v of %d", page, total2)
+	}
+	if none, n, err := s.Library("NoSuchRoot", 0, 10); err != nil || n != 0 || len(none) != 0 {
+		t.Errorf("an unknown root gives %v, %d, %v", none, n, err)
+	}
+}
+
 func TestErrors(t *testing.T) {
 	exe := local(t)
 	s, err := lean.Start(context.Background(), exe, ".")
