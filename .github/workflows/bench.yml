@@ -1,0 +1,51 @@
+name: bench
+
+# The latency benchmark of the graph queries Q1 to Q7 (spec 05.6) on a synthetic graph. The hosted runner has 4 cores and 16 GB, so the scheduled run uses 1 million nodes. Run it by hand with more nodes on a larger machine.
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      nodes:
+        description: the number of synthetic nodes
+        default: "1000000"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GO_VERSION: "1.27.x"
+
+jobs:
+  graph:
+    name: graph queries
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+      - name: run the benchmark
+        env:
+          NODES: ${{ inputs.nodes || '1000000' }}
+        run: go test ./bench/graph -run TestLatency -count=1 -timeout 50m -v -nodes "$NODES" -report "$RUNNER_TEMP/bench.md"
+      - name: write the summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/bench.md" ]; then
+            cat "$RUNNER_TEMP/bench.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: bench-graph
+          path: ${{ runner.temp }}/bench.md
+          if-no-files-found: ignore

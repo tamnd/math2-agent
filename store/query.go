@@ -2,9 +2,11 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/status"
@@ -29,20 +31,28 @@ func (s *Store) Closure(tag string, m graph.Measure) (Closure, error) {
 	if !ok {
 		return Closure{}, fmt.Errorf("%s has no alternative: each alternative goes around a cycle", tag)
 	}
-	c := Closure{Alternative: alt, Evidence: s.status[tag].Evidence, Below: []string{}, Axioms: []string{}, Hypotheses: []string{}}
-	for _, t := range alt.Nodes {
-		st := s.status[t]
-		if st.Evidence != status.None && (c.Weakest == status.None || st.Evidence < c.Weakest) {
-			c.Weakest = st.Evidence
+	c := Closure{Alternative: alt, Evidence: s.evidence(tag), Below: []string{}, Axioms: []string{}, Hypotheses: []string{}}
+	// Many nodes have the same axioms, so the loop marks each set of axioms once.
+	sets := make([]bool, len(s.sets))
+	for k, i := range alt.Index {
+		if i < 0 {
+			continue
 		}
-		if t != tag && st.Evidence != status.None && st.Evidence < c.Evidence {
+		t, ev := alt.Nodes[k], s.level[i]
+		if ev != status.None && (c.Weakest == status.None || ev < c.Weakest) {
+			c.Weakest = ev
+		}
+		if t != tag && ev != status.None && ev < c.Evidence {
 			c.Below = append(c.Below, t)
 		}
-		for _, b := range st.Bindings {
-			c.Axioms = append(c.Axioms, b.Axioms...)
-		}
-		if n, _ := s.graph.Node(t); t != tag && (n.Kind == "conjecture" || n.Kind == "problem") {
+		sets[s.axioms[i]] = true
+		if t != tag && s.hyp[i] {
 			c.Hypotheses = append(c.Hypotheses, t)
+		}
+	}
+	for k, ok := range sets {
+		if ok {
+			c.Axioms = append(c.Axioms, s.sets[k]...)
 		}
 	}
 	slices.Sort(c.Axioms)
@@ -62,7 +72,11 @@ func (s *Store) Dependents(tag string) (Dependents, error) {
 	if _, err := s.node(tag); err != nil {
 		return Dependents{}, err
 	}
-	d := Dependents{Tag: tag, Needs: s.graph.Needs(tag), Uses: s.graph.Dependents(tag)}
+	d := Dependents{Tag: tag}
+	var wg sync.WaitGroup
+	wg.Go(func() { d.Needs = s.graph.Needs(tag) })
+	wg.Go(func() { d.Uses = s.graph.Dependents(tag) })
+	wg.Wait()
 	if d.Needs == nil {
 		d.Needs = []string{}
 	}
@@ -118,54 +132,143 @@ type Bound struct {
 //
 // The frontier of formal statements has each statement that is not retired, that has a formal statement at fidelity F1 or above, and that has an evidence level below E5. Its proof is open to formalise. The open-problem frontier has each conjecture and each problem at E0, with the statements that bound it. The dates that the bounds moved come from the provenance of the nodes, in a later milestone.
 func (s *Store) Frontier(f Filter) ([]Entry, error) {
+	// The conditions are on the columns of a table that the letter X stands for.
 	var where []string
 	var args []any
 	if f.Open {
-		where = append(where, `n.kind IN ('conjecture', 'problem')`, `n.evidence = ?`)
+		where = append(where, `X.kind IN ('conjecture', 'problem')`, `X.evidence = ?`)
 		args = append(args, status.Open.String())
 	} else {
-		where = append(where, `n.kind = 'statement'`, `n.fidelity IN ('F1', 'F2', 'F3')`, `n.evidence <> ?`)
+		where = append(where, `X.kind = 'statement'`, `X.fidelity IN ('F1', 'F2', 'F3')`, `X.evidence <> ?`)
 		args = append(args, status.Kernel.String())
 	}
-	where = append(where, `n.retired = 0`)
-	if f.MSC != "" {
-		where = append(where, `EXISTS (SELECT 1 FROM msc m WHERE m.tag = n.tag AND substr(m.code, 1, length(?)) = ?)`)
-		args = append(args, f.MSC, f.MSC)
-	}
-	if f.Topic != "" {
-		where = append(where, `EXISTS (SELECT 1 FROM edges e WHERE e.type = ? AND e.src = n.tag AND e.dst = ?)`)
-		args = append(args, graph.PartOf, f.Topic)
-	}
+	where = append(where, `X.retired = 0`)
 	if f.Evidence != status.None {
-		where = append(where, `n.evidence = ?`)
+		where = append(where, `X.evidence = ?`)
 		args = append(args, f.Evidence.String())
 	}
-	query := `SELECT n.tag, n.kind, n.name, (SELECT group_concat(code, ' ') FROM (SELECT code FROM msc m WHERE m.tag = n.tag ORDER BY code)) FROM nodes n WHERE ` + strings.Join(where, " AND ") + ` ORDER BY n.tag`
+	cond := strings.Join(where, " AND ")
+	// The query starts from the MSC codes or from the topic, when the filter has one, so it reads only the nodes of the slice. The MSC table has the columns of the conditions.
+	from, fromArgs := `nodes n`, []any{}
+	switch {
+	case f.MSC != "":
+		from = `(SELECT DISTINCT tag FROM msc WHERE code >= ? AND code < ? AND ` + strings.ReplaceAll(cond, "X.", "") + `) m CROSS JOIN nodes n ON n.tag = m.tag`
+		fromArgs = append(fromArgs, f.MSC, f.MSC+"\x7f")
+		fromArgs = append(fromArgs, args...)
+	case f.Topic != "":
+		from = `(SELECT DISTINCT src AS tag FROM edges WHERE dst = ? AND type = ?) m CROSS JOIN nodes n ON n.tag = m.tag`
+		fromArgs = append(fromArgs, f.Topic, graph.PartOf)
+	}
+	cond = strings.ReplaceAll(cond, "X.", "n.")
+	args = append(fromArgs, args...)
+	if f.MSC != "" && f.Topic != "" {
+		cond += ` AND EXISTS (SELECT 1 FROM edges e WHERE e.src = n.tag AND e.type = ? AND e.dst = ?)`
+		args = append(args, graph.PartOf, f.Topic)
+	}
+	query := `SELECT n.tag, n.kind, n.name, n.evidence, n.fidelity, (SELECT group_concat(code, ' ') FROM (SELECT code FROM msc c WHERE c.tag = n.tag ORDER BY code)) FROM ` + from + ` WHERE ` + cond + ` ORDER BY n.tag`
 	out := []Entry{}
 	err := rows(s.db, query, func(r *sql.Rows) error {
 		var e Entry
+		var evidence, fidelity []byte
 		var codes sql.NullString
-		if err := r.Scan(&e.Tag, &e.Kind, &e.Name, &codes); err != nil {
+		if err := r.Scan(&e.Tag, &e.Kind, &e.Name, &evidence, &fidelity, &codes); err != nil {
 			return err
 		}
-		st := s.status[e.Tag]
-		e.Evidence, e.Fidelity, e.MSC = st.Evidence, st.Fidelity, strings.Fields(codes.String)
+		if err := errors.Join(e.Evidence.UnmarshalText(evidence), e.Fidelity.UnmarshalText(fidelity)); err != nil {
+			return err
+		}
+		e.MSC = strings.Fields(codes.String)
 		if e.MSC == nil {
 			e.MSC = []string{}
 		}
 		out = append(out, e)
 		return nil
 	}, args...)
-	if err != nil {
-		return nil, err
+	if err != nil || !f.Open {
+		return out, err
 	}
-	if f.Open {
-		for i := range out {
-			for _, b := range s.graph.In(graph.Bounds, out[i].Tag) {
-				side, value, _ := strings.Cut(b.Label, " ")
-				out[i].Bounds = append(out[i].Bounds, Bound{Tag: b.From, Side: side, Value: value, Via: b.Via, Evidence: s.status[b.From].Evidence})
+	// The bounds of many problems come in one query.
+	at := make(map[string]int, len(out))
+	for i, e := range out {
+		at[e.Tag] = i
+	}
+	for chunk := range slices.Chunk(out, 500) {
+		args := []any{graph.Bounds}
+		for _, e := range chunk {
+			args = append(args, e.Tag)
+		}
+		query := `SELECT dst, src, via, label FROM edges WHERE type = ? AND dst IN (` + strings.Repeat(", ?", len(chunk))[2:] + `) ORDER BY dst, src, via, system, label`
+		err := rows(s.db, query, func(r *sql.Rows) error {
+			var dst, label string
+			var b Bound
+			if err := r.Scan(&dst, &b.Tag, &b.Via, &label); err != nil {
+				return err
 			}
+			b.Side, b.Value, _ = strings.Cut(label, " ")
+			b.Evidence = s.evidence(b.Tag)
+			out[at[dst]].Bounds = append(out[at[dst]].Bounds, b)
+			return nil
+		}, args...)
+		if err != nil {
+			return nil, err
 		}
 	}
 	return out, nil
+}
+
+// Neighbourhood is the part of the graph near a node (query Q2).
+type Neighbourhood struct {
+	Tag   string       `json:"tag"`
+	Hops  int          `json:"hops"`
+	Nodes []string     `json:"nodes"` // the nodes at most Hops edges from the node, the node too, in byte order
+	Edges []graph.Edge `json:"edges"` // each edge of each type with an end less than Hops edges from the node, in the order of [graph.Edge.Compare]
+}
+
+// Neighbourhood returns the nodes and the edges near the node with the tag (query Q2). An edge goes either way. The ends of the edges that are not nodes, such as Lean declarations and external ids, are in the edges, but a path does not go through them.
+func (s *Store) Neighbourhood(tag string, hops int) (Neighbourhood, error) {
+	if _, err := s.node(tag); err != nil {
+		return Neighbourhood{}, err
+	}
+	nb := Neighbourhood{Tag: tag, Hops: hops, Nodes: []string{tag}, Edges: []graph.Edge{}}
+	seen := map[string]bool{tag: true}
+	found := map[graph.Edge]bool{}
+	near := []string{tag}
+	for range hops {
+		var next []string
+		for chunk := range slices.Chunk(near, 500) {
+			marks := strings.Repeat(", ?", len(chunk))[2:]
+			args := make([]any, 0, 2*len(chunk))
+			for _, t := range chunk {
+				args = append(args, t)
+			}
+			args = append(args, args...)
+			query := `SELECT type, src, dst, via, system, label FROM edges WHERE src IN (` + marks + `) UNION ALL SELECT type, src, dst, via, system, label FROM edges WHERE dst IN (` + marks + `)`
+			err := rows(s.db, query, func(r *sql.Rows) error {
+				var e graph.Edge
+				if err := r.Scan(&e.Type, &e.From, &e.To, &e.Via, &e.System, &e.Label); err != nil {
+					return err
+				}
+				if found[e] {
+					return nil
+				}
+				found[e] = true
+				nb.Edges = append(nb.Edges, e)
+				for _, t := range []string{e.From, e.To} {
+					if _, isNode := s.at(t); isNode && !seen[t] {
+						seen[t] = true
+						next = append(next, t)
+						nb.Nodes = append(nb.Nodes, t)
+					}
+				}
+				return nil
+			}, args...)
+			if err != nil {
+				return Neighbourhood{}, err
+			}
+		}
+		near = next
+	}
+	slices.Sort(nb.Nodes)
+	slices.SortFunc(nb.Edges, graph.Edge.Compare)
+	return nb, nil
 }

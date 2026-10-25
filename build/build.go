@@ -657,13 +657,13 @@ func (b *builder) graph(_ context.Context, nodes []*node.Node) (Step, error) {
 	return Step{Input: input, Output: out}, err
 }
 
-// store writes the serving store from the nodes, status.json and the aliases. The input is the output of the status and graph steps and the hash of registers/aliases.reg. The aliases of the nodes are in the node hashes, thus in the output of the graph step.
+// store writes the serving store from the nodes, status.json and the aliases. The input is the version of the store, the output of the status and graph steps and the hash of registers/aliases.reg. The aliases of the nodes are in the node hashes, thus in the output of the graph step.
 func (b *builder) store(_ context.Context, nodes []*node.Node) (Step, error) {
 	reg, err := os.ReadFile(filepath.Join(b.opt.Root, filepath.FromSlash(format.AliasRegister))) // #nosec G304 -- the caller names the root of the tree.
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return Step{}, err
 	}
-	input := hashString(strings.Join([]string{"status " + b.output(Status), "graph " + b.output(Graph), "aliases " + hashString(string(reg))}, "\n"))
+	input := hashString(strings.Join([]string{"store " + store.Version, "status " + b.output(Status), "graph " + b.output(Graph), "aliases " + hashString(string(reg))}, "\n"))
 	if out, err := hashFiles(b.opt.Out, []string{StoreFile}); err == nil {
 		if s, ok := b.cached(Store, input, out); ok {
 			return s, nil

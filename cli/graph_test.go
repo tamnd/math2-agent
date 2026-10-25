@@ -22,6 +22,8 @@ func TestGraph(t *testing.T) {
 		code int
 		want []string // each string is in the output
 	}{
+		{[]string{"neighbourhood", "-hops", "1", "D2SB01"}, ExitOK, []string{"nodes at most 1 edges from D2SB01 (5)", "  G5SB02  concept", "edges (4)", "  D2SB01  defines  G5SB02"}},
+		{[]string{"neighbourhood", "-hops", "-1", "D2SB01"}, ExitUsage, []string{"is negative"}},
 		{[]string{"closure", "lagrange"}, ExitFailure, []string{"no node has the alias lagrange"}},
 		{[]string{"closure", "3C53TD"}, ExitOK, []string{"proofs      P1QG01", "  D2SB01  definition", "hypotheses  none"}},
 		{[]string{"closure", "-measure", "size", "m2://lean/Subgroup.card_subgroup_dvd_card"}, ExitOK, []string{"closure     3C53TD"}},

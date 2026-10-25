@@ -34,8 +34,11 @@ func open(t *testing.T) *store.Store {
 
 func TestOpen(t *testing.T) {
 	s := open(t)
-	if got := len(s.Graph().Nodes); got != 14 {
-		t.Errorf("the store has %d nodes, and the tree has 14", got)
+	if n, ok := s.Node("G5S1M9"); !ok || n.Kind != "concept" || n.Name != "Group" || n.Hash == "" {
+		t.Errorf("the node G5S1M9 is %+v, %v", n, ok)
+	}
+	if _, ok := s.Node("7K3QX2"); ok {
+		t.Error("the store has the node 7K3QX2, and the tree has not")
 	}
 	st, ok := s.Status("3C53TD")
 	if !ok || st.Evidence != status.Claimed || st.Fidelity != status.F0 {
@@ -55,7 +58,7 @@ func TestGraphHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := open(t).Graph().Hash(), graph.Build(nodes).Hash(); got != want {
+	if got, want := open(t).Hash(), graph.Build(nodes).Hash(); got != want {
 		t.Errorf("the graph of the store has the hash %s, and the graph of the tree has %s", got, want)
 	}
 }
@@ -92,6 +95,36 @@ func TestResolve(t *testing.T) {
 		if !strings.HasPrefix(got, tt.want) {
 			t.Errorf("Resolve(%q) gives %q, and it must give %q", tt.ref, got, tt.want)
 		}
+	}
+}
+
+func TestNeighbourhood(t *testing.T) {
+	s := open(t)
+	nb, err := s.Neighbourhood("D2SB01", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var edges []string
+	for _, e := range nb.Edges {
+		edges = append(edges, e.Type+" "+e.From+" "+e.To)
+	}
+	wantNodes := []string{"3C53TD", "C05ET1", "D1F0A1", "D2SB01", "G5SB02"}
+	wantEdges := []string{"defines D2SB01 G5SB02", "uses 3C53TD D2SB01", "uses C05ET1 D2SB01", "uses D2SB01 D1F0A1"}
+	if !reflect.DeepEqual(nb.Nodes, wantNodes) || !reflect.DeepEqual(edges, wantEdges) {
+		t.Errorf("the neighbourhood of D2SB01 has the nodes %v and the edges %q, and it must have %v and %q", nb.Nodes, edges, wantNodes, wantEdges)
+	}
+	two, err := s.Neighbourhood("D2SB01", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(two.Nodes) <= len(nb.Nodes) || len(two.Edges) <= len(nb.Edges) {
+		t.Errorf("2 hops give %d nodes and %d edges, and 1 hop gives %d and %d", len(two.Nodes), len(two.Edges), len(nb.Nodes), len(nb.Edges))
+	}
+	if zero, err := s.Neighbourhood("D2SB01", 0); err != nil || len(zero.Nodes) != 1 || len(zero.Edges) != 0 {
+		t.Errorf("0 hops give %+v, %v", zero, err)
+	}
+	if _, err := s.Neighbourhood("7K3QX2", 2); err == nil {
+		t.Error("Neighbourhood accepts a tag that is not in the store")
 	}
 }
 

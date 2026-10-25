@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). The command `m2 release` comes in M2. The first work of M2 is written: the `store` package puts the graph and the status of each node into one SQLite file, and `m2 graph` runs the closure, reverse dependency, learning path and frontier queries on it. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). The command `m2 release` comes in M2. The first work of M2 is written: the `store` package puts the graph and the status of each node into one SQLite file, and `m2 graph` runs the neighbourhood, closure, reverse dependency, learning path and frontier queries on it. The `synth` package and `bench/graph` measure these queries on a synthetic graph. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -51,7 +51,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 build` | Build the derived data: Lean, extraction, replay, status, graph and store. Search comes later. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
-| `m2 graph` | Run a graph query: closure, reverse dependencies, path or frontier. | written |
+| `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source. | M2 |
 | `m2 align <source>` | Propose crosswalk edges to an external source. | M2 |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release. | M2 |
@@ -117,6 +117,7 @@ The output gives the evidence level, the fidelity level, the flags, each item of
 `m2 graph` runs a query on `build/store.db` from the last `m2 build`. Give each node as a tag, an alias or an m2:// URI. Put the flags before the nodes. Each query takes `-json`.
 
 ```sh
+m2 graph neighbourhood D2SB01           # the nodes and the edges at most 2 edges from the node (Q2)
 m2 graph closure 3C53TD                 # the best alternative, its trust profile and its axioms (Q3)
 m2 graph closure -measure size 3C53TD   # the alternative with few nodes, not the least depth
 m2 graph rdeps m2://concept/group       # the nodes that need the node, and the nodes that use it (Q4)
@@ -125,7 +126,29 @@ m2 graph frontier -msc 11               # the formal statements with no kernel p
 m2 graph frontier -open -topic T0NT01   # the open problems and the statements that bound them (Q7)
 ```
 
-`m2 graph frontier` also takes `-evidence E1`. A node that `needs` the node loses each alternative when the node is false. A node that `uses` the node uses it in at least one alternative. The learning path goes from `from` to `to` through the uses edges that end at a definition and the defines edges.
+`m2 graph neighbourhood` takes `-hops N`. `m2 graph frontier` also takes `-evidence E1`. A node that `needs` the node loses each alternative when the node is false. A node that `uses` the node uses it in at least one alternative. The learning path goes from `from` to `to` through the uses edges that end at a definition and the defines edges.
+
+## Benchmarks
+
+`bench/graph` measures the latency of the queries Q1 to Q7 on a synthetic graph from the `synth` package, and compares the 95th percentile with the targets of spec 05.6. The test runs with 20,000 nodes in CI. The `bench` workflow runs it each week with 1 million nodes and puts the table in the summary of the run. To run it at reference scale (5 million nodes), use a machine with at least 24 GB of memory and 6 GB of free disk:
+
+```sh
+go test ./bench/graph -run TestLatency -nodes 5000000 -timeout 2h -v -report bench.md
+```
+
+On a Mac with 10 cores and 24 GB, with 5,001,118 nodes and 16,225,859 edges, each query meets its target:
+
+| Query | | p50 | p95 | target p95 |
+|---|---|---|---|---|
+| Q1 | resolve an identifier | 0.15 ms | 1.2 ms | 5 ms |
+| Q2 | neighbourhood, 2 hops | 5.5 ms | 10 ms | 20 ms |
+| Q3 | dependency closure (median 682,066 nodes) | 24 ms | 33 ms | 100 ms |
+| Q4 | reverse dependencies | 1.0 ms | 132 ms | 200 ms |
+| Q5 | prerequisite path | 3.4 ms | 12 ms | 100 ms |
+| Q6 | status slice | 94 ms | 230 ms | 500 ms |
+| Q7 | open-problem frontier | 8.7 ms | 144 ms | 200 ms |
+
+The store file has 2.9 GB. Open takes 37 seconds, and the heap after Open has 2.6 GB. The store keeps in memory only the uses, proves and defines edges, the kind and the evidence level of each node, and the axioms of the bindings. The other data stays in SQLite.
 
 ## Rules that the toolchain keeps
 
@@ -152,6 +175,7 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 ```
 cmd/m2/   the m2 binary
 audit/    the audit rules of spec 15, with a fixture pair for each rule
+bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6
 build/    the steps of m2 build, their cache and the build manifest
 check/    the fast rules of m2 check: schema, body and links
 cli/      the command table
@@ -165,14 +189,15 @@ schema/   check front matter against the node schema
 site/     build the wiki
 store/    the serving store: the graph and the status of each node in SQLite, and the queries of spec 05.6
 status/   the evidence level, the fidelity level and the flags of each node (spec 04.7), and the reviews
+synth/    synthetic graphs for the benchmarks
 tag/      tags, provisional ids, the tag register and the alias register
 uri/      m2:// URIs
 spec/     the specification
 ```
 
-Each directory except `cmd/` and `spec/` is a Go package that other programs can import. For example, a bot can use `github.com/tamnd/math2-agent/node` to read and format node files. The packages follow the conventions of the Go standard library, and `go doc` shows an example for each main function.
+Each directory except `cmd/`, `bench/` and `spec/` is a Go package that other programs can import. For example, a bot can use `github.com/tamnd/math2-agent/node` to read and format node files. The packages follow the conventions of the Go standard library, and `go doc` shows an example for each main function.
 
-The full layout arrives with the milestones. The plan has these parts: `compute`, `ingest`, `align`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `prompts/`, `images/`, `web/` and `bench/`.
+The full layout arrives with the milestones. The plan has these parts: `compute`, `ingest`, `align`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `prompts/`, `images/` and `web/`.
 
 ## Contribute
 
