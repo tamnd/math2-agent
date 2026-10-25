@@ -10,6 +10,7 @@ import M2Extract.Record
 * `{"cmd":"import","modules":["Mathlib"]}` loads the modules from the search path.
 * `{"cmd":"extract","decls":[...],"bound":[...]}` gives one record for each declaration in `decls`. `bound` is the list of all bound declarations.
 * `{"cmd":"axioms","decls":[...]}` gives the axioms of each declaration, as `#print axioms` gives them.
+* `{"cmd":"bindings"}` gives each declaration that has the attribute `@[m2 "TAG"]` of tamnd/math2, and its tag.
 
 An answer with the field `error` tells that the request failed.
 -/
@@ -44,6 +45,10 @@ def handle (env? : IO.Ref (Option Environment)) (req : Json) : IO Json := do
     let bound := (← IO.ofExcept (strs req "bound")).foldl NameSet.insert {}
     runMeta env do
       return Json.mkObj [("records", Json.arr (← ds.mapM (record bound)))]
+  | "bindings" =>
+    let env ← needEnv
+    let bs ← unsafe bindings env
+    return Json.mkObj [("bindings", Json.arr (bs.map fun b => Json.mkObj [("decl", b.decl.toString), ("tag", b.tag)]))]
   | "axioms" =>
     let env ← needEnv
     let ds ← IO.ofExcept (strs req "decls")

@@ -171,6 +171,21 @@ func (s *Session) Extract(decls, bound []string) ([]Record, error) {
 	return resp.Records, nil
 }
 
+// Binding is a declaration with the attribute @[m2 "TAG"] of the Math2 package.
+type Binding struct {
+	Decl string `json:"decl"`
+	Tag  string `json:"tag"`
+}
+
+// Bindings returns the declarations with the attribute @[m2 "TAG"] in the loaded modules, in order of module. It is empty when no loaded module defines the attribute.
+func (s *Session) Bindings() ([]Binding, error) {
+	var resp struct {
+		Bindings []Binding `json:"bindings"`
+	}
+	err := s.call(map[string]any{"cmd": "bindings"}, &resp)
+	return resp.Bindings, err
+}
+
 // Axioms returns the axioms of each declaration in decls, as "#print axioms" gives them, in order of name. A declaration that Lean does not know is not in the map.
 func (s *Session) Axioms(decls ...string) (map[string][]string, error) {
 	var resp struct {
