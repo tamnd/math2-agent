@@ -1,0 +1,4 @@
+nodes/3C/3C53TD.md:11:13: A01: the wikidata id "Q083478" is not a QID such as Q180967
+nodes/3C/3C53TD.md:12:9: A01: the oeis id "A45" is not an A-number such as A000045
+nodes/3C/3C53TD.md:13:14: A01: the proofwiki id "[[Lagrange's Theorem]]" is not a ProofWiki page title: a title has no # < > [ ] | { }
+nodes/3C/3C53TD.md:14:10: A01: the lmfdb id "8.3" is not the path of the object on the LMFDB, such as EllipticCurve/Q/11.a2

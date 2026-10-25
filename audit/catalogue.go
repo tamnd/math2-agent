@@ -52,7 +52,7 @@ var catalogue = []entry{
 	{Rule{"C03", Compute, false, "the image of a computation is older than the image of the current release"}, nil},
 	{Rule{"C04", Compute, true, "the certificate checker is the fixed checker for its kind"}, nil},
 	{Rule{"C05", Compute, true, "no network and no model calls in the computation logs"}, nil},
-	{Rule{"A01", Align, true, "each same_as value has the syntax of its system"}, nil},
+	{Rule{"A01", Align, true, "each same_as value has the syntax of its system"}, a01},
 	{Rule{"A02", Align, false, "a same_as value from an agent has no confirmation after 90 days"}, nil},
 	{Rule{"A03", Align, false, "the external record exists and matches at its pinned revision"}, nil},
 	{Rule{"A04", Align, false, "a candidate duplicate pair has no decision after 30 days"}, nil},
