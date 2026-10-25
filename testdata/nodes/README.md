@@ -1,8 +1,9 @@
 # Fixture nodes
 
-These are the fixture sets of spec 19 M0. The tests of the `schema` and `check` packages use them. `go test ./check` runs each broken node against the valid tree and expects exactly the planted rule and line.
+These are the fixture sets of spec 19 M0. The tests of the `schema`, `check`, `format` and `cli` packages use them. `go test ./check` runs each broken node against the valid tree and expects exactly the planted rule and line.
 
 - `valid/` is a math2 working tree with 117 nodes and no error. It has at least 5 nodes of each of the 11 kinds. The topics are group theory, number theory, real analysis, linear algebra, graph theory and proof methods. Each reference resolves inside the tree. Two nodes have provisional ids, and two nodes are retired. Each file is in canonical form.
+- `aliases/` has 3 nodes that refer to nodes of `valid/` by alias, and `registers/aliases.reg`. The aliases are in top-level fields, in the nested fields of an `implies` edge and in link targets. Some links are in code, and m2 fmt must not change them. `aliases/want/` has the output of m2 fmt for each node. Before m2 fmt, m2 check gives S01 and B02 findings for the aliases. After m2 fmt, it gives no findings.
 - `broken/` has 200 nodes. Each one is a copy of a valid node with a new tag and one planted error. `broken/expect.yaml` gives the rule that catches the error and the line of the error. The links and the references of a broken node point to nodes in `valid/`. Thus check a broken node together with the valid tree.
 
 The number of broken nodes for each rule:

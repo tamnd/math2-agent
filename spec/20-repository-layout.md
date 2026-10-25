@@ -103,6 +103,7 @@ math2-agent/
 
   check/                         the fast rules of m2 check: S01 to S04, B01 to B03, G01 (15.3)
   cli/                           the command table and the flags of each command
+  format/                        m2 fmt: canonical front matter, aliases to tags (04.4, 04.5)
   node/                          parse, canonicalise, hash node files (document 04)
   schema/                        schema validation, migrations
   tag/                           minting, provisional id rewrite, registers

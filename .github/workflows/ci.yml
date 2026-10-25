@@ -121,6 +121,18 @@ jobs:
           "$RUNNER_TEMP/m2" check -root testdata/nodes/broken -q > findings.txt || code=$?
           test "$code" = 1
           test -s findings.txt
+      - name: m2 fmt changes the aliases to tags, and m2 check then passes
+        run: |
+          "$RUNNER_TEMP/m2" fmt -check -root testdata/nodes/valid
+          tree="$RUNNER_TEMP/tree"
+          cp -R testdata/nodes/valid "$tree"
+          cp -R testdata/nodes/aliases/nodes testdata/nodes/aliases/registers "$tree"
+          code=0
+          "$RUNNER_TEMP/m2" fmt -check -root "$tree" || code=$?
+          test "$code" = 1
+          "$RUNNER_TEMP/m2" fmt -root "$tree"
+          test -z "$("$RUNNER_TEMP/m2" fmt -root "$tree")"
+          "$RUNNER_TEMP/m2" check -root "$tree"
       - name: an unknown command exits with code 2
         run: |
           code=0

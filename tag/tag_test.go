@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -121,6 +122,40 @@ func TestAppendKeepsLines(t *testing.T) {
 	used, err := ReadUsed(path, filepath.Join(t.TempDir(), "missing.reg"))
 	if err != nil || len(used) != 3 || !used["1H8D2C"] {
 		t.Fatalf("ReadUsed = %v, %v", used, err)
+	}
+}
+
+func TestReadAliases(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "aliases.reg")
+	text := "# alias tag from until\ncompact-space 1H8D2C 2026-01-02 2026-05-01\ncompact-space 7K3QX2 2026-05-01 -\n\nlagrange 9TX3RB 2026-03-04 -\n"
+	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadAliases(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Alias{{"compact-space", "1H8D2C", "2026-01-02", "2026-05-01"}, {"compact-space", "7K3QX2", "2026-05-01", Current}, {"lagrange", "9TX3RB", "2026-03-04", Current}}
+	if !slices.Equal(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	if got, err := ReadAliases(filepath.Join(dir, "missing.reg")); got != nil || err != nil {
+		t.Fatalf("a missing register gave %v, %v", got, err)
+	}
+	for _, line := range []string{
+		"compact-space 1H8D2C 2026-01-02",
+		"Compact 1H8D2C 2026-01-02 -",
+		"compact-space 1h8d2c 2026-01-02 -",
+		"compact-space 1H8D2C 2 Jan 2026",
+		"compact-space 1H8D2C 2026-01-02 now",
+	} {
+		if err := os.WriteFile(path, []byte(line+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ReadAliases(path); err == nil || !strings.Contains(err.Error(), "aliases.reg:1:") {
+			t.Errorf("%q: the error is %v", line, err)
+		}
 	}
 }
 
