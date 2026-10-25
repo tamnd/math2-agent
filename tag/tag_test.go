@@ -229,3 +229,28 @@ func TestRewriteUnknownProvisional(t *testing.T) {
 		t.Fatal("Rewrite moved a file after an error")
 	}
 }
+
+func TestRewriteContentDirs(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "nodes/~/~00000001.md", node("~00000001", "statement", "~00000001 [[this node|~00000001]]"))
+	write(t, root, "lean/Math2/Algebra/A.lean", "@[m2 \"~00000001\"]\ntheorem a : True := trivial\n")
+	readme := "A new node has a provisional id, for example `~3fa94c01`.\n"
+	write(t, root, "README.md", readme)
+	write(t, root, ".github/workflows/check.yml", "# ~3fa94c01\n")
+
+	minted, err := Rewrite(root, nil, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(minted) != 1 {
+		t.Fatalf("minted %d tags, want 1", len(minted))
+	}
+	lean, _ := os.ReadFile(filepath.Join(root, "lean", "Math2", "Algebra", "A.lean"))
+	if !strings.Contains(string(lean), `@[m2 "`+minted[0].Tag+`"]`) {
+		t.Errorf("the Lean attribute does not have the new tag:\n%s", lean)
+	}
+	got, _ := os.ReadFile(filepath.Join(root, "README.md"))
+	if string(got) != readme {
+		t.Errorf("Rewrite changed the README:\n%s", got)
+	}
+}
