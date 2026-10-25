@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"context"
 	"io"
 	"slices"
 	"sync"
@@ -20,6 +21,17 @@ type Adapter interface {
 	// Read reads one snapshot and calls emit for each item. Read returns the first error from emit.
 	Read(snapshot io.Reader, emit func(Record) error) error
 }
+
+// Fetcher is an Adapter whose bulk channel is more than one file, for example an OAI-PMH harvest in pages or a set of monthly files. For a new snapshot, Pull calls Fetch in place of one download. The bytes that Fetch writes to w are the snapshot, and Read must accept them.
+type Fetcher interface {
+	Adapter
+
+	// Fetch gets the bulk channel at url with get and writes the snapshot to w.
+	Fetch(ctx context.Context, url string, get Getter, w io.Writer) error
+}
+
+// Getter gets the body of one URL. The body is nil when the error is not nil, and the caller closes it.
+type Getter func(ctx context.Context, url string) (io.ReadCloser, error)
 
 var (
 	mu       sync.RWMutex
