@@ -289,8 +289,11 @@ func TestOrphan(t *testing.T) {
 
 func TestRetired(t *testing.T) {
 	out := Compute(Input{Nodes: parse(t, "1A0000 statement\nretired:\n  reason: duplicate\n  successor: [1B0000]", "1B0000 statement")})
-	if len(out) != 1 || out[0].Tag != "1B0000" {
-		t.Errorf("got %d statuses, want only 1B0000", len(out))
+	if len(out) != 2 || !out[0].Retired || out[0].Evidence != None || out[1].Retired || out[1].Evidence != Claimed {
+		t.Fatalf("got %+v", out)
+	}
+	if want := "The node is retired, so it has no status. Its successor is 1B0000."; out[0].Reasons[0] != want {
+		t.Errorf("reason %q, want %q", out[0].Reasons[0], want)
 	}
 }
 

@@ -105,7 +105,7 @@ jobs:
           test "$("$RUNNER_TEMP/m2" version)" = "m2 ci"
       - name: a command that is not written yet exits with code 3
         run: |
-          for cmd in status graph search serve review agent; do
+          for cmd in graph search serve review agent; do
             code=0
             "$RUNNER_TEMP/m2" "$cmd" 2> err.txt || code=$?
             if [ "$code" != 3 ]; then
@@ -120,6 +120,15 @@ jobs:
           b=$("$RUNNER_TEMP/m2" build -root testdata/nodes/valid -out "$RUNNER_TEMP/b2" | tail -n 1)
           echo "$a"
           test "$a" = "$b"
+      - name: m2 status shows each node of the build, and an unknown tag exits with code 1
+        run: |
+          for f in testdata/nodes/valid/nodes/*/*.md; do
+            "$RUNNER_TEMP/m2" status -root testdata/nodes/valid -out "$RUNNER_TEMP/b1" "$(basename "$f" .md)" > /dev/null
+          done
+          "$RUNNER_TEMP/m2" status -root testdata/nodes/valid -out "$RUNNER_TEMP/b1" Q529ES
+          code=0
+          "$RUNNER_TEMP/m2" status -root testdata/nodes/valid -out "$RUNNER_TEMP/b1" ZZZZZZ || code=$?
+          test "$code" = 1
       - name: m2 check passes the valid fixtures and fails the broken fixtures
         run: |
           "$RUNNER_TEMP/m2" check -root testdata/nodes/valid

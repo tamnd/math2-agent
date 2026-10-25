@@ -55,7 +55,7 @@ var commands = []command{
 	{name: "site", usage: "m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-commit C] [-date now]", summary: "Build the wiki: a static site for people and agents.", run: runSite},
 	{name: "build", usage: "m2 build [-root DIR] [-out DIR] [-cache DIR] [-only STEP] [-json]", summary: "Build the derived data: Lean, extraction, status and graph. Search comes later.", run: runBuild},
 	{name: "audit", usage: "m2 audit [-root DIR] [-plane P] [-rule R,...] [-changed] [-base REV] [-release R] [-json] [-q]", summary: "Run the audit rules and write the report to reports/.", run: runAudit},
-	{name: "status", usage: "m2 status <tag>", summary: "Show the computed status of a node and the evidence for it.", milestone: "M1"},
+	{name: "status", usage: "m2 status [-root DIR] [-out DIR] [-json] <tag|alias|uri>", summary: "Show the computed status of a node and the evidence for it.", run: runStatus},
 	{name: "graph", usage: "m2 graph closure|rdeps|path|frontier <tag>", summary: "Run a graph query.", milestone: "M2"},
 	{name: "ingest", usage: "m2 ingest <source> [-snapshot S]", summary: "Get a pinned snapshot of an external source.", milestone: "M2"},
 	{name: "align", usage: "m2 align <source>", summary: "Propose crosswalk edges to an external source.", milestone: "M2"},
