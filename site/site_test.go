@@ -93,6 +93,29 @@ func TestEmptyTree(t *testing.T) {
 	if err := json.Unmarshal([]byte(readFile(t, out, "api/nodes.json")), &index); err != nil || index.Count != 0 {
 		t.Errorf("api/nodes.json: count %d, error %v", index.Count, err)
 	}
+	if _, err := os.Stat(filepath.Join(out, "curate", "index.html")); err == nil || strings.Contains(readFile(t, out, "llms.txt"), "curate.md") {
+		t.Error("a tree with no CURATION.md has a Curation page")
+	}
+}
+
+func TestDocs(t *testing.T) {
+	content := newContent(t)
+	writeFile(t, content, "CONTRIBUTING.md", "# Contributing\n\nRead [the guide](CURATION.md) and [the readme](README.md).\n")
+	writeFile(t, content, "CURATION.md", "# Curation of alignment proposals\n\nRead [CONTRIBUTING.md](./CONTRIBUTING.md) first.\n")
+	out := build(t, content, "")
+	contribute := readFile(t, out, "contribute/index.html")
+	if !strings.Contains(contribute, `href="/math2/curate/"`) || !strings.Contains(contribute, `href="https://github.com/o/math2/blob/main/README.md"`) {
+		t.Errorf("the Contribute page does not link to the Curation page and the readme:\n%s", contribute)
+	}
+	if !strings.Contains(readFile(t, out, "curate/index.html"), `href="/math2/contribute/"`) {
+		t.Error("the Curation page does not link to the Contribute page")
+	}
+	if readFile(t, out, "curate.md") != readFile(t, content, "CURATION.md") {
+		t.Error("curate.md is not a copy of CURATION.md")
+	}
+	if !strings.Contains(readFile(t, out, "llms.txt"), "- [Curation](https://example.org/math2/curate.md)") {
+		t.Error("llms.txt does not list the Curation page")
+	}
 }
 
 func TestNodes(t *testing.T) {

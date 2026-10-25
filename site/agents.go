@@ -154,7 +154,11 @@ func (b *builder) llms(full bool) []byte {
 	fmt.Fprintf(&w, "- [Node schema](%s): JSON Schema 2020-12 for the front matter\n", b.abs("schema/node.v1.json"))
 	fmt.Fprintf(&w, "- [Edges](%s): the 23 link types between nodes\n", b.abs("schema/edges.md"))
 	fmt.Fprintf(&w, "- [Macros](%s): the TeX macros that node bodies use\n", b.abs("macros/m2.katex.json"))
-	fmt.Fprintf(&w, "- [Contribute](%s): how to add a node\n\n", b.abs("contribute.md"))
+	fmt.Fprintf(&w, "- [Contribute](%s): how to add a node\n", b.abs("contribute.md"))
+	if b.hasDoc(contentDocs[1]) {
+		fmt.Fprintf(&w, "- [Curation](%s): how to decide on the alignment proposals of m2 align\n", b.abs("curate.md"))
+	}
+	w.WriteString("\n")
 	if len(b.specs) > 0 {
 		w.WriteString("## Specification\n\n")
 		for _, d := range b.specs {
