@@ -37,7 +37,7 @@ var sourceURL = map[string]func(id string) string{
 	"proofwiki": func(id string) string {
 		return "https://proofwiki.org/wiki/" + url.PathEscape(strings.ReplaceAll(id, " ", "_"))
 	},
-	"lmfdb": func(id string) string { return "https://www.lmfdb.org/knowledge/show/" + id },
+	"lmfdb": func(id string) string { return "https://www.lmfdb.org/" + id },
 }
 
 // sourceLabel is the name of each identifier on the page.

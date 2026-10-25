@@ -75,7 +75,7 @@ math2 does not try to replace nLab, Wikipedia, Wikidata, Mathlib, the Stacks Pro
 | Wikipedia | page title + revision id | concepts, named theorems | revision-pinned, because titles move |
 | ProofWiki | page title | statements, definitions, proofs | |
 | OEIS | A-number | objects (sequences) | an OEIS sequence is an `object` node. Its formulae become `statement` nodes |
-| LMFDB | label | objects | number fields, elliptic curves, modular forms, … |
+| LMFDB | the path of the object, for example `EllipticCurve/Q/11.a2` | objects | number fields, elliptic curves, modular forms, … The path has the collection and the label, because a label alone does not identify an object |
 | zbMATH Open | document id; author id; MSC code | records | the main record plane source for "all mathematics" |
 | MathSciNet | MR number | records | identifier only (no bulk licence) |
 | arXiv | id + version, and per-paper result tag from `tamnd/arxiv` | records, results | `ax://paper/<id>#<tag>` |
