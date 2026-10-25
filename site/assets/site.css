@@ -260,3 +260,46 @@ a.kind:visited { color: var(--muted); }
   .top, .side, .bottom, .theme, .formats, .pager, .spec .toc { display: none; }
   .frame { display: block; padding: 0; }
 }
+
+/* The graph figures. The bar on each box shows the evidence level: one blue ramp for E1 to E5, the critical red for E⊥, and grey for E0 and for no level. The box also gives the level as text. */
+:root {
+  --ev1: #86b6ef; --ev2: #5598e7; --ev3: #2a78d6; --ev4: #1c5cab; --ev5: #104281;
+  --ev-refuted: #d03b3b; --ev-none: #a2a9b1;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --ev1: #184f95; --ev2: #256abf; --ev3: #3987e5; --ev4: #6da7ec; --ev5: #b7d3f6; --ev-none: #54595d; }
+}
+:root[data-theme="dark"] { --ev1: #184f95; --ev2: #256abf; --ev3: #3987e5; --ev4: #6da7ec; --ev5: #b7d3f6; --ev-none: #54595d; }
+
+.dag-figure { margin: 1rem 0 0.5rem; clear: both; }
+.dag-scroll { overflow-x: auto; }
+.dag { display: block; max-width: none; height: auto; font-family: var(--sans); }
+.dag .edges path { fill: none; stroke: var(--border); stroke-width: 1.5; }
+.dag .box rect { fill: var(--bg-soft); stroke: var(--border); stroke-width: 1; }
+.dag .box.root > rect:first-of-type { stroke: var(--text); stroke-width: 2; }
+.dag .box.member > rect:first-of-type { stroke: var(--text); stroke-width: 2.5; }
+.dag .box:hover > rect:first-of-type, .dag .box:focus > rect:first-of-type { fill: var(--bg-strong); }
+.dag .box:focus { outline: none; }
+.dag .box:focus > rect:first-of-type { stroke: var(--accent); stroke-width: 2.5; }
+.dag text { fill: var(--text); font-size: 13px; }
+.dag text.sub { fill: var(--muted); font-size: 11px; }
+.dag .box rect.ev { stroke: none; }
+.ev-none rect.ev, .swatch.ev-none, .ev-e0 rect.ev, .swatch.ev-e0 { fill: var(--ev-none); background: var(--ev-none); }
+.ev-e1 rect.ev, .swatch.ev-e1 { fill: var(--ev1); background: var(--ev1); }
+.ev-e2 rect.ev, .swatch.ev-e2 { fill: var(--ev2); background: var(--ev2); }
+.ev-e3 rect.ev, .swatch.ev-e3 { fill: var(--ev3); background: var(--ev3); }
+.ev-e4 rect.ev, .swatch.ev-e4 { fill: var(--ev4); background: var(--ev4); }
+.ev-e5 rect.ev, .swatch.ev-e5 { fill: var(--ev5); background: var(--ev5); }
+.ev-refuted rect.ev, .swatch.ev-refuted { fill: var(--ev-refuted); background: var(--ev-refuted); }
+.dag-figure figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 0.4rem; }
+.legend { list-style: none; padding: 0; margin: 0.4rem 0 1rem; display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; font-size: 0.9rem; color: var(--muted); }
+.legend .swatch { display: inline-block; width: 0.6rem; height: 1rem; border-radius: 2px; margin-right: 0.4rem; vertical-align: -0.15em; }
+.reading li.root > a { font-weight: 600; }
+.ev-text { font-family: var(--mono); font-size: 0.85em; color: var(--muted); }
+.cols { columns: 18rem; }
+.reasons { margin: 1rem 0; }
+.reasons summary { cursor: pointer; color: var(--link); }
+@media (forced-colors: active) {
+  .dag .box rect.ev { fill: CanvasText; }
+  .dag .edges path { stroke: CanvasText; }
+}

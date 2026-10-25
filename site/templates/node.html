@@ -13,7 +13,10 @@
     {{with .Aliases}}<tr><th>Aliases</th><td>{{range $i, $a := .}}{{if $i}}, {{end}}<code>{{$a}}</code>{{end}}</td></tr>{{end}}
     <tr><th>Kind</th><td>{{.Kind}}{{with .Role}}, {{.}}{{end}}</td></tr>
     {{with .MSC}}<tr><th>MSC</th><td>{{range $i, $c := .}}{{if $i}}, {{end}}<a href="{{url (print "msc/" (top $c) "/")}}" title="{{mscName (top $c)}}">{{$c}}</a>{{end}}</td></tr>{{end}}
-    {{if or (eq .Kind "statement") (eq .Kind "conjecture")}}<tr><th>Status</th><td><span class="muted">Not computed yet. The build computes it from M1.</span></td></tr>{{end}}
+    {{with .Status}}<tr><th>Evidence</th><td>{{if .Evidence.String}}{{.Evidence}} <span class="muted">{{.Evidence.Word}}</span>{{else}}<span class="muted">none for this kind</span>{{end}}</td></tr>
+    {{if ge .Fidelity 0}}<tr><th>Fidelity</th><td>{{.Fidelity}}</td></tr>{{end}}
+    {{with .Flags}}<tr><th>Flags</th><td>{{join . ", "}}</td></tr>{{end}}
+    {{else}}{{if or (eq .Kind "statement") (eq .Kind "conjecture") (eq .Kind "problem")}}<tr><th>Status</th><td><span class="muted">This copy of the site has no build data. Run <code>m2 status {{.Tag}}</code>.</span></td></tr>{{end}}{{end}}
     {{range .Refs}}<tr><th>{{.Label}}</th><td>{{range $i, $l := .Links}}{{if $i}}, {{end}}<a href="{{$l.URL}}"{{if $l.Missing}} class="missing" title="This node does not exist yet"{{end}}>{{$l.Text}}</a>{{with $l.Note}} <span class="muted">({{.}})</span>{{end}}{{end}}</td></tr>
     {{end}}
     {{with .Formal}}<tr><th>Formal</th><td>{{range .}}<div>{{if .URL}}<a href="{{.URL}}"><code>{{.Text}}</code></a>{{else}}<code>{{.Text}}</code>{{end}} <span class="muted">{{.Note}}</span></div>{{end}}</td></tr>{{end}}
@@ -24,6 +27,33 @@
 <div class="prose">
 {{.HTML}}
 </div>
+{{with .Status}}{{with .Reasons}}
+<details class="reasons">
+  <summary>Why the build gives this status</summary>
+  <ul>{{range .}}<li>{{.}}</li>{{end}}</ul>
+</details>
+{{end}}{{end}}
+{{with .Closure}}
+<section class="closure" aria-labelledby="closure-h">
+  <h2 id="closure-h">What this needs</h2>
+  <p>To read this node, read these {{len .Items}} nodes in this order. The foundations come first, and the list ends with this node.{{with .Proofs}} The list takes the proof{{if gt (len .) 1}}s{{end}} {{range $i, $l := .}}{{if $i}}, {{end}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{end}}.{{end}}</p>
+  {{template "dag" .}}
+</section>
+{{end}}
+{{with .Blueprint}}
+<section class="blueprint" aria-labelledby="blueprint-h">
+  <h2 id="blueprint-h">Blueprint</h2>
+  <p>The members of this topic and each node that they need, {{len .Items}} nodes in all. A member has a thick border in the figure and the mark "member" in the list.</p>
+  {{template "dag" .}}
+</section>
+{{end}}
+{{with .UsedBy}}
+<section class="usedby" aria-labelledby="usedby-h">
+  <h2 id="usedby-h">What depends on this</h2>
+  <p>{{len .}} node{{if gt (len .) 1}}s use{{else}} uses{{end}} this node, directly or through other nodes.</p>
+  <ul class="cols">{{range .}}<li><a href="{{.URL}}"{{if .Missing}} class="missing"{{end}}>{{.Text}}</a> <span class="tag">{{.Tag}}</span></li>{{end}}</ul>
+</section>
+{{end}}
 {{with .Sources}}
 <section class="sources">
   <h2>Sources</h2>
@@ -36,4 +66,15 @@
   {{else}}<p class="muted">No node links to this node yet.</p>{{end}}
 </section>
 </article>
+{{end}}
+
+{{define "dag"}}
+{{with .SVG}}<figure class="dag-figure">
+  <div class="dag-scroll">{{.}}</div>
+  <figcaption id="{{$.ID}}">Each node uses the nodes above it. The colour of the bar on a box shows the evidence level, and the box also gives it as text. The list below has the same nodes.</figcaption>
+</figure>
+<ul class="legend" aria-label="Evidence levels">{{range $.Legend}}<li><span class="swatch {{.Class}}" aria-hidden="true"></span>{{.Label}}</li>{{end}}</ul>
+{{end}}
+<ol class="reading">{{range .Items}}<li{{if .Root}} class="root"{{end}}><a href="{{.URL}}"{{if .Missing}} class="missing"{{end}}>{{.Text}}</a> <span class="kind kind-{{.Kind}}">{{.Kind}}</span>{{with .Evidence}} <span class="ev-text">{{.}}</span>{{end}}{{if .Member}} <span class="muted">member</span>{{end}}</li>
+{{end}}</ol>
 {{end}}

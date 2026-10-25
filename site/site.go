@@ -18,8 +18,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/katex"
 	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/status"
+	"github.com/tamnd/math2-agent/store"
 	"github.com/tamnd/math2-agent/tag"
 )
 
@@ -39,6 +43,7 @@ type Options struct {
 	URL        string      // the public URL of the site, for example https://tamnd.github.io/math2
 	Repo       string      // the content repository, for example tamnd/math2
 	AgentRepo  string      // the toolchain repository, for example tamnd/math2-agent
+	Build      string      // the output directory of m2 build for the tree, or "". With a build, the pages show the status that the build computed.
 	Commit     string      // the content commit, or ""
 	Version    string      // the m2 version
 	Date       time.Time   // the build date. A zero date leaves it out, so that two builds give the same bytes.
@@ -105,6 +110,9 @@ type nodeView struct {
 	Formal                                 []link
 	Sources, SameAs                        []link
 	Retired                                map[string]any
+	Status                                 *status.Status // nil when the site has no build
+	Closure, Blueprint                     *dagView
+	UsedBy                                 []link
 	HTML                                   template.HTML
 	URL, MarkdownURL, JSONURL, EditURL     string
 }
@@ -122,6 +130,8 @@ type builder struct {
 	order   []*nodeView
 	specs   []*specDoc
 	katex   *katex.Renderer
+	graph   *graph.Graph
+	status  map[string]status.Status // nil when the site has no build
 	tmpl    *template.Template
 	pages   []string // the paths of the HTML pages, for the sitemap
 	nodeMD  *markdown
@@ -149,7 +159,7 @@ func Build(opt Options) error {
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeSpec, b.writeDocs, b.writeHome, b.writeAgents}
+	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeAgents}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
@@ -205,7 +215,31 @@ func (b *builder) load() error {
 			return err
 		}
 	}
+	b.graph = graph.Build(nodes)
+	if err := b.loadStatus(); err != nil {
+		return err
+	}
+	b.explore()
 	return b.loadSpec()
+}
+
+// loadStatus reads the status of each node from the store of the build.
+func (b *builder) loadStatus() error {
+	if b.opt.Build == "" {
+		return nil
+	}
+	st, err := store.Open(filepath.Join(b.opt.Build, build.StoreFile))
+	if err != nil {
+		return fmt.Errorf("site: %w", err)
+	}
+	defer func() { _ = st.Close() }()
+	b.status = map[string]status.Status{}
+	for _, v := range b.order {
+		if s, ok := st.Status(v.Tag); ok {
+			b.status[v.Tag] = s
+		}
+	}
+	return nil
 }
 
 // refsOf returns the node ids in a front matter value: a string, a list of strings, or maps with a target.

@@ -1,0 +1,27 @@
+{{define "frontier"}}
+<header class="page-head">
+  <h1>Frontier</h1>
+  <p class="lead">The gaps in the graph. People and agents can take each item as work. To claim an item, open an issue in the content repository.</p>
+</header>
+{{if not .HasStatus}}<p class="notice">This copy of the site has no build data, so the lists give no evidence levels.</p>{{end}}
+<section aria-labelledby="unproved-h">
+  <h2 id="unproved-h">Statements with no proof</h2>
+  <p>No proof node in the graph proves these statements. A source can still support them.</p>
+  {{template "frontierlist" .Unproved}}
+</section>
+<section aria-labelledby="open-h">
+  <h2 id="open-h">Open conjectures and problems</h2>
+  <p>No node in the graph resolves these conjectures and problems.</p>
+  {{template "frontierlist" .Open}}
+</section>
+{{end}}
+
+{{define "frontierlist"}}{{if .}}
+<table class="list">
+  <thead><tr><th>Name</th><th>Tag</th><th>Kind</th><th>Evidence</th></tr></thead>
+  <tbody>
+  {{range .}}<tr><td><a href="{{.URL}}">{{.Text}}</a></td><td><span class="tag">{{.Tag}}</span></td><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td><td>{{if .Evidence}}{{.Evidence}} <span class="muted">{{.Word}}</span>{{else}}<span class="muted">none</span>{{end}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}<p class="muted">None.</p>{{end}}{{end}}
