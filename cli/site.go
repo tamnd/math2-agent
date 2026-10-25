@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -10,7 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tamnd/math2-agent/site"
@@ -19,7 +22,8 @@ import (
 const siteUsage = `Usage:
   m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-build DIR] [-commit C] [-date now]
   m2 site check [-url URL] [-json] [DIR]
-  m2 site serve [-url URL] [-addr HOST:PORT] [DIR]`
+  m2 site serve [-url URL] [-addr HOST:PORT] [DIR]
+  m2 site archive [-url URL] [-o FILE] [-name NAME] [DIR]`
 
 func runSite(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -33,6 +37,8 @@ func runSite(args []string, stdout, stderr io.Writer) int {
 		return runSiteCheck(args[1:], stdout, stderr)
 	case "serve":
 		return runSiteServe(args[1:], stdout, stderr)
+	case "archive":
+		return runSiteArchive(args[1:], stdout, stderr)
 	}
 	fmt.Fprintln(stderr, siteUsage)
 	return ExitUsage
@@ -135,6 +141,59 @@ func runSiteServe(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	return ExitOK
+}
+
+func runSiteArchive(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("m2 site archive", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	rawURL := fs.String("url", "https://tamnd.github.io/math2", "the public URL that the site was built with")
+	out := fs.String("o", "math2-site.zip", "the zip file to write")
+	name := fs.String("name", "", "the folder in the zip file. Leave it empty for the name of the file without .zip.")
+	if err := fs.Parse(args); err != nil || fs.NArg() > 1 {
+		return ExitUsage
+	}
+	dir := "_site"
+	if fs.NArg() == 1 {
+		dir = fs.Arg(0)
+	}
+	base, err := sitePath(*rawURL)
+	if err != nil {
+		fmt.Fprintf(stderr, "m2 site archive: -url: %v\n", err)
+		return ExitUsage
+	}
+	if *name == "" {
+		*name = strings.TrimSuffix(filepath.Base(*out), ".zip")
+	}
+	// Write to a temporary file, so that an error leaves no part of an archive.
+	f, err := os.CreateTemp(filepath.Dir(*out), ".m2-archive-*")
+	if err != nil {
+		fmt.Fprintf(stderr, "m2 site archive: %v\n", err)
+		return ExitFailure
+	}
+	defer func() { _ = os.Remove(f.Name()) }()
+	h := sha256.New()
+	n := &countWriter{}
+	err = site.Archive(io.MultiWriter(f, h, n), dir, base, *name)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(f.Name(), *out)
+	}
+	if err != nil {
+		fmt.Fprintf(stderr, "m2 site archive: %v\n", err)
+		return ExitFailure
+	}
+	fmt.Fprintf(stdout, "m2 site archive wrote %s: %d bytes, sha256 %x\n", *out, n.n, h.Sum(nil))
+	return ExitOK
+}
+
+// countWriter counts the bytes written to it.
+type countWriter struct{ n int64 }
+
+func (c *countWriter) Write(b []byte) (int, error) {
+	c.n += int64(len(b))
+	return len(b), nil
 }
 
 func runSiteBuild(args []string, stdout, stderr io.Writer) int {

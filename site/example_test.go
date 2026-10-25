@@ -1,6 +1,8 @@
 package site_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -57,4 +59,31 @@ func ExampleHandler() {
 	fmt.Println(resp.StatusCode, resp.Header.Get("Content-Encoding"))
 	// Output:
 	// 200 gzip
+}
+
+func ExampleArchive() {
+	out, err := os.MkdirTemp("", "m2site")
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = os.RemoveAll(out) }()
+	opt := site.Options{Content: "../testdata/nodes/valid", Out: filepath.Join(out, "site"), URL: "https://example.org/math2"}
+	if err := site.Build(opt); err != nil {
+		panic(err)
+	}
+	var buf bytes.Buffer
+	if err := site.Archive(&buf, opt.Out, "/math2", "math2-2026.11"); err != nil {
+		panic(err)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
+	if err != nil {
+		panic(err)
+	}
+	for _, f := range zr.File[:3] {
+		fmt.Println(f.Name)
+	}
+	// Output:
+	// math2-2026.11/README.txt
+	// math2-2026.11/assets/search.js
+	// math2-2026.11/.nojekyll
 }
