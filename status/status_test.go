@@ -216,6 +216,35 @@ func TestStale(t *testing.T) {
 	}
 }
 
+// TestNeedsReplay checks that a binding needs a replay only when the replay is the one check of E5 that it does not pass.
+func TestNeedsReplay(t *testing.T) {
+	nodes := parse(t, bound("exact", "", "r-1A0000-01")...)
+	rec := theorem("X.thm", lean.StandardAxioms...)
+	r := review("r-1A0000-01", "github:a", "X.thm", nodes[0], rec)
+	needs := func(in Input) bool { return find(t, Compute(in), "1A0000").Bindings[0].NeedsReplay() }
+	in := Input{Nodes: nodes, Records: map[string]lean.Record{"X.thm": rec}, Reviews: map[string]Review{r.ID: r}}
+	if !needs(in) {
+		t.Error("a reviewed binding with no replay does not need a replay")
+	}
+	in.Replays = map[string]Replay{"X.thm": {Reason: "the kernel rejects the proof"}}
+	if needs(in) {
+		t.Error("a binding with a replay result needs a replay")
+	}
+	s := find(t, Compute(in), "1A0000")
+	if !slices.ContainsFunc(s.Reasons, func(x string) bool { return strings.Contains(x, "the replay failed: the kernel rejects the proof.") }) {
+		t.Errorf("the reasons %q do not give the reason of the replay", s.Reasons)
+	}
+	in = Input{Nodes: nodes, Records: map[string]lean.Record{"X.thm": rec}}
+	if needs(in) {
+		t.Error("a binding with no review needs a replay")
+	}
+	in.Records["X.thm"] = theorem("X.thm", "sorryAx")
+	in.Reviews = map[string]Review{r.ID: r}
+	if needs(in) {
+		t.Error("a binding with sorry needs a replay")
+	}
+}
+
 // TestStatementStale changes the statement section after the review.
 func TestStatementStale(t *testing.T) {
 	nodes := parse(t, bound("exact", "", "r-1A0000-01")...)

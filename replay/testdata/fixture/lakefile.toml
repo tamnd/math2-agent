@@ -1,0 +1,8 @@
+name = "fixture"
+version = "0.1.0"
+defaultTargets = ["Fixture"]
+
+# The fixtures of the replay tests. They use only the Lean core library.
+
+[[lean_lib]]
+name = "Fixture"

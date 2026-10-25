@@ -58,6 +58,7 @@ type Replay struct {
 	Passed   bool              `json:"passed"`
 	External bool              `json:"external,omitempty"` // the result comes from the replay of an external library at its pinned commit
 	Checkers map[string]string `json:"checkers,omitempty"` // the version of each checker
+	Reason   string            `json:"reason,omitempty"`   // why the replay failed
 }
 
 // Status is the computed status of one node.
@@ -96,7 +97,11 @@ type Binding struct {
 	Level    Level         `json:"level"`  // E5, E4 or None
 	Reason   string        `json:"reason"` // why the binding has its level
 	native   bool
+	needs    bool
 }
+
+// NeedsReplay reports whether the binding has no replay result and passes each other check of E5. The build replays only such a binding. The JSON form of a Binding does not keep the value.
+func (b Binding) NeedsReplay() bool { return b.needs }
 
 // ReviewState is a review of a binding and the state of the review.
 type ReviewState struct {
@@ -416,6 +421,12 @@ func binding(in Input, f formal, stmt string) Binding {
 		b.Replay = &r
 	}
 	b.Level, b.Reason = kernel(b, rec, known)
+	if b.Replay == nil {
+		passed := b
+		passed.Replay = &Replay{Passed: true}
+		level, _ := kernel(passed, rec, known)
+		b.needs = level != None
+	}
 	return b
 }
 
@@ -453,6 +464,8 @@ func kernel(b Binding, rec lean.Record, known bool) (Level, string) {
 		return no("the fidelity is %s, and E5 needs F2", b.Fidelity)
 	case b.Replay == nil:
 		return no("the declaration has no replay result")
+	case !b.Replay.Passed && b.Replay.Reason != "":
+		return no("the replay failed: %s", b.Replay.Reason)
 	case !b.Replay.Passed:
 		return no("the replay or the comparator check failed")
 	case b.native:

@@ -2,12 +2,18 @@ package build_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/lean"
+	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/status"
 )
 
 const fixture = "../testdata/nodes/valid"
@@ -110,7 +116,7 @@ func TestMath2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(m.Steps) != 4 || m.Mathlib == "" || m.Checkers["leanchecker"] == "" {
+	if len(m.Steps) != 5 || m.Mathlib == "" || m.Checkers["leanchecker"] == "" {
 		t.Errorf("the manifest is %+v", m)
 	}
 	x, err := build.ReadExtraction(opt.Out)
@@ -144,6 +150,94 @@ func TestMath2(t *testing.T) {
 	}
 	if again.Output != m.Output {
 		t.Errorf("the second build gives %s, and the first build gave %s", again.Output, m.Output)
+	}
+}
+
+// TestReplayMath2 adds a review of the adapter of 3C53TD to a copy of the math2 tree. The binding then needs a replay, and the replay step checks it in each kernel. On Linux the checkers run in the sandbox, and the binding is at E5. On other systems the checkers run without the sandbox, and the binding is not at E5.
+func TestReplayMath2(t *testing.T) {
+	project := os.Getenv("M2_MATH2_LEAN")
+	if project == "" {
+		t.Skip("M2_MATH2_LEAN is not set")
+	}
+	ctx := context.Background()
+	src := filepath.Dir(project)
+	root := t.TempDir()
+	for _, dir := range []string{"nodes", "registers"} {
+		if err := os.CopyFS(filepath.Join(root, dir), os.DirFS(filepath.Join(src, dir))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(project, filepath.Join(root, "lean")); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(root, "nodes", "3C", "3C53TD.md")
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const line = "    adapter: Math2.Match.lagrange\n"
+	if !strings.Contains(string(data), line) {
+		t.Fatalf("%s has no line %q", file, line)
+	}
+	data = []byte(strings.Replace(string(data), line, line+"    fidelity_reviews: [r-3C53TD-01]\n", 1))
+	if err := os.WriteFile(file, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	opt := build.Options{Root: root, Cache: t.TempDir(), Out: t.TempDir(), NoSandbox: runtime.GOOS != "linux", Log: logger{t}}
+	if _, err := build.Run(ctx, opt); err != nil {
+		t.Fatal(err)
+	}
+	x, err := build.ReadExtraction(opt.Out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i := slices.IndexFunc(x.Records, func(r lean.Record) bool { return r.Decl == "Math2.Match.lagrange" })
+	if i < 0 {
+		t.Fatal("the extraction has no record of Math2.Match.lagrange")
+	}
+	nodes, err := node.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := nodes[slices.IndexFunc(nodes, func(n *node.Node) bool { return n.ID == "3C53TD" })]
+	review := fmt.Sprintf("reviews:\n  - id: r-3C53TD-01\n    reviewer: github:tamnd\n    date: 2026-10-25\n    decl: Math2.Match.lagrange\n    statement_hash: %s\n    type_hash: %s\n    verdict: faithful\n", status.StatementHash(n), x.Records[i].TypeHash)
+	if err := os.MkdirAll(filepath.Join(root, "reviews", "3C"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "reviews", "3C", "3C53TD.yaml"), []byte(review), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	m, err := build.Run(ctx, opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Counts.Replays != 1 {
+		t.Errorf("%d declarations need a replay, and one must", m.Counts.Replays)
+	}
+	rs, err := build.ReadReplays(opt.Out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rs) != 1 || !rs[0].Passed || len(rs[0].Kernels) < 2 {
+		t.Fatalf("the replays are %+v", rs)
+	}
+	st, err := build.ReadStatus(opt.Out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := st[slices.IndexFunc(st, func(s status.Status) bool { return s.Tag == "3C53TD" })]
+	b := s.Bindings[0]
+	if b.Fidelity != status.F2 || b.Replay == nil {
+		t.Fatalf("the binding of 3C53TD is %+v", b)
+	}
+	if runtime.GOOS == "linux" {
+		if b.Level != status.Kernel || len(b.Replay.Checkers) < 2 {
+			t.Errorf("the binding of 3C53TD is %+v, and it must be at E5", b)
+		}
+	} else if b.Level != status.None || !strings.Contains(b.Reason, "sandbox") {
+		t.Errorf("the binding of 3C53TD is %+v, and without the sandbox it must not be at E5", b)
 	}
 }
 

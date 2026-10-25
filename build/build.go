@@ -1,8 +1,8 @@
 // Package build makes the derived data of a math2 working tree (spec 07.6).
 //
-// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The search and site steps come in later issues.
+// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The search and site steps come in later issues.
 //
-// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, status and graph steps. Two builds of the same tree give the same output hash (rule R01).
+// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, status and graph steps. Two builds of the same tree give the same output hash (rule R01).
 package build
 
 import (
@@ -14,9 +14,11 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -25,6 +27,7 @@ import (
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/replay"
 	"github.com/tamnd/math2-agent/status"
 )
 
@@ -32,17 +35,19 @@ import (
 const (
 	Lean    = "lean"
 	Extract = "extract"
+	Replay  = "replay"
 	Status  = "status"
 	Graph   = "graph"
 )
 
 // Steps returns the names of the steps in order.
-func Steps() []string { return []string{Lean, Extract, Status, Graph} }
+func Steps() []string { return []string{Lean, Extract, Replay, Status, Graph} }
 
 // The files of the build, from the output directory.
 const (
 	ManifestFile = "manifest.json"
 	ExtractFile  = "extract.json"
+	ReplayFile   = "replay.json"
 	StatusFile   = "status.json"
 	GraphDir     = "graph"
 )
@@ -52,13 +57,16 @@ var Checkers = []string{"leanchecker", "leanchecker-paranoid", "lean4lean", "nan
 
 // Options are the options of Run.
 type Options struct {
-	Root    string    // the math2 working tree
-	Out     string    // the output directory. Empty means build/ in Root.
-	Cache   string    // the directory where M2Extract is built. Empty means m2 in the user cache directory.
-	Only    string    // run only this step. Empty means all the steps.
-	Modules []string  // the modules that the extract step loads. Empty means Mathlib and Math2.
-	Version string    // the m2 version, for the manifest
-	Log     io.Writer // one line for each step. Nil means no log.
+	Root  string // the math2 working tree
+	Out   string // the output directory. Empty means build/ in Root.
+	Cache string // the directory where M2Extract is built. Empty means m2 in the user cache directory.
+	Only  string // run only this step. Empty means all the steps.
+
+	// NoSandbox runs the checkers of the replay step without the bwrap sandbox, which needs Linux. A replay without the sandbox is not trustworthy, thus it does not give E5.
+	NoSandbox bool
+	Modules   []string  // the modules that the extract step loads. Empty means Mathlib and Math2.
+	Version   string    // the m2 version, for the manifest
+	Log       io.Writer // one line for each step. Nil means no log.
 }
 
 // Manifest is the record of a build. Run writes it to manifest.json in the output directory.
@@ -70,7 +78,7 @@ type Manifest struct {
 	Checkers    map[string]string `json:"checkers"`     // the hash of each checker program of the toolchain
 	Steps       []Step            `json:"steps"`
 	Counts      Counts            `json:"counts"`
-	Output      string            `json:"output"` // the hash of the files of the extract, status and graph steps
+	Output      string            `json:"output"` // the hash of the files of the extract, replay, status and graph steps
 }
 
 // Step is the record of one step.
@@ -87,6 +95,7 @@ type Counts struct {
 	Edges    int `json:"edges"`
 	Records  int `json:"records"`
 	Bindings int `json:"bindings"`
+	Replays  int `json:"replays"`
 }
 
 // Extraction is the content of extract.json.
@@ -131,8 +140,12 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, statErr := os.Stat(b.project)
+	// The lean/ directory can be a symbolic link. The hash of a tree reads the files below a directory, thus resolve the link first.
+	project, statErr := filepath.EvalSymlinks(b.project)
 	hasLean := statErr == nil
+	if hasLean {
+		b.project = project
+	}
 	if hasLean {
 		if err := b.toolchain(ctx); err != nil {
 			return nil, err
@@ -145,6 +158,7 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 	}{
 		{Lean, true, b.lean},
 		{Extract, true, b.extract},
+		{Replay, true, b.replay},
 		{Status, false, b.status},
 		{Graph, false, b.graph},
 	}
@@ -212,6 +226,19 @@ func ReadStatus(out string) ([]status.Status, error) {
 		return nil, fmt.Errorf("build: %s: %w", StatusFile, err)
 	}
 	return st, nil
+}
+
+// ReadReplays reads replay.json of the build in the output directory out. It holds the result of each replay, in order of declaration.
+func ReadReplays(out string) ([]replay.Result, error) {
+	data, err := os.ReadFile(filepath.Join(out, ReplayFile)) // #nosec G304 -- the caller names the output directory.
+	if err != nil {
+		return nil, err
+	}
+	var rs []replay.Result
+	if err := json.Unmarshal(data, &rs); err != nil {
+		return nil, fmt.Errorf("build: %s: %w", ReplayFile, err)
+	}
+	return rs, nil
 }
 
 // ReadExtraction reads extract.json of the build in the output directory out.
@@ -418,9 +445,113 @@ func formalDecls(nodes []*node.Node) []string {
 	return slices.Compact(out)
 }
 
-// status computes the status of each node and writes status.json. The step is fast, so it always runs, and the input hash only records the inputs: the output of the extract step, the content hash of each node and the reviews. The step is cached when status.json does not change, so that a new version of the rules always gives a new status.
+// input returns the evidence of the build for the status: the nodes, the records of extract.json and the reviews. It has the results of replay.json when replays is set.
+func (b *builder) input(nodes []*node.Node, replays bool) (status.Input, error) {
+	in := status.Input{Nodes: nodes, Records: map[string]lean.Record{}, Replays: map[string]status.Replay{}}
+	var err error
+	if in.Reviews, err = status.LoadReviews(b.opt.Root); err != nil {
+		return in, err
+	}
+	if b.output(Extract) != "" {
+		x, err := ReadExtraction(b.opt.Out)
+		if err != nil {
+			return in, err
+		}
+		for _, r := range x.Records {
+			in.Records[r.Decl] = r
+		}
+	}
+	if replays && b.output(Replay) != "" {
+		rs, err := ReadReplays(b.opt.Out)
+		if err != nil {
+			return in, err
+		}
+		for _, r := range rs {
+			in.Replays[r.Decl] = b.verdict(r)
+		}
+	}
+	return in, nil
+}
+
+// verdict turns a replay result into the replay of the status. A replay without the sandbox, or with fewer than two kernels, does not pass. The checkers are the kernels that accept the proof, with the hash of each program in the manifest.
+func (b *builder) verdict(r replay.Result) status.Replay {
+	v := status.Replay{Passed: r.Passed, Reason: r.Reason, Checkers: map[string]string{}}
+	for _, k := range r.Kernels {
+		v.Checkers[k] = b.m.Checkers[k]
+	}
+	switch {
+	case r.Passed && !r.Sandboxed:
+		v.Passed, v.Reason = false, "the checkers ran without the sandbox, thus the result is not trustworthy"
+	case r.Passed && len(r.Kernels) < 2:
+		v.Passed, v.Reason = false, fmt.Sprintf("only %d kernel accepts the proof, and E5 needs two independent kernels", len(r.Kernels))
+	}
+	return v
+}
+
+// replay checks again each binding that needs a replay, and writes replay.json. The input is the output of the lean and extract steps, the declarations to check with their hashes, the checkers and the sandbox option.
+func (b *builder) replay(ctx context.Context, nodes []*node.Node) (Step, error) {
+	in, err := b.input(nodes, false)
+	if err != nil {
+		return Step{}, err
+	}
+	var decls []string
+	for _, s := range status.Compute(in) {
+		for _, bd := range s.Bindings {
+			if bd.NeedsReplay() {
+				decls = append(decls, bd.Checked)
+			}
+		}
+	}
+	slices.Sort(decls)
+	decls = slices.Compact(decls)
+	lines := []string{"lean " + b.output(Lean), "extract " + b.output(Extract), fmt.Sprintf("sandbox %v", !b.opt.NoSandbox)}
+	for _, c := range slices.Sorted(maps.Keys(b.m.Checkers)) {
+		lines = append(lines, "checker "+c+" "+b.m.Checkers[c])
+	}
+	for _, d := range decls {
+		r := in.Records[d]
+		lines = append(lines, "decl "+d+" "+r.TypeHash+" "+r.ValueHash)
+	}
+	input := hashString(strings.Join(lines, "\n"))
+	b.m.Counts.Replays = len(decls)
+	if out, err := hashFiles(b.opt.Out, []string{ReplayFile}); err == nil {
+		if s, ok := b.cached(Replay, input, out); ok {
+			return s, nil
+		}
+	}
+
+	results := []replay.Result{}
+	if len(decls) > 0 {
+		if runtime.GOOS != "linux" && !b.opt.NoSandbox {
+			return Step{}, fmt.Errorf("%d declarations need a replay, and the sandbox of the checkers needs Linux. Build on Linux, or set the option to run without the sandbox. A replay without the sandbox does not give E5", len(decls))
+		}
+		c, err := replay.New(ctx, b.project, replay.Options{Paranoid: true, NoSandbox: b.opt.NoSandbox})
+		if err != nil {
+			return Step{}, err
+		}
+		for _, d := range decls {
+			b.logf("replay: %s", d)
+			r, err := c.Check(ctx, replay.TargetOf(in.Records[d]))
+			if err != nil {
+				return Step{}, err
+			}
+			results = append(results, r)
+		}
+	}
+	data, err := json.MarshalIndent(results, "", "  ")
+	if err != nil {
+		return Step{}, err
+	}
+	if err := write(filepath.Join(b.opt.Out, ReplayFile), append(data, '\n')); err != nil {
+		return Step{}, err
+	}
+	out, err := hashFiles(b.opt.Out, []string{ReplayFile})
+	return Step{Input: input, Output: out}, err
+}
+
+// status computes the status of each node and writes status.json. The step is fast, so it always runs, and the input hash only records the inputs: the output of the extract and replay steps, the content hash of each node and the reviews. The step is cached when status.json does not change, so that a new version of the rules always gives a new status.
 func (b *builder) status(_ context.Context, nodes []*node.Node) (Step, error) {
-	lines := []string{"extract " + b.output(Extract)}
+	lines := []string{"extract " + b.output(Extract), "replay " + b.output(Replay)}
 	for _, n := range nodes {
 		lines = append(lines, n.ID+" "+node.Hash(n))
 	}
@@ -431,18 +562,9 @@ func (b *builder) status(_ context.Context, nodes []*node.Node) (Step, error) {
 	lines = append(lines, "reviews "+reviews)
 	input := hashString(strings.Join(lines, "\n"))
 
-	in := status.Input{Nodes: nodes, Records: map[string]lean.Record{}}
-	if in.Reviews, err = status.LoadReviews(b.opt.Root); err != nil {
+	in, err := b.input(nodes, true)
+	if err != nil {
 		return Step{}, err
-	}
-	if b.output(Extract) != "" {
-		x, err := ReadExtraction(b.opt.Out)
-		if err != nil {
-			return Step{}, err
-		}
-		for _, r := range x.Records {
-			in.Records[r.Decl] = r
-		}
 	}
 	data, err := json.MarshalIndent(status.Compute(in), "", "  ")
 	if err != nil {

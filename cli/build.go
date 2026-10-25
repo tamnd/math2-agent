@@ -22,6 +22,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.Out, "out", "", "the output directory. Empty means build/ in the tree.")
 	fs.StringVar(&opt.Cache, "cache", "", "the directory where M2Extract is built. Empty means m2 in the user cache directory.")
 	fs.StringVar(&opt.Only, "only", "", "run only this step: "+strings.Join(build.Steps(), ", "))
+	fs.BoolVar(&opt.NoSandbox, "no-sandbox", false, "run the checkers of the replay step without the bwrap sandbox, for example on macOS. Such a replay does not give E5.")
 	asJSON := fs.Bool("json", false, "write the manifest as JSON")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage

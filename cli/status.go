@@ -188,6 +188,8 @@ func printStatus(w io.Writer, s status.Status, m *build.Manifest) {
 			fmt.Fprintf(tw, "  replay\tnot run\n")
 		case b.Replay.Passed:
 			fmt.Fprintf(tw, "  replay\tpassed\n")
+		case b.Replay.Reason != "":
+			fmt.Fprintf(tw, "  replay\tfailed: %s\n", b.Replay.Reason)
 		default:
 			fmt.Fprintf(tw, "  replay\tfailed\n")
 		}

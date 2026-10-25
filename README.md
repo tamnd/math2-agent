@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05 and G01 to G10. Rule G04 reads `build/extract.json` from the last `m2 build`. It skips when that file does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms and the formal dependencies of each bound declaration. `m2 build` runs `lake build`, runs M2Extract on each binding, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05 and G01 to G10. Rule G04 reads `build/extract.json` from the last `m2 build`. It skips when that file does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms and the formal dependencies of each bound declaration. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -48,7 +48,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
 | `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
-| `m2 build` | Build the derived data: Lean, extraction, status and graph. Search comes later. | written |
+| `m2 build` | Build the derived data: Lean, extraction, replay, status and graph. Search comes later. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
 | `m2 graph` | Run a graph query: closure, reverse dependencies, path or frontier. | M2 |
@@ -86,11 +86,18 @@ To preview the site with the local server above, set `-url http://localhost:8000
 m2 build                # all the steps
 m2 build -only lean     # only lake build
 m2 build -json          # write the manifest as JSON
+m2 build -no-sandbox    # run the checkers without the sandbox, for example on macOS
 ```
 
-The steps are `lean`, `extract`, `status` and `graph`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `status` step computes the evidence level and the fidelity level of each node from the nodes, `build/extract.json` and the reviews in `reviews/`, and writes `build/status.json`. The `graph` step writes the graph as Parquet to `build/graph/`. A tree without `lean/` has only the `status` and `graph` steps.
+The steps are `lean`, `extract`, `replay`, `status` and `graph`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `replay` step checks each binding that passes each check of E5 except the replay, and writes `build/replay.json`. The `status` step computes the evidence level and the fidelity level of each node from the nodes, `build/extract.json`, `build/replay.json` and the reviews in `reviews/`, and writes `build/status.json`. The `graph` step writes the graph as Parquet to `build/graph/`. A tree without `lean/` has only the `status` and `graph` steps.
 
-`build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `status.json` and `graph/`. Two builds of the same commit give the same output hash (rule R01).
+`build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `replay.json`, `status.json` and `graph/`.
+
+## The replay of a proof
+
+The `replay` package checks a formal declaration again, outside the process that elaborated it (spec 07.7). It writes a challenge module that states the declaration again from its record, with `sorry` as the proof. It exports the challenge and the module of the declaration with `leanexport`, and runs `lake comparator --paranoid` on the two exports. The declaration passes when it has the statement of the challenge, uses only the standard axioms, and each kernel of the toolchain accepts it. The kernels are `leanchecker`, `leanchecker-paranoid`, `lean4lean`, `nanoda_bin`, `con-leche` and `con-ron`. A check takes about 20 seconds for a declaration that imports Mathlib.
+
+The comparator runs the checkers in a `bwrap` sandbox, and `bwrap` needs Linux. On macOS, `m2 build -no-sandbox` runs the checkers without the sandbox. A replay without the sandbox does not give E5, and `m2 status` gives the reason. E5 also needs two kernels that accept the proof. Two builds of the same commit give the same output hash (rule R01).
 
 ## The status of a node
 
@@ -137,6 +144,7 @@ format/   the canonical form of m2 fmt and the change from aliases to tags
 graph/    the graph of spec 05: edges, closure, cycles, CSR and Parquet
 lean/     M2Extract, its Lake package and the Go package that drives it
 node/     read node files, write the canonical form and compute the content hash
+replay/   the replay of a declaration in the comparator and the independent kernels
 schema/   check front matter against the node schema
 site/     build the wiki
 status/   the evidence level, the fidelity level and the flags of each node (spec 04.7), and the reviews
