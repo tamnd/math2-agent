@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). The command `m2 release` comes in M2. The first work of M2 is written: the `store` package puts the graph and the status of each node into one SQLite file, and `m2 graph` runs the neighbourhood, closure, reverse dependency, learning path and frontier queries on it. The `synth` package and `bench/graph` measure these queries on a synthetic graph. The `ingest` package and `m2 ingest` get pinned snapshots of external sources, apply the licence gate of spec 09.3 and write the records. The adapters of arXiv, zbMATH Open, Mathlib, the OEIS, Wikidata, the LMFDB, the Erdős problems, formal-conjectures, Palomar and the Stacks Project are written. The rules L01 to L04 check the licences. Rule A01 checks that each `same_as` id has the syntax of its system, with the `crosswalk` package. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M2. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). The command `m2 release` comes in M2. The first work of M2 is written: the `store` package puts the graph and the status of each node into one SQLite file, and `m2 graph` runs the neighbourhood, closure, reverse dependency, learning path and frontier queries on it. The `synth` package and `bench/graph` measure these queries on a synthetic graph. The `ingest` package and `m2 ingest` get pinned snapshots of external sources, apply the licence gate of spec 09.3 and write the records. The adapters of arXiv, zbMATH Open, Mathlib, the OEIS, Wikidata, the LMFDB, the Erdős problems, formal-conjectures, Palomar and the Stacks Project are written. The rules L01 to L04 check the licences. Rule A01 checks that each `same_as` id has the syntax of its system, with the `crosswalk` package. The `align` package and `m2 align` propose `same_as`, `close_to` and `aligned` edges to the records of a source, and a person accepts or rejects each proposal. The rules A02 to A04 check these edges over time. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -53,7 +53,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. | written |
-| `m2 align <source>` | Propose crosswalk edges to an external source. | M2 |
+| `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release. | M2 |
 | `m2 release` | Cut, describe or verify a release. | M2 |
 | `m2 search <query>` | Search the knowledge graph. | M3 |
@@ -180,6 +180,42 @@ Each source has an access class: `open`, `share-alike-nc`, `verbatim`, `gfdl` or
 
 L02 to L04 need the records in `build/records/`. When they do not exist, the rules skip. Each source has an adapter in the package `ingest/<source>`. An adapter whose bulk channel has more than one file also implements `ingest.Fetcher`. To add a source, write the adapter, register it with `ingest.Register`, import its package in `cmd/m2`, and ask a maintainer to approve the class in `manifests/sources.yaml`.
 
+## Alignment
+
+`m2 align <source>` compares each node with the records of a source and proposes edges. Run `m2 ingest <source>` first. The aligner does not change a node. It writes the proposals to `queues/align/<system>.jsonl`, and a person decides on each one.
+
+```sh
+m2 ingest wikidata
+m2 align wikidata                     # write the proposals to queues/align/wikidata.jsonl
+m2 align wikidata -n                  # show the proposals and do not write them
+m2 align queue                        # all proposals, the node with the most dependents first
+m2 align accept -by github:octocat 3f9a0c12b7de
+m2 align accept -by github:octocat -note "The record is the finite case only." 8e01d2c4a9b3
+m2 align reject -by github:octocat 5c7e2b90d1fa
+m2 align confirm -by orcid:0000-0002-1825-0097 3C53TD wikidata
+```
+
+The aligner gives a score from 0 to 1 to each candidate record. It uses four channels:
+
+| Channel | What it compares |
+|---|---|
+| id | The node and the record have the same id in a third system, or the record names the Mathlib declaration of the node. The Wikidata records connect the systems, thus a node with an nLab id finds its OEIS sequence through the Wikidata item that has both ids. When only one record matches by id, its score is 1. |
+| name | The names and the aliases, in lowercase and without accents. An equal name gives 1. Otherwise the score is the share of the rare words that the two names have in common. |
+| formula | The formulas in `$...$`, without space and braces. This channel counts only when both texts have formulas. |
+| embedding | The cosine of the vectors of the two texts. The default embedder `hash/1` hashes the words, the word pairs and the character trigrams. It is in the binary, and it calls no service. A program can give a different `align.Embedder`. |
+
+A node gets a `same_as` proposal when the best record has a score of at least 0.9 (`-threshold`), the next record is at least 0.05 lower (`-margin`), and the node has no value for the system yet. Each other record with a score of at least 0.75 (`-close`) gives a `close_to` proposal. When two nodes match one record, the aligner proposes `close_to` for both, and it proposes in `queues/dedup.jsonl` that the two nodes are one node. A record of arXiv or zbMATH Open is a paper, and it gives an `aligned` proposal with the locator of the paper. The aligner skips retired nodes, the edges that the nodes have already and the edges that a person rejected.
+
+`m2 align accept` writes the edge into the node in canonical form, and it removes the proposal from the queue. A `close_to` edge needs a note that tells how the node and the record differ. An `aligned` edge needs `-match`: `exact`, `stronger`, `weaker`, `variant` or `partial`. An accepted duplicate does not change the nodes, because a curator merges or retires the nodes in a separate pull request. Only a person decides. The `-by` flag takes `orcid:` and an ORCID iD, or `github:` and a GitHub login, and the command refuses an agent or a bot. Each decision is one line of `registers/crosswalk.reg`, with the hash of the record at the time of the decision. `m2 align confirm` records that a person checked a `same_as` value that was in the node already.
+
+| Rule | What it checks |
+|---|---|
+| A02 | A `same_as` value that an agent wrote, as the provenance log in `prov/` shows, has the decision of a person within 90 days. |
+| A03 | Each `same_as` value is still in the latest records of its system. When a person decided on the value, the record still has the hash that it had at the time of the decision. The rule reads `build/records/`, and it does not use the network. |
+| A04 | No duplicate proposal in `queues/dedup.jsonl` waits for more than 30 days. |
+
+On the nodes of math2 and the Wikidata records of 25 October 2026, the aligner proposes two `same_as` edges: Q505798 for Lagrange's theorem, through its Mathlib declaration, and Q83478 for the node Group. Both are correct. The other sources give no proposals for the seed nodes.
+
 ## Benchmarks
 
 `bench/graph` measures the latency of the queries Q1 to Q7 on a synthetic graph from the `synth` package, and compares the 95th percentile with the targets of spec 05.6. The test runs with 20,000 nodes in CI. The `bench` workflow runs it each week with 1 million nodes and puts the table in the summary of the run. To run it at reference scale (5 million nodes), use a machine with at least 24 GB of memory and 6 GB of free disk:
@@ -226,6 +262,7 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 
 ```
 cmd/m2/   the m2 binary
+align/    the aligner: candidates, scores, the curation queues and the register of decisions (spec 05.3, 05.4 and 16.3)
 audit/    the audit rules of spec 15, with a fixture pair for each rule
 bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6
 build/    the steps of m2 build, their cache and the build manifest
@@ -251,7 +288,7 @@ spec/     the specification
 
 Each directory except `cmd/`, `bench/` and `spec/` is a Go package that other programs can import. For example, a bot can use `github.com/tamnd/math2-agent/node` to read and format node files. The packages follow the conventions of the Go standard library, and `go doc` shows an example for each main function.
 
-The full layout arrives with the milestones. The plan has these parts: `compute`, `align`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `prompts/`, `images/` and `web/`.
+The full layout arrives with the milestones. The plan has these parts: `compute`, `search`, `api`, `mcp`, `orchestrator`, `agent`, `prompts/`, `images/` and `web/`.
 
 ## Contribute
 

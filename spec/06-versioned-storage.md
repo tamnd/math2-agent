@@ -101,6 +101,7 @@ Some facts must never be lost and must never change. They live in append-only re
 | `retired.reg` | retirement: tag, date, reason, successors | |
 | `bindings.reg` | formal binding change: tag, system, old decl, new decl, cause (bind/rename/refactor/rebind), Mathlib commit, author | answers "which Mathlib name did this node have in March 2027" |
 | `reviewers.reg` | reviewer identity: ORCID or GitHub handle, first review date, areas, affiliations | needed for F2/F3 independence (document 10.6) |
+| `crosswalk.reg` | crosswalk decision: tag, edge, system, id, decision (accepted/rejected/confirmed), person, date, record hash | `A02`, `A03`: a person decided on each `same_as` value, and the record did not change after the decision |
 
 Registers are plain text, sorted, with one record per line. Thus `git log -p` on a register is the full history of that decision space. Each build rebuilds the registers and checks them against the node files (rule `T05`).
 

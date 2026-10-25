@@ -82,12 +82,21 @@ func result(t *testing.T, rep *check.Report, id string) check.Result {
 
 // TestFixtures checks that each written rule passes on its good fixture and finds the problems of want.txt in its bad fixture (spec 15.3).
 // setup prepares the state of the other packages that the fixtures of a rule need.
+// fixedDate gives the commits of a fixture the date 2026-10-01.
+func fixedDate(t *testing.T) {
+	t.Setenv("GIT_AUTHOR_DATE", "2026-10-01T12:00:00Z")
+	t.Setenv("GIT_COMMITTER_DATE", "2026-10-01T12:00:00Z")
+}
+
 var setup = map[string]func(t *testing.T){
 	// V04 compares the date of a review with the date of the HEAD commit, thus the commits of the fixtures have a fixed date.
 	"V04": func(t *testing.T) {
 		t.Setenv("GIT_AUTHOR_DATE", "2026-10-01T12:00:00Z")
 		t.Setenv("GIT_COMMITTER_DATE", "2026-10-01T12:00:00Z")
 	},
+	// A02 and A04 compare a date with the date of the HEAD commit, thus the commits of the fixtures have a fixed date.
+	"A02": fixedDate,
+	"A04": fixedDate,
 	// The manifest of R01 names the commit of step 1, thus the commits of the fixtures have a fixed date.
 	"R01": func(t *testing.T) {
 		t.Setenv("GIT_AUTHOR_DATE", "2026-10-01T12:00:00Z")
