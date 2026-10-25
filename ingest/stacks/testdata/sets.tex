@@ -1,0 +1,88 @@
+\input{preamble}
+\input{chapters}
+
+\title{Sets}
+
+\begin{document}
+
+\maketitle
+
+\phantomsection
+\label{section-phantom}
+
+\tableofcontents
+
+\section{Introduction}
+\label{section-introduction}
+
+\noindent
+This chapter is a test file for the adapter of math2. It is in the style of
+the Stacks project, and all the words in it are new words.
+
+\section{Finite sets}
+\label{section-finite}
+
+\noindent
+A set is finite when a bijection to a set of the form $\{1, \ldots, n\}$
+exists.
+
+\begin{definition}
+\label{definition-finite}
+A set $S$ is {\it finite} if there is a natural number $n$ and a bijection
+between $S$ and the set of the natural numbers from one to $n$.
+\end{definition}
+
+\begin{lemma}[Pigeonhole]
+\label{lemma-pigeonhole}
+Let $S$ and $T$ be finite sets with more elements in $S$ than in $T$.
+Then each map from $S$ to $T$ sends two different elements to one element.
+\end{lemma}
+
+\begin{proof}
+Use induction on the number of elements of $T$. When $T$ is empty, the
+set $S$ has an element and there is no map at all. In the other case we
+remove one element from $T$ and look at the elements of $S$ that go to it.
+\begin{proof}
+An inner proof stays in the proof of the lemma.
+\end{proof}
+\end{proof}
+
+\noindent
+The count in the next equation is used below.
+\begin{equation}
+\label{equation-count}
+|S \times T| = |S| \cdot |T|
+\end{equation}
+
+\subsection{Unions}
+\label{subsection-unions}
+
+\noindent
+The union of two finite sets is finite.
+
+\begin{remark}
+\label{lemma-wrong-prefix}
+The label of this remark starts with lemma, and the kind is still remark.
+\end{remark}
+
+\begin{lemma}
+\label{lemma-items}
+The following are true for finite sets $S$ and $T$.
+\begin{enumerate}
+\item
+\label{item-union}
+The union of $S$ and $T$ is finite.
+\item
+\label{item-product}
+The product of $S$ and $T$ is finite.
+\end{enumerate}
+\end{lemma}
+
+% \begin{lemma}
+% \label{lemma-comment}
+% A lemma in a comment is not a lemma.
+% \end{lemma}
+
+\input{chapters}
+
+\end{document}
