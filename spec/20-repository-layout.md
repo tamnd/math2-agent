@@ -101,37 +101,37 @@ math2-agent/
   cmd/
     m2/                          the binary
 
-  internal/
-    node/                        parse, canonicalise, hash node files (document 04)
-    schema/                      schema validation, migrations
-    tag/                         minting, provisional id rewrite, registers
-    graph/                       derive edges, closure (AND–OR), CSR, Parquet writer (document 05)
-    store/                       SQLite + DuckDB + CSR + vector serving store (05.7)
-    build/                       the build graph: nodes → Lean → compute → graph → search → site
-    lean/                        drive Lake, the Lean REPL and the extraction package; axiom audit; replay (document 07)
-    compute/                     image runner, sandbox, certificate dispatch (document 08)
-    ingest/                      source adapters (document 09), one subpackage per source
-      arxiv/  zbmath/  crossref/  oeis/  lmfdb/  wikidata/  mardi/  nlab/  stacks/  proofwiki/  mathlib/  leanlibs/
-      afp/  palomar/  blueprint/  erdos/  formalconj/  mo/  objects/  theoremidx/
-    extract/                     statement extraction from papers (09.5)
-    align/                       dedup and crosswalk (05.3, 05.4)
-    autoform/                    statement autoformalization and fidelity pipeline (document 10)
-    search/                      lexical, formula, embedding, type-directed search (document 14)
-    audit/                       one file per rule, with fixtures (document 15)
-    prov/                        provenance writing, PROV export, quarantine (06.5)
-    release/                     release manifest, notes, archive (06.2)
-    api/                         the Mathematical API: HTTP+JSON, gRPC (document 11)
-    mcp/                         the MCP server over the API
-    orchestrator/                job queue, scheduler, budgets, run records (document 11)
-    agent/                       the research agents (document 12)
-      formalize/  prove/  explore/  explain/  curate/  align/  bump/  review-assist/
-    llm/                         model clients (Anthropic SDK first; adapters for local prover models)
-    sandbox/                     gVisor/Firecracker wrappers shared by compute and agents
-    uri/                         m2:// parser and the ant driver
+  cli/                           the command table and the flags of each command
+  node/                          parse, canonicalise, hash node files (document 04)
+  schema/                        schema validation, migrations
+  tag/                           minting, provisional id rewrite, registers
+  graph/                         derive edges, closure (AND–OR), CSR, Parquet writer (document 05)
+  store/                         SQLite + DuckDB + CSR + vector serving store (05.7)
+  build/                         the build graph: nodes → Lean → compute → graph → search → site
+  compute/                       image runner, sandbox, certificate dispatch (document 08)
+  ingest/                        source adapters (document 09), one subpackage per source
+    arxiv/  zbmath/  crossref/  oeis/  lmfdb/  wikidata/  mardi/  nlab/  stacks/  proofwiki/  mathlib/  leanlibs/
+    afp/  palomar/  blueprint/  erdos/  formalconj/  mo/  objects/  theoremidx/
+  extract/                       statement extraction from papers (09.5)
+  align/                         dedup and crosswalk (05.3, 05.4)
+  autoform/                      statement autoformalization and fidelity pipeline (document 10)
+  search/                        lexical, formula, embedding, type-directed search (document 14)
+  audit/                         one file per rule, with fixtures (document 15)
+  prov/                          provenance writing, PROV export, quarantine (06.5)
+  release/                       release manifest, notes, archive (06.2)
+  api/                           the Mathematical API: HTTP+JSON, gRPC (document 11)
+  mcp/                           the MCP server over the API
+  orchestrator/                  job queue, scheduler, budgets, run records (document 11)
+  agent/                         the research agents (document 12)
+    formalize/  prove/  explore/  explain/  curate/  align/  bump/  review-assist/
+  llm/                           model clients (Anthropic SDK first; adapters for local prover models)
+  sandbox/                       gVisor/Firecracker wrappers shared by compute and agents
+  uri/                           m2:// parser and the ant driver
+  site/                          the wiki: a static site for people and agents
 
-  lean/
+  lean/                          drive Lake, the Lean REPL and the extraction package; axiom audit; replay (document 07)
     M2Extract/                   Lean package: dependency graph, elaborated-type hash, axioms, statement pretty-printing, degenerate-statement checks
-    lakefile.toml                depends on Mathlib and on tamnd/math2's Math2 package at the pinned commits
+    M2Extract/lakefile.toml      depends on Mathlib and on tamnd/math2's Math2 package at the pinned commits
 
   prompts/                       versioned prompts per agent role; each change bumps the role version (12.8)
   images/                        Nix flakes for every computational image (08.1)
@@ -151,6 +151,8 @@ math2-agent/
   docs/                          command reference, generated
   spec/                          this specification (documents 00 to 21)
 ```
+
+The module has no `internal/` directory. Each Go directory is a package that other programs can import, for example a bot that reads node files with `node` and checks them with `schema`. Thus each package follows the conventions of the Go standard library. It has a package comment, a doc comment on each exported name and testable examples. It exports only what other programs need. A change to an exported name is a breaking change, and the release notes say so.
 
 ### The command set
 
@@ -184,7 +186,7 @@ Each command names the milestone in which it arrives (document 19). If the miles
 
 The rest of the `tamnd` toolchain is Go: `ax`, `ant`, and the `*-cli` family. `m2 ingest` links the packages of that family as libraries. Go builds one static binary and cross-compiles easily. It has the official Anthropic SDK, DuckDB and SQLite bindings, and good sandbox control. Lean-specific work happens in Lean (`lean/M2Extract`), driven over the Lean REPL protocol. Python appears only inside computational images and in the no-dependency check script in `tamnd/math2`.
 
-One exception may come later: a Python sidecar for local open-weight prover models (document 12.3). The reason is that the inference stacks of these models are in Python. If the sidecar exists, it sits behind a gRPC interface in `internal/llm`. Nothing else in the toolchain knows about it.
+One exception may come later: a Python sidecar for local open-weight prover models (document 12.3). The reason is that the inference stacks of these models are in Python. If the sidecar exists, it sits behind a gRPC interface in `llm`. Nothing else in the toolchain knows about it.
 
 ## 20.3 How the two repositories move together
 

@@ -29,7 +29,7 @@ func TestParse(t *testing.T) {
 	if n.ID != "7K3QX2" || n.Kind() != "statement" || n.Name() != "Lagrange's theorem" {
 		t.Fatalf("got %q %q %q", n.ID, n.Kind(), n.Name())
 	}
-	if got := n.Strings("uses"); strings.Join(got, ",") != "1H8D2C,6PQ0WZ" {
+	if got := n.List("uses"); strings.Join(got, ",") != "1H8D2C,6PQ0WZ" {
 		t.Fatalf("uses = %v", got)
 	}
 	if !strings.HasPrefix(n.Body, "\n## Statement") || n.BodyLine != 9 {

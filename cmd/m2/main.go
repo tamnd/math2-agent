@@ -4,7 +4,7 @@ package main
 import (
 	"os"
 
-	"github.com/tamnd/math2-agent/internal/cli"
+	"github.com/tamnd/math2-agent/cli"
 )
 
 // Version is set at build time with -ldflags "-X main.Version=v0.1.0".

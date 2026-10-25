@@ -5,7 +5,7 @@ In the diagram, one box is between the Research Workspace and the Research Agent
 - the **Mathematical API** is the only way for anything outside the build to read the knowledge graph or to ask for work. This includes a person's browser, an agent and an external tool;
 - the **Orchestrator** changes requests for work into agent runs. It schedules the runs, enforces budgets and records everything. It changes the results into pull requests.
 
-Both are in `tamnd/math2-agent` (`internal/api`, `internal/mcp`, `internal/orchestrator`). `m2 serve` and `m2 orchestrate` serve them.
+Both are in `tamnd/math2-agent` (`api`, `mcp`, `orchestrator`). `m2 serve` and `m2 orchestrate` serve them.
 
 ## 11.1 Principles
 

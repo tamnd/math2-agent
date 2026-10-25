@@ -44,12 +44,12 @@ The arrows show the direction of data flow. Four of them carry most of the desig
 
 | Box | Repository · package | Specified in | In | Out |
 |---|---|---|---|---|
-| Research Agents | `math2-agent` · `internal/agent/*` | 12 | jobs from the orchestrator; API reads; engine results | proposed diffs (nodes, bindings, proofs, alignments, explanations); run records |
-| Mathematical API and Agent Orchestrator | `math2-agent` · `internal/api`, `internal/mcp`, `internal/orchestrator` | 11 | reads from the graph store; requests from the workspace, external clients and schedules | query responses; jobs; PRs against `tamnd/math2` |
-| Formal Engine | `math2` · `lean/`; `math2-agent` · `internal/lean`, `lean/M2Extract` | 07, 10 | Lean code; bindings; Lean sessions from agents | kernel-checked declarations, dependency edges, type hashes, axiom profiles, replay results |
-| Computational Engine | `math2` · `compute/`; `math2-agent` · `internal/compute`, `images/` | 08 | computation records; ad hoc requests from agents | outputs, certificates, checker verdicts |
-| Literature Ingestion | `math2-agent` · `internal/ingest`, `internal/extract`, `internal/align` | 09 | pinned snapshots of external sources | record plane entries, extracted results, alignment proposals, imported nodes |
-| Knowledge Graph | `math2` · `nodes/`, `reviews/`; `math2-agent` · `internal/graph`, `internal/store` | 04, 05 | node files; formal, compute and ingestion outputs | the derived graph (Parquet), computed status, the serving store |
+| Research Agents | `math2-agent` · `agent/*` | 12 | jobs from the orchestrator; API reads; engine results | proposed diffs (nodes, bindings, proofs, alignments, explanations); run records |
+| Mathematical API and Agent Orchestrator | `math2-agent` · `api`, `mcp`, `orchestrator` | 11 | reads from the graph store; requests from the workspace, external clients and schedules | query responses; jobs; PRs against `tamnd/math2` |
+| Formal Engine | `math2` · `lean/`; `math2-agent` · `lean`, `lean/M2Extract` | 07, 10 | Lean code; bindings; Lean sessions from agents | kernel-checked declarations, dependency edges, type hashes, axiom profiles, replay results |
+| Computational Engine | `math2` · `compute/`; `math2-agent` · `compute`, `images/` | 08 | computation records; ad hoc requests from agents | outputs, certificates, checker verdicts |
+| Literature Ingestion | `math2-agent` · `ingest`, `extract`, `align` | 09 | pinned snapshots of external sources | record plane entries, extracted results, alignment proposals, imported nodes |
+| Knowledge Graph | `math2` · `nodes/`, `reviews/`; `math2-agent` · `graph`, `store` | 04, 05 | node files; formal, compute and ingestion outputs | the derived graph (Parquet), computed status, the serving store |
 | Versioned Storage | git (`tamnd/math2`) plus the artefact store | 06 | everything | releases, artefacts by hash, provenance |
 | Research Workspace | `math2-agent` · `web/`, `m2 site`, `m2 tui` | 13, 14 | the API | pages, search, exploration, explanations, collaboration, work requests |
 

@@ -1,6 +1,6 @@
 # 12. Research agents
 
-The top box of the diagram says "Formalize, Prove, Explore, Explain". Readers see these four agent roles. Four more roles work behind them and keep the graph healthy: curate, align, bump and review-assist. All eight roles are in `tamnd/math2-agent/internal/agent/`. They run under the orchestrator (document 11). They change content only through pull requests.
+The top box of the diagram says "Formalize, Prove, Explore, Explain". Readers see these four agent roles. Four more roles work behind them and keep the graph healthy: curate, align, bump and review-assist. All eight roles are in `tamnd/math2-agent/agent/`. They run under the orchestrator (document 11). They change content only through pull requests.
 
 The design comes from one finding of 2026. Document 01 gives this finding with its sources. **A minimal agent loop on a strong general model, with a strict verifier, matches or beats bespoke provers.** A plain agent on a general model saturated PutnamBench for about $111. The baseline agent of AlphaProof Nexus replicated the Erdős results of AlphaProof Nexus. The Fermat formalization ran on a generic DAG-of-statements harness. Thus math2 does not build a prover. It builds the things that a prover needs and cannot supply itself:
 

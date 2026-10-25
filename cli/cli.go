@@ -18,16 +18,16 @@ const (
 	ExitNotWritten = 3
 )
 
-// Milestone is one milestone of the project plan.
-type Milestone struct {
+// milestone is one milestone of the project plan.
+type milestone struct {
 	ID     string
 	Title  string
 	Number int    // the GitHub milestone number in tamnd/math2-agent
 	Due    string // the month the milestone is due
 }
 
-// Milestones is the project plan, in order.
-var Milestones = []Milestone{
+// plan is the project plan, in order.
+var plan = []milestone{
 	{"M0", "the skeleton", 1, "December 2026"},
 	{"M1", "the seed and the trust core", 2, "March 2027"},
 	{"M2", "the graph meets the world", 3, "June 2027"},
@@ -73,8 +73,8 @@ var commands = []command{
 // version is the m2 version that Run got.
 var version = "dev"
 
-// Current is the milestone that the project works on now.
-const Current = "M0"
+// current is the milestone that the project works on now.
+const current = "M0"
 
 // Run runs the command in args and returns the exit code.
 func Run(args []string, v string, stdout, stderr io.Writer) int {
@@ -100,7 +100,7 @@ func Run(args []string, v string, stdout, stderr io.Writer) int {
 			return ExitUsage
 		}
 		if c.run == nil {
-			m := milestone(c.milestone)
+			m := goal(c.milestone)
 			fmt.Fprintf(stderr, "m2 %s: this command is not written yet. It arrives in %s, %s.\n", c.name, m.ID, m.Title)
 			return ExitNotWritten
 		}
@@ -117,13 +117,13 @@ func lookup(name string) (command, bool) {
 	return command{}, false
 }
 
-func milestone(id string) Milestone {
-	for _, m := range Milestones {
+func goal(id string) milestone {
+	for _, m := range plan {
 		if m.ID == id {
 			return m
 		}
 	}
-	return Milestone{ID: id, Title: "an unknown milestone"}
+	return milestone{ID: id, Title: "an unknown milestone"}
 }
 
 func helpFor(name string, stdout, stderr io.Writer) int {
@@ -134,7 +134,7 @@ func helpFor(name string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "Usage: %s\n\n%s\n", c.usage, c.summary)
 	if c.run == nil {
-		m := milestone(c.milestone)
+		m := goal(c.milestone)
 		fmt.Fprintf(stdout, "\nThis command is not written yet. It arrives in %s, %s.\n", m.ID, m.Title)
 	}
 	return ExitOK

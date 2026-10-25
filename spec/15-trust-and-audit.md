@@ -16,7 +16,7 @@ For E5, math2 trusts nothing else. Specifically, this includes:
 - any model's output;
 - the prover that found the proof;
 - the implementation of any tactic, because its output is a term that the kernel checks;
-- the `m2` toolchain, except for the code that extracts declarations and hashes. That code is small and reviewed, and it has its own tests in `math2-agent/internal/trust/`.
+- the `m2` toolchain, except for the code that extracts declarations and hashes. That code is small and reviewed, and it has its own tests in `math2-agent/trust/`.
 
 For E4, the trusted base is the certificate checker for that certificate kind (document 08.3), plus the runtime of the checker. For E3 and E2, it is the literature and the curators who read it. For E1, it is nothing.
 
@@ -59,7 +59,7 @@ F06   n/a    0
 
 ## 15.3 The rule catalogue
 
-The letter tells the subject of the rule. Rules with the mark **H** are hard, and they block. Rules with the mark **S** are soft, and the audit reports them. The implementation of each rule is in `tamnd/math2-agent/internal/audit/<id>.go`. With it is a fixture that triggers the rule and a fixture that does not.
+The letter tells the subject of the rule. Rules with the mark **H** are hard, and they block. Rules with the mark **S** are soft, and the audit reports them. The implementation of each rule is in `tamnd/math2-agent/audit/<id>.go`. With it is a fixture that triggers the rule and a fixture that does not.
 
 ### T: tags and identity
 

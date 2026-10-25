@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tamnd/math2-agent/internal/node"
-	"github.com/tamnd/math2-agent/internal/schema"
+	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/schema"
 )
 
 // testOrder returns the key order of the embedded schema.

@@ -100,17 +100,19 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 ## Layout
 
 ```
-cmd/m2/          the m2 binary
-internal/cli/    the command table
-internal/node/   read node files, write the canonical form and compute the content hash
-internal/schema/ check front matter against the node schema
-internal/site/   build the wiki
-internal/tag/    tags, provisional ids and the tag register
-internal/uri/    m2:// URIs
-spec/            the specification
+cmd/m2/   the m2 binary
+cli/      the command table
+node/     read node files, write the canonical form and compute the content hash
+schema/   check front matter against the node schema
+site/     build the wiki
+tag/      tags, provisional ids and the tag register
+uri/      m2:// URIs
+spec/     the specification
 ```
 
-The full layout arrives with the milestones. The plan has these parts: `internal/graph`, `internal/lean`, `internal/compute`, `internal/ingest`, `internal/align`, `internal/search`, `internal/audit`, `internal/api`, `internal/mcp`, `internal/orchestrator`, `internal/agent`, `lean/M2Extract`, `prompts/`, `images/`, `web/` and `bench/`.
+Each directory except `cmd/` and `spec/` is a Go package that other programs can import. For example, a bot can use `github.com/tamnd/math2-agent/node` to read and format node files. The packages follow the conventions of the Go standard library, and `go doc` shows an example for each main function.
+
+The full layout arrives with the milestones. The plan has these parts: `graph`, `lean`, `compute`, `ingest`, `align`, `search`, `audit`, `api`, `mcp`, `orchestrator`, `agent`, `lean/M2Extract`, `prompts/`, `images/`, `web/` and `bench/`.
 
 ## Contribute
 
