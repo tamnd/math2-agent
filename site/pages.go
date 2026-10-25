@@ -265,9 +265,6 @@ func (b *builder) Canonical(dir string) string {
 	return b.abs(dir + "/")
 }
 
-// Macros returns the KaTeX macros as JSON.
-func (b *builder) Macros() template.JS { return b.macros }
-
 // KindCounts returns the number of nodes of each kind.
 func (b *builder) KindCounts() []kindCount { return b.kindCounts() }
 

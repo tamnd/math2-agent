@@ -3,6 +3,7 @@ module github.com/tamnd/math2-agent
 go 1.27
 
 require (
+	github.com/dop251/goja v0.0.0-20261024144015-2a9269b6b6de
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/parquet-go/parquet-go v0.32.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
@@ -15,8 +16,11 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.1.1 // indirect
+	github.com/dlclark/regexp2/v2 v2.8.1 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
+	github.com/google/pprof v0.0.0-20261016150608-1facf8f91b50 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.12 // indirect

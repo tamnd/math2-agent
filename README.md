@@ -88,7 +88,7 @@ go run ./cmd/m2 site build -content ../math2 -spec spec -out _site
 python3 -m http.server -d _site 8000
 ```
 
-Each node gets a page with an infobox, its links and its backlinks. KaTeX renders the math in the browser with the macros of math2. Each page also has a copy for programs: `node/<TAG>.md`, `api/node/<TAG>.json`, `api/nodes.json`, `llms.txt` and `llms-full.txt`. The pages Contribute and Curation come from CONTRIBUTING.md and CURATION.md in the math2 tree. A build with no `-date` flag gives the same bytes each time.
+Each node gets a page with an infobox, its links and its backlinks. The build renders the math to HTML and MathML with KaTeX and the macros of math2, so a reader can read each node with JavaScript off. The site serves the KaTeX style sheet and fonts itself, so it loads nothing from a CDN. Each page also has a copy for programs: `node/<TAG>.md`, `api/node/<TAG>.json`, `api/nodes.json`, `llms.txt` and `llms-full.txt`. The pages Contribute and Curation come from CONTRIBUTING.md and CURATION.md in the math2 tree. A build with no `-date` flag gives the same bytes each time.
 
 To preview the site with the local server above, set `-url http://localhost:8000`.
 
@@ -426,6 +426,7 @@ crosswalk/ the syntax of the ids of each external system of same_as (spec 05.3)
 cli/      the command table
 format/   the canonical form of m2 fmt and the change from aliases to tags
 graph/    the graph of spec 05: edges, closure, cycles, CSR and Parquet
+katex/    render TeX to HTML and MathML with KaTeX in pure Go, with the style sheet and the fonts of the same release
 ingest/   the adapters of the external sources, the licence gate, the snapshots and the import manifests (spec 09)
 lean/     M2Extract, its Lake package and the Go package that drives it
 mcp/      the MCP server: a read-only tool for each method of the API (spec 11.2 and 11.7)

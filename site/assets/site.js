@@ -1,4 +1,4 @@
-// The scripts of the Math 2.0 wiki: math, the colour theme, copy buttons, list filters and search.
+// The scripts of the Math 2.0 wiki: the colour theme, copy buttons, list filters and search. Each page can be read with no script. The build renders the math.
 (function () {
   "use strict";
 
@@ -14,25 +14,6 @@
       localStorage.setItem("m2-theme", root.dataset.theme);
     });
   }
-
-  // Math. Each .math element holds TeX. KaTeX renders it with the macros of the content repository.
-  function renderMath(scope) {
-    if (!window.katex) return;
-    var macros = {};
-    try { macros = JSON.parse(document.getElementById("m2-macros").textContent); } catch (e) { macros = {}; }
-    scope.querySelectorAll(".math").forEach(function (el) {
-      if (el.dataset.rendered) return;
-      var tex = el.textContent;
-      try {
-        katex.render(tex, el, { displayMode: el.classList.contains("display"), throwOnError: false, macros: macros, trust: false });
-        el.dataset.rendered = "1";
-        el.setAttribute("data-tex", tex);
-      } catch (e) {
-        el.title = String(e);
-      }
-    });
-  }
-  window.addEventListener("load", function () { renderMath(document); });
 
   // Click a tag or a URI to copy it.
   document.querySelectorAll("code.copy").forEach(function (el) {

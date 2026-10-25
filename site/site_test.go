@@ -60,7 +60,7 @@ uses: [1H8D2C]
 
 ## Statement
 
-Let $G$ be a finite [[group|1H8D2C]]. See also [[a missing node|ZZZZZZ]].
+Let $G$ be a finite [[group|1H8D2C]], for example $\Z$. See also [[a missing node|ZZZZZZ]].
 
 $$
 |G| = [G : H] \cdot |H|
@@ -75,7 +75,7 @@ name: Group
 
 ## Summary
 
-A group.
+A group. $\nosuch{x}$
 
 ` + "```markdown\n[[not a link|7K3QX2]]\n```\n"
 
@@ -128,8 +128,11 @@ func TestNodes(t *testing.T) {
 	for _, want := range []string{
 		`<a href="/math2/node/1H8D2C/">group</a>`,
 		`class="missing"`,
-		`<span class="math">G</span>`,
-		`<div class="math display">`,
+		`<span class="math"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML">`,
+		`<annotation encoding="application/x-tex">G</annotation>`,
+		`<mi mathvariant="double-struck">Z</mi>`,
+		`<div class="math display"><span class="katex-display">`,
+		`<link rel="stylesheet" href="/math2/assets/katex/katex.min.css">`,
 		`m2://7K3QX2`,
 		`<a href="/math2/msc/20/"`,
 		`<link rel="canonical" href="https://example.org/math2/node/7K3QX2/">`,
@@ -142,6 +145,17 @@ func TestNodes(t *testing.T) {
 	group := readFile(t, out, "node/1H8D2C/index.html")
 	if !strings.Contains(group, "What links here") || !strings.Contains(group, `<a href="/math2/node/7K3QX2/">Lagrange&#39;s theorem</a>`) {
 		t.Error("the backlink from 7K3QX2 is not on the page of 1H8D2C")
+	}
+	if !strings.Contains(group, `<code class="tex-error" title="KaTeX parse error: Undefined control sequence: \nosuch`) {
+		t.Error("a formula that KaTeX cannot parse does not show as TeX")
+	}
+	for _, f := range []string{"assets/katex/katex.min.css", "assets/katex/fonts/KaTeX_Main-Regular.woff2", "assets/katex/LICENSE"} {
+		if _, err := os.Stat(filepath.Join(out, f)); err != nil {
+			t.Error(err)
+		}
+	}
+	if strings.Contains(page, "cdn.jsdelivr.net") {
+		t.Error("the node page loads a file from a CDN")
 	}
 	if !strings.Contains(group, "[[not a link|7K3QX2]]") {
 		t.Error("a wiki link in fenced code changed")
