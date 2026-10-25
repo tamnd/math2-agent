@@ -11,7 +11,8 @@ const minA11y = asserts["categories:accessibility"][1].minScore;
 const maxPaint = Math.min(asserts["first-contentful-paint"][1].maxNumericValue, asserts["largest-contentful-paint"][1].maxNumericValue);
 const t = config.ci.collect.settings.throttling;
 
-const pages = manifest.map((m) => {
+// Lighthouse CI runs each page three times, and the representative run is the median run.
+const pages = manifest.filter((m) => m.isRepresentativeRun).map((m) => {
   const r = JSON.parse(readFileSync(m.jsonPath, "utf8"));
   const failed = Object.entries(r.audits)
     .filter(([, a]) => a.scoreDisplayMode === "binary" && a.score === 0 && r.categories.accessibility.auditRefs.some((ref) => ref.id === a.id))

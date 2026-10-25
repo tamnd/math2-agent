@@ -105,7 +105,7 @@ jobs:
           test "$("$RUNNER_TEMP/m2" version)" = "m2 ci"
       - name: a command that is not written yet exits with code 3
         run: |
-          for cmd in search serve review agent; do
+          for cmd in review agent; do
             code=0
             "$RUNNER_TEMP/m2" "$cmd" 2> err.txt || code=$?
             if [ "$code" != 3 ]; then
