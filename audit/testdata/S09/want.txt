@@ -1,0 +1,1 @@
+nodes/G5/G5S1M9.md:1:1: S09: the front matter has the form of schema node.v0, which is deprecated; migrate it to node.v1

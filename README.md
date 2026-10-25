@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04 and G03. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09 and G03. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|

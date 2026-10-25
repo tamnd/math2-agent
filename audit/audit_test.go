@@ -10,7 +10,10 @@ import (
 	"strings"
 	"testing"
 
+	"go.yaml.in/yaml/v3"
+
 	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/schema"
 )
 
 var update = flag.Bool("update", false, "write the want.txt file of each bad fixture")
@@ -78,6 +81,24 @@ func result(t *testing.T, rep *check.Report, id string) check.Result {
 }
 
 // TestFixtures checks that each written rule passes on its good fixture and finds the problems of want.txt in its bad fixture (spec 15.3).
+// setup prepares the state of the other packages that the fixtures of a rule need.
+var setup = map[string]func(t *testing.T){
+	// S09 needs an open migration window. The test migration renames the field msc_codes to msc.
+	"S09": func(t *testing.T) {
+		saved := schema.Migrations
+		t.Cleanup(func() { schema.Migrations = saved })
+		schema.Migrations = []schema.Migration{{From: "node.v0", To: schema.Version, Apply: func(front *yaml.Node) error {
+			m := front.Content[0]
+			for i := 0; i+1 < len(m.Content); i += 2 {
+				if m.Content[i].Value == "msc_codes" {
+					m.Content[i].Value = "msc"
+				}
+			}
+			return nil
+		}}}
+	},
+}
+
 func TestFixtures(t *testing.T) {
 	for _, e := range catalogue {
 		dir := filepath.Join("testdata", e.ID)
@@ -93,6 +114,9 @@ func TestFixtures(t *testing.T) {
 			continue
 		}
 		t.Run(e.ID, func(t *testing.T) {
+			if f := setup[e.ID]; f != nil {
+				f(t)
+			}
 			good, err := Run(tree(t, filepath.Join(dir, "good")), Options{Rules: []string{e.ID}})
 			if err != nil {
 				t.Fatal(err)
