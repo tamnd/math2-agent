@@ -154,7 +154,7 @@ func TestBrokenFixturesComplete(t *testing.T) {
 	}
 }
 
-// TestBrokenFixturesSchema checks the entries for S01, S02 and S03. Each gives exactly one finding, with the expected rule and line. The other entries must give no schema finding. m2 check (#14) checks the other rules.
+// TestBrokenFixturesSchema checks the entries for S01, S02 and S03. Each gives exactly one finding, with the expected rule and line. The other entries must give no schema finding. The tests of the check package check the other rules.
 func TestBrokenFixturesSchema(t *testing.T) {
 	s := schema.Embedded()
 	for _, e := range readExpect(t) {

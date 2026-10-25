@@ -50,7 +50,7 @@ type command struct {
 var commands = []command{
 	{name: "new", usage: "m2 new <kind>", summary: "Make a node file with a provisional id.", milestone: "M0"},
 	{name: "fmt", usage: "m2 fmt [path...]", summary: "Make front matter canonical and change aliases to tags.", milestone: "M0"},
-	{name: "check", usage: "m2 check [path...]", summary: "Check schema, body and links on the working tree. This does not use Lean.", milestone: "M0"},
+	{name: "check", usage: "m2 check [-root DIR] [-rule R,...] [-json] [-q] [path...]", summary: "Check schema, body and links on the working tree. This does not use Lean.", run: runCheck},
 	{name: "site", usage: "m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-commit C] [-date now]", summary: "Build the wiki: a static site for people and agents.", run: runSite},
 	{name: "build", usage: "m2 build", summary: "Build everything: Lean, extraction, status, graph and search.", milestone: "M1"},
 	{name: "audit", usage: "m2 audit [-plane P] [-rule R] [-changed] [-release R]", summary: "Run the audit rules.", milestone: "M1"},

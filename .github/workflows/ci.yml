@@ -105,7 +105,7 @@ jobs:
           test "$("$RUNNER_TEMP/m2" version)" = "m2 ci"
       - name: a command that is not written yet exits with code 3
         run: |
-          for cmd in new check build audit graph search serve review agent; do
+          for cmd in new build audit graph search serve review agent; do
             code=0
             "$RUNNER_TEMP/m2" "$cmd" 2> err.txt || code=$?
             if [ "$code" != 3 ]; then
@@ -114,6 +114,13 @@ jobs:
             fi
             grep -q "It arrives in M" err.txt
           done
+      - name: m2 check passes the valid fixtures and fails the broken fixtures
+        run: |
+          "$RUNNER_TEMP/m2" check -root testdata/nodes/valid
+          code=0
+          "$RUNNER_TEMP/m2" check -root testdata/nodes/broken -q > findings.txt || code=$?
+          test "$code" = 1
+          test -s findings.txt
       - name: an unknown command exits with code 2
         run: |
           code=0
