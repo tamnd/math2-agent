@@ -1,0 +1,51 @@
+{
+  "body": {
+    "about": [
+      {
+        "hash": "blake3:0af45caecb26037c56273efbf101b50616ce53b083753067d1e81823dd0f0640",
+        "tag": "DTT8HP"
+      },
+      {
+        "hash": "blake3:b6d71ea78b1a490c0380e880d4b6c8fb2eb96088b4b1e920ee997af1b2e0e7a9",
+        "tag": "E18G47"
+      },
+      {
+        "hash": "blake3:2c0346da501e827bbd5bf3acd2f04addb6df947de54f77fdfb91cf4c44b67fd5",
+        "tag": "GY1XDB"
+      },
+      {
+        "hash": "blake3:c48374f7a4e1b72be44b8cb27a01de84c162f1c3944f64ab3125b8c4a18b6fab",
+        "tag": "N98ZA2"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:10e84c7fdbf6c393ad48f0b0eddcde077144933251e7ee88e4f21b1257444846",
+        "tag": "Q529ES"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "closure",
+    "result": {
+      "Depth": 2,
+      "Nodes": [
+        "DTT8HP",
+        "E18G47",
+        "GY1XDB",
+        "N98ZA2",
+        "Q529ES"
+      ],
+      "Proofs": [
+        "DTT8HP"
+      ],
+      "Tag": "Q529ES",
+      "axioms": [],
+      "below": [],
+      "evidence": "E1",
+      "hypotheses": [],
+      "weakest": "E1"
+    }
+  },
+  "status": 200
+}

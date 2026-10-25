@@ -1,0 +1,70 @@
+{
+  "body": {
+    "about": [
+      {
+        "evidence": "E3",
+        "hash": "blake3:5a3c78301793e7dcf4727e98be303e6c514cc050208a71bd6a04066a9fea46f6",
+        "tag": "VTPHZM"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:581a7e8ec1e13e0445c633d71b691c20fcecbd91016f7ab09831f19341909995",
+        "tag": "QXQ1Z0"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:d1202747767e6e4efe3cbba6e7da6f97e5833c7c7d3bfb6413782bbb94634e48",
+        "tag": "2GJGRJ"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "search_formula",
+    "result": [
+      {
+        "channels": [
+          {
+            "channel": "formula",
+            "rank": 1,
+            "score": 1.000186
+          }
+        ],
+        "evidence": "E3",
+        "kind": "proof",
+        "name": "McKay's proof of Cauchy's theorem",
+        "score": 0.015418,
+        "tag": "VTPHZM"
+      },
+      {
+        "channels": [
+          {
+            "channel": "formula",
+            "rank": 2,
+            "score": 0.334384
+          }
+        ],
+        "evidence": "E1",
+        "kind": "statement",
+        "name": "Wilson's theorem",
+        "score": 0.010545,
+        "tag": "QXQ1Z0"
+      },
+      {
+        "channels": [
+          {
+            "channel": "formula",
+            "rank": 4,
+            "score": 0.333928
+          }
+        ],
+        "evidence": "E0",
+        "kind": "conjecture",
+        "name": "Hadwiger's conjecture",
+        "score": 0.010008,
+        "tag": "2GJGRJ"
+      }
+    ]
+  },
+  "status": 200
+}

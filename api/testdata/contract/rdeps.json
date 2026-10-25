@@ -1,0 +1,21 @@
+{
+  "body": {
+    "about": [
+      {
+        "evidence": "E3",
+        "hash": "blake3:bb2f42cc605a19f9bfc091c97515524f4578615b3dcfc1fd5407023925ae45c9",
+        "tag": "CM1BRG"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "rdeps",
+    "result": {
+      "needs": [],
+      "tag": "CM1BRG",
+      "uses": []
+    }
+  },
+  "status": 200
+}

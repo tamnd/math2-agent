@@ -1,0 +1,11 @@
+{
+  "body": {
+    "about": [],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "premises",
+    "result": []
+  },
+  "status": 200
+}

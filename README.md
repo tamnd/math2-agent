@@ -23,6 +23,8 @@ The code of M2 connects the graph to the world. The `store` package puts the gra
 
 Some acceptance items of M2 need time or people, and they stay open: three monthly bumps in a row, the releases of April to June 2027, the full harvests of zbMATH Open and arXiv for C0, and a test of the curation guide by a new curator.
 
+The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON.
+
 The audit report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
@@ -69,7 +71,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
 | `m2 release` | Cut a release with its manifest, levels and notes, write the release notes, or rebuild a release from its manifest. | written |
 | `m2 search <query>` | Search the knowledge graph with the identifier resolver and the lexical, formula, formal and embedding channels. `m2 search -premises <goal>` ranks the Lean declarations that can help to prove a goal. | written |
-| `m2 serve` | Serve the API, the MCP server and the workspace. | M3 |
+| `m2 serve` | Serve the read API over HTTP with JSON, from the last build. | written |
 | `m2 compute` | Run or verify a computation. | M3 |
 | `m2 prov` | Show or change provenance. | M3 |
 | `m2 review <tag>` | Review a formal statement against its informal statement. | M4 |
@@ -167,6 +169,19 @@ The identifier resolver runs first. A node that it finds comes first. Then four 
 Each result shows the channels that found it and its rank in each one, for example `lexical#1 formula#3`. Statements and concepts rank a little above proofs, and E5, E3 and E2 above E1. With `-open`, the open problems and the weak evidence rank first. A retired node folds into its live successor. `-json` writes the results as JSON.
 
 `m2 search -premises` ranks the Lean declarations that can help to prove a goal (spec 14.5). It fuses the formal channel, the declarations that the proofs of near declarations use, the declarations of the nodes that the node of `-tag` uses, and the embedding similarity. The learned reranker comes with the run records of the agents.
+
+## Serve
+
+`m2 serve` serves the read API (spec 11.2) from the last `m2 build`. It reads `build/store.db`, `build/search.db` and the node files of the tree. The API has no write path. A write is a pull request against tamnd/math2.
+
+```
+m2 serve -addr localhost:8080
+curl 'http://localhost:8080/v1/get?ref=Q529ES'
+curl 'http://localhost:8080/v1/search?q=Lagrange&k=5'
+curl -d '{"from": "DSG7KN", "to": "Q529ES"}' http://localhost:8080/v1/path
+```
+
+`GET /v1` lists the methods and their parameters. A method takes its parameters in the query of a GET request, or as a JSON object in the body of a POST request. The methods are `resolve`, `get`, `status`, `get_formal`, `neighbours`, `closure`, `rdeps`, `path`, `frontier`, `search`, `search_formal`, `search_formula`, `similar` and `premises`. Each response gives the version of the API, the method, the commit of the tree, the output hash of the build, and the content hash and the evidence level of each node in the result. An error gives `{"error": {"code": ..., "message": ...}}` with the HTTP status of its code: `invalid` is 400, `not_found` is 404, `rate_limited` is 429 and `internal_error` is 500. Each client can send `-rate` requests each second, and `-burst` requests at once. A client over the limit gets 429 with a `Retry-After` header. The contract test in `api/` keeps the answer of each method in `api/testdata/contract/`.
 
 ## Ingest
 
@@ -394,8 +409,9 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 ```
 cmd/m2/   the m2 binary
 align/    the aligner: candidates, scores, the curation queues and the register of decisions (spec 05.3, 05.4 and 16.3)
+api/      the read API of spec 11.2 and its HTTP handler
 audit/    the audit rules of spec 15, with a fixture pair for each rule
-bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, and bench/align measures the precision of the aligner, and bench/search measures the quality of search
+bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, and bench/search measures the quality of search
 bump/     the Mathlib bump: the pins, the breaks of a bump, the renames and the bump report (spec 07.9)
 build/    the steps of m2 build, their cache and the build manifest
 check/    the fast rules of m2 check: schema, body and links

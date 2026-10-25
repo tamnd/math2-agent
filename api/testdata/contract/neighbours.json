@@ -1,0 +1,157 @@
+{
+  "body": {
+    "about": [
+      {
+        "evidence": "E1",
+        "hash": "blake3:08b64ab3317168988c4af39c9b0dfa7a70fc0a1f1c6ebb2a9dd8ff84aeb7b191",
+        "tag": "7S3BEX"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:353c871d47a38ad0f63172bc184cb2382692cde4c731d2202f7005f739a8d1e4",
+        "tag": "9ZQEPQ"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:b09347d55bdafecc324c10637e0e67bcc3823f9c98c0b3ea279bc0937138be2b",
+        "tag": "BP30YM"
+      },
+      {
+        "hash": "blake3:0af45caecb26037c56273efbf101b50616ce53b083753067d1e81823dd0f0640",
+        "tag": "DTT8HP"
+      },
+      {
+        "hash": "blake3:b6d71ea78b1a490c0380e880d4b6c8fb2eb96088b4b1e920ee997af1b2e0e7a9",
+        "tag": "E18G47"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:e3e11de706005fb001f715a3536a17b2c816631b2fc39181fd61bc17c764013c",
+        "tag": "ENS73X"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:aa0740687c2f650698976678a844eefbca2d54ba3335fc1b7d037be38148e64d",
+        "tag": "FQAJ21"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:b6f1ba6161d8028e1e07771f9e1a0273845e19fca7bee9764d7b0dbbe7840e78",
+        "tag": "M8XBZ4"
+      },
+      {
+        "hash": "blake3:c48374f7a4e1b72be44b8cb27a01de84c162f1c3944f64ab3125b8c4a18b6fab",
+        "tag": "N98ZA2"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:10e84c7fdbf6c393ad48f0b0eddcde077144933251e7ee88e4f21b1257444846",
+        "tag": "Q529ES"
+      },
+      {
+        "hash": "blake3:682f319a5bb4e31eaccb14f671b55e753909891b3454753d311f4f55d5774999",
+        "tag": "ZZZJE6"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "neighbours",
+    "result": {
+      "edges": [
+        {
+          "from": "Subgroup.card_subgroup_dvd_card",
+          "label": "exact",
+          "system": "lean4/mathlib",
+          "to": "Q529ES",
+          "type": "formalizes"
+        },
+        {
+          "from": "Q529ES",
+          "to": "ZZZJE6",
+          "type": "part_of"
+        },
+        {
+          "from": "DTT8HP",
+          "to": "Q529ES",
+          "type": "proves"
+        },
+        {
+          "from": "ENS73X",
+          "to": "Q529ES",
+          "type": "proves"
+        },
+        {
+          "from": "Q529ES",
+          "system": "proofwiki",
+          "to": "Lagrange's_Theorem_(Group_Theory)",
+          "type": "same_as"
+        },
+        {
+          "from": "Q529ES",
+          "system": "wikidata",
+          "to": "Q180967",
+          "type": "same_as"
+        },
+        {
+          "from": "Q529ES",
+          "label": "Section 3.2, Theorem 8",
+          "system": "book",
+          "to": "isbn:9780471433347",
+          "type": "source"
+        },
+        {
+          "from": "7S3BEX",
+          "to": "Q529ES",
+          "type": "uses"
+        },
+        {
+          "from": "9ZQEPQ",
+          "to": "Q529ES",
+          "type": "uses"
+        },
+        {
+          "from": "BP30YM",
+          "to": "Q529ES",
+          "type": "uses"
+        },
+        {
+          "from": "FQAJ21",
+          "to": "Q529ES",
+          "type": "uses"
+        },
+        {
+          "from": "M8XBZ4",
+          "to": "Q529ES",
+          "type": "uses"
+        },
+        {
+          "from": "Q529ES",
+          "to": "E18G47",
+          "type": "uses"
+        },
+        {
+          "from": "Q529ES",
+          "to": "N98ZA2",
+          "type": "uses"
+        }
+      ],
+      "hops": 1,
+      "nodes": [
+        "7S3BEX",
+        "9ZQEPQ",
+        "BP30YM",
+        "DTT8HP",
+        "E18G47",
+        "ENS73X",
+        "FQAJ21",
+        "M8XBZ4",
+        "N98ZA2",
+        "Q529ES",
+        "ZZZJE6"
+      ],
+      "tag": "Q529ES"
+    }
+  },
+  "status": 200
+}

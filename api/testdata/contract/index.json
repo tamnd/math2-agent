@@ -1,0 +1,250 @@
+{
+  "body": {
+    "api": "v1",
+    "methods": [
+      {
+        "name": "resolve",
+        "params": [
+          {
+            "name": "ref",
+            "required": true,
+            "summary": "the identifier",
+            "type": "string"
+          }
+        ],
+        "summary": "Find the nodes that an identifier names: a tag, an alias, an m2:// URI, a Lean declaration or an external id such as a Wikidata QID or an OEIS A-number."
+      },
+      {
+        "name": "get",
+        "params": [
+          {
+            "name": "ref",
+            "required": true,
+            "summary": "a tag, an alias or an m2:// URI",
+            "type": "string"
+          }
+        ],
+        "summary": "Get a node: its front matter, its body and its computed status."
+      },
+      {
+        "name": "status",
+        "params": [
+          {
+            "name": "ref",
+            "required": true,
+            "summary": "a tag, an alias or an m2:// URI",
+            "type": "string"
+          }
+        ],
+        "summary": "Get the status that the build computed for a node: the evidence level, the fidelity level and the reasons."
+      },
+      {
+        "name": "get_formal",
+        "params": [
+          {
+            "name": "ref",
+            "required": true,
+            "summary": "a tag, an alias or an m2:// URI",
+            "type": "string"
+          }
+        ],
+        "summary": "Get the Lean bindings of a node, with their axioms, their fidelity, their reviews and their replay."
+      },
+      {
+        "name": "neighbours",
+        "params": [
+          {
+            "name": "ref",
+            "required": true,
+            "summary": "a tag, an alias or an m2:// URI",
+            "type": "string"
+          },
+          {
+            "name": "depth",
+            "summary": "the number of edges from the node, from 0 to 3. The default is 1.",
+            "type": "integer"
+          }
+        ],
+        "summary": "Get the nodes and the edges near a node."
+      },
+      {
+        "name": "closure",
+        "params": [
+          {
+            "name": "ref",
+            "required": true,
+            "summary": "a tag, an alias or an m2:// URI",
+            "type": "string"
+          },
+          {
+            "name": "strategy",
+            "summary": "min-depth or min-size. The default is min-depth.",
+            "type": "string"
+          }
+        ],
+        "summary": "Get the best alternative of the proofs of a node, with its trust profile and its axioms."
+      },
+      {
+        "name": "rdeps",
+        "params": [
+          {
+            "name": "ref",
+            "required": true,
+            "summary": "a tag, an alias or an m2:// URI",
+            "type": "string"
+          }
+        ],
+        "summary": "Get the nodes that use a node, and the nodes that lose each proof when the node is false."
+      },
+      {
+        "name": "path",
+        "params": [
+          {
+            "name": "from",
+            "required": true,
+            "summary": "the node to start from: a tag, an alias or an m2:// URI",
+            "type": "string"
+          },
+          {
+            "name": "to",
+            "required": true,
+            "summary": "the node to learn: a tag, an alias or an m2:// URI",
+            "type": "string"
+          }
+        ],
+        "summary": "Get the shortest learning path from one node to another."
+      },
+      {
+        "name": "frontier",
+        "params": [
+          {
+            "name": "open",
+            "summary": "the open problems, not the formal statements with no proof",
+            "type": "boolean"
+          },
+          {
+            "name": "msc",
+            "summary": "only the nodes with an MSC code that starts with this",
+            "type": "string"
+          },
+          {
+            "name": "topic",
+            "summary": "only the nodes that are part of this topic: a tag, an alias or an m2:// URI",
+            "type": "string"
+          },
+          {
+            "name": "evidence",
+            "summary": "only the nodes at this evidence level, from E0 to E5",
+            "type": "string"
+          }
+        ],
+        "summary": "Get the formal statements with no proof, or the open problems with the statements that bound them."
+      },
+      {
+        "name": "search",
+        "params": [
+          {
+            "name": "q",
+            "required": true,
+            "summary": "the query",
+            "type": "string"
+          },
+          {
+            "name": "k",
+            "summary": "the number of results, from 1 to 100. The default is 10.",
+            "type": "integer"
+          },
+          {
+            "name": "channel",
+            "summary": "the channels to run, separated by commas: identifier, lexical, formula, formal, embedding. The default is all of them.",
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "summary": "only nodes of these kinds, separated by commas",
+            "type": "string"
+          },
+          {
+            "name": "open",
+            "summary": "rank the open problems and the weak evidence first",
+            "type": "boolean"
+          }
+        ],
+        "summary": "Search the nodes with free text, LaTeX, a Lean type or an identifier. Each result gives the channels that found it."
+      },
+      {
+        "name": "search_formal",
+        "params": [
+          {
+            "name": "q",
+            "required": true,
+            "summary": "the Lean type, the goal or the constants",
+            "type": "string"
+          },
+          {
+            "name": "k",
+            "summary": "the number of results, from 1 to 100. The default is 10.",
+            "type": "integer"
+          }
+        ],
+        "summary": "Search the nodes and the Mathlib declarations with a Lean type pattern, a Lean goal or a list of constants."
+      },
+      {
+        "name": "search_formula",
+        "params": [
+          {
+            "name": "q",
+            "required": true,
+            "summary": "the formula in LaTeX",
+            "type": "string"
+          },
+          {
+            "name": "k",
+            "summary": "the number of results, from 1 to 100. The default is 10.",
+            "type": "integer"
+          }
+        ],
+        "summary": "Search the nodes by the structure of a LaTeX formula. The names of the variables do not matter."
+      },
+      {
+        "name": "similar",
+        "params": [
+          {
+            "name": "ref",
+            "required": true,
+            "summary": "a tag, an alias or an m2:// URI",
+            "type": "string"
+          },
+          {
+            "name": "k",
+            "summary": "the number of results, from 1 to 100. The default is 10.",
+            "type": "integer"
+          }
+        ],
+        "summary": "Get the nodes whose text is near the text of a node."
+      },
+      {
+        "name": "premises",
+        "params": [
+          {
+            "name": "goal",
+            "summary": "the goal, as Lean prints it, with the hypotheses before ⊢",
+            "type": "string"
+          },
+          {
+            "name": "tag",
+            "summary": "the node of the goal. The declarations of the nodes that it uses rank higher.",
+            "type": "string"
+          },
+          {
+            "name": "k",
+            "summary": "the number of results, from 1 to 100. The default is 10.",
+            "type": "integer"
+          }
+        ],
+        "summary": "Rank the Lean declarations that can help to prove a goal."
+      }
+    ]
+  },
+  "status": 200
+}

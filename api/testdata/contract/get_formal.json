@@ -1,0 +1,33 @@
+{
+  "body": {
+    "about": [
+      {
+        "evidence": "E1",
+        "hash": "blake3:10e84c7fdbf6c393ad48f0b0eddcde077144933251e7ee88e4f21b1257444846",
+        "tag": "Q529ES"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "get_formal",
+    "result": {
+      "bindings": [
+        {
+          "axioms": [],
+          "checked": "Subgroup.card_subgroup_dvd_card",
+          "decl": "Subgroup.card_subgroup_dvd_card",
+          "fidelity": "F0",
+          "level": "",
+          "match": "exact",
+          "reason": "The binding Subgroup.card_subgroup_dvd_card is not E5: the build has no extraction record of the declaration.",
+          "reviews": [],
+          "type_hash": ""
+        }
+      ],
+      "fidelity": "F0",
+      "tag": "Q529ES"
+    }
+  },
+  "status": 200
+}

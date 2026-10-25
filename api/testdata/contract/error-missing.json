@@ -1,0 +1,11 @@
+{
+  "body": {
+    "api": "v1",
+    "error": {
+      "code": "invalid",
+      "message": "get needs the parameter ref"
+    },
+    "method": "get"
+  },
+  "status": 400
+}

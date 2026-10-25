@@ -1,0 +1,176 @@
+{
+  "body": {
+    "about": [
+      {
+        "evidence": "E0",
+        "hash": "blake3:b886124fd7d6236fb44d6f46fa243273a163e8a52092d58c3dce0002358ce95c",
+        "tag": "1ATNDT"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:d1202747767e6e4efe3cbba6e7da6f97e5833c7c7d3bfb6413782bbb94634e48",
+        "tag": "2GJGRJ"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:aa44caedfbf0a9849245d679086d787a59a4165381f12d2ce704006a640dbd31",
+        "tag": "5R3ZAF"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:146a9397a50f8a428fc0cc6ebe86d5dc979a18bd394bb72e2adfa0acd99f26a9",
+        "tag": "5T2YC8"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:33e67f1f24037befd193c5d6305563ae342338405048adde2ae6bdcb410bd7db",
+        "tag": "AG5NVJ"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:a4eabe2b791b3d2c941a2af04b250af3c5bd866383196dac6e577088944fa4b7",
+        "tag": "CXXMNB"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:bb82b7f5f840332945be4fb96712a9f62b938e7b4e8899b52fd25940bbfa0cf1",
+        "tag": "ETCDHB"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:1f5bf95f293833c9e0c38ce4e90274688cb2459a0cc0faae47a2fff59b5faf98",
+        "tag": "GG6BXV"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:84e96f40fbb0011bf6e718d7cbc6487aace71e4594674b72480610c464f4035e",
+        "tag": "J191EC"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:47ff7dde6dbd46ce534c4ed8bebf5599bd8d4eeab27ca41d9a3a3908524e6801",
+        "tag": "J8S24E"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:9af8af6da4a5d95c2032da47dea7501402259a63ccfddde7e2b8541b8dd9fc1c",
+        "tag": "VP2HXT"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "frontier",
+    "result": [
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "conjecture",
+        "msc": [
+          "11N05"
+        ],
+        "name": "Legendre's conjecture",
+        "tag": "1ATNDT"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "conjecture",
+        "msc": [
+          "05C15"
+        ],
+        "name": "Hadwiger's conjecture",
+        "tag": "2GJGRJ"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "conjecture",
+        "msc": [
+          "11B83"
+        ],
+        "name": "Collatz conjecture",
+        "tag": "5R3ZAF"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "problem",
+        "msc": [
+          "05C15"
+        ],
+        "name": "Chromatic number of the plane",
+        "tag": "5T2YC8"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "conjecture",
+        "msc": [
+          "11P32"
+        ],
+        "name": "Goldbach's conjecture",
+        "tag": "AG5NVJ"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "conjecture",
+        "msc": [
+          "11N05"
+        ],
+        "name": "Twin prime conjecture",
+        "tag": "CXXMNB"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "conjecture",
+        "msc": [],
+        "name": "The converse of Lagrange's theorem",
+        "tag": "ETCDHB"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "problem",
+        "msc": [
+          "20D60"
+        ],
+        "name": "The number of groups of order n",
+        "tag": "GG6BXV"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "problem",
+        "msc": [
+          "11A25"
+        ],
+        "name": "Odd perfect numbers",
+        "tag": "J191EC"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "problem",
+        "msc": [
+          "12F12"
+        ],
+        "name": "Inverse Galois problem",
+        "tag": "J8S24E"
+      },
+      {
+        "evidence": "E0",
+        "fidelity": "",
+        "kind": "problem",
+        "msc": [
+          "05D10"
+        ],
+        "name": "The Ramsey number R(5, 5)",
+        "tag": "VP2HXT"
+      }
+    ]
+  },
+  "status": 200
+}

@@ -1,0 +1,11 @@
+{
+  "body": {
+    "api": "v1",
+    "error": {
+      "code": "not_found",
+      "message": "\"put\" is not a method. The methods are resolve, get, status, get_formal, neighbours, closure, rdeps, path, frontier, search, search_formal, search_formula, similar, premises"
+    },
+    "method": "put"
+  },
+  "status": 404
+}

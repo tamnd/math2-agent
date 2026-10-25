@@ -1,0 +1,11 @@
+{
+  "body": {
+    "api": "v1",
+    "error": {
+      "code": "not_found",
+      "message": "no node has the tag ZZZZZZ in the store. Check the tag, or run m2 build again"
+    },
+    "method": "get"
+  },
+  "status": 404
+}

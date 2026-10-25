@@ -1,0 +1,57 @@
+package cli
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+
+	"github.com/tamnd/math2-agent/api"
+	"github.com/tamnd/math2-agent/build"
+)
+
+func TestServe(t *testing.T) {
+	out := t.TempDir()
+	if _, err := build.Run(context.Background(), build.Options{Root: valid, Out: out}); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	oldInterrupt, oldListening := interrupt, listening
+	interrupt = func() (context.Context, context.CancelFunc) { return ctx, cancel }
+	addrs := make(chan string, 1)
+	listening = func(a string) { addrs <- a }
+	defer func() {
+		interrupt, listening = oldInterrupt, oldListening
+	}()
+	codes := make(chan int, 1)
+	go func() {
+		code, _, stderr := run("serve", "-root", valid, "-out", out, "-addr", "127.0.0.1:0", "-commit", "abc")
+		if stderr != "" {
+			t.Errorf("m2 serve prints: %s", stderr)
+		}
+		codes <- code
+	}()
+	addr := <-addrs
+	resp, err := http.Get("http://" + addr + "/v1/get?ref=Q529ES")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var r api.Response
+	err = json.NewDecoder(resp.Body).Decode(&r)
+	_ = resp.Body.Close()
+	if err != nil || resp.StatusCode != http.StatusOK || r.Commit != "abc" || len(r.About) != 1 || r.About[0].Tag != "Q529ES" {
+		t.Errorf("GET /v1/get gives %d, %+v, %v", resp.StatusCode, r, err)
+	}
+	cancel()
+	if code := <-codes; code != ExitOK {
+		t.Errorf("m2 serve exits with code %d", code)
+	}
+
+	if code, _, stderr := run("serve", "-root", valid, "-out", t.TempDir()); code != ExitFailure || !strings.Contains(stderr, "m2 build") {
+		t.Errorf("m2 serve with no build exits with code %d: %s", code, stderr)
+	}
+	if code, _, _ := run("serve", "x"); code != ExitUsage {
+		t.Errorf("m2 serve x exits with code %d", code)
+	}
+}

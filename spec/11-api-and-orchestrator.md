@@ -160,3 +160,13 @@ Run records complete the provenance chain in document 06.5. They are also the tr
 - `lean_check`, `compute` and Lean sessions run arbitrary code: Lean metaprograms can do arbitrary IO at elaboration time. Thus they run in the sandbox, with no network, a read-only toolchain and quotas for each identity. Anonymous use is permitted only for `lean_check` on small snippets, with a strict timeout.
 - MCP tools that write have a mark that says so. The read-only MCP profile disables them. That profile is the default for third-party agent clients.
 - Text from sources (paper text, MathOverflow posts) is data. It goes into agent contexts with an untrusted mark. It is never put in a system prompt, and it is never concatenated into a tool description (document 12.7).
+
+## 11.8 The first version
+
+The first version of the read surface is in the `api` package, and `m2 serve` serves it. It has these limits:
+
+- It serves the last build of one working tree, not a release. A request for `tag@release` gives an error.
+- `get_source`, `history`, `topic` and `diff` come with the provenance of document 06 and the topic pages of document 13. The check, compute and propose methods come with the orchestrator.
+- The one interface definition is the table of methods in the `api` package, not `api/m2.proto`. The HTTP handler and the MCP server read the same table, so the two encodings cannot drift apart. gRPC comes with the orchestrator in M4 (tamnd/math2-agent#126), because only the agents inside the cluster use it. At that time `api/m2.proto` is made from the table, and a test checks that the two agree.
+- The rate limit is a token bucket for each IP address of a peer, in memory. Behind a proxy or a CDN, the handler must read the address that the proxy sets.
+- `similar` uses the embedding channel with the text of the node, and it has no judge label yet.

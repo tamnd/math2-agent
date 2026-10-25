@@ -1,0 +1,67 @@
+{
+  "body": {
+    "about": [
+      {
+        "evidence": "E1",
+        "hash": "blake3:10e84c7fdbf6c393ad48f0b0eddcde077144933251e7ee88e4f21b1257444846",
+        "tag": "Q529ES"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "status",
+    "result": {
+      "bindings": [
+        {
+          "axioms": [],
+          "checked": "Subgroup.card_subgroup_dvd_card",
+          "decl": "Subgroup.card_subgroup_dvd_card",
+          "fidelity": "F0",
+          "level": "",
+          "match": "exact",
+          "reason": "The binding Subgroup.card_subgroup_dvd_card is not E5: the build has no extraction record of the declaration.",
+          "reviews": [],
+          "type_hash": ""
+        }
+      ],
+      "evidence": "E1",
+      "fidelity": "F0",
+      "flags": [
+        "sorry_in_closure"
+      ],
+      "items": [
+        {
+          "detail": "",
+          "kind": "proof",
+          "level": "E1",
+          "ref": "ENS73X"
+        },
+        {
+          "detail": "Section 3.2, Theorem 8",
+          "kind": "source",
+          "level": "E2",
+          "ref": "book:isbn:9780471433347"
+        },
+        {
+          "detail": "exact",
+          "kind": "formal",
+          "level": "",
+          "ref": "Subgroup.card_subgroup_dvd_card"
+        }
+      ],
+      "kind": "statement",
+      "name": "Lagrange's theorem",
+      "reasons": [
+        "The best binding has the fidelity F0.",
+        "The node states it, so it is at least E1.",
+        "One textbook source has a locator. E2 needs two independent textbook sources.",
+        "The binding Subgroup.card_subgroup_dvd_card is not E5: the build has no extraction record of the declaration.",
+        "BFBKVM in its closure is at E1, so the flag sorry_in_closure is set."
+      ],
+      "statement_hash": "blake3:2d11a9994fa9afac1e1473b46234cbd352b77bf5256b33bbcc026b2e1f9c4f52",
+      "tag": "Q529ES"
+    }
+  },
+  "status": 200
+}
