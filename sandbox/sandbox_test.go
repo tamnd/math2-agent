@@ -34,7 +34,7 @@ func TestValidImage(t *testing.T) {
 func TestArgs(t *testing.T) {
 	d := &Docker{Runtime: "runsc"}
 	args, err := d.Args(Spec{
-		Image: testImage, Command: []string{"/bin/sage", "run.sage"}, Dir: "/data/in",
+		Image: testImage, Command: []string{"/bin/sage", "run.sage"}, Dir: "/data/in", Out: "/data/out",
 		Env: map[string]string{"SEED": "7", "LANG": "C"}, CPU: 2, Memory: 1 << 20, Scratch: 1 << 10,
 	}, "m2-x")
 	if err != nil {
@@ -44,7 +44,7 @@ func TestArgs(t *testing.T) {
 	for _, want := range []string{
 		"run --rm --name m2-x ", "--network none", "--read-only", "--cap-drop ALL", "--security-opt no-new-privileges",
 		"--cpus 2", "--memory 1048576", "--memory-swap 1048576", "--user 65534:65534", "--runtime runsc",
-		"--tmpfs /scratch:rw,exec,size=1024,mode=1777", "--mount type=bind,source=/data/in,target=/work,readonly",
+		"--tmpfs /scratch:rw,exec,size=1024,mode=1777", "--mount type=bind,source=/data/in,target=/work,readonly", "--mount type=bind,source=/data/out,target=/out --env",
 		"--env LANG=C --env SEED=7 -- " + testImage + " /bin/sage run.sage",
 	} {
 		if !strings.Contains(line, want) {
@@ -65,6 +65,7 @@ func TestArgsErrors(t *testing.T) {
 		"no command": {Image: testImage},
 		"relative":   {Image: testImage, Command: []string{"/x"}, Dir: "in"},
 		"comma":      {Image: testImage, Command: []string{"/x"}, Dir: "/a,b"},
+		"out":        {Image: testImage, Command: []string{"/x"}, Out: "out"},
 		"env":        {Image: testImage, Command: []string{"/x"}, Env: map[string]string{"A B": "1"}},
 		"home":       {Image: testImage, Command: []string{"/x"}, Env: map[string]string{"HOME": "/"}},
 	} {
@@ -105,14 +106,21 @@ func TestDocker(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(in, "input.txt"), []byte("42\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	res, err := d.Run(ctx, Spec{Image: image, Command: []string{"/probe", "net"}, Dir: in, Wall: time.Minute})
+	out := t.TempDir()
+	if err := os.Chmod(out, 0o777); err != nil { // #nosec G302 -- the user 65534 in the sandbox writes here.
+		t.Fatal(err)
+	}
+	res, err := d.Run(ctx, Spec{Image: image, Command: []string{"/probe", "net"}, Dir: in, Out: out, Wall: time.Minute})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("runtime %s, arch %s, %s:\n%s%s", res.Runtime, res.Arch, res.Duration, res.Stdout, res.Stderr)
-	want := "dial failed\nudp failed\nresolve failed\nwrite-root failed\nwrite-work failed\nwrite-scratch ok\nread-work ok\nuid 65534\n"
+	want := "dial failed\nudp failed\nresolve failed\nwrite-root failed\nwrite-work failed\nwrite-scratch ok\nwrite-out ok\nread-work ok\nuid 65534\n"
 	if string(res.Stdout) != want || res.ExitCode != 0 {
 		t.Errorf("the probe gave exit code %d and\n%s\nwant exit code 0 and\n%s", res.ExitCode, res.Stdout, want)
+	}
+	if b, err := os.ReadFile(filepath.Join(out, "probe")); err != nil || string(b) != "out\n" {
+		t.Errorf("the probe did not write /out/probe: %q, %v", b, err)
 	}
 	if res.Network != "none" || res.Arch != runtime.GOARCH {
 		t.Errorf("the result has network %q and arch %q", res.Network, res.Arch)

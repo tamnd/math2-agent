@@ -44,6 +44,7 @@ func main() {
 		try("write-root", func() error { return os.WriteFile("/probe", []byte("x"), 0o600) })
 		try("write-work", func() error { return os.WriteFile("/work/probe", []byte("x"), 0o600) })
 		try("write-scratch", func() error { return os.WriteFile("/scratch/probe", []byte("x"), 0o600) })
+		try("write-out", func() error { return os.WriteFile("/out/probe", []byte("out\n"), 0o644) })
 		try("read-work", func() error {
 			b, err := os.ReadFile("/work/input.txt")
 			if err == nil && strings.TrimSpace(string(b)) != "42" {

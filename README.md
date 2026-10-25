@@ -75,7 +75,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 release` | Cut a release with its manifest, levels and notes, write the release notes, or rebuild a release from its manifest. | written |
 | `m2 search <query>` | Search the knowledge graph with the identifier resolver and the lexical, formula, formal and embedding channels. `m2 search -premises <goal>` ranks the Lean declarations that can help to prove a goal. | written |
 | `m2 serve` | Serve the read API over HTTP with JSON, and the MCP server over HTTP or stdio, from the last build. | written |
-| `m2 compute` | Run or verify a computation. | M3 |
+| `m2 compute run\|verify <tag>` | Run a computation in the sandbox, or verify its output and its certificate. | written |
 | `m2 prov` | Show or change provenance. | M3 |
 | `m2 review <tag>` | Review a formal statement against its informal statement. | M4 |
 | `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
@@ -138,6 +138,20 @@ m2 build -no-sandbox    # run the checkers without the sandbox, for example on m
 The steps are `lean`, `extract`, `replay`, `status`, `graph`, `store` and `search`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `replay` step checks each binding that passes each check of E5 except the replay, and writes `build/replay.json`. The `status` step computes the evidence level and the fidelity level of each node from the nodes, `build/extract.json`, `build/replay.json` and the reviews in `reviews/`, and writes `build/status.json`. The `graph` step writes the graph as Parquet to `build/graph/`. The `store` step writes the graph, the status of each node and the aliases to the SQLite file `build/store.db`, for `m2 graph`. The `search` step writes the search index to `build/search.db`, for `m2 search`. A tree without `lean/` has only the `status`, `graph`, `store` and `search` steps.
 
 `build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `replay.json`, `status.json`, `graph/`, `store.db` and `search.db`.
+
+## Computations
+
+A computation is a node of kind `computation` (spec 08.2). Its code is in `compute/TAG/` of the content tree. Its record names the image by digest, the entry point, the inputs, the seed, the budgets, the hash of the output and, for a computation that can reach E4, a certificate.
+
+```sh
+m2 compute run 3MZ8QD       # run it in the sandbox
+m2 compute verify 3MZ8QD    # run it, and check the output and the certificate
+m2 compute verify -all      # each computation of the tree
+```
+
+The `compute` package reads the record and the image manifest `manifests/images.yaml`. A record names an image by the digest of one architecture, and the runner runs the digest of the same image for its own architecture. The program reads `compute/TAG/` at `/work`, gets the inputs as JSON in `M2_INPUTS` and the seed in `M2_SEED`, and writes a certificate to `/out/certificate`. The output hash is the BLAKE3 hash of the standard output.
+
+The run writes `run.json`, `stdout` and `stderr` to `build/compute/TAG/ARCH/`. A verified run exits with the code 0 in time, and its output has the hash of the record. When the record has a certificate, the certificate has the hash of the record, and the fixed checker of its kind (spec 08.8) accepts it. `compute.Checkers` is the table of the fixed checkers. A change to it needs the review of a person.
 
 ## The sandbox
 
