@@ -64,6 +64,8 @@ type Replay struct {
 type Status struct {
 	Tag      string    `json:"tag"`
 	Kind     string    `json:"kind"`
+	Name     string    `json:"name"`
+	Retired  bool      `json:"retired,omitempty"` // the node is retired, and it has no levels
 	Evidence Level     `json:"evidence"`
 	Fidelity Fidelity  `json:"fidelity"`
 	Flags    []string  `json:"flags"`
@@ -109,7 +111,7 @@ var evidenceKinds = []string{"statement", "conjecture", "problem", "example", "c
 // openKinds are the kinds that start at E0.
 var openKinds = []string{"conjecture", "problem"}
 
-// Compute returns the status of each node that is not retired, in tag order.
+// Compute returns the status of each node, in tag order. A retired node has no levels, and the other nodes do not see its edges.
 func Compute(in Input) []Status {
 	g := graph.Build(in.Nodes)
 	byTag := map[string]*node.Node{}
@@ -213,12 +215,42 @@ func Compute(in Input) []Status {
 		slices.Sort(out[i].Flags)
 		out[i].Flags = slices.Compact(out[i].Flags)
 	}
+	for _, n := range in.Nodes {
+		if byTag[n.ID] == nil {
+			out = append(out, retired(n))
+		}
+	}
+	slices.SortFunc(out, func(a, b Status) int { return strings.Compare(a.Tag, b.Tag) })
 	return out
+}
+
+// retired returns the status of a retired node. It has no levels and no flags.
+func retired(n *node.Node) Status {
+	s := Status{Tag: n.ID, Kind: n.Kind(), Name: n.Name(), Retired: true, Fidelity: Unbound, Flags: []string{}, Items: []Item{}, Bindings: []Binding{}}
+	r, _ := n.Meta["retired"].(map[string]any)
+	var next []string
+	switch v := r["successor"].(type) {
+	case string:
+		next = []string{v}
+	case []any:
+		for _, x := range v {
+			next = append(next, str(x))
+		}
+	}
+	switch len(next) {
+	case 0:
+		s.Reasons = []string{"The node is retired, so it has no status."}
+	case 1:
+		s.Reasons = []string{fmt.Sprintf("The node is retired, so it has no status. Its successor is %s.", next[0])}
+	default:
+		s.Reasons = []string{fmt.Sprintf("The node is retired, so it has no status. Its successors are %s.", strings.Join(next, ", "))}
+	}
+	return s
 }
 
 // base computes the status of n from its own evidence and from the evidence of its proofs.
 func base(in Input, g *graph.Graph, byTag map[string]*node.Node, n *node.Node) Status {
-	s := Status{Tag: n.ID, Kind: n.Kind(), Fidelity: Unbound, Flags: []string{}, Items: []Item{}, Bindings: []Binding{}, Reasons: []string{}}
+	s := Status{Tag: n.ID, Kind: n.Kind(), Name: n.Name(), Fidelity: Unbound, Flags: []string{}, Items: []Item{}, Bindings: []Binding{}, Reasons: []string{}}
 	hasLevel := slices.Contains(evidenceKinds, s.Kind)
 	open := slices.Contains(openKinds, s.Kind)
 	reason := func(format string, args ...any) { s.Reasons = append(s.Reasons, fmt.Sprintf(format, args...)) }
