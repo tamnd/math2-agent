@@ -1,4 +1,4 @@
-package node
+package node_test
 
 import (
 	"bytes"
@@ -6,24 +6,23 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tamnd/math2-agent/internal/node"
+	"github.com/tamnd/math2-agent/internal/schema"
 )
 
-// testOrder reads the key order from the copy of the schema in testdata.
-func testOrder(t testing.TB) Order {
-	t.Helper()
-	data, err := os.ReadFile("testdata/node.v1.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	o, err := ParseOrder(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return o
-}
+// testOrder returns the key order of the embedded schema.
+func testOrder(testing.TB) node.Order { return schema.Embedded().Order }
 
 func TestParseOrder(t *testing.T) {
-	o := testOrder(t)
+	data, err := os.ReadFile("../schema/node.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	o, err := node.ParseOrder(data)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got := strings.Join(o[""][:4], " "); got != "tag kind role name" {
 		t.Errorf("top order starts with %q", got)
 	}
@@ -34,7 +33,7 @@ func TestParseOrder(t *testing.T) {
 		t.Errorf("engine.resources order is %q", got)
 	}
 	for _, bad := range []string{"", "[]", `{"properties": {}}`} {
-		if _, err := ParseOrder([]byte(bad)); err == nil {
+		if _, err := node.ParseOrder([]byte(bad)); err == nil {
 			t.Errorf("ParseOrder(%q) gave no error", bad)
 		}
 	}
@@ -52,10 +51,10 @@ func TestCanonicalFixtures(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ok, err := Canonical("nodes/xx/"+filepath.Base(f), data, o)
+		ok, err := node.Canonical("nodes/xx/"+filepath.Base(f), data, o)
 		if err != nil || !ok {
-			n, _ := Parse("nodes/xx/"+filepath.Base(f), data)
-			t.Errorf("%s is not canonical (%v). Format gives:\n%s", f, err, Format(n, o))
+			n, _ := node.Parse("nodes/xx/"+filepath.Base(f), data)
+			t.Errorf("%s is not canonical (%v). Format gives:\n%s", f, err, node.Format(n, o))
 		}
 	}
 }
@@ -64,25 +63,25 @@ func TestFormat(t *testing.T) {
 	o := testOrder(t)
 	in := "---\r\nzeta: 1\r\nname: 'A node'\r\nalpha: True\r\nkind: concept\r\ntag: 7K3QX2\r\nsame_as:\r\n  nlab: ~\r\n  wikidata: Q1\r\nmsc:\r\n  - \"20D60\"\r\n  - '20E05'\r\n---\r\n## Summary\r\n\r\nText.\r\n\r\n\r\n"
 	want := "---\ntag: 7K3QX2\nkind: concept\nname: A node\nmsc: [20D60, \"20E05\"]\nsame_as:\n  wikidata: Q1\n  nlab: null\nalpha: true\nzeta: 1\n---\n\n## Summary\n\nText.\n"
-	n, err := Parse("nodes/7K/7K3QX2.md", []byte(in))
+	n, err := node.Parse("nodes/7K/7K3QX2.md", []byte(in))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := string(Format(n, o)); got != want {
+	if got := string(node.Format(n, o)); got != want {
 		t.Errorf("Format gives\n%s\nwant\n%s", got, want)
 	}
-	if ok, _ := Canonical("nodes/7K/7K3QX2.md", []byte(in), o); ok {
+	if ok, _ := node.Canonical("nodes/7K/7K3QX2.md", []byte(in), o); ok {
 		t.Error("Canonical is true for a file in CRLF form")
 	}
 }
 
 func TestFormatKeepsComments(t *testing.T) {
 	in := "---\ntag: 7K3QX2\nkind: statement\nname: A node\nrole: lemma\nuses:\n  - 1H8D2C # subgroup\n  - 6PQ0WZ\n---\n"
-	n, err := Parse("nodes/7K/7K3QX2.md", []byte(in))
+	n, err := node.Parse("nodes/7K/7K3QX2.md", []byte(in))
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := string(Format(n, testOrder(t)))
+	got := string(node.Format(n, testOrder(t)))
 	if !strings.Contains(got, "role: lemma\nname: A node\n") || !strings.Contains(got, "uses:\n  - 1H8D2C # subgroup\n  - 6PQ0WZ\n") {
 		t.Errorf("Format gives\n%s", got)
 	}
@@ -93,12 +92,12 @@ func TestHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	n, err := Parse("nodes/7K/7K3QX2.md", data)
+	n, err := node.Parse("nodes/7K/7K3QX2.md", data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := Hash(n)
-	if !strings.HasPrefix(h, HashPrefix) || len(h) != len(HashPrefix)+64 {
+	h := node.Hash(n)
+	if !strings.HasPrefix(h, node.HashPrefix) || len(h) != len(node.HashPrefix)+64 {
 		t.Fatalf("Hash = %q", h)
 	}
 	text := string(data)
@@ -113,16 +112,16 @@ func TestHash(t *testing.T) {
 	}
 	nfc := strings.Replace(text, "## Remarks\n", "## Remarks\n\nCafé.\n", 1)
 	for name, variant := range same {
-		v, err := Parse("nodes/7K/7K3QX2.md", []byte(variant))
+		v, err := node.Parse("nodes/7K/7K3QX2.md", []byte(variant))
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
 		want := h
 		if name == "NFC" {
-			w, _ := Parse("nodes/7K/7K3QX2.md", []byte(nfc))
-			want = Hash(w)
+			w, _ := node.Parse("nodes/7K/7K3QX2.md", []byte(nfc))
+			want = node.Hash(w)
 		}
-		if got := Hash(v); got != want {
+		if got := node.Hash(v); got != want {
 			t.Errorf("a change of %s changes the hash", name)
 		}
 	}
@@ -132,11 +131,11 @@ func TestHash(t *testing.T) {
 		"null":  strings.Replace(text, "nlab: null", "nlab: \"null\"", 1),
 	}
 	for name, variant := range different {
-		v, err := Parse("nodes/7K/7K3QX2.md", []byte(variant))
+		v, err := node.Parse("nodes/7K/7K3QX2.md", []byte(variant))
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		if Hash(v) == h {
+		if node.Hash(v) == h {
 			t.Errorf("a change of %s does not change the hash", name)
 		}
 	}
@@ -151,14 +150,14 @@ func TestErrorPositions(t *testing.T) {
 		"---\ntag: 7K3QX2\nbase: {a: 1}\nmore:\n  <<: {b: 2}\n---\n": "nodes/7K/7K3QX2.md:5:3: the front matter must not use YAML anchors",
 	}
 	for in, want := range cases {
-		_, err := Parse("nodes/7K/7K3QX2.md", []byte(in))
+		_, err := node.Parse("nodes/7K/7K3QX2.md", []byte(in))
 		if err == nil || !strings.HasPrefix(err.Error(), want) {
 			t.Errorf("Parse(%q) = %v, want an error that starts with %q", in, err, want)
 		}
 	}
 }
 
-// FuzzParse checks that the parser does not crash, and that Format is stable: a second Format gives the same bytes and the hash does not change.
+// FuzzParse checks that the parser does not crash, and that node.Format is stable: a second node.Format gives the same bytes and the hash does not change.
 func FuzzParse(f *testing.F) {
 	files, _ := filepath.Glob("testdata/canonical/*.md")
 	for _, file := range files {
@@ -172,19 +171,19 @@ func FuzzParse(f *testing.F) {
 	f.Add([]byte("---\na: [1, {b: c}]\n---\n\n## A\n"))
 	o := testOrder(f)
 	f.Fuzz(func(t *testing.T, data []byte) {
-		n, err := Parse("nodes/7K/7K3QX2.md", data)
+		n, err := node.Parse("nodes/7K/7K3QX2.md", data)
 		if err != nil {
 			return
 		}
-		once := Format(n, o)
-		m, err := Parse("nodes/7K/7K3QX2.md", once)
+		once := node.Format(n, o)
+		m, err := node.Parse("nodes/7K/7K3QX2.md", once)
 		if err != nil {
 			t.Fatalf("Format gives a file that does not parse: %v\n%s", err, once)
 		}
-		if twice := Format(m, o); !bytes.Equal(once, twice) {
+		if twice := node.Format(m, o); !bytes.Equal(once, twice) {
 			t.Fatalf("Format is not stable:\n%s\nthen\n%s", once, twice)
 		}
-		if Hash(n) != Hash(m) {
+		if node.Hash(n) != node.Hash(m) {
 			t.Fatalf("Format changes the hash:\n%s\nthen\n%s", data, once)
 		}
 	})
