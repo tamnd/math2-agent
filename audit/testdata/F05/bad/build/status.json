@@ -1,0 +1,31 @@
+[
+  {
+    "tag": "3C53TD",
+    "kind": "statement",
+    "name": "Lagrange's theorem",
+    "evidence": "E5",
+    "fidelity": "F2",
+    "flags": [],
+    "items": [],
+    "bindings": [
+      {
+        "decl": "Subgroup.card_subgroup_dvd_card",
+        "match": "exact",
+        "checked": "Subgroup.card_subgroup_dvd_card",
+        "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "axioms": [],
+        "fidelity": "F2",
+        "reviews": [],
+        "level": "E5",
+        "reason": "",
+        "replay": {
+          "passed": true,
+          "checkers": {
+            "leanchecker": "4.35.0"
+          }
+        }
+      }
+    ],
+    "reasons": []
+  }
+]

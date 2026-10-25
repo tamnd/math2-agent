@@ -1,0 +1,1 @@
+nodes/3C/3C53TD.md:8:5: F04: the closure of Subgroup.card_subgroup_dvd_card has the native_decide axiom Subgroup.card_subgroup_dvd_card._native.native_decide.ax_1. The level is at most E4

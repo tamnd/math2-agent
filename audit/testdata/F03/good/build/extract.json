@@ -1,0 +1,20 @@
+{
+  "lean": {
+    "lean": "4.35.0",
+    "githash": ""
+  },
+  "bindings": [],
+  "records": [
+    {
+      "decl": "Subgroup.card_subgroup_dvd_card",
+      "kind": "theorem",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext",
+        "Math2.Hypotheses.riemann"
+      ],
+      "native_decide_axioms": [],
+      "uses_bound": []
+    }
+  ]
+}
