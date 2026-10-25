@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -281,6 +282,10 @@ func TestPullErrors(t *testing.T) {
 		if _, err := ingest.Pull(context.Background(), a, opt); err == nil {
 			t.Errorf("%s: Pull gives no error", name)
 		}
+	}
+	_, err := ingest.Pull(context.Background(), a, ingest.Options{Root: t.TempDir(), Cache: t.TempDir(), URL: srv.URL + "/missing"})
+	if se, ok := errors.AsType[*ingest.StatusError](err); !ok || se.Code != http.StatusNotFound || se.URL != srv.URL+"/missing" {
+		t.Errorf("a missing snapshot gives %v, want a StatusError with the code 404", err)
 	}
 	bad := lines{id: "seq", licence: "GFDL-1.3-only", class: ingest.Open}
 	if _, err := ingest.Pull(context.Background(), bad, ingest.Options{Root: t.TempDir(), Cache: t.TempDir(), URL: srv.URL}); err == nil || !strings.Contains(err.Error(), "gives the class gfdl") {

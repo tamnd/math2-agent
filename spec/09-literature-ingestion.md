@@ -29,7 +29,7 @@ Sizes are from document 01, measured or reported in October 2026.
 | **Mathlib** | declarations, types, docstrings, module structure, deprecations | about 290k theorems, 140k definitions | the pinned checkout plus `M2Extract` (07.4) | Apache-2.0 | every bump (07.9) |
 | **other Lean libraries** | the same, for bound libraries: Tau Ceti, Formal Frontier textbooks, Physlib, CSLib, FLT (Imperial and Anthropic), PFR, Carleson, sphere packing | Tau Ceti about 3M lines | pinned checkouts | per repository (mostly Apache-2.0) | per release |
 | **formal-conjectures** | formal statements of open problems, categories, solved markers | 4,652 statements on 25 October 2026 (1,602 open research problems, 2,816 solved, 234 textbook) | git | Apache-2.0 | weekly |
-| **Palomar** | registered Lean-verified results, with `formalization.yaml` provenance | growing since August 2026 | JSON feed | CC0 metadata | daily |
+| **Palomar** | registered Lean-verified results, with `formalization.yaml` provenance | 760 results on 25 October 2026 (registry revision 517), growing since August 2026 | the listing API | CC0 metadata | daily |
 | **Erdős problems** (`teorth/erdosproblems`) | problem statements, status, links to formal statements and OEIS | 1,221 problems | git (`data/problems.yaml`) | Apache-2.0 | weekly |
 | **Isabelle AFP** | entries and theorem names, for bindings and crosswalk | 1,038 entries | the release tarball | per entry (BSD/LGPL) | per AFP release |
 | **OEIS** | sequences: name, terms, formulas, references, conjectures in comments | about 400k sequences | `oeisdata` git export | CC BY-SA 4.0 | weekly |

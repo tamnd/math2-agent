@@ -80,7 +80,7 @@ math2 does not try to replace nLab, Wikipedia, Wikidata, Mathlib, the Stacks Pro
 | MathSciNet | MR number | records | identifier only (no bulk licence) |
 | arXiv | id + version, and per-paper result tag from `tamnd/arxiv` | records, results | `ax://paper/<id>#<tag>` |
 | Erdős problems | problem number | problems/conjectures | |
-| formal-conjectures (DeepMind) | file + declaration | conjectures with Lean statements | |
+| formal-conjectures (DeepMind) | declaration name | conjectures with Lean statements | |
 | MathOverflow / Math.SE | question id | sources for E1 claims | |
 | Palomar | registry entry id | Lean-verified results | carries the entry's `formalization.yaml` disclosure and replay record (09.4) |
 | TheoremSearch, TheoremGraph/LeanGraph, Matlas | native statement ids | extracted results | record plane `same_as`; their extractions are imported as candidates only (09.6) |

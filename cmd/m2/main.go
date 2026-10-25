@@ -13,6 +13,7 @@ import (
 	_ "github.com/tamnd/math2-agent/ingest/lmfdb"
 	_ "github.com/tamnd/math2-agent/ingest/mathlib"
 	_ "github.com/tamnd/math2-agent/ingest/oeis"
+	_ "github.com/tamnd/math2-agent/ingest/palomar"
 	_ "github.com/tamnd/math2-agent/ingest/wikidata"
 	_ "github.com/tamnd/math2-agent/ingest/zbmath"
 )

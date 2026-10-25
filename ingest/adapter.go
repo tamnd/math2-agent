@@ -41,8 +41,17 @@ type Request struct {
 	Commit string
 }
 
-// Getter gets the body of one URL. The body is nil when the error is not nil, and the caller closes it.
+// Getter gets the body of one URL. The body is nil when the error is not nil, and the caller closes it. The Getter of Pull gives a [*StatusError] when the server answers with a status other than 200 OK.
 type Getter func(ctx context.Context, url string) (io.ReadCloser, error)
+
+// StatusError is the error of a Getter when the server answers with a status other than 200 OK. An adapter uses errors.As to act on the status, for example to start again when an API answers 409 Conflict.
+type StatusError struct {
+	URL    string
+	Code   int    // the status code, for example 409
+	Status string // the status line, for example 409 Conflict
+}
+
+func (e *StatusError) Error() string { return "GET " + e.URL + ": " + e.Status }
 
 var (
 	mu       sync.RWMutex
