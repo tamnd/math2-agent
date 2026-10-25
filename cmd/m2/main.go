@@ -8,6 +8,7 @@ import (
 
 	// The ingest adapters register themselves with m2 ingest.
 	_ "github.com/tamnd/math2-agent/ingest/arxiv"
+	_ "github.com/tamnd/math2-agent/ingest/arxivresults"
 	_ "github.com/tamnd/math2-agent/ingest/erdosproblems"
 	_ "github.com/tamnd/math2-agent/ingest/formalconjectures"
 	_ "github.com/tamnd/math2-agent/ingest/lmfdb"
