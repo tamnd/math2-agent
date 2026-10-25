@@ -30,6 +30,7 @@ type dagItem struct {
 // dagView is a set of nodes in the order of their dependencies, with a figure when the set is small.
 type dagView struct {
 	ID     string     // the id of the figure caption, unique on its page
+	Wide   bool       // the figure takes the full width of the page, below the infobox
 	Items  []*dagItem // the foundations first
 	SVG    template.HTML
 	Legend []legendItem
@@ -66,8 +67,14 @@ func (b *builder) deps(tag string, set map[string]bool) []string {
 	return slices.Compact(out)
 }
 
-// dag lays out the nodes in tags. root is the node of the page, or "". members marks the nodes of a topic.
-func (b *builder) dag(id string, tags []string, root string, members map[string]bool) *dagView {
+// The most boxes in one row of a figure. A closure has 3, so that it fits next to the infobox. A blueprint has 5, and it goes below the infobox.
+const (
+	narrowRow = 3
+	wideRow   = 5
+)
+
+// dag lays out the nodes in tags. root is the node of the page, or "". members marks the nodes of a topic. wide gives a figure with the full width of the page.
+func (b *builder) dag(id string, tags []string, root string, members map[string]bool, wide bool) *dagView {
 	set := map[string]bool{}
 	for _, t := range tags {
 		set[t] = true
@@ -129,12 +136,16 @@ func (b *builder) dag(id string, tags []string, root string, members map[string]
 			pos[it.Tag] = float64(i)
 		}
 	}
-	v := &dagView{ID: id}
+	v := &dagView{ID: id, Wide: wide}
 	for _, l := range layers {
 		v.Items = append(v.Items, l...)
 	}
 	if len(tags) > 1 && len(tags) <= maxFigure {
-		v.SVG = svg(id, layers)
+		perRow := narrowRow
+		if wide {
+			perRow = wideRow
+		}
+		v.SVG = svg(id, layers, perRow)
 	}
 	seen := map[string]bool{}
 	for _, it := range v.Items {
@@ -168,11 +179,10 @@ const (
 	boxW, boxH = 176, 46
 	gapX, gapY = 16, 36
 	pad        = 4
-	perRow     = 5 // the most boxes in one row, so that a figure fits the width of a page
 )
 
 // svg draws the layers from the foundations at the top to the node of the page at the bottom. A layer with more than perRow nodes takes more than one row. Each box is a link to its node, and its title gives the full name.
-func svg(id string, layers [][]*dagItem) template.HTML {
+func svg(id string, layers [][]*dagItem, perRow int) template.HTML {
 	var rows [][]*dagItem
 	for _, l := range layers {
 		for len(l) > perRow {
@@ -251,7 +261,7 @@ func (b *builder) explore() {
 	for _, v := range b.order {
 		v.Status = b.statusOf(v.Tag)
 		if alt, ok := b.graph.Closure(v.Tag, graph.MinDepth); ok && len(alt.Nodes) > 1 {
-			v.Closure = b.dag("closure-caption", alt.Nodes, v.Tag, nil)
+			v.Closure = b.dag("closure-caption", alt.Nodes, v.Tag, nil, false)
 			for _, p := range alt.Proofs {
 				v.Closure.Proofs = append(v.Closure.Proofs, b.nodeLink(p))
 			}
@@ -277,7 +287,7 @@ func (b *builder) explore() {
 					tags = append(tags, t)
 				}
 				slices.Sort(tags)
-				v.Blueprint = b.dag("blueprint-caption", tags, "", members)
+				v.Blueprint = b.dag("blueprint-caption", tags, "", members, true)
 			}
 		}
 	}

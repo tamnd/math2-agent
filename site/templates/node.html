@@ -69,7 +69,7 @@
 {{end}}
 
 {{define "dag"}}
-{{with .SVG}}<figure class="dag-figure">
+{{with .SVG}}<figure class="dag-figure{{if $.Wide}} wide{{end}}">
   <div class="dag-scroll">{{.}}</div>
   <figcaption id="{{$.ID}}">Each node uses the nodes above it. The colour of the bar on a box shows the evidence level, and the box also gives it as text. The list below has the same nodes.</figcaption>
 </figure>

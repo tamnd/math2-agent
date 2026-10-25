@@ -189,6 +189,37 @@ jobs:
           "$RUNNER_TEMP/m2" frobnicate || code=$?
           test "$code" = 2
 
+  # The wiki of the fixtures must meet the targets of spec 13.7: the static checks of m2 site check, and the Lighthouse audits for accessibility and the time to the first paint.
+  site:
+    name: site targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+      - name: build
+        run: go build -trimpath -ldflags "-X main.Version=ci" -o "$RUNNER_TEMP/m2" ./cmd/m2
+      - name: install Lighthouse CI
+        run: npm ci --ignore-scripts --prefix .github/lighthouse
+      - name: site report
+        run: |
+          mkdir -p "$RUNNER_TEMP/report"
+          code=0
+          .github/lighthouse/report.sh "$RUNNER_TEMP/m2" "$RUNNER_TEMP/report/site-report.md" || code=$?
+          cat "$RUNNER_TEMP/report/site-report.md" >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: site-report
+          path: ${{ runner.temp }}/report
+          retention-days: 14
+
   # M2Extract must build with the pinned toolchain, and its records must agree with the golden files on Linux. The golden files come from macOS, thus this job also checks that the hashes are the same on two machines. The replay tests run the comparator in the sandbox, thus the seed binding with a review reaches E5 here.
   lean:
     name: M2Extract

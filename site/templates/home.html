@@ -17,7 +17,8 @@
   <section class="card">
     <h2>Browse by kind</h2>
     <table class="plain">
-      {{range .Kinds}}<tr><td><a href="{{.URL}}">{{.Plural}}</a></td><td class="num">{{.Count}}</td><td class="muted">{{.Text}}</td></tr>
+      <thead class="sr-only"><tr><th scope="col">Kind</th><th scope="col">Nodes</th><th scope="col">What it is</th></tr></thead>
+      {{range .Kinds}}<tr><th scope="row"><a href="{{.URL}}">{{.Plural}}</a></th><td class="num">{{.Count}}</td><td class="muted">{{.Text}}</td></tr>
       {{end}}
     </table>
   </section>
