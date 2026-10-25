@@ -1,0 +1,43 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "label",
+   "value"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q178546"
+    },
+    "value": {
+     "type": "literal",
+     "value": "Matrix.det"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "determinant"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12916"
+    },
+    "value": {
+     "type": "literal",
+     "value": "Real"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "real number"
+    }
+   }
+  ]
+ }
+}

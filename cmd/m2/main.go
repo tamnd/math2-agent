@@ -10,6 +10,7 @@ import (
 	_ "github.com/tamnd/math2-agent/ingest/arxiv"
 	_ "github.com/tamnd/math2-agent/ingest/mathlib"
 	_ "github.com/tamnd/math2-agent/ingest/oeis"
+	_ "github.com/tamnd/math2-agent/ingest/wikidata"
 	_ "github.com/tamnd/math2-agent/ingest/zbmath"
 )
 
