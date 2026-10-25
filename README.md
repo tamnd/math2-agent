@@ -75,7 +75,7 @@ go run ./cmd/m2 site build -content ../math2 -spec spec -out _site
 python3 -m http.server -d _site 8000
 ```
 
-Each node gets a page with an infobox, its links and its backlinks. KaTeX renders the math in the browser with the macros of math2. Each page also has a copy for programs: `node/<TAG>.md`, `api/node/<TAG>.json`, `api/nodes.json`, `llms.txt` and `llms-full.txt`. A build with no `-date` flag gives the same bytes each time.
+Each node gets a page with an infobox, its links and its backlinks. KaTeX renders the math in the browser with the macros of math2. Each page also has a copy for programs: `node/<TAG>.md`, `api/node/<TAG>.json`, `api/nodes.json`, `llms.txt` and `llms-full.txt`. The pages Contribute and Curation come from CONTRIBUTING.md and CURATION.md in the math2 tree. A build with no `-date` flag gives the same bytes each time.
 
 To preview the site with the local server above, set `-url http://localhost:8000`.
 

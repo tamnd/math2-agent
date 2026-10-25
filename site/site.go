@@ -291,8 +291,10 @@ func (b *builder) contentLinks(dest string) (string, bool) {
 	if strings.Contains(dest, "://") || strings.HasPrefix(dest, "#") || strings.HasPrefix(dest, "mailto:") {
 		return dest, true
 	}
-	if dest == "CONTRIBUTING.md" {
-		return b.url("contribute/"), true
+	for _, d := range contentDocs {
+		if strings.TrimPrefix(dest, "./") == d.File && b.hasDoc(d) {
+			return b.url(d.Slug + "/"), true
+		}
 	}
 	return "https://github.com/" + b.opt.Repo + "/blob/main/" + strings.TrimPrefix(dest, "./"), true
 }

@@ -176,25 +176,47 @@ func (b *builder) writeSpec() error {
 	return nil
 }
 
+// A contentDoc is a document of the content repository that the site shows as a page.
+type contentDoc struct {
+	File, Slug, Title, Description string
+}
+
+// contentDocs are the documents of the content repository that the site shows. The site always has the first one, Contribute.
+var contentDocs = []contentDoc{
+	{"CONTRIBUTING.md", "contribute", "Contribute", "How to add and change nodes in Math 2.0."},
+	{"CURATION.md", "curate", "Curation", "How to decide on the alignment proposals of m2 align."},
+}
+
+// hasDoc tells if the content repository has the document d. The site always has a Contribute page.
+func (b *builder) hasDoc(d contentDoc) bool {
+	if d.Slug == "contribute" {
+		return true
+	}
+	_, err := os.Stat(filepath.Join(b.opt.Content, d.File))
+	return err == nil
+}
+
 // writeDocs writes the pages from the documents of the content repository and copies the schema and the macros.
 func (b *builder) writeDocs() error {
-	data, err := os.ReadFile(filepath.Join(b.opt.Content, "CONTRIBUTING.md"))
-	if os.IsNotExist(err) {
-		data, err = []byte("# Contribute\n\nRead CONTRIBUTING.md in [the content repository](https://github.com/"+b.opt.Repo+").\n"), nil
-	}
-	if err != nil {
-		return err
-	}
-	{
-		body, err := b.plainMD.render(string(data), b.contentLinks)
-		if err != nil {
-			return fmt.Errorf("site: CONTRIBUTING.md: %w", err)
-		}
-		d := &specDoc{Title: "Contribute", Body: template.HTML(body)} // #nosec G203 -- CONTRIBUTING.md is in the math2 repository, which review gates.
-		if err := b.writePage("contribute", "doc", d, page{Title: "Contribute", Description: "How to add and change nodes in Math 2.0.", Section: "contribute", MarkdownURL: b.url("contribute.md")}); err != nil {
+	for _, d := range contentDocs {
+		data, err := os.ReadFile(filepath.Join(b.opt.Content, d.File))
+		switch {
+		case os.IsNotExist(err) && d.Slug == "contribute":
+			data = []byte("# Contribute\n\nRead CONTRIBUTING.md in [the content repository](https://github.com/" + b.opt.Repo + ").\n")
+		case os.IsNotExist(err):
+			continue
+		case err != nil:
 			return err
 		}
-		if err := b.write("contribute.md", data); err != nil {
+		body, err := b.plainMD.render(string(data), b.contentLinks)
+		if err != nil {
+			return fmt.Errorf("site: %s: %w", d.File, err)
+		}
+		doc := &specDoc{Title: d.Title, Body: template.HTML(body)} // #nosec G203 -- the document is in the math2 repository, which review gates.
+		if err := b.writePage(d.Slug, "doc", doc, page{Title: d.Title, Description: d.Description, Section: "contribute", MarkdownURL: b.url(d.Slug + ".md")}); err != nil {
+			return err
+		}
+		if err := b.write(d.Slug+".md", data); err != nil {
 			return err
 		}
 	}
