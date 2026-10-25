@@ -1,6 +1,7 @@
 package tag
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -22,10 +23,13 @@ type Minted struct {
 // textExts are the file types that can refer to a node.
 var textExts = map[string]bool{".md": true, ".yaml": true, ".yml": true, ".lean": true}
 
-// skipDirs are the directories that Rewrite does not read.
+// contentDirs are the directories of the working tree that can refer to a node (spec 20). Text in other files, for example a provisional id in README.md, is not a reference.
+var contentDirs = []string{"nodes", "topics", "reviews", "compute", "lean"}
+
+// skipDirs are the directories in a content directory that Rewrite does not read.
 var skipDirs = map[string]bool{".git": true, ".lake": true, "node_modules": true}
 
-// Rewrite changes each provisional id in the math2 working tree at root to a new tag. It mints one tag for each file in nodes/~/. It changes the id in the file name, in the front matter, in each [[text|~id]] link and in each other text file that refers to it. Then it adds the new tags to registers/tags.reg with the given commit.
+// Rewrite changes each provisional id in the math2 working tree at root to a new tag. It mints one tag for each file in nodes/~/. It changes the id in the file name, in the front matter, in each [[text|~id]] link and in each other text file in nodes/, topics/, reviews/, compute/ and lean/ that refers to it. It does not change other files, for example the README. Then it adds the new tags to registers/tags.reg with the given commit.
 //
 // Rewrite changes nothing if a file refers to a provisional id that has no file in nodes/~/ (rule T03).
 func Rewrite(root string, r io.Reader, commit string) ([]Minted, error) {
@@ -67,7 +71,7 @@ func Rewrite(root string, r io.Reader, commit string) ([]Minted, error) {
 	// Read every file that can refer to a node before writing any file.
 	changed := map[string][]byte{}
 	var unknown []string
-	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	walk := func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -97,9 +101,12 @@ func Rewrite(root string, r io.Reader, commit string) ([]Minted, error) {
 			changed[path] = out
 		}
 		return nil
-	})
-	if err != nil {
-		return nil, err
+	}
+	for _, dir := range contentDirs {
+		err := filepath.WalkDir(filepath.Join(root, dir), walk)
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return nil, err
+		}
 	}
 	if len(unknown) > 0 {
 		return nil, fmt.Errorf("these files refer to a provisional id that has no node file in nodes/~/ (rule T03):\n  %s", strings.Join(unknown, "\n  "))
