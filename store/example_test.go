@@ -42,6 +42,26 @@ func ExampleStore_Resolve() {
 	// m2://ext/wikidata/Q83478 [G5S1M9] <nil>
 }
 
+func ExampleStore_Neighbourhood() {
+	s, dir := openExample()
+	defer func() { _ = os.RemoveAll(dir) }()
+	defer func() { _ = s.Close() }()
+	nb, err := s.Neighbourhood("D2SB01", 1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(nb.Nodes)
+	for _, e := range nb.Edges {
+		fmt.Println(e.From, e.Type, e.To)
+	}
+	// Output:
+	// [3C53TD C05ET1 D1F0A1 D2SB01 G5SB02]
+	// D2SB01 defines G5SB02
+	// 3C53TD uses D2SB01
+	// C05ET1 uses D2SB01
+	// D2SB01 uses D1F0A1
+}
+
 func ExampleStore_Closure() {
 	s, dir := openExample()
 	defer func() { _ = os.RemoveAll(dir) }()

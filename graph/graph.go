@@ -78,15 +78,16 @@ type Node struct {
 
 // Edge is one typed and directed edge. Between two nodes, From and To are tags or provisional ids. For the other edges, one end is a node and the other end is an external id, a record or a formal declaration.
 type Edge struct {
-	Type   string `parquet:"type"`
-	From   string `parquet:"from"`
-	To     string `parquet:"to"`
-	Via    string `parquet:"via"`    // the proof or the computation that supports the edge, or ""
-	System string `parquet:"system"` // the external system, the kind of record or the formal system, or ""
-	Label  string `parquet:"label"`  // the match, the outcome, the bound, the specialising map or the locator, or ""
+	Type   string `parquet:"type" json:"type"`
+	From   string `parquet:"from" json:"from"`
+	To     string `parquet:"to" json:"to"`
+	Via    string `parquet:"via" json:"via,omitempty"`       // the proof or the computation that supports the edge, or ""
+	System string `parquet:"system" json:"system,omitempty"` // the external system, the kind of record or the formal system, or ""
+	Label  string `parquet:"label" json:"label,omitempty"`   // the match, the outcome, the bound, the specialising map or the locator, or ""
 }
 
-func (e Edge) compare(f Edge) int {
+// Compare compares two edges by type, then by From, To, Via, System and Label. It returns -1, 0 or +1. This is the order of Graph.Edges.
+func (e Edge) Compare(f Edge) int {
 	return cmp.Or(strings.Compare(e.Type, f.Type), strings.Compare(e.From, f.From), strings.Compare(e.To, f.To),
 		strings.Compare(e.Via, f.Via), strings.Compare(e.System, f.System), strings.Compare(e.Label, f.Label))
 }
@@ -96,12 +97,12 @@ type Graph struct {
 	Nodes []Node
 	Edges []Edge
 
-	index map[string]int   // the position of each tag in Nodes
-	out   map[string][]int // the edges of each type that start at a node, as positions in Edges
-	in    map[string][]int // the edges of each type that end at a node, as positions in Edges
+	in []int32 // the positions in Edges, sorted by type, then by To
 
-	once   [2]sync.Once // one for each Measure
-	solved [2]*solution
+	adjOnce sync.Once // for adj
+	adj     *adjacency
+	once    [2]sync.Once // one for each Measure
+	solved  [2]*solution
 }
 
 // Build derives the graph from the nodes. A value that is not a reference is not an edge to a node, and the schema rules report it. An edge can name a target that is not in nodes, and rule G01 reports it.
@@ -113,45 +114,71 @@ func Build(nodes []*node.Node) *Graph {
 		g.Edges = append(g.Edges, edges(n)...)
 	}
 	slices.SortFunc(g.Nodes, func(a, b Node) int { return strings.Compare(a.Tag, b.Tag) })
-	slices.SortFunc(g.Edges, Edge.compare)
+	slices.SortFunc(g.Edges, Edge.Compare)
 	g.Edges = slices.Compact(g.Edges)
 	g.init()
 	return g
 }
 
 func (g *Graph) init() {
-	g.index = make(map[string]int, len(g.Nodes))
-	for i, n := range g.Nodes {
-		g.index[n.Tag] = i
+	g.in = make([]int32, len(g.Edges))
+	for i := range g.in {
+		g.in[i] = int32(i) // #nosec G115 -- there are fewer than 2^31 edges.
 	}
-	g.out, g.in = map[string][]int{}, map[string][]int{}
-	for i, e := range g.Edges {
-		g.out[e.Type+" "+e.From] = append(g.out[e.Type+" "+e.From], i)
-		g.in[e.Type+" "+e.To] = append(g.in[e.Type+" "+e.To], i)
-	}
+	// Edges is sorted by type, so a stable sort by type and To keeps the order of Edges within each end.
+	slices.SortStableFunc(g.in, func(a, b int32) int {
+		return cmp.Or(strings.Compare(g.Edges[a].Type, g.Edges[b].Type), strings.Compare(g.Edges[a].To, g.Edges[b].To))
+	})
 }
 
 // Node returns the node with the tag.
 func (g *Graph) Node(tag string) (Node, bool) {
-	i, ok := g.index[tag]
-	if !ok {
-		return Node{}, false
+	if i, ok := g.index(tag); ok {
+		return g.Nodes[i], true
 	}
-	return g.Nodes[i], true
+	return Node{}, false
+}
+
+func (g *Graph) index(tag string) (int, bool) {
+	return slices.BinarySearchFunc(g.Nodes, tag, func(n Node, t string) int { return strings.Compare(n.Tag, t) })
 }
 
 // Out returns the edges of type t that start at from, in the order of Edges.
-func (g *Graph) Out(t, from string) []Edge { return g.pick(g.out[t+" "+from]) }
+func (g *Graph) Out(t, from string) []Edge {
+	lo, _ := slices.BinarySearchFunc(g.Edges, Edge{Type: t, From: from}, func(e, k Edge) int {
+		return cmp.Or(strings.Compare(e.Type, k.Type), strings.Compare(e.From, k.From))
+	})
+	hi := lo
+	for hi < len(g.Edges) && g.Edges[hi].Type == t && g.Edges[hi].From == from {
+		hi++
+	}
+	return slices.Clone(g.Edges[lo:hi])
+}
 
 // In returns the edges of type t that end at to, in the order of Edges.
-func (g *Graph) In(t, to string) []Edge { return g.pick(g.in[t+" "+to]) }
-
-func (g *Graph) pick(pos []int) []Edge {
-	out := make([]Edge, len(pos))
-	for i, p := range pos {
-		out[i] = g.Edges[p]
+func (g *Graph) In(t, to string) []Edge {
+	lo, _ := slices.BinarySearchFunc(g.in, Edge{Type: t, To: to}, func(p int32, k Edge) int {
+		return cmp.Or(strings.Compare(g.Edges[p].Type, k.Type), strings.Compare(g.Edges[p].To, k.To))
+	})
+	var out []Edge
+	for _, p := range g.in[lo:] {
+		if e := g.Edges[p]; e.Type == t && e.To == to {
+			out = append(out, e)
+			continue
+		}
+		break
 	}
 	return out
+}
+
+// typed returns the edges of type t.
+func (g *Graph) typed(t string) []Edge {
+	lo, _ := slices.BinarySearchFunc(g.Edges, t, func(e Edge, t string) int { return strings.Compare(e.Type, t) })
+	hi := lo
+	for hi < len(g.Edges) && g.Edges[hi].Type == t {
+		hi++
+	}
+	return g.Edges[lo:hi:hi]
 }
 
 // Hash returns the content hash of the graph: "blake3:" and 64 lowercase hex characters. The hash covers each node with its content hash and each edge. Two builds of the same nodes give the same hash (rule R01).

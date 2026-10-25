@@ -3,7 +3,8 @@ package graph
 import (
 	"container/heap"
 	"math"
-	"slices"
+	"math/bits"
+	"sync"
 )
 
 // Measure says which alternative Closure gives.
@@ -22,6 +23,8 @@ type Alternative struct {
 	Nodes  []string // each node of the closure, the node too, in byte order
 	Proofs []string // the proofs that the alternative takes, in byte order
 	Depth  int      // the length of the longest chain of dependencies, in edges
+	// Index holds the position in the Nodes of the graph of each tag in Nodes, or -1 for a tag that is not a node of the graph. A caller that keeps data in a slice in the order of the Nodes of the graph reads it with no search.
+	Index []int `json:"-"`
 }
 
 const infinite = math.MaxInt
@@ -30,41 +33,120 @@ const infinite = math.MaxInt
 func (g *Graph) Closure(tag string, m Measure) (Alternative, bool) {
 	s := g.solve(m)
 	i, ok := s.uses.Index(tag)
-	if _, isNode := g.index[tag]; !ok || !isNode || s.value[i] == infinite {
+	if !ok || s.pos[i] < 0 || s.value[i] == infinite {
 		return Alternative{}, false
 	}
-	alt := Alternative{Tag: tag}
-	seen := make([]bool, len(s.uses.IDs))
-	var visit func(i int) int
-	visit = func(i int) int {
-		if seen[i] {
-			return s.depth[i]
+	// The closure can hold a large part of the graph, so the sets are bit sets, and the ids come out of them in order with no sort.
+	nodes, proofs := newSet(len(s.uses.IDs)), newSet(len(s.uses.IDs))
+	stack := []int32{int32(i)} // #nosec G115 -- there are fewer than 2^31 ids.
+	nodes.set(i)
+	push := func(j int32) {
+		if !nodes.has(int(j)) {
+			nodes.set(int(j))
+			stack = append(stack, j)
 		}
-		seen[i] = true
-		alt.Nodes = append(alt.Nodes, s.uses.IDs[i])
-		for _, j := range s.uses.Out(i) {
-			visit(int(j))
-		}
-		if p := s.choice[i]; p >= 0 {
-			alt.Proofs = append(alt.Proofs, s.uses.IDs[p])
-			visit(int(p))
-		}
-		return s.depth[i]
 	}
-	alt.Depth = visit(i)
-	slices.Sort(alt.Nodes)
-	slices.Sort(alt.Proofs)
-	return alt, true
+	for len(stack) > 0 {
+		j := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		for _, k := range s.uses.Out(int(j)) {
+			push(k)
+		}
+		if p := s.choice[j]; p >= 0 {
+			proofs.set(int(p))
+			push(p)
+		}
+	}
+	return Alternative{Tag: tag, Nodes: s.names(nodes), Proofs: s.names(proofs), Depth: s.depth[i], Index: s.positions(nodes)}, true
+}
+
+// idset is a set of ids.
+type idset []uint64
+
+func newSet(n int) idset { return make(idset, (n+63)/64) }
+
+func (b idset) set(i int)      { b[i/64] |= 1 << (i % 64) }
+func (b idset) has(i int) bool { return b[i/64]&(1<<(i%64)) != 0 }
+
+func (b idset) count() int {
+	n := 0
+	for _, w := range b {
+		n += bits.OnesCount64(w)
+	}
+	return n
+}
+
+// adjacency is the uses and the proves edges over one set of ids, in both directions.
+type adjacency struct {
+	pos    []int32   // the position in the Nodes of the graph of each id, or -1 when the id is not the tag of a node
+	uses   *CSR      // the uses edges
+	proofs *CSR      // from each statement to its proofs
+	usedBy *CSR      // the uses edges against their direction
+	proves *CSR      // from each proof to its statements
+	pool   sync.Pool // of *scratch
+}
+
+func (g *Graph) adjacency() *adjacency {
+	g.adjOnce.Do(func() {
+		ids, pairs := g.ends(g.typed(Uses), g.typed(Proves))
+		pos := make([]int32, len(ids))
+		for i, k := 0, 0; i < len(ids); i++ {
+			pos[i] = -1
+			if k < len(g.Nodes) && ids[i] == g.Nodes[k].Tag {
+				pos[i] = int32(k) // #nosec G115 -- there are fewer than 2^31 nodes.
+				k++
+			}
+		}
+		g.adj = &adjacency{
+			pos:    pos,
+			uses:   fromPairs(ids, pairs[0], false),
+			usedBy: fromPairs(ids, pairs[0], true),
+			proofs: fromPairs(ids, pairs[1], true),
+			proves: fromPairs(ids, pairs[1], false),
+		}
+	})
+	return g.adj
+}
+
+// names returns the names of the ids in the set, in byte order.
+func (a *adjacency) names(set idset) []string {
+	out := make([]string, 0, set.count())
+	for k, w := range set {
+		for w != 0 {
+			out = append(out, a.uses.IDs[k*64+bits.TrailingZeros64(w)])
+			w &= w - 1
+		}
+	}
+	return out
+}
+
+// positions returns the position in the Nodes of the graph of each id in the set, or -1, in the order of the ids.
+func (a *adjacency) positions(set idset) []int {
+	out := make([]int, 0, set.count())
+	for k, w := range set {
+		for w != 0 {
+			out = append(out, int(a.pos[k*64+bits.TrailingZeros64(w)]))
+			w &= w - 1
+		}
+	}
+	return out
 }
 
 // solution is the best alternative of each id for one measure.
 type solution struct {
-	uses   *CSR    // the uses edges
-	proofs *CSR    // from each statement to its proofs, over the same IDs
+	*adjacency
 	value  []int   // the measure of the best alternative, or infinite
 	depth  []int   // the depth of the best alternative, or infinite
 	choice []int32 // the proof that the best alternative takes, or -1
+	facts  []uint8 // the bits isNode, hasProofs and finite of each id, in one byte for the queries that read them often
 }
+
+// The bits of solution.facts.
+const (
+	isNode    = 1 << iota // the id is the tag of a node
+	hasProofs             // a proof proves the id
+	finite                // the id has an alternative
+)
 
 func (g *Graph) solve(m Measure) *solution {
 	g.once[m].Do(func() { g.solved[m] = g.compute(m) })
@@ -73,26 +155,8 @@ func (g *Graph) solve(m Measure) *solution {
 
 // compute uses the algorithm of Knuth (1977) for superior functions, a form of the algorithm of Dijkstra for AND-OR graphs. An id gets its value when each of its uses has a value and one of its proofs has a value. Ids leave the queue in order of value, so the first proof to get a value is the best proof.
 func (g *Graph) compute(m Measure) *solution {
-	var us, ps []Edge
-	for _, e := range g.Edges {
-		switch e.Type {
-		case Uses:
-			us = append(us, e)
-		case Proves:
-			ps = append(ps, e)
-		}
-	}
-	// Both adjacencies must use the same ids.
-	all := append(slices.Clip(us), ps...)
-	ids := g.csr(all, false).IDs
-	sub := &Graph{Nodes: make([]Node, len(ids))}
-	for i, id := range ids {
-		sub.Nodes[i].Tag = id
-	}
-	s := &solution{uses: sub.csr(us, false), proofs: sub.csr(ps, true)}
-	n := len(ids)
-	usedBy, proves := sub.csr(us, true), sub.csr(ps, false)
-
+	s := &solution{adjacency: g.adjacency()}
+	n := len(s.uses.IDs)
 	s.value, s.depth, s.choice = make([]int, n), make([]int, n), make([]int32, n)
 	waiting := make([]int, n) // the uses that have no value yet
 	acc, deep := make([]int, n), make([]int, n)
@@ -120,19 +184,31 @@ func (g *Graph) compute(m Measure) *solution {
 			continue
 		}
 		s.value[it.id], s.depth[it.id] = it.value, it.depth
-		for _, p := range usedBy.Out(it.id) {
+		for _, p := range s.usedBy.Out(it.id) {
 			waiting[p]--
 			acc[p] = add(acc[p], it.value)
 			deep[p] = max(deep[p], it.depth)
 			ready(int(p))
 		}
-		for _, st := range proves.Out(it.id) {
+		for _, st := range s.proves.Out(it.id) {
 			if !proved[st] {
 				proved[st], s.choice[st] = true, int32(it.id) // #nosec G115 -- there are fewer than 2^31 ids.
 				acc[st] = add(acc[st], it.value)
 				deep[st] = max(deep[st], it.depth)
 				ready(int(st))
 			}
+		}
+	}
+	s.facts = make([]uint8, n)
+	for i := range n {
+		if s.pos[i] >= 0 {
+			s.facts[i] |= isNode
+		}
+		if len(s.proofs.Out(i)) > 0 {
+			s.facts[i] |= hasProofs
+		}
+		if s.value[i] != infinite {
+			s.facts[i] |= finite
 		}
 	}
 	return s

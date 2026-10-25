@@ -17,7 +17,7 @@ import (
 	"github.com/tamnd/math2-agent/store"
 )
 
-const graphUsage = "m2 graph closure|rdeps|path|frontier [flags] <tag>..."
+const graphUsage = "m2 graph neighbourhood|closure|rdeps|path|frontier [flags] <tag>..."
 
 func runGraph(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -33,8 +33,11 @@ func runGraph(args []string, stdout, stderr io.Writer) int {
 	asJSON := flags.Bool("json", false, "write the result as JSON")
 	var measure, msc, topic, evidence *string
 	var open *bool
+	var hops *int
 	nargs := 1
 	switch sub {
+	case "neighbourhood":
+		hops = flags.Int("hops", 2, "the number of edges from the node")
 	case "closure":
 		measure = flags.String("measure", "depth", "the measure of the best alternative: depth or size")
 	case "rdeps":
@@ -93,6 +96,16 @@ func runGraph(args []string, stdout, stderr io.Writer) int {
 	var v any
 	var text func(w io.Writer)
 	switch sub {
+	case "neighbourhood":
+		if *hops < 0 {
+			fmt.Fprintf(stderr, "%s: the number of hops %d is negative\n", name, *hops)
+			return ExitUsage
+		}
+		nb, err := s.Neighbourhood(tags[0], *hops)
+		if err != nil {
+			return fail(err)
+		}
+		v, text = nb, func(w io.Writer) { printNeighbourhood(w, s, nb) }
 	case "closure":
 		m := graph.MinDepth
 		switch *measure {
@@ -168,6 +181,24 @@ func one(s *store.Store, ref string) (string, error) {
 	return tags[0], nil
 }
 
+func printNeighbourhood(w io.Writer, s *store.Store, nb store.Neighbourhood) {
+	fmt.Fprintf(w, "nodes at most %d edges from %s (%d)\n", nb.Hops, nb.Tag, len(nb.Nodes))
+	printTags(w, s, nb.Nodes)
+	fmt.Fprintf(w, "edges (%d)\n", len(nb.Edges))
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	for _, e := range nb.Edges {
+		fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\n", e.From, e.Type, e.To, strings.TrimSpace(strings.Join([]string{e.System, e.Label, via(e.Via)}, " ")))
+	}
+	_ = tw.Flush()
+}
+
+func via(v string) string {
+	if v == "" {
+		return ""
+	}
+	return "via " + v
+}
+
 func printClosure(w io.Writer, s *store.Store, c store.Closure) {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintf(tw, "closure\t%s\n", c.Tag)
@@ -187,7 +218,7 @@ func printClosure(w io.Writer, s *store.Store, c store.Closure) {
 func printTags(w io.Writer, s *store.Store, tags []string) {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	for _, t := range tags {
-		n, _ := s.Graph().Node(t)
+		n, _ := s.Node(t)
 		st, _ := s.Status(t)
 		fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\n", t, n.Kind, level(st.Evidence), n.Name)
 	}
