@@ -1,6 +1,6 @@
 // Package build makes the derived data of a math2 working tree (spec 07.6).
 //
-// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The search and site steps come in later issues.
+// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The search and site steps come in later issues.
 //
 // Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, status and graph steps. Two builds of the same tree give the same output hash (rule R01).
 package build
@@ -420,8 +420,25 @@ func run(s *lean.Session, modules, decls []string) (*Extraction, error) {
 	}
 	slices.Sort(decls)
 	decls = slices.Compact(decls)
-	x.Records, err = s.Extract(decls, decls)
-	return x, err
+	if x.Records, err = s.Extract(decls, decls); err != nil {
+		return nil, err
+	}
+	var theorems []string
+	for _, r := range x.Records {
+		if r.Error == "" && r.Kind == "theorem" {
+			theorems = append(theorems, r.Decl)
+		}
+	}
+	checks, err := s.Checks(lean.CheckHeartbeats, theorems...)
+	if err != nil {
+		return nil, err
+	}
+	for i, r := range x.Records {
+		if c, ok := checks[r.Decl]; ok {
+			x.Records[i].Checks = &c
+		}
+	}
+	return x, nil
 }
 
 // formalDecls returns the declarations and the adapters of the Lean bindings of the nodes, sorted and without duplicates.

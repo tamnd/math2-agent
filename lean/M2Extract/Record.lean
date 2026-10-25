@@ -77,6 +77,15 @@ unsafe def bindings (env : Environment) : IO (Array Binding) := do
       out := out.push (unsafeCast e : Binding)
   return out
 
+/-- `deprecation env d` is the entry of the `@[deprecated]` attribute of `d`, or null when `d` is not deprecated. -/
+def deprecation (env : Environment) (d : Name) : Json :=
+  match Linter.deprecatedAttr.getParam? env d with
+  | some e => Json.mkObj [
+      ("new_name", (e.newName?.map (Json.str ·.toString)).getD Json.null),
+      ("since", (e.since?.map Json.str).getD Json.null),
+      ("text", (e.text?.map Json.str).getD Json.null)]
+  | none => Json.null
+
 /-- `record bound d` is the extraction record of `d`. -/
 def record (bound : NameSet) (d : Name) : MetaM Json := do
   let env ← getEnv
@@ -108,7 +117,8 @@ def record (bound : NameSet) (d : Name) : MetaM Json := do
     ("native_decide_axioms", names (axioms.filter isNative)),
     ("uses_decls", names usesDecls),
     ("uses_bound", names (boundUses env bound d)),
-    ("uses_constants_in_statement", names (sorted ci.type.getUsedConstants))
+    ("uses_constants_in_statement", names (sorted ci.type.getUsedConstants)),
+    ("deprecated", deprecation env d)
   ]
 
 end M2Extract
