@@ -1,0 +1,11 @@
+{
+  "body": {
+    "api": "v1",
+    "error": {
+      "code": "invalid",
+      "message": "k is 1000, and it must be from 1 to 100"
+    },
+    "method": "search"
+  },
+  "status": 400
+}

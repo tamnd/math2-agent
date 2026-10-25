@@ -1,0 +1,85 @@
+{
+  "body": {
+    "about": [
+      {
+        "evidence": "E1",
+        "hash": "blake3:c0153b8440937d6d989d60984a862d40605c1a7ba872b42d097307c4a4e5093e",
+        "tag": "2J2QXT"
+      },
+      {
+        "evidence": "E0",
+        "hash": "blake3:bb82b7f5f840332945be4fb96712a9f62b938e7b4e8899b52fd25940bbfa0cf1",
+        "tag": "ETCDHB"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:08b64ab3317168988c4af39c9b0dfa7a70fc0a1f1c6ebb2a9dd8ff84aeb7b191",
+        "tag": "7S3BEX"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "search",
+    "result": [
+      {
+        "channels": [
+          {
+            "channel": "lexical",
+            "rank": 1,
+            "score": 9.655024
+          },
+          {
+            "channel": "embedding",
+            "rank": 9,
+            "score": 0.45613
+          }
+        ],
+        "evidence": "E1",
+        "kind": "counterexample",
+        "name": "A4 has no subgroup of order 6",
+        "score": 0.021469,
+        "tag": "2J2QXT"
+      },
+      {
+        "channels": [
+          {
+            "channel": "lexical",
+            "rank": 3,
+            "score": 7.952055
+          },
+          {
+            "channel": "embedding",
+            "rank": 2,
+            "score": 0.548965
+          }
+        ],
+        "evidence": "E0",
+        "kind": "conjecture",
+        "name": "The converse of Lagrange's theorem",
+        "score": 0.021076,
+        "tag": "ETCDHB"
+      },
+      {
+        "channels": [
+          {
+            "channel": "lexical",
+            "rank": 2,
+            "score": 8.891931
+          },
+          {
+            "channel": "embedding",
+            "rank": 13,
+            "score": 0.383709
+          }
+        ],
+        "evidence": "E1",
+        "kind": "proof",
+        "name": "Proof that a group of prime order is cyclic",
+        "score": 0.019512,
+        "tag": "7S3BEX"
+      }
+    ]
+  },
+  "status": 200
+}

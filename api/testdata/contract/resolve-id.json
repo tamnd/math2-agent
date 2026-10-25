@@ -1,0 +1,27 @@
+{
+  "body": {
+    "about": [
+      {
+        "hash": "blake3:b70c8d8d7b2436bd6a1b4890138eb440b52410030526467dc9aade80db42f30a",
+        "tag": "NKCASP"
+      },
+      {
+        "hash": "blake3:16acf7bddf4f7cb3124b450a782e3b355ed945743dfa3f2e2273cafbb3f94a0d",
+        "tag": "Q9FKYJ"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "resolve",
+    "result": {
+      "match": "identifier",
+      "ref": "A000040",
+      "tags": [
+        "NKCASP",
+        "Q9FKYJ"
+      ]
+    }
+  },
+  "status": 200
+}

@@ -1,0 +1,23 @@
+{
+  "body": {
+    "about": [
+      {
+        "evidence": "E1",
+        "hash": "blake3:10e84c7fdbf6c393ad48f0b0eddcde077144933251e7ee88e4f21b1257444846",
+        "tag": "Q529ES"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "resolve",
+    "result": {
+      "match": "store",
+      "ref": "m2://Q529ES",
+      "tags": [
+        "Q529ES"
+      ]
+    }
+  },
+  "status": 200
+}

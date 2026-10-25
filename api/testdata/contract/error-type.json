@@ -1,0 +1,11 @@
+{
+  "body": {
+    "api": "v1",
+    "error": {
+      "code": "invalid",
+      "message": "the parameter depth of neighbours must be an integer, not two"
+    },
+    "method": "neighbours"
+  },
+  "status": 400
+}

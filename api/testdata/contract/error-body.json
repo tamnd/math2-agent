@@ -1,0 +1,11 @@
+{
+  "body": {
+    "api": "v1",
+    "error": {
+      "code": "invalid",
+      "message": "the body is not a JSON object of parameters: json: cannot unmarshal array into Go value of type map[string]interface {}"
+    },
+    "method": "search"
+  },
+  "status": 400
+}

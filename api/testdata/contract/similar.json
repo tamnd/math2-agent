@@ -1,0 +1,70 @@
+{
+  "body": {
+    "about": [
+      {
+        "evidence": "E0",
+        "hash": "blake3:bb82b7f5f840332945be4fb96712a9f62b938e7b4e8899b52fd25940bbfa0cf1",
+        "tag": "ETCDHB"
+      },
+      {
+        "evidence": "E3",
+        "hash": "blake3:bb2f42cc605a19f9bfc091c97515524f4578615b3dcfc1fd5407023925ae45c9",
+        "tag": "CM1BRG"
+      },
+      {
+        "evidence": "E1",
+        "hash": "blake3:c0153b8440937d6d989d60984a862d40605c1a7ba872b42d097307c4a4e5093e",
+        "tag": "2J2QXT"
+      }
+    ],
+    "api": "v1",
+    "build": "BUILD",
+    "commit": "0123abc",
+    "method": "similar",
+    "result": [
+      {
+        "channels": [
+          {
+            "channel": "embedding",
+            "rank": 2,
+            "score": 0.556297
+          }
+        ],
+        "evidence": "E0",
+        "kind": "conjecture",
+        "name": "The converse of Lagrange's theorem",
+        "score": 0.007018,
+        "tag": "ETCDHB"
+      },
+      {
+        "channels": [
+          {
+            "channel": "embedding",
+            "rank": 4,
+            "score": 0.515737
+          }
+        ],
+        "evidence": "E3",
+        "kind": "statement",
+        "name": "Cauchy's theorem for groups",
+        "score": 0.006779,
+        "tag": "CM1BRG"
+      },
+      {
+        "channels": [
+          {
+            "channel": "embedding",
+            "rank": 3,
+            "score": 0.52832
+          }
+        ],
+        "evidence": "E1",
+        "kind": "counterexample",
+        "name": "A4 has no subgroup of order 6",
+        "score": 0.006682,
+        "tag": "2J2QXT"
+      }
+    ]
+  },
+  "status": 200
+}
