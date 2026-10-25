@@ -1,0 +1,2 @@
+nodes/3C/3C53TD.md:11:1: G02: the wikidata id Q83478 is the same_as id of more than one live node: 3C53TD, G5S1M9. Use close_to with a note for a node that is not the same thing
+nodes/G5/G5S1M9.md:9:1: G02: the wikidata id Q83478 is the same_as id of more than one live node: 3C53TD, G5S1M9. Use close_to with a note for a node that is not the same thing
