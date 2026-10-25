@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"cmp"
+	"compress/gzip"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -46,11 +47,15 @@ func Gate(src *Source, r Record) Record {
 	return r
 }
 
-// Import reads the snapshot with the adapter, applies the licence gate to each item and returns the records in the order of their ids. Each item must have an id, and no two items can have the same id.
+// Import reads the snapshot with the adapter, applies the licence gate to each item and returns the records in the order of their ids. Each item must have an id, and no two items can have the same id. When the snapshot is compressed with gzip, the adapter reads the uncompressed bytes.
 func Import(a Adapter, src *Source, snapshot io.Reader) ([]Record, error) {
+	snapshot, err := gunzip(snapshot)
+	if err != nil {
+		return nil, fmt.Errorf("ingest %s: %w", src.ID, err)
+	}
 	var out []Record
 	seen := map[string]bool{}
-	err := a.Read(snapshot, func(r Record) error {
+	err = a.Read(snapshot, func(r Record) error {
 		if r.ID == "" {
 			return fmt.Errorf("item %d has no id", len(out)+1)
 		}
@@ -66,6 +71,16 @@ func Import(a Adapter, src *Source, snapshot io.Reader) ([]Record, error) {
 	}
 	slices.SortFunc(out, func(a, b Record) int { return cmp.Compare(a.ID, b.ID) })
 	return out, nil
+}
+
+// gunzip returns a reader of the uncompressed bytes of r when r starts with the gzip magic number, and a reader of the bytes of r when it does not.
+func gunzip(r io.Reader) (io.Reader, error) {
+	br := bufio.NewReader(r)
+	magic, err := br.Peek(2)
+	if err != nil || magic[0] != 0x1f || magic[1] != 0x8b {
+		return br, nil // a short snapshot is not compressed, and the adapter reports a read error
+	}
+	return gzip.NewReader(br)
 }
 
 // WriteRecords writes the records to w, one JSON object for each line, and returns the hash of the bytes.

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+	<responseDate>2026-10-25T16:48:51Z</responseDate>
+	<request metadataPrefix="oai_zb_preview" set="03" verb="ListRecords">https://oai.zbmath.org/v1/</request>
+	<ListRecords>
+		<record>
+			<header>
+				<identifier>oai:zbmath.org:8270026</identifier>
+				<datestamp>2026-10-16T07:43:54Z</datestamp>
+				<setSpec>03</setSpec>
+			</header>
+			<metadata>
+				<oai_zb_preview:zbmath xmlns:oai_zb_preview="https://zbmath.org/OAI/2.0/oai_zb_preview/" xmlns:zbmath="https://zbmath.org/zbmath/elements/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+					<zbmath:author>Cuenca, Sandra D.; Estrada-González, Luis</zbmath:author>
+					<zbmath:author_ids>
+						<zbmath:author_id>cuenca.sandra-d</zbmath:author_id>
+						<zbmath:author_id>estrada-gonzalez.luis</zbmath:author_id>
+					</zbmath:author_ids>
+					<zbmath:classifications>
+						<zbmath:classification>03A05</zbmath:classification>
+						<zbmath:classification>03B53</zbmath:classification>
+						<zbmath:classification>03B60</zbmath:classification>
+						<zbmath:classification>03B62</zbmath:classification>
+					</zbmath:classifications>
+					<zbmath:document_id>8270026</zbmath:document_id>
+					<zbmath:document_title>Genuinely non-traditional logics</zbmath:document_title>
+					<zbmath:document_type>j</zbmath:document_type>
+					<zbmath:doi>10.1007/s11787-026-00426-5</zbmath:doi>
+					<zbmath:language>English</zbmath:language>
+					<zbmath:pagination>373-389</zbmath:pagination>
+					<zbmath:publication_year>2026</zbmath:publication_year>
+					<zbmath:source>Log. Univers. 20, No. 3, 373-389 (2026)</zbmath:source>
+					<zbmath:spelling>Cuenca, Sandra D.; Estrada-González, Luis; Estrada González, Luis; Estrada-Gonzáles, Luis</zbmath:spelling>
+					<zbmath:time>2026-10-16T07:43:54Z</zbmath:time>
+					<zbmath:zbl_id>None</zbmath:zbl_id>
+					<zbmath:serial>
+						<zbmath:serial_publisher>Springer International Publishing, Cham</zbmath:serial_publisher>
+						<zbmath:serial_title>Logica Universalis</zbmath:serial_title>
+					</zbmath:serial>
+					<zbmath:references>
+						<zbmath:reference>
+							<zbmath:text>Arieli, O.; Avron, A., Reasoning with logical bilattices, J. Logic Lang. Inform., 5, 1, 25-63, 1996</zbmath:text>
+							<zbmath:ref_id>910426</zbmath:ref_id>
+							<zbmath:ref_classifications>
+								<zbmath:ref_classification>03F03</zbmath:ref_classification>
+								<zbmath:ref_classification>03G10</zbmath:ref_classification>
+								<zbmath:ref_classification>03B53</zbmath:ref_classification>
+								<zbmath:ref_classification>68T27</zbmath:ref_classification>
+							</zbmath:ref_classifications>
+						</zbmath:reference>
+						<zbmath:reference>
+							<zbmath:text>Arieli, O.; Avron, A., The value of the four values, Artif. Intell., 102, 1, 97-141, 1998</zbmath:text>
+							<zbmath:ref_id>1238317</zbmath:ref_id>
+							<zbmath:ref_classifications>
+								<zbmath:ref_classification>03B53</zbmath:ref_classification>
+								<zbmath:ref_classification>68T37</zbmath:ref_classification>
+								<zbmath:ref_classification>03B50</zbmath:ref_classification>
+								<zbmath:ref_classification>68T27</zbmath:ref_classification>
+								<zbmath:ref_classification>03G25</zbmath:ref_classification>
+							</zbmath:ref_classifications>
+						</zbmath:reference>
+					</zbmath:references>
+				</oai_zb_preview:zbmath>
+			</metadata>
+		</record>
+		<record>
+			<header>
+				<identifier>oai:zbmath.org:8268038</identifier>
+				<datestamp>2026-10-12T12:03:10Z</datestamp>
+				<setSpec>03</setSpec>
+			</header>
+			<metadata>
+				<oai_zb_preview:zbmath xmlns:oai_zb_preview="https://zbmath.org/OAI/2.0/oai_zb_preview/" xmlns:zbmath="https://zbmath.org/zbmath/elements/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+					<zbmath:author>Cardona, Miguel A.; Marton, Adam; Šupina, Jaroslav</zbmath:author>
+					<zbmath:author_ids>
+						<zbmath:author_id>cardona.miguel-a</zbmath:author_id>
+						<zbmath:author_id>marton.adam</zbmath:author_id>
+						<zbmath:author_id>supina.jaroslav</zbmath:author_id>
+					</zbmath:author_ids>
+					<zbmath:classifications>
+						<zbmath:classification>03E17</zbmath:classification>
+						<zbmath:classification>03E35</zbmath:classification>
+						<zbmath:classification>03E05</zbmath:classification>
+						<zbmath:classification>03E15</zbmath:classification>
+					</zbmath:classifications>
+					<zbmath:document_id>8268038</zbmath:document_id>
+					<zbmath:document_title>Cardinal characteristics associated with small subsets of reals</zbmath:document_title>
+					<zbmath:document_type>j</zbmath:document_type>
+					<zbmath:doi>10.4064/fm250317-14-3</zbmath:doi>
+					<zbmath:language>English</zbmath:language>
+					<zbmath:pagination>201-236</zbmath:pagination>
+					<zbmath:publication_year>2026</zbmath:publication_year>
+					<zbmath:source>Fundam. Math. 274, No. 3, 201-236 (2026)</zbmath:source>
+					<zbmath:spelling>Cardona, Miguel A.; Marton, Adam; Šupina, Jaroslav; Šupina, J.</zbmath:spelling>
+					<zbmath:time>2026-10-12T12:03:10Z</zbmath:time>
+					<zbmath:zbl_id>None</zbmath:zbl_id>
+					<zbmath:serial>
+						<zbmath:serial_publisher>Polish Academy of Sciences (Polska Akademia Nauk - PAN), Institute of Mathematics (Instytut Matematyczny), Warsaw</zbmath:serial_publisher>
+						<zbmath:serial_title>Fundamenta Mathematicae</zbmath:serial_title>
+					</zbmath:serial>
+					<zbmath:references>
+					</zbmath:references>
+				</oai_zb_preview:zbmath>
+			</metadata>
+		</record>
+		<record>
+			<header>
+				<identifier>oai:zbmath.org:6383667</identifier>
+				<datestamp>2015-01-06T13:15:02Z</datestamp>
+				<setSpec>11</setSpec>
+			</header>
+			<metadata>
+				<oai_zb_preview:zbmath xmlns:oai_zb_preview="https://zbmath.org/OAI/2.0/oai_zb_preview/" xmlns:zbmath="https://zbmath.org/zbmath/elements/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+					<zbmath:author>Maynard, James</zbmath:author>
+					<zbmath:author_ids>
+						<zbmath:author_id>maynard.james</zbmath:author_id>
+					</zbmath:author_ids>
+					<zbmath:classifications>
+						<zbmath:classification>11N05</zbmath:classification>
+						<zbmath:classification>11N36</zbmath:classification>
+					</zbmath:classifications>
+					<zbmath:document_id>6383667</zbmath:document_id>
+					<zbmath:document_title>Small gaps between primes</zbmath:document_title>
+					<zbmath:document_type>j</zbmath:document_type>
+					<zbmath:doi>10.4007/annals.2015.181.1.7</zbmath:doi>
+					<zbmath:language>English</zbmath:language>
+					<zbmath:pagination>383-413</zbmath:pagination>
+					<zbmath:publication_year>2015</zbmath:publication_year>
+					<zbmath:source>Ann. Math. (2) 181, No. 1, 383-413 (2015).</zbmath:source>
+					<zbmath:spelling>Maynard, James</zbmath:spelling>
+					<zbmath:time>2015-01-06T13:15:02Z</zbmath:time>
+					<zbmath:zbl_id>1306.11073</zbmath:zbl_id>
+					<zbmath:serial>
+						<zbmath:serial_publisher>Princeton University, Mathematics Department, Princeton, NJ</zbmath:serial_publisher>
+						<zbmath:serial_title>Annals of Mathematics. Second Series</zbmath:serial_title>
+					</zbmath:serial>
+					<zbmath:references>
+						<zbmath:reference>
+							<zbmath:text>P. D. T. A. Elliott and H. Halberstam, ''A conjecture in prime number theory,'' in Symposia Mathematica, Vol. IV, London: Academic Press, 1970, pp. 59-72.</zbmath:text>
+							<zbmath:ref_id>3377327</zbmath:ref_id>
+							<zbmath:ref_classifications>
+								<zbmath:ref_classification>11N35</zbmath:ref_classification>
+								<zbmath:ref_classification>11N13</zbmath:ref_classification>
+							</zbmath:ref_classifications>
+						</zbmath:reference>
+						<zbmath:reference>
+							<zbmath:text>J. Friedlander and A. Granville, ''Limitations to the equi-distribution of primes. I,'' Ann. of Math., vol. 129, iss. 2, pp. 363-382, 1989.</zbmath:text>
+							<zbmath:ref_id>4097497</zbmath:ref_id>
+							<zbmath:ref_classifications>
+								<zbmath:ref_classification>11N05</zbmath:ref_classification>
+								<zbmath:ref_classification>11N13</zbmath:ref_classification>
+								<zbmath:ref_classification>11N35</zbmath:ref_classification>
+							</zbmath:ref_classifications>
+						</zbmath:reference>
+					</zbmath:references>
+				</oai_zb_preview:zbmath>
+			</metadata>
+		</record>
+		<resumptionToken expirationDate="2026-10-26T16:48:51Z" completeListSize="4" cursor="3">7ddd54a1-0de1-423a-a054-8ee14bf374d9</resumptionToken>
+	</ListRecords>
+</OAI-PMH>

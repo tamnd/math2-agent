@@ -5,6 +5,10 @@ import (
 	"os"
 
 	"github.com/tamnd/math2-agent/cli"
+
+	// The ingest adapters register themselves with m2 ingest.
+	_ "github.com/tamnd/math2-agent/ingest/arxiv"
+	_ "github.com/tamnd/math2-agent/ingest/zbmath"
 )
 
 // Version is set at build time with -ldflags "-X main.Version=v0.1.0".

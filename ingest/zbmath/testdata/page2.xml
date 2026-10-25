@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+	<responseDate>2026-10-25T16:48:51Z</responseDate>
+	<request resumptionToken="7ddd54a1-0de1-423a-a054-8ee14bf374d9" verb="ListRecords">https://oai.zbmath.org/v1/</request>
+	<ListRecords>
+		<record>
+			<header>
+				<identifier>oai:zbmath.org:8270899</identifier>
+				<datestamp>2026-10-20T10:09:25Z</datestamp>
+				<setSpec>03</setSpec>
+			</header>
+			<metadata>
+				<oai_zb_preview:zbmath xmlns:oai_zb_preview="https://zbmath.org/OAI/2.0/oai_zb_preview/" xmlns:zbmath="https://zbmath.org/zbmath/elements/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+					<zbmath:author>Shirmohammadzadeh Maleki, Fatemeh; de Jongh, Dick</zbmath:author>
+					<zbmath:author_ids>
+						<zbmath:author_id>shirmohammadzadeh-maleki.fatemeh</zbmath:author_id>
+						<zbmath:author_id>de-jongh.dick-h-j</zbmath:author_id>
+					</zbmath:author_ids>
+					<zbmath:classifications>
+						<zbmath:classification>03B20</zbmath:classification>
+						<zbmath:classification>03B55</zbmath:classification>
+						<zbmath:classification>03B60</zbmath:classification>
+					</zbmath:classifications>
+					<zbmath:document_id>8270899</zbmath:document_id>
+					<zbmath:document_title>Fragments of some subintuitionistic logics</zbmath:document_title>
+					<zbmath:document_type>j</zbmath:document_type>
+					<zbmath:doi>10.1007/s00153-026-01031-5</zbmath:doi>
+					<zbmath:language>English</zbmath:language>
+					<zbmath:pagination>955-978</zbmath:pagination>
+					<zbmath:publication_year>2026</zbmath:publication_year>
+					<zbmath:source>Arch. Math. Logic 65, No. 7, 955-978 (2026)</zbmath:source>
+					<zbmath:spelling>Shirmohammadzadeh Maleki, Fatemeh; de Jongh, Dick; de Jongh, D. H. J.; de Jongh, Dick H. J.; De Jongh, Dick</zbmath:spelling>
+					<zbmath:time>2026-10-20T10:09:25Z</zbmath:time>
+					<zbmath:zbl_id>None</zbmath:zbl_id>
+					<zbmath:serial>
+						<zbmath:serial_publisher>Springer, Berlin/Heidelberg</zbmath:serial_publisher>
+						<zbmath:serial_title>Archive for Mathematical Logic</zbmath:serial_title>
+					</zbmath:serial>
+					<zbmath:references>
+						<zbmath:reference>
+							<zbmath:text>Corsi, G.: Weak Logics with strict implication. Zeitschrift fur Mathematische Logik und Grundlagen der Mathematik 33, 389–406 (1987)</zbmath:text>
+							<zbmath:ref_id>4051559</zbmath:ref_id>
+							<zbmath:ref_classifications>
+								<zbmath:ref_classification>03B20</zbmath:ref_classification>
+							</zbmath:ref_classifications>
+						</zbmath:reference>
+						<zbmath:reference>
+							<zbmath:text>Celani, S.; Jansana, R., A closer look at some subintuitionistic logics, Notre Dame J. Formal Log., 42, 4, 225-255, 2001</zbmath:text>
+							<zbmath:ref_id>2038294</zbmath:ref_id>
+							<zbmath:ref_classifications>
+								<zbmath:ref_classification>03B20</zbmath:ref_classification>
+								<zbmath:ref_classification>03G99</zbmath:ref_classification>
+								<zbmath:ref_classification>03B45</zbmath:ref_classification>
+							</zbmath:ref_classifications>
+						</zbmath:reference>
+					</zbmath:references>
+				</oai_zb_preview:zbmath>
+			</metadata>
+		</record>
+	</ListRecords>
+</OAI-PMH>

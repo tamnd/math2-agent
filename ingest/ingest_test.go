@@ -2,6 +2,8 @@ package ingest_test
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -307,4 +309,19 @@ func TestRegister(t *testing.T) {
 		}
 	}()
 	ingest.Register(lines{id: "registered"})
+}
+
+func TestImportGzip(t *testing.T) {
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+	_, _ = zw.Write([]byte("a\t\tA\t" + passage + "\n"))
+	_ = zw.Close()
+	src := &ingest.Source{ID: "test", Licence: "CC0-1.0", Class: ingest.Open}
+	recs, err := ingest.Import(lines{id: "test"}, src, &buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recs) != 1 || recs[0].Text != passage {
+		t.Errorf("the gzip snapshot gives %+v", recs)
+	}
 }
