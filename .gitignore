@@ -4,3 +4,4 @@ coverage.out
 *.test
 .DS_Store
 /lean/.lake/
+/replay/testdata/fixture/.lake/

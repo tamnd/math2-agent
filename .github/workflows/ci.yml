@@ -189,7 +189,7 @@ jobs:
           "$RUNNER_TEMP/m2" frobnicate || code=$?
           test "$code" = 2
 
-  # M2Extract must build with the pinned toolchain, and its records must agree with the golden files on Linux. The golden files come from macOS, thus this job also checks that the hashes are the same on two machines.
+  # M2Extract must build with the pinned toolchain, and its records must agree with the golden files on Linux. The golden files come from macOS, thus this job also checks that the hashes are the same on two machines. The replay tests run the comparator in the sandbox, thus the seed binding with a review reaches E5 here.
   lean:
     name: M2Extract
     runs-on: ubuntu-latest
@@ -223,8 +223,14 @@ jobs:
           build: true
           test: false
           lint: false
-      - name: test the fixtures, the seed and the Mathlib sample
-        run: M2_MATH2_LEAN="$GITHUB_WORKSPACE/math2/lean" go test -count=1 -v ./lean ./build
+      # lake comparator runs the checkers in a bwrap sandbox. Ubuntu blocks the user namespaces of bwrap by default.
+      - name: install bwrap for the sandbox of the comparator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: test the fixtures, the seed, the Mathlib sample and the replay
+        run: M2_MATH2_LEAN="$GITHUB_WORKSPACE/math2/lean" go test -count=1 -v ./lean ./build ./replay
 
   workflows:
     name: workflow lint
