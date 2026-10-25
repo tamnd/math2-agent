@@ -42,7 +42,11 @@ math2/
     7K/7K3QX2.jsonl              provenance, one line per field change
 
   registers/
-    tags.reg  aliases.reg  retired.reg  bindings.reg  reviewers.reg
+    tags.reg  aliases.reg  retired.reg  bindings.reg  reviewers.reg  crosswalk.reg
+
+  queues/
+    align/wikidata.jsonl         proposed same_as, close_to and aligned edges, one file for each external system (16.3)
+    dedup.jsonl                  proposed duplicate pairs (05.4)
 
   lean/                          the math2 Lean library (a Lake package)
     lakefile.toml                requires mathlib at the pinned commit

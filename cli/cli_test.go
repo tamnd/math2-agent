@@ -96,11 +96,18 @@ func TestCommandTable(t *testing.T) {
 }
 
 func TestHelpForOneCommand(t *testing.T) {
-	code, stdout, _ := run("help", "align")
-	if code != ExitOK {
-		t.Fatalf("exit code is %d, want %d", code, ExitOK)
-	}
-	if !strings.Contains(stdout, "Usage: m2 align") || !strings.Contains(stdout, "M2, the graph meets the world") {
-		t.Fatalf("unexpected help:\n%s", stdout)
+	for _, c := range commands {
+		code, stdout, _ := run("help", c.name)
+		if code != ExitOK {
+			t.Fatalf("%s: exit code is %d, want %d", c.name, code, ExitOK)
+		}
+		if !strings.Contains(stdout, "Usage: m2 "+c.name) || !strings.Contains(stdout, c.summary) {
+			t.Errorf("%s: unexpected help:\n%s", c.name, stdout)
+		}
+		if c.milestone != "" {
+			if m := goal(c.milestone); !strings.Contains(stdout, m.ID+", "+m.Title) {
+				t.Errorf("%s: the help does not name %s:\n%s", c.name, m.ID, stdout)
+			}
+		}
 	}
 }

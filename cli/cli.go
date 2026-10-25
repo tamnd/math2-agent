@@ -58,7 +58,7 @@ var commands = []command{
 	{name: "status", usage: "m2 status [-root DIR] [-out DIR] [-json] <tag|alias|uri>", summary: "Show the computed status of a node and the evidence for it.", run: runStatus},
 	{name: "graph", usage: graphUsage, summary: "Run a graph query.", run: runGraph},
 	{name: "ingest", usage: ingestUsage, summary: "Get a pinned snapshot of an external source and write its records.", run: runIngest},
-	{name: "align", usage: "m2 align <source>", summary: "Propose crosswalk edges to an external source.", milestone: "M2"},
+	{name: "align", usage: alignUsage, summary: "Propose crosswalk edges to an external source, and decide on them.", run: runAlign},
 	{name: "bump", usage: "m2 bump", summary: "Make a branch that moves Lean and Mathlib to the next release.", milestone: "M2"},
 	{name: "release", usage: "m2 release cut|notes|verify", summary: "Cut, describe or verify a release.", milestone: "M2"},
 	{name: "search", usage: "m2 search <query>", summary: "Search the knowledge graph.", milestone: "M3"},
@@ -75,7 +75,7 @@ var commands = []command{
 var version = "dev"
 
 // current is the milestone that the project works on now.
-const current = "M1"
+const current = "M2"
 
 // Run runs the command in args and returns the exit code.
 func Run(args []string, v string, stdout, stderr io.Writer) int {

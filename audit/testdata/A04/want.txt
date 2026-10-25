@@ -1,0 +1,2 @@
+queues/dedup.jsonl:1:1: A04: 3C53TD and G5S1M9 can be one node, and no person decided on it since 2026-05-01. Run m2 align accept or m2 align reject on 3C53TDG5S1M9
+queues/dedup.jsonl:2:1: A04: the proposal 3C53TDG5S1N0 has the date "May 2026", which is not YYYY-MM-DD

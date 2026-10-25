@@ -160,12 +160,7 @@ func v04(a *auditor) outcome {
 		o.reason = err.Error()
 		return o
 	}
-	head, err := git(a.root, "log", "-1", "--format=%cs")
-	if err != nil {
-		o.reason = err.Error()
-		return o
-	}
-	now, err := time.Parse(time.DateOnly, strings.TrimSpace(head))
+	now, err := headDate(a.root)
 	if err != nil {
 		o.reason = err.Error()
 		return o

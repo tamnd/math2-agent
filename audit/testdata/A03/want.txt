@@ -1,0 +1,2 @@
+nodes/3C/3C53TD.md:8:13: A03: the record wikidata Q505798 changed after github:curator decided on it on 2026-02-01. Check that it is the same thing still, and run m2 align confirm
+nodes/G5/G5S1M9.md:8:13: A03: wikidata Q99999999 is not in the latest records of wikidata. The record is gone, or it has a new id

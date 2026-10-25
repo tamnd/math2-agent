@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // git runs git in the tree at root and returns the standard output.
@@ -49,4 +50,13 @@ func changed(root, base string) (map[string]bool, error) {
 		}
 	}
 	return out, nil
+}
+
+// headDate returns the date of the HEAD commit. A rule that measures an age measures it to this date, thus the result for a commit does not change with the day of the audit.
+func headDate(root string) (time.Time, error) {
+	head, err := git(root, "log", "-1", "--format=%cs")
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Parse(time.DateOnly, strings.TrimSpace(head))
 }
