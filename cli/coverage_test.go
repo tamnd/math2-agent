@@ -19,6 +19,7 @@ func TestCoverage(t *testing.T) {
 	}
 	files := map[string]string{
 		"topics/msc2020.yaml":        "\"11-XX\": {label: number theory}\n\"20-XX\": {label: groups}\n\"20Axx\": {label: foundations of group theory}\n\"20A05\": {label: axioms of groups}\n\"20Dxx\": {label: finite groups}\n\"20D60\": {label: arithmetic problems on finite groups}\n",
+		"topics/skeletons/20.yaml":   "skeleton: 20-XX\ntitle: groups\nitems:\n  - {name: group, kind: concept, node: G5S1M9}\n  - {name: Lagrange's theorem, kind: statement, node: 3C53TD}\n  - {name: Sylow theorems, kind: statement}\n",
 		"build/records/zbmath.jsonl": `{"id":"1","class":"open","meta":{"msc":"20D60 11A41"}}` + "\n" + `{"id":"2","class":"open","meta":{"msc":"20A05"}}` + "\n",
 	}
 	for p, data := range files {
@@ -62,7 +63,7 @@ func TestCoverage(t *testing.T) {
 		t.Errorf("the count is %+v, %v", e, err)
 	}
 	md, err := os.ReadFile(filepath.Join(root, "reports", "coverage", "next", "20.md"))
-	if err != nil || !strings.Contains(string(md), "| 20-XX | groups | 2 | 2 | 4 | 50.0% | 0.0% | - | - | - | 2 |") || !strings.Contains(string(md), "| 20Axx | foundations of group theory | 1 | 1 | - |") {
+	if err != nil || !strings.Contains(string(md), "| 20-XX | groups | 2 | 2 | 4 | 50.0% | 0.0% | 3 | 2 | 66.7% | - | - | 2 |") || !strings.Contains(string(md), "| 20Axx | foundations of group theory | 1 | 1 | - |") {
 		t.Errorf("the summary of 20 is\n%s, %v", md, err)
 	}
 

@@ -59,9 +59,9 @@ func (r *Report) Markdown(code string) []byte {
 	} else {
 		b.WriteString("No count of the documents is pinned. ")
 	}
-	b.WriteString("C0 and C1 have a value only for a class with a count. C2 to C4 need the cores of spec 18.3, which are not written yet. A dash means that the level has no value.\n\n")
-	b.WriteString("| Code | Area | Records | Counted | Documents | C0 | C1 | C2 | C3 | C4 | Nodes | E2 | E5 |\n")
-	b.WriteString("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+	b.WriteString("C0 and C1 have a value only for a class with a count. Skeleton is the items of the skeleton of a class in topics/skeletons/, and Mapped is the items with a live node that has a source. C2 is Mapped divided by Skeleton, thus C2 has a value only for a class with a skeleton. C3 and C4 need the cores of spec 18.3, which are not written yet. A dash means that the level has no value.\n\n")
+	b.WriteString("| Code | Area | Records | Counted | Documents | C0 | C1 | Skeleton | Mapped | C2 | C3 | C4 | Nodes | E2 | E5 |\n")
+	b.WriteString("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, row := range rows {
 		name := row.Code
 		if code == "" {
@@ -71,7 +71,7 @@ func (r *Report) Markdown(code string) []byte {
 		if row.Expected > 0 {
 			docs = fmt.Sprint(row.Expected)
 		}
-		fmt.Fprintf(&b, "| %s | %s | %d | %d | %s | %s | %s | %s | %s | %s | %d | %d | %d |\n", name, labelCell.Replace(row.Label), row.Records, row.Recorded, docs, percent(row.C0), percent(row.C1), percent(row.C2), percent(row.C3), percent(row.C4), row.Nodes, row.E2, row.E5)
+		fmt.Fprintf(&b, "| %s | %s | %d | %d | %s | %s | %s | %d | %d | %s | %s | %s | %d | %d | %d |\n", name, labelCell.Replace(row.Label), row.Records, row.Recorded, docs, percent(row.C0), percent(row.C1), row.Skeleton, row.Mapped, percent(row.C2), percent(row.C3), percent(row.C4), row.Nodes, row.E2, row.E5)
 	}
 	return b.Bytes()
 }

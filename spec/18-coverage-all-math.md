@@ -42,7 +42,10 @@ Every MSC2020 class is in scope for C0 and C1. For the statement plane:
 - **Applied areas** (35, 49, 60 to 62, 65, 68, 70 to 94) are in scope for their mathematical results: the theorems, definitions and conjectures. A model of a physical, biological or economic system is not a node unless it comes with a mathematical statement. If a formal library exists for the area (Physlib for physics, CSLib for computer science), math2 aligns to it and leaves the modelling to it.
 - **68 (computer science)** overlaps with the theory of computation. Its mathematical core (complexity classes, automata, type theory) is in scope. Software engineering is not.
 
-## 18.3 Cores
+## 18.3 Skeletons and cores
+
+A **skeleton** is the list that C2 counts. Each top-level MSC2020 class has at most one, in `topics/skeletons/NN.yaml`, where NN is the first two characters of the code. Its items have the fields of the items of a curriculum: a name, a kind, and at least one of a Wikipedia title, a Wikidata item and a Mathlib list, with a Mathlib declaration when one exists. An item gets the field `node` when its node exists. C2 of the class is the share of the items whose node is live and has at least one source. A class with no skeleton has no C2. One person who works in the area reviews the skeleton before it counts toward a claim such as "100% C2".
+
 
 A "core" is the set of nodes that an area must have before it can claim C3 or C4. Without cores, C3 would be a percentage of an unknown total. Each core is a curated list in `topics/cores/<name>.yaml`. It is built from standard syllabi and texts, and people who teach the area review it. Cores nest:
 
