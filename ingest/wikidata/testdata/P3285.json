@@ -1,0 +1,28 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "label",
+   "value"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q131476"
+    },
+    "value": {
+     "type": "literal",
+     "value": "05Cxx"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "graph theory"
+    }
+   }
+  ]
+ }
+}

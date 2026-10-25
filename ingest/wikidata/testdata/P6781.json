@@ -1,0 +1,73 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "label",
+   "value"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q131476"
+    },
+    "value": {
+     "type": "literal",
+     "value": "Definition:Graph_Theory"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "graph theory"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12916"
+    },
+    "value": {
+     "type": "literal",
+     "value": "Definition:Real_Number"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "real number"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q11518"
+    },
+    "value": {
+     "type": "literal",
+     "value": "Pythagorean_Theorem"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Pythagorean theorem"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q11518"
+    },
+    "value": {
+     "type": "literal",
+     "value": "Pythagoras's_Theorem"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Pythagorean theorem"
+    }
+   }
+  ]
+ }
+}

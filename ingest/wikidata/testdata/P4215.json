@@ -1,0 +1,58 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "label",
+   "value"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q178546"
+    },
+    "value": {
+     "type": "literal",
+     "value": "determinant"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "determinant"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12916"
+    },
+    "value": {
+     "type": "literal",
+     "value": "real number"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "real number"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q11518"
+    },
+    "value": {
+     "type": "literal",
+     "value": "Pythagorean theorem"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Pythagorean theorem"
+    }
+   }
+  ]
+ }
+}
