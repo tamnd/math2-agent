@@ -63,7 +63,7 @@ var commands = []command{
 	{name: "coverage", usage: coverageUsage, summary: "Write the coverage report of each MSC2020 code to reports/coverage/.", run: runCoverage},
 	{name: "release", usage: releaseUsage, summary: "Cut, describe or verify a release.", run: runRelease},
 	{name: "search", usage: searchUsage, summary: "Search the knowledge graph, or rank the premises of a Lean goal.", run: runSearch},
-	{name: "serve", usage: serveUsage, summary: "Serve the read API over HTTP with JSON.", run: runServe},
+	{name: "serve", usage: serveUsage, summary: "Serve the read API over HTTP with JSON, and the MCP server over HTTP or stdio.", run: runServe},
 	{name: "compute", usage: "m2 compute run|verify <tag>", summary: "Run or verify a computation.", milestone: "M3"},
 	{name: "prov", usage: "m2 prov show|quarantine|credit|disclose <tag>", summary: "Show or change provenance.", milestone: "M3"},
 	{name: "review", usage: "m2 review <tag>", summary: "Review a formal statement against its informal statement.", milestone: "M4"},

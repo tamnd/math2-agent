@@ -169,4 +169,5 @@ The first version of the read surface is in the `api` package, and `m2 serve` se
 - `get_source`, `history`, `topic` and `diff` come with the provenance of document 06 and the topic pages of document 13. The check, compute and propose methods come with the orchestrator.
 - The one interface definition is the table of methods in the `api` package, not `api/m2.proto`. The HTTP handler and the MCP server read the same table, so the two encodings cannot drift apart. gRPC comes with the orchestrator in M4 (tamnd/math2-agent#126), because only the agents inside the cluster use it. At that time `api/m2.proto` is made from the table, and a test checks that the two agree.
 - The rate limit is a token bucket for each IP address of a peer, in memory. Behind a proxy or a CDN, the handler must read the address that the proxy sets.
+- The MCP server is in the `mcp` package. It has the read-only profile only, with one tool for each read method, and `m2 serve` serves it over streamable HTTP at `/mcp` and over stdio. It uses the Go SDK of the Model Context Protocol.
 - `similar` uses the embedding channel with the text of the node, and it has no judge label yet.

@@ -23,7 +23,7 @@ The code of M2 connects the graph to the world. The `store` package puts the gra
 
 Some acceptance items of M2 need time or people, and they stay open: three monthly bumps in a row, the releases of April to June 2027, the full harvests of zbMATH Open and arXiv for C0, and a test of the curation guide by a new curator.
 
-The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON.
+The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON, and the `mcp` package gives the same methods as MCP tools.
 
 The audit report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
@@ -71,7 +71,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
 | `m2 release` | Cut a release with its manifest, levels and notes, write the release notes, or rebuild a release from its manifest. | written |
 | `m2 search <query>` | Search the knowledge graph with the identifier resolver and the lexical, formula, formal and embedding channels. `m2 search -premises <goal>` ranks the Lean declarations that can help to prove a goal. | written |
-| `m2 serve` | Serve the read API over HTTP with JSON, from the last build. | written |
+| `m2 serve` | Serve the read API over HTTP with JSON, and the MCP server over HTTP or stdio, from the last build. | written |
 | `m2 compute` | Run or verify a computation. | M3 |
 | `m2 prov` | Show or change provenance. | M3 |
 | `m2 review <tag>` | Review a formal statement against its informal statement. | M4 |
@@ -182,6 +182,13 @@ curl -d '{"from": "DSG7KN", "to": "Q529ES"}' http://localhost:8080/v1/path
 ```
 
 `GET /v1` lists the methods and their parameters. A method takes its parameters in the query of a GET request, or as a JSON object in the body of a POST request. The methods are `resolve`, `get`, `status`, `get_formal`, `neighbours`, `closure`, `rdeps`, `path`, `frontier`, `search`, `search_formal`, `search_formula`, `similar` and `premises`. Each response gives the version of the API, the method, the commit of the tree, the output hash of the build, and the content hash and the evidence level of each node in the result. An error gives `{"error": {"code": ..., "message": ...}}` with the HTTP status of its code: `invalid` is 400, `not_found` is 404, `rate_limited` is 429 and `internal_error` is 500. Each client can send `-rate` requests each second, and `-burst` requests at once. A client over the limit gets 429 with a `Retry-After` header. The contract test in `api/` keeps the answer of each method in `api/testdata/contract/`.
+
+The MCP server (spec 11.2 and 11.7) has one tool for each method, with the same name and the same parameters. A tool gives the response of its method as structured content and as JSON text. Each tool only reads, and it has the read-only annotation. `m2 serve` serves MCP over streamable HTTP at `/mcp`, behind the same rate limit, and `m2 serve -stdio` serves it on stdin and stdout. To use it in Claude Code:
+
+```
+claude mcp add math2 -- m2 serve -stdio -root ~/math2
+claude mcp add --transport http math2 http://localhost:8080/mcp
+```
 
 ## Ingest
 
@@ -409,7 +416,7 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 ```
 cmd/m2/   the m2 binary
 align/    the aligner: candidates, scores, the curation queues and the register of decisions (spec 05.3, 05.4 and 16.3)
-api/      the read API of spec 11.2 and its HTTP handler
+api/      the read API of spec 11.2, its HTTP handler and its rate limit
 audit/    the audit rules of spec 15, with a fixture pair for each rule
 bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, and bench/search measures the quality of search
 bump/     the Mathlib bump: the pins, the breaks of a bump, the renames and the bump report (spec 07.9)
@@ -421,6 +428,7 @@ format/   the canonical form of m2 fmt and the change from aliases to tags
 graph/    the graph of spec 05: edges, closure, cycles, CSR and Parquet
 ingest/   the adapters of the external sources, the licence gate, the snapshots and the import manifests (spec 09)
 lean/     M2Extract, its Lake package and the Go package that drives it
+mcp/      the MCP server: a read-only tool for each method of the API (spec 11.2 and 11.7)
 node/     read node files, write the canonical form and compute the content hash
 release/  the release manifest, the levels and the notes of spec 06.2, and the rebuild checks R01 and R02
 replay/   the replay of a declaration in the comparator and the independent kernels
