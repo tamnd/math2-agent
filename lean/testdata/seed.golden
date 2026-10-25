@@ -6,3 +6,7 @@ Subgroup.card_subgroup_dvd_card theorem Mathlib.GroupTheory.Coset.Card
   type blake3:4550ab83e0c670b97ac5b09081019d483f2f9edba1daff359c01ca07d258f018
   axioms [Classical.choice Quot.sound propext] native 0
   uses_bound [Group]
+Math2.Match.lagrange theorem Math2.Meta.Match
+  type blake3:b7b9005ea2e988c43f27dd7d75b84d724e5553b7c353099e3ab9542e9e0f46b2
+  axioms [Classical.choice Quot.sound propext] native 0
+  uses_bound [Group Subgroup.card_subgroup_dvd_card]

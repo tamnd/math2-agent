@@ -209,7 +209,7 @@ jobs:
           test: false
           lint: false
       - name: test the fixtures, the seed and the Mathlib sample
-        run: M2_MATHLIB="$GITHUB_WORKSPACE/math2/lean" go test -count=1 -v ./lean
+        run: M2_MATH2_LEAN="$GITHUB_WORKSPACE/math2/lean" go test -count=1 -v ./lean
 
   workflows:
     name: workflow lint

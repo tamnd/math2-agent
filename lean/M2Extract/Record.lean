@@ -59,6 +59,24 @@ def kind : ConstantInfo → String
   | .ctorInfo _ => "constructor"
   | .recInfo _ => "recursor"
 
+/-- A binding on the Lean side. It has the same form as `Math2.Meta.Binding` in tamnd/math2. -/
+structure Binding where
+  decl : Name
+  tag : String
+
+/-- The name of the extension of the `@[m2 "TAG"]` attribute in tamnd/math2. -/
+def bindingExtName : Name := `Math2.Meta.bindingExt
+
+/-- `bindings env` reads the bindings of the `@[m2 "TAG"]` attribute from each module of `env`. It is empty when no module defines the attribute. -/
+unsafe def bindings (env : Environment) : IO (Array Binding) := do
+  let exts ← persistentEnvExtensionsRef.get
+  let some ext := exts.find? (·.name == bindingExtName) | return #[]
+  let mut out := #[]
+  for i in [:env.header.moduleNames.size] do
+    for e in ext.getModuleEntries env i do
+      out := out.push (unsafeCast e : Binding)
+  return out
+
 /-- `record bound d` is the extraction record of `d`. -/
 def record (bound : NameSet) (d : Name) : MetaM Json := do
   let env ← getEnv

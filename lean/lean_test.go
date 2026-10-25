@@ -190,14 +190,21 @@ func TestInstall(t *testing.T) {
 	}
 }
 
-// TestMathlib checks the seed bindings and 100 sampled Mathlib declarations. It needs a Lake project with Mathlib, for example lean/ of tamnd/math2. Set M2_MATHLIB to its directory.
-func TestMathlib(t *testing.T) {
-	project := os.Getenv("M2_MATHLIB")
+// TestMath2 checks the seed bindings and 100 sampled Mathlib declarations. It needs the Lake project lean/ of tamnd/math2. Set M2_MATH2_LEAN to its directory.
+func TestMath2(t *testing.T) {
+	project := os.Getenv("M2_MATH2_LEAN")
 	if project == "" {
-		t.Skip("M2_MATHLIB is not set")
+		t.Skip("M2_MATH2_LEAN is not set")
 	}
-	s := start(t, local(t), project, "Mathlib")
-	seed := []string{"Group", "Subgroup.card_subgroup_dvd_card"}
+	s := start(t, local(t), project, "Mathlib", "Math2")
+	bs, err := s.Bindings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(bs, lean.Binding{Decl: "Math2.Match.lagrange", Tag: "3C53TD"}) {
+		t.Errorf("the bindings are %v, without the adapter of 3C53TD", bs)
+	}
+	seed := []string{"Group", "Subgroup.card_subgroup_dvd_card", "Math2.Match.lagrange"}
 	rs, err := s.Extract(seed, seed)
 	if err != nil {
 		t.Fatal(err)
