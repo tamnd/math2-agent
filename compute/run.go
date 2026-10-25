@@ -274,7 +274,8 @@ func copyFile(dst, src string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0o600) // #nosec G703 -- a file of the build output.
+	// The checker runs as the user 65534 and reads the copy.
+	return os.WriteFile(dst, data, 0o644) // #nosec G306 G703 -- a file of the build output that the sandbox user reads.
 }
 
 func writeRun(dir string, run *Run) error {

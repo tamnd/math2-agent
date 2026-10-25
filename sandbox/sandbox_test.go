@@ -102,8 +102,12 @@ func TestDocker(t *testing.T) {
 	}
 	image := probeImage(t)
 
+	// The user 65534 in the sandbox reads this directory, and t.TempDir makes it with the mode 0700.
 	in := t.TempDir()
-	if err := os.WriteFile(filepath.Join(in, "input.txt"), []byte("42\n"), 0o600); err != nil {
+	if err := os.Chmod(in, 0o755); err != nil { // #nosec G302 -- the user 65534 in the sandbox reads here.
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(in, "input.txt"), []byte("42\n"), 0o644); err != nil { // #nosec G306 -- the user 65534 in the sandbox reads this file.
 		t.Fatal(err)
 	}
 	out := t.TempDir()
