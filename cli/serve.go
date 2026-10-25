@@ -16,10 +16,13 @@ import (
 	"syscall"
 	"time"
 
+	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/tamnd/math2-agent/api"
+	"github.com/tamnd/math2-agent/mcp"
 )
 
-const serveUsage = "m2 serve [-root DIR] [-out DIR] [-addr A] [-rate R] [-burst B] [-commit C]"
+const serveUsage = "m2 serve [-root DIR] [-out DIR] [-addr A] [-rate R] [-burst B] [-commit C] [-stdio]"
 
 // interrupt returns the context of the server. The server stops when the context is done. Tests change it.
 var interrupt = func() (context.Context, context.CancelFunc) {
@@ -38,6 +41,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	rate := flags.Float64("rate", 10, "the requests per second of each client. A negative rate means no limit.")
 	burst := flags.Int("burst", 20, "the requests that a client can send at once")
 	commit := flags.String("commit", "", "the commit of the tree, for the responses. Empty means the HEAD of the tree when it is a git repository.")
+	stdio := flags.Bool("stdio", false, "serve the MCP server on stdin and stdout, not HTTP")
 	if err := flags.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -60,23 +64,34 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	defer func() { _ = s.Close() }()
+	srv := mcp.NewServer(s, version)
+	ctx, stop := interrupt()
+	defer stop()
+	if *stdio {
+		if err := srv.Run(ctx, &sdk.StdioTransport{}); err != nil && ctx.Err() == nil {
+			fmt.Fprintf(stderr, "m2 serve: %v\n", err)
+			return ExitFailure
+		}
+		return ExitOK
+	}
 	ln, err := net.Listen("tcp", *addr)
 	if err != nil {
 		fmt.Fprintf(stderr, "m2 serve: %v\n", err)
 		return ExitFailure
 	}
-	srv := &http.Server{
-		Handler:           s.Handler(api.Options{Rate: *rate, Burst: *burst}),
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", mcp.Handler(srv))
+	mux.Handle("/", s.Handler(api.Options{Rate: -1}))
+	hs := &http.Server{
+		Handler:           api.Limit(mux, api.Options{Rate: *rate, Burst: *burst}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 	}
-	ctx, stop := interrupt()
-	defer stop()
 	done := make(chan error, 1)
-	go func() { done <- srv.Serve(ln) }()
-	fmt.Fprintf(stdout, "m2 serve: the API is at http://%s/%s\n", ln.Addr(), api.Version)
+	go func() { done <- hs.Serve(ln) }()
+	fmt.Fprintf(stdout, "m2 serve: the API is at http://%s/%s and the MCP server is at http://%s/mcp\n", ln.Addr(), api.Version, ln.Addr())
 	listening(ln.Addr().String())
 	select {
 	case err := <-done:
@@ -86,7 +101,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	}
 	shut, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(shut); err != nil {
+	if err := hs.Shutdown(shut); err != nil {
 		fmt.Fprintf(stderr, "m2 serve: %v\n", err)
 		return ExitFailure
 	}

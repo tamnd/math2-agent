@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// Options are the options of Handler.
+// Options are the options of Handler and Limit.
 type Options struct {
 	Rate  float64 // the requests per second of each client. Zero means 10. A negative rate means no limit.
 	Burst int     // the requests that a client can send at once. Zero means 20.
@@ -31,18 +31,8 @@ const maxBody = 1 << 20
 //	POST /v1/{method}        a call with the parameters in a JSON object
 //	GET  /healthz            ok
 //
-// A call gives a Response with the status 200, or an Error in {"error": ...} with the status of its code. Each client has a rate limit, and a client over the limit gets the status 429 with a Retry-After header.
+// A call gives a Response with the status 200, or an Error in {"error": ...} with the status of its code. Each client has the rate limit of Limit.
 func (s *Service) Handler(opt Options) http.Handler {
-	if opt.Rate == 0 {
-		opt.Rate = 10
-	}
-	if opt.Burst <= 0 {
-		opt.Burst = 20
-	}
-	if opt.Client == nil {
-		opt.Client = peer
-	}
-	lim := &limiter{rate: opt.Rate, burst: float64(opt.Burst), clients: map[string]*bucket{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -78,14 +68,34 @@ func (s *Service) Handler(opt Options) http.Handler {
 	}
 	mux.HandleFunc("GET /"+Version+"/{method}", call)
 	mux.HandleFunc("POST /"+Version+"/{method}", call)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return Limit(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		mux.ServeHTTP(w, r)
+	}), opt)
+}
+
+// Limit gives each client of h the rate limit of opt. A client over the limit gets the status 429 with a Retry-After header and an Error with the code RateLimited. m2 serve puts the API and the MCP server behind one limit.
+func Limit(h http.Handler, opt Options) http.Handler {
+	if opt.Rate < 0 {
+		return h
+	}
+	if opt.Rate == 0 {
+		opt.Rate = 10
+	}
+	if opt.Burst <= 0 {
+		opt.Burst = 20
+	}
+	if opt.Client == nil {
+		opt.Client = peer
+	}
+	lim := &limiter{rate: opt.Rate, burst: float64(opt.Burst), clients: map[string]*bucket{}}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if wait, ok := lim.allow(opt.Client(r), time.Now()); !ok {
 			w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(wait.Seconds()))))
 			fail(w, "", &Error{Code: RateLimited, Message: "too many requests. Wait and try again"})
 			return
 		}
-		mux.ServeHTTP(w, r)
+		h.ServeHTTP(w, r)
 	})
 }
 
@@ -151,9 +161,6 @@ const maxClients = 10000
 
 // allow takes a token of the client. When the bucket is empty, it returns the time until the next token.
 func (l *limiter) allow(client string, now time.Time) (time.Duration, bool) {
-	if l.rate < 0 {
-		return 0, true
-	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	b, ok := l.clients[client]

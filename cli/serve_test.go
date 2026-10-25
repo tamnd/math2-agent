@@ -43,6 +43,21 @@ func TestServe(t *testing.T) {
 	if err != nil || resp.StatusCode != http.StatusOK || r.Commit != "abc" || len(r.About) != 1 || r.About[0].Tag != "Q529ES" {
 		t.Errorf("GET /v1/get gives %d, %+v, %v", resp.StatusCode, r, err)
 	}
+	req, _ := http.NewRequest(http.MethodPost, "http://"+addr+"/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var msg struct {
+		Result struct{ Tools []json.RawMessage } `json:"result"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&msg)
+	_ = resp.Body.Close()
+	if err != nil || len(msg.Result.Tools) != len(api.Methods()) {
+		t.Errorf("POST /mcp tools/list gives %d, %d tools, %v", resp.StatusCode, len(msg.Result.Tools), err)
+	}
 	cancel()
 	if code := <-codes; code != ExitOK {
 		t.Errorf("m2 serve exits with code %d", code)
