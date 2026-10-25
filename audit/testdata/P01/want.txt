@@ -1,0 +1,4 @@
+nodes/3C/3C53TD.md:5:1: P01: the merge changed the field name of 3C53TD, and prov/3C/3C53TD.jsonl has no new line on it. Run m2 prov record
+nodes/3C/3C53TD.md:9:1: P01: the merge changed the field body.statement of 3C53TD, and prov/3C/3C53TD.jsonl has no new line on it. Run m2 prov record
+prov/3C/3C53TD.jsonl:2:1: P01: the provenance line is not valid: the operation "edit" is not add, change, remove, confirm or quarantine
+prov/ZN/ZNAZT5.jsonl:1:1: P01: the merge rewrote the provenance log of ZNAZT5. A log only grows: add a new line to correct a line

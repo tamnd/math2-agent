@@ -157,6 +157,7 @@ func (o *outcome) add(path string, line, col int, format string, args ...any) {
 type auditor struct {
 	root     string
 	pr       bool            // the audit is of a pull request
+	base     string          // the revision that the pull request starts from, when pr is true
 	touched  map[string]bool // the shards and the files that changed, when pr is true
 	schema   *schema.Schema  // the schema of the tree
 	macros   check.Macros    // the macros of the tree
@@ -184,7 +185,7 @@ func load(root string, opt Options) (*auditor, error) {
 		return nil, err
 	}
 	if opt.Base != "" {
-		a.pr = true
+		a.pr, a.base = true, opt.Base
 		if a.touched, err = changed(root, opt.Base); err != nil {
 			return nil, err
 		}

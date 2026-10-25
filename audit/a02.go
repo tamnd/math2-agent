@@ -1,9 +1,6 @@
 package audit
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
 	"errors"
 	"io/fs"
 	"os"
@@ -14,21 +11,13 @@ import (
 
 	"github.com/tamnd/math2-agent/align"
 	"github.com/tamnd/math2-agent/ingest"
-	"github.com/tamnd/math2-agent/tag"
+	"github.com/tamnd/math2-agent/prov"
 )
 
 // unconfirmedAge is the age after which rule A02 reports a same_as value that an agent wrote.
 const unconfirmedAge = 90 // days
 
-// provLine is the part of a line of a provenance log that rule A02 reads (spec 04.8).
-type provLine struct {
-	Field string  `json:"field"` // for example same_as.wikidata
-	Agent *string `json:"agent"` // the agent and its version, or null for a person
-	Human *string `json:"human"` // the person, or null for an agent
-	At    string  `json:"at"`    // the time of the change, RFC 3339
-}
-
-// a02 reports each same_as value that an agent wrote and that no person accepted or confirmed in 90 days (rule A02). The writer of a value is in the provenance log of the node, prov/<shard>/<tag>.jsonl: the last line whose field is same_as.<system>. A value that came through m2 align accept has a person already. The age is to the date of the HEAD commit, as in V04.
+// a02 reports each same_as value that an agent wrote and that no person accepted or confirmed in 90 days (rule A02). The writer of a value is in the provenance log of the node, prov/<shard>/<tag>.jsonl: the last line on same_as.<system>, on same_as or on the whole node (prov.Author). A value that came through m2 align accept has a person already. The age is to the date of the HEAD commit, as in V04.
 func a02(a *auditor) outcome {
 	var o outcome
 	if !isRepo(a.root) {
@@ -54,7 +43,7 @@ func a02(a *auditor) outcome {
 		if m == nil || retired(n) {
 			continue
 		}
-		log, err := readProv(a.root, n.ID)
+		log, err := prov.Read(a.root, n.ID)
 		if err != nil {
 			o.reason = err.Error()
 			return o
@@ -64,12 +53,12 @@ func a02(a *auditor) outcome {
 			if v.Kind != yaml.ScalarNode || v.Tag == "!!null" {
 				continue
 			}
-			p, ok := log[align.SameAs+"."+k.Value]
+			p, ok := prov.Author(log, align.SameAs+"."+k.Value)
 			if !ok {
 				continue
 			}
 			o.checked++
-			if p.Agent == nil || p.Human != nil || decided[[3]string{n.ID, k.Value, v.Value}] {
+			if p.Agent == "" || p.Human != "" || decided[[3]string{n.ID, k.Value, v.Value}] {
 				continue
 			}
 			at, err := time.Parse(time.RFC3339, p.At)
@@ -77,7 +66,7 @@ func a02(a *auditor) outcome {
 				continue // the time is the business of the provenance rules
 			}
 			if at.AddDate(0, 0, unconfirmedAge).Before(now) {
-				o.add(n.Path, v.Line, v.Column, "the same_as value %s in %s is from %s on %s, and no person confirmed it in %d days. Run m2 align confirm, or remove the value", v.Value, k.Value, *p.Agent, at.Format(time.DateOnly), unconfirmedAge)
+				o.add(n.Path, v.Line, v.Column, "the same_as value %s in %s is from %s on %s, and no person confirmed it in %d days. Run m2 align confirm, or remove the value", v.Value, k.Value, p.Agent, at.Format(time.DateOnly), unconfirmedAge)
 			}
 		}
 	}
@@ -97,28 +86,6 @@ func personal(root string) (map[[3]string]bool, error) {
 		}
 	}
 	return out, nil
-}
-
-// readProv returns the last line of the provenance log of the node for each field. A node with no log has no lines.
-func readProv(root, id string) (map[string]provLine, error) {
-	path := filepath.Join(root, "prov", tag.Shard(id), id+".jsonl")
-	data, err := os.ReadFile(path) // #nosec G304 -- the path is a provenance log of the working tree.
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	out := map[string]provLine{}
-	sc := bufio.NewScanner(bytes.NewReader(data))
-	sc.Buffer(nil, 1<<20)
-	for sc.Scan() {
-		var p provLine
-		if json.Unmarshal(sc.Bytes(), &p) == nil && p.Field != "" {
-			out[p.Field] = p
-		}
-	}
-	return out, sc.Err()
 }
 
 // a03 checks each same_as value against the latest records of its system (rule A03). The record must still be there. When a person decided on the value, and the register has the hash of the record at that time, the record must still say the same: the same kind, title and text. The rule reads the records that m2 ingest wrote, and it does not fetch them again. Thus the audit does not use the network, and its result changes only with a new snapshot. A value whose system has no records in the tree is not checked.

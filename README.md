@@ -23,7 +23,7 @@ The code of M2 connects the graph to the world. The `store` package puts the gra
 
 Some acceptance items of M2 need time or people, and they stay open: three monthly bumps in a row, the releases of April to June 2027, the full harvests of zbMATH Open and arXiv for C0, and a test of the curation guide by a new curator.
 
-The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON, and the `mcp` package gives the same methods as MCP tools. The `sandbox` package runs a program with no network and with limits, and the `compute` package and `m2 compute` run the computations in it. The rules C01 to C05 check the computations and their runs.
+The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON, and the `mcp` package gives the same methods as MCP tools. The `sandbox` package runs a program with no network and with limits, and the `compute` package and `m2 compute` run the computations in it. The rules C01 to C05 check the computations and their runs. The `prov` package reads and writes the provenance log of each node (spec 04.8), and `m2 prov` shows, records, credits, quarantines and confirms the lines. The rules P01 to P04 check the logs and the agent runs.
 
 The audit report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
@@ -76,7 +76,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 search <query>` | Search the knowledge graph with the identifier resolver and the lexical, formula, formal and embedding channels. `m2 search -premises <goal>` ranks the Lean declarations that can help to prove a goal. | written |
 | `m2 serve` | Serve the read API over HTTP with JSON, and the MCP server over HTTP or stdio, from the last build. | written |
 | `m2 compute run\|verify <tag>` | Run a computation in the sandbox, or verify its output and its certificate. | written |
-| `m2 prov` | Show or change provenance. | M3 |
+| `m2 prov` | Show, record, credit, quarantine and confirm provenance. `m2 prov disclose` arrives later in M3. | written |
 | `m2 review <tag>` | Review a formal statement against its informal statement. | M4 |
 | `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
 | `m2 agent run <role>` | Do one agent run. | M5 |
@@ -351,6 +351,33 @@ A node gets a `same_as` proposal when the best record has a score of at least 0.
 
 On the nodes of math2 and the Wikidata records of 25 October 2026, the aligner proposes two `same_as` edges: Q505798 for Lagrange's theorem, through its Mathlib declaration, and Q83478 for the node Group. Both are correct. The other sources give no proposals for the seed nodes.
 
+## Provenance
+
+Each node has a provenance log in `prov/<shard>/<tag>.jsonl` (spec 04.8). Each line of the log is one change to one field: the field, the operation, the agent or the person, and the time. A line of an agent also names its run, and it can name the model and the prompt version. A person is `orcid:` and an ORCID iD, or `github:` and a GitHub login. An agent is a role at a version, for example `m2-agent/formalize@0.9.1`. The log only grows. The fields are the top-level keys of the front matter, `body` for the text before the first section, `body.<section>` for each section, `body.explanations.L1` to `L4` for each explanation, and `*` for the whole node.
+
+```sh
+m2 prov record -by github:octocat     # write a line for each field that changed since HEAD
+m2 prov record -agent m2-agent/explain@1.2.0 -run r-2026-10-26-1 -model claude-opus-5-5
+m2 prov show 3C53TD                   # the lines of a node, and the fields in quarantine
+m2 prov credit -from 2027-01-01 -to 2027-12-31 orcid:0000-0002-1825-0097
+m2 prov quarantine -model claude-opus-5-5 -prompt explain/7
+m2 prov quarantine -model claude-opus-5-5 -prompt explain/7 -by github:octocat
+m2 prov confirm -by github:octocat 3C53TD body.explanations.L1
+```
+
+`m2 prov record` compares the node files with a revision, `HEAD` by default, and it skips a field that has a new line since that revision already. `m2 prov credit` lists the changes of a person in the CRediT roles, with the changes of the agent runs that worked on behalf of the person. `m2 prov quarantine` lists the fields that an agent wrote with a model and a prompt version, and that no person changed or confirmed since (spec 06.5). With `-by`, it puts the fields in quarantine. A person clears a field when they change it or run `m2 prov confirm`. `m2 align accept` and `m2 align confirm` write the lines of their decisions. `m2 mint` moves the log of a provisional id to its tag.
+
+The summary of each agent run is in `build/runs/<id>.json`, with the agent, the prompt version, the models, the tools, the images, the person or schedule that the run worked on behalf of, and the outcome.
+
+| Rule | What it checks |
+|---|---|
+| P01 | Each change to a node in the pull request has a line in its log, each new line is valid, and no line of the log changed. |
+| P02 | Each line of an agent names a run that exists, with the same agent and a model of the run. |
+| P03 | Each run worked on behalf of a person, a schedule or the project. |
+| P04 | An explanation that the node marks as written by a person was not written last by an agent. |
+
+P02 and P03 need the run summaries in `build/runs/`. When they do not exist, the rules skip.
+
 ## The Mathlib bump
 
 `m2 bump` moves the tree to the newest release tag of Mathlib (spec 07.9). It never picks a release candidate. The command needs a git working tree with no changes, and it does these steps:
@@ -504,6 +531,7 @@ ingest/   the adapters of the external sources, the licence gate, the snapshots 
 lean/     M2Extract, its Lake package and the Go package that drives it
 mcp/      the MCP server: a read-only tool for each method of the API (spec 11.2 and 11.7)
 node/     read node files, write the canonical form and compute the content hash
+prov/     the provenance logs, the agent runs, the credit of a person and the quarantine of a model (spec 04.8 and 06.5)
 release/  the release manifest, the levels and the notes of spec 06.2, and the rebuild checks R01 and R02
 replay/   the replay of a declaration in the comparator and the independent kernels
 schema/   check front matter against the node schema

@@ -183,6 +183,7 @@ func TestRewriteThreeLinkedNodes(t *testing.T) {
 	}
 	write(t, root, "nodes/7K/7K3QX2.md", node("7K3QX2", "concept", "~00000001 [[a new node|~00000001]]"))
 	write(t, root, "registers/tags.reg", "7K3QX2 aaaaaaa concept\n")
+	write(t, root, "prov/~/~00000002.jsonl", `{"field":"*","op":"add","agent":null,"human":"github:writer","at":"2026-09-01T10:00:00Z"}`+"\n")
 
 	minted, err := Rewrite(root, nil, "ccccccc")
 	if err != nil {
@@ -215,6 +216,10 @@ func TestRewriteThreeLinkedNodes(t *testing.T) {
 		}
 		if !strings.Contains(string(reg), m.Tag+" ccccccc statement\n") {
 			t.Errorf("tags.reg does not have %s", m.Tag)
+		}
+		_, err = os.Stat(filepath.Join(root, "prov", Shard(m.Tag), m.Tag+".jsonl"))
+		if hasLog := err == nil; hasLog != (m.Provisional == "~00000002") {
+			t.Errorf("%s has a provenance log: %v", m.Tag, hasLog)
 		}
 	}
 }

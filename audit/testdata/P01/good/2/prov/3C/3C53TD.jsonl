@@ -1,0 +1,4 @@
+{"field":"*","op":"add","agent":null,"human":"github:writer","at":"2026-09-01T10:00:00Z"}
+{"field":"name","op":"change","agent":null,"human":"github:writer","at":"2026-09-02T10:00:00Z"}
+{"field":"same_as.wikidata","op":"add","agent":"m2-agent/align@0.2.0","run":"r-2026-09-02-1","human":null,"at":"2026-09-02T10:00:00Z"}
+{"field":"body.statement","op":"change","agent":null,"human":"github:writer","at":"2026-09-02T10:00:00Z"}

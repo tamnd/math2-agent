@@ -29,7 +29,7 @@ func ContentDirs() []string { return []string{"nodes", "topics", "reviews", "com
 // skipDirs are the directories in a content directory that Rewrite does not read.
 var skipDirs = map[string]bool{".git": true, ".lake": true, "node_modules": true}
 
-// Rewrite changes each provisional id in the math2 working tree at root to a new tag. It mints one tag for each file in nodes/~/. It changes the id in the file name, in the front matter, in each [[text|~id]] link and in each other text file in nodes/, topics/, reviews/, compute/ and lean/ that refers to it. It does not change other files, for example the README. Then it adds the new tags to registers/tags.reg with the given commit.
+// Rewrite changes each provisional id in the math2 working tree at root to a new tag. It mints one tag for each file in nodes/~/. It changes the id in the file name, in the front matter, in each [[text|~id]] link and in each other text file in nodes/, topics/, reviews/, compute/ and lean/ that refers to it. It does not change other files, for example the README. It moves the provenance log of each node from prov/~/ to the shard of its tag. Then it adds the new tags to registers/tags.reg with the given commit.
 //
 // Rewrite changes nothing if a file refers to a provisional id that has no file in nodes/~/ (rule T03).
 func Rewrite(root string, r io.Reader, commit string) ([]Minted, error) {
@@ -140,6 +140,9 @@ func rewrite(root string, r io.Reader, commit string, mint func(io.Reader, func(
 		if err := os.Rename(from, to); err != nil {
 			return nil, err
 		}
+		if err := moveLog(root, m); err != nil {
+			return nil, err
+		}
 		entries = append(entries, Entry{Tag: m.Tag, Commit: commit, Kind: m.Kind})
 	}
 	if len(entries) > 0 {
@@ -148,6 +151,23 @@ func rewrite(root string, r io.Reader, commit string, mint func(io.Reader, func(
 		}
 	}
 	return minted, nil
+}
+
+// moveLog moves the provenance log of the provisional id, prov/~/ID.jsonl, to the log of the tag (spec 04.8). A node with no log has nothing to move.
+func moveLog(root string, m Minted) error {
+	from := filepath.Join(root, "prov", "~", m.Provisional+".jsonl")
+	if _, err := os.Stat(from); errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	dir := filepath.Join(root, "prov", Shard(m.Tag))
+	to := filepath.Join(dir, m.Tag+".jsonl")
+	if _, err := os.Stat(to); err == nil {
+		return fmt.Errorf("%s exists already", to)
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- content directories are public.
+		return err
+	}
+	return os.Rename(from, to)
 }
 
 // addTreeTags adds the tags of the node files in the tree to used. A node file can exist before its tag is in the register, for example in a test tree.
