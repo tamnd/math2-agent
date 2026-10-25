@@ -1,8 +1,8 @@
 // Package build makes the derived data of a math2 working tree (spec 07.6).
 //
-// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The store step writes the serving store, store.db, from the nodes, status.json and the aliases (spec 05.7). The search and site steps come in later issues.
+// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The store step writes the serving store, store.db, from the nodes, status.json and the aliases (spec 05.7). The search step writes the search index, search.db, from the nodes, status.json, the aliases and extract.json (spec 14). The site step comes in a later issue.
 //
-// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, status and graph steps. Two builds of the same tree give the same output hash (rule R01).
+// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, status, graph, store and search steps. Two builds of the same tree give the same output hash (rule R01).
 package build
 
 import (
@@ -29,6 +29,7 @@ import (
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/replay"
+	"github.com/tamnd/math2-agent/search"
 	"github.com/tamnd/math2-agent/status"
 	"github.com/tamnd/math2-agent/store"
 )
@@ -41,10 +42,11 @@ const (
 	Status  = "status"
 	Graph   = "graph"
 	Store   = "store"
+	Search  = "search"
 )
 
 // Steps returns the names of the steps in order.
-func Steps() []string { return []string{Lean, Extract, Replay, Status, Graph, Store} }
+func Steps() []string { return []string{Lean, Extract, Replay, Status, Graph, Store, Search} }
 
 // The files of the build, from the output directory.
 const (
@@ -54,6 +56,7 @@ const (
 	StatusFile   = "status.json"
 	GraphDir     = "graph"
 	StoreFile    = "store.db"
+	SearchFile   = "search.db"
 )
 
 // Checkers are the programs of the Lean toolchain that check an environment again (spec 07.7). The manifest records the hash of each one that the toolchain has.
@@ -166,6 +169,7 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 		{Status, false, b.status},
 		{Graph, false, b.graph},
 		{Store, false, b.store},
+		{Search, false, b.search},
 	}
 	for _, s := range steps {
 		if opt.Only != "" && s.name != opt.Only {
@@ -681,6 +685,39 @@ func (b *builder) store(_ context.Context, nodes []*node.Node) (Step, error) {
 		return Step{}, err
 	}
 	out, err := hashFiles(b.opt.Out, []string{StoreFile})
+	return Step{Input: input, Output: out}, err
+}
+
+// search writes the search index from the nodes, status.json, the aliases and extract.json. The input is the version of the index, the output of the extract, status and graph steps and the hash of registers/aliases.reg. A tree without a lean/ directory has no extract.json, and its index has no declarations.
+func (b *builder) search(_ context.Context, nodes []*node.Node) (Step, error) {
+	reg, err := os.ReadFile(filepath.Join(b.opt.Root, filepath.FromSlash(format.AliasRegister))) // #nosec G304 -- the caller names the root of the tree.
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return Step{}, err
+	}
+	input := hashString(strings.Join([]string{"search " + search.Version, "extract " + b.output(Extract), "status " + b.output(Status), "graph " + b.output(Graph), "aliases " + hashString(string(reg))}, "\n"))
+	if out, err := hashFiles(b.opt.Out, []string{SearchFile}); err == nil {
+		if s, ok := b.cached(Search, input, out); ok {
+			return s, nil
+		}
+	}
+	st, err := ReadStatus(b.opt.Out)
+	if err != nil {
+		return Step{}, err
+	}
+	aliases, err := format.ReadAliases(b.opt.Root, nodes)
+	if err != nil {
+		return Step{}, err
+	}
+	in := search.Input{Nodes: nodes, Status: st, Aliases: aliases}
+	if x, err := ReadExtraction(b.opt.Out); err == nil {
+		in.Records, in.Bindings = x.Records, x.Bindings
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return Step{}, err
+	}
+	if err := search.Write(filepath.Join(b.opt.Out, SearchFile), in); err != nil {
+		return Step{}, err
+	}
+	out, err := hashFiles(b.opt.Out, []string{SearchFile})
 	return Step{Input: input, Output: out}, err
 }
 
