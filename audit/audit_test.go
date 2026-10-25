@@ -88,6 +88,11 @@ var setup = map[string]func(t *testing.T){
 		t.Setenv("GIT_AUTHOR_DATE", "2026-10-01T12:00:00Z")
 		t.Setenv("GIT_COMMITTER_DATE", "2026-10-01T12:00:00Z")
 	},
+	// The manifest of R01 names the commit of step 1, thus the commits of the fixtures have a fixed date.
+	"R01": func(t *testing.T) {
+		t.Setenv("GIT_AUTHOR_DATE", "2026-10-01T12:00:00Z")
+		t.Setenv("GIT_COMMITTER_DATE", "2026-10-01T12:00:00Z")
+	},
 	// S09 needs an open migration window. The test migration renames the field msc_codes to msc.
 	"S09": func(t *testing.T) {
 		saved := schema.Migrations
@@ -197,8 +202,12 @@ func TestSelect(t *testing.T) {
 	var ids []string
 	for _, r := range rep.Results {
 		ids = append(ids, r.Rule)
-		if r.State != check.Skip || r.Reason != "not written yet" {
-			t.Errorf("%s: the state is %s %q, and it must be skip because the rule is not written", r.Rule, r.State, r.Reason)
+		reason := "not written yet"
+		if r.Rule == "R01" || r.Rule == "R02" {
+			reason = "the tree has no release manifest in manifests/releases"
+		}
+		if r.State != check.Skip || r.Reason != reason {
+			t.Errorf("%s: the state is %s %q, and it must be skip with the reason %q", r.Rule, r.State, r.Reason, reason)
 		}
 	}
 	if !slices.Equal(ids, []string{"R01", "R02", "R03", "R04", "R05"}) {

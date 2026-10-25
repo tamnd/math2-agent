@@ -1,0 +1,2 @@
+manifests/releases/2027.03.yaml:7:1: R01: the graph of 2027.03 rebuilds to blake3:8d3ecfbe953683f5eb9799f6670232c2b6b12a486fb5eb1e0014a521ecf70744, and the manifest has blake3:0000000000000000000000000000000000000000000000000000000000000000
+manifests/releases/2027.03.yaml:15:1: R01: the rebuild of 2027.03 on ubuntu-24.04/x86_64/4c/16G did not reproduce the graph hash

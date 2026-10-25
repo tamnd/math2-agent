@@ -51,12 +51,12 @@ toolchain:
     pari: ghcr.io/tamnd/m2-pari@sha256:...
     gap:  ghcr.io/tamnd/m2-gap@sha256:...
     smt:  ghcr.io/tamnd/m2-smt@sha256:...
-artefacts:
-  graph:    blake3:af01...  size: 3.1G
-  oleans:   blake3:77c2...  size: 9.8G
-  search:   blake3:1e9b...  size: 6.4G
-  site:     blake3:c0de...  size: 2.2G
-  certs:    blake3:51aa...  size: 840M
+artefacts:                        # the hash of the files and the size in bytes
+  graph:  {hash: blake3:af01..., size: 3100000000}
+  oleans: {hash: blake3:77c2..., size: 9800000000}
+  search: {hash: blake3:1e9b..., size: 6400000000}
+  site:   {hash: blake3:c0de..., size: 2200000000}
+  certs:  {hash: blake3:51aa..., size: 840000000}
 counts:                           # filled by the build. The README table is generated from this
   nodes_live: 0
   by_kind: {}
@@ -68,6 +68,7 @@ rebuild_check:
   runner: ubuntu-24.04/x86_64/32c/128G
   graph_hash_reproduced: true
   oleans_hash_reproduced: true
+  olean_differences: []           # each file that is different, with a reason, when oleans_hash_reproduced is false
 ```
 
 The rules:
