@@ -1,0 +1,5 @@
+reviews/3C/3C53TD.yaml:9:5: V01: the review r-3C53TD-02 has the statement_hash "abc". Write the hash as blake3: and 64 lowercase hex digits
+reviews/3C/3C53TD.yaml:9:5: V01: the review r-3C53TD-02 read Math2.Match.lagrange, and the binding that lists it checks Subgroup.card_subgroup_dvd_card
+reviews/3C/3C53TD.yaml:16:5: V01: the review r-3C53TD-03 has the type_hash "". Write the hash as blake3: and 64 lowercase hex digits
+reviews/3C/3C53TD.yaml:16:5: V01: no Lean binding of 3C53TD lists the review r-3C53TD-03 in fidelity_reviews. Add the id to the binding that the review read
+reviews/7Q/7Q2K1B.yaml:2:5: V01: the review r-7Q2K1B-01 is in the file of 7Q2K1B, and no node has the tag 7Q2K1B

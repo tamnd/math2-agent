@@ -1,0 +1,4 @@
+lean/Math2/Basic.lean:6:3: F06: the library uses sorry outside Math2/Hypotheses/. Complete the proof
+lean/Math2/Basic.lean:8:27: F06: the library uses admit outside Math2/Hypotheses/. Complete the proof
+lean/Math2/Basic.lean:10:1: F06: the library uses axiom outside Math2/Hypotheses/. Prove it, or state it as a named hypothesis in Math2/Hypotheses/
+lean/Math2/Basic.lean:12:3: F06: the library uses implemented_by outside Math2/Hypotheses/. Remove the attribute. The kernel cannot check the code that it names

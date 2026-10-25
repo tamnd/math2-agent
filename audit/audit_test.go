@@ -83,6 +83,11 @@ func result(t *testing.T, rep *check.Report, id string) check.Result {
 // TestFixtures checks that each written rule passes on its good fixture and finds the problems of want.txt in its bad fixture (spec 15.3).
 // setup prepares the state of the other packages that the fixtures of a rule need.
 var setup = map[string]func(t *testing.T){
+	// V04 compares the date of a review with the date of the HEAD commit, thus the commits of the fixtures have a fixed date.
+	"V04": func(t *testing.T) {
+		t.Setenv("GIT_AUTHOR_DATE", "2026-10-01T12:00:00Z")
+		t.Setenv("GIT_COMMITTER_DATE", "2026-10-01T12:00:00Z")
+	},
 	// S09 needs an open migration window. The test migration renames the field msc_codes to msc.
 	"S09": func(t *testing.T) {
 		saved := schema.Migrations
