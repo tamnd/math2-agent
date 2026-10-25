@@ -56,7 +56,7 @@ var commands = []command{
 	{name: "build", usage: "m2 build [-root DIR] [-out DIR] [-cache DIR] [-only STEP] [-no-sandbox] [-json]", summary: "Build the derived data: Lean, extraction, replay, status and graph. Search comes later.", run: runBuild},
 	{name: "audit", usage: "m2 audit [-root DIR] [-plane P] [-rule R,...] [-changed] [-base REV] [-release R] [-json] [-q]", summary: "Run the audit rules and write the report to reports/.", run: runAudit},
 	{name: "status", usage: "m2 status [-root DIR] [-out DIR] [-json] <tag|alias|uri>", summary: "Show the computed status of a node and the evidence for it.", run: runStatus},
-	{name: "graph", usage: "m2 graph closure|rdeps|path|frontier <tag>", summary: "Run a graph query.", milestone: "M2"},
+	{name: "graph", usage: graphUsage, summary: "Run a graph query.", run: runGraph},
 	{name: "ingest", usage: "m2 ingest <source> [-snapshot S]", summary: "Get a pinned snapshot of an external source.", milestone: "M2"},
 	{name: "align", usage: "m2 align <source>", summary: "Propose crosswalk edges to an external source.", milestone: "M2"},
 	{name: "bump", usage: "m2 bump", summary: "Make a branch that moves Lean and Mathlib to the next release.", milestone: "M2"},

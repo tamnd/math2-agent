@@ -25,4 +25,5 @@ func ExampleRun() {
 	// Output:
 	// status false
 	// graph false
+	// store false
 }

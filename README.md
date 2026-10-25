@@ -12,7 +12,7 @@ The wiki at https://tamnd.github.io/math2 shows the spec, the milestones and eac
 
 ## Status
 
-The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). The command `m2 release` comes in M2. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
+The project is at milestone M1. Release v0.1.0 closes the code of M0: `m2 new`, `m2 fmt`, `m2 check`, `m2 mint` and `m2 site build` are written. In M1, `m2 audit` runs the rules T01 to T06, S01 to S04, S09, B01 to B05, G01 to G10, F01 to F09, V01 to V04, R01 and R02. The rules G04, F01 to F05 and F07 to F09 read the files in `build/` from the last `m2 build`. A rule skips when a file that it needs does not exist. The `graph` package derives the graph from the node files, with the AND-OR closure of spec 05.5, the CSR adjacency and the Parquet build format. The `lean` package drives M2Extract, a small Lean program that gives the type hash, the axioms, the formal dependencies and the deprecation of each bound declaration. It also runs the checks for degenerate statements of spec 10.4 on each bound theorem. `m2 build` runs `lake build`, runs M2Extract on each binding, replays each binding that needs it in six kernels, computes the status of each node and writes the graph, with a cache for each step. The `status` package computes the evidence level, the fidelity level and the flags of spec 04.7, and `m2 status` shows them. A review counts only when its reviewer has a record in `registers/reviewers.reg` and did not write the binding. F3 needs two reviewers with no shared affiliation. The `release` package makes the release manifest of spec 06.2 from a tree and its last build. It rebuilds the graph of a release from its commit (rule R01), and it rebuilds the `.olean` files and lists each file that is different (rule R02). The command `m2 release` comes in M2. The first work of M2 is written: the `store` package puts the graph and the status of each node into one SQLite file, and `m2 graph` runs the closure, reverse dependency, learning path and frontier queries on it. The report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
 | Milestone | Dates | Result |
 |---|---|---|
@@ -48,10 +48,10 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
 | `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
-| `m2 build` | Build the derived data: Lean, extraction, replay, status and graph. Search comes later. | written |
+| `m2 build` | Build the derived data: Lean, extraction, replay, status, graph and store. Search comes later. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
-| `m2 graph` | Run a graph query: closure, reverse dependencies, path or frontier. | M2 |
+| `m2 graph` | Run a graph query: closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source. | M2 |
 | `m2 align <source>` | Propose crosswalk edges to an external source. | M2 |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release. | M2 |
@@ -89,9 +89,9 @@ m2 build -json          # write the manifest as JSON
 m2 build -no-sandbox    # run the checkers without the sandbox, for example on macOS
 ```
 
-The steps are `lean`, `extract`, `replay`, `status` and `graph`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `replay` step checks each binding that passes each check of E5 except the replay, and writes `build/replay.json`. The `status` step computes the evidence level and the fidelity level of each node from the nodes, `build/extract.json`, `build/replay.json` and the reviews in `reviews/`, and writes `build/status.json`. The `graph` step writes the graph as Parquet to `build/graph/`. A tree without `lean/` has only the `status` and `graph` steps.
+The steps are `lean`, `extract`, `replay`, `status`, `graph` and `store`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `replay` step checks each binding that passes each check of E5 except the replay, and writes `build/replay.json`. The `status` step computes the evidence level and the fidelity level of each node from the nodes, `build/extract.json`, `build/replay.json` and the reviews in `reviews/`, and writes `build/status.json`. The `graph` step writes the graph as Parquet to `build/graph/`. The `store` step writes the graph, the status of each node and the aliases to the SQLite file `build/store.db`, for `m2 graph`. A tree without `lean/` has only the `status`, `graph` and `store` steps.
 
-`build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `replay.json`, `status.json` and `graph/`.
+`build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `replay.json`, `status.json`, `graph/` and `store.db`.
 
 ## The replay of a proof
 
@@ -111,6 +111,21 @@ m2 status -json 3C53TD
 ```
 
 The output gives the evidence level, the fidelity level, the flags, each item of evidence, each Lean binding with its type hash, its axioms, its reviews and its replay, and one reason for each decision. For an E5 result, it also gives the checker versions. A tag that is not in the build exits with code 1.
+
+## Graph queries
+
+`m2 graph` runs a query on `build/store.db` from the last `m2 build`. Give each node as a tag, an alias or an m2:// URI. Put the flags before the nodes. Each query takes `-json`.
+
+```sh
+m2 graph closure 3C53TD                 # the best alternative, its trust profile and its axioms (Q3)
+m2 graph closure -measure size 3C53TD   # the alternative with few nodes, not the least depth
+m2 graph rdeps m2://concept/group       # the nodes that need the node, and the nodes that use it (Q4)
+m2 graph path group 3C53TD              # the shortest learning path through definitions (Q5)
+m2 graph frontier -msc 11               # the formal statements with no kernel proof (Q6)
+m2 graph frontier -open -topic T0NT01   # the open problems and the statements that bound them (Q7)
+```
+
+`m2 graph frontier` also takes `-evidence E1`. A node that `needs` the node loses each alternative when the node is false. A node that `uses` the node uses it in at least one alternative. The learning path goes from `from` to `to` through the uses edges that end at a definition and the defines edges.
 
 ## Rules that the toolchain keeps
 
@@ -144,9 +159,11 @@ format/   the canonical form of m2 fmt and the change from aliases to tags
 graph/    the graph of spec 05: edges, closure, cycles, CSR and Parquet
 lean/     M2Extract, its Lake package and the Go package that drives it
 node/     read node files, write the canonical form and compute the content hash
+release/  the release manifest of spec 06.2 and the rebuild checks R01 and R02
 replay/   the replay of a declaration in the comparator and the independent kernels
 schema/   check front matter against the node schema
 site/     build the wiki
+store/    the serving store: the graph and the status of each node in SQLite, and the queries of spec 05.6
 status/   the evidence level, the fidelity level and the flags of each node (spec 04.7), and the reviews
 tag/      tags, provisional ids, the tag register and the alias register
 uri/      m2:// URIs
