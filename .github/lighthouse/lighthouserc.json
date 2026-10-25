@@ -19,7 +19,7 @@
         "http://127.0.0.1:8000/math2/agents/",
         "http://127.0.0.1:8000/math2/404.html"
       ],
-      "numberOfRuns": 1,
+      "numberOfRuns": 3,
       "settings": {
         "chromeFlags": "--headless=new --no-sandbox",
         "onlyCategories": [
@@ -46,13 +46,15 @@
         "first-contentful-paint": [
           "error",
           {
-            "maxNumericValue": 1000
+            "maxNumericValue": 1000,
+            "aggregationMethod": "median-run"
           }
         ],
         "largest-contentful-paint": [
           "error",
           {
-            "maxNumericValue": 1000
+            "maxNumericValue": 1000,
+            "aggregationMethod": "median-run"
           }
         ]
       }
