@@ -76,7 +76,7 @@ var commands = []command{
 var version = "dev"
 
 // current is the milestone that the project works on now.
-const current = "M2"
+const current = "M3"
 
 // Run runs the command in args and returns the exit code.
 func Run(args []string, v string, stdout, stderr io.Writer) int {
