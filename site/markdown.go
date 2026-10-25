@@ -3,7 +3,6 @@ package site
 import (
 	"bytes"
 	"fmt"
-	"html"
 	"regexp"
 	"strings"
 
@@ -29,29 +28,33 @@ const displayMarker = "M2DISPLAYMATH"
 // linkFunc changes a link destination. It returns the new destination and false when the target does not exist.
 type linkFunc func(dest string) (string, bool)
 
-// markdown renders Markdown to HTML. A node body keeps its math as TeX in a span or a div, and the browser renders it with KaTeX.
+// texFunc returns the HTML of a formula.
+type texFunc func(tex string, display bool) string
+
+// markdown renders Markdown to HTML. In a node body, tex renders the math at build time.
 type markdown struct {
-	md    goldmark.Markdown
-	nodes bool // change wiki links to node links
+	md  goldmark.Markdown
+	tex texFunc // nil for a document with no math and no wiki links
 }
 
-func newMarkdown(math bool) *markdown {
+func newMarkdown(tex texFunc) *markdown {
 	inline := []util.PrioritizedValue{}
-	if math {
+	if tex != nil {
 		inline = append(inline, util.Prioritized(mathParser{}, 50))
 	}
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.Table, extension.Strikethrough, extension.Footnote),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID(), parser.WithInlineParsers(inline...)),
-		goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(mathRenderer{}, 50)), gmhtml.WithUnsafe()),
+		goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(mathRenderer{tex}, 50)), gmhtml.WithUnsafe()),
 	)
-	return &markdown{md: md, nodes: math}
+	return &markdown{md: md, tex: tex}
 }
 
 // render renders src. Each link destination goes through links. A node link to a missing node gets the class missing.
 func (m *markdown) render(src string, links linkFunc) (string, error) {
-	src, blocks := takeDisplayMath(src)
-	if m.nodes {
+	var blocks []string
+	if m.tex != nil {
+		src, blocks = takeDisplayMath(src)
 		src = wikiLinks(src)
 	}
 	doc := m.md.Parser().Parse(text.NewReader([]byte(src)))
@@ -76,7 +79,7 @@ func (m *markdown) render(src string, links linkFunc) (string, error) {
 	out := buf.String()
 	for i, tex := range blocks {
 		marker := fmt.Sprintf("%s%d", displayMarker, i)
-		div := `<div class="math display">` + html.EscapeString(tex) + `</div>`
+		div := `<div class="math display">` + m.tex(tex, true) + `</div>`
 		out = strings.Replace(out, "<p>"+marker+"</p>", div, 1)
 	}
 	return out, nil
@@ -191,9 +194,9 @@ func (mathParser) Parse(_ ast.Node, block text.Reader, _ parser.Context) ast.Nod
 	return n
 }
 
-type mathRenderer struct{}
+type mathRenderer struct{ tex texFunc }
 
-func (mathRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+func (r mathRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(mathKind, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
@@ -203,7 +206,7 @@ func (mathRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 		if m.Display {
 			class = "math display"
 		}
-		_, _ = fmt.Fprintf(w, `<span class="%s">%s</span>`, class, html.EscapeString(string(m.TeX)))
+		_, _ = fmt.Fprintf(w, `<span class="%s">%s</span>`, class, r.tex(string(m.TeX), m.Display))
 		return ast.WalkSkipChildren, nil
 	})
 }

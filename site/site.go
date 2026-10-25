@@ -1,12 +1,13 @@
 // Package site builds the math2 wiki: a static site for GitHub Pages.
 //
-// The site has one page for each node, each MSC class, each spec document and each kind. People read the HTML pages. Agents read the same content as JSON in api/, as Markdown next to each page and through llms.txt. The site works with no server. Search runs in the browser from api/search.json. Math stays as TeX in the HTML, and KaTeX renders it in the browser with the macros of the content repository.
+// The site has one page for each node, each MSC class, each spec document and each kind. People read the HTML pages. Agents read the same content as JSON in api/, as Markdown next to each page and through llms.txt. The site works with no server. Search runs in the browser from api/search.json. The build renders the math of each node to HTML and MathML with the katex package and the macros of the content repository, so a reader can read each node with JavaScript off.
 package site
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"html/template"
 	"io/fs"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tamnd/math2-agent/katex"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/tag"
 )
@@ -119,7 +121,7 @@ type builder struct {
 	nodes   map[string]*nodeView
 	order   []*nodeView
 	specs   []*specDoc
-	macros  template.JS
+	katex   *katex.Renderer
 	tmpl    *template.Template
 	pages   []string // the paths of the HTML pages, for the sitemap
 	nodeMD  *markdown
@@ -128,7 +130,7 @@ type builder struct {
 
 // Build writes the site to opt.Out.
 func Build(opt Options) error {
-	b := &builder{opt: opt, nodes: map[string]*nodeView{}, nodeMD: newMarkdown(true), plainMD: newMarkdown(false)}
+	b := &builder{opt: opt, nodes: map[string]*nodeView{}, plainMD: newMarkdown(nil)}
 	if opt.URL != "" {
 		u := strings.TrimSuffix(opt.URL, "/")
 		if i := strings.Index(u, "://"); i >= 0 {
@@ -188,16 +190,16 @@ func (b *builder) load() error {
 		b.nodes[n.ID] = v
 		b.order = append(b.order, v)
 	}
+	var macros map[string]string
 	if data, err := os.ReadFile(filepath.Join(b.opt.Content, "macros", "m2.katex.json")); err == nil {
-		var m map[string]string
-		if err := json.Unmarshal(data, &m); err != nil {
+		if err := json.Unmarshal(data, &macros); err != nil {
 			return fmt.Errorf("site: macros/m2.katex.json: %w", err)
 		}
-		js, _ := json.Marshal(m)
-		b.macros = template.JS(js) // #nosec G203 -- json.Marshal escapes <, > and & for a script element.
-	} else {
-		b.macros = template.JS("{}")
 	}
+	if b.katex, err = katex.New(macros); err != nil {
+		return fmt.Errorf("site: %w", err)
+	}
+	b.nodeMD = newMarkdown(b.math)
 	for _, v := range b.order {
 		if err := b.resolve(v); err != nil {
 			return err
@@ -270,6 +272,15 @@ func (b *builder) resolve(v *nodeView) error {
 	}
 	v.HTML = template.HTML(body) // #nosec G203 -- the body is content from the math2 repository, which review gates.
 	return nil
+}
+
+// math returns the HTML and MathML of a formula. A formula that KaTeX cannot parse shows as its TeX source, with the error as the title.
+func (b *builder) math(tex string, display bool) string {
+	out, err := b.katex.Render(tex, display)
+	if err != nil {
+		return `<code class="tex-error" title="` + html.EscapeString(err.Error()) + `">` + html.EscapeString(tex) + `</code>`
+	}
+	return out
 }
 
 func (v *nodeView) addBacklink(field, label string, l link) {
@@ -399,15 +410,25 @@ func (b *builder) writePage(dir, name string, data any, p page) error {
 	return b.write(file, out.Bytes())
 }
 
+// writeAssets writes the files of the site and the style sheet and the fonts of KaTeX in assets/katex/.
 func (b *builder) writeAssets() error {
-	return fs.WalkDir(files, "assets", func(p string, d fs.DirEntry, err error) error {
+	if err := b.copyFS(files, "assets", "assets"); err != nil {
+		return err
+	}
+	return b.copyFS(katex.Assets(), ".", "assets/katex")
+}
+
+// copyFS writes each file in dir of fsys to the output directory out.
+func (b *builder) copyFS(fsys fs.FS, dir, out string) error {
+	return fs.WalkDir(fsys, dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		data, err := files.ReadFile(p)
+		data, err := fs.ReadFile(fsys, p)
 		if err != nil {
 			return err
 		}
-		return b.write(p, data)
+		rel, _ := strings.CutPrefix(p, dir+"/")
+		return b.write(path.Join(out, rel), data)
 	})
 }

@@ -14,12 +14,10 @@
 {{end}}{{with .JSONURL}}<link rel="alternate" type="application/json" href="{{.}}">
 {{end}}<link rel="alternate" type="text/plain" title="llms.txt" href="{{url "llms.txt"}}">
 <link rel="icon" href="{{url "assets/icon.svg"}}" type="image/svg+xml">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.1/dist/katex.min.css" integrity="sha384-WwGtaC6ywCHxA5cstpj/3+xIZvTez8dq2IcBQaXRkenHZ7FVVq1ZROtURwfbtTlG" crossorigin="anonymous">
-<link rel="stylesheet" href="{{url "assets/site.css"}}">
+{{if .Math}}<link rel="stylesheet" href="{{url "assets/katex/katex.min.css"}}">
+{{end}}<link rel="stylesheet" href="{{url "assets/site.css"}}">
 <script>document.documentElement.dataset.theme = localStorage.getItem("m2-theme") || "";</script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.1/dist/katex.min.js" integrity="sha384-a1WQdjRj162i159OYq041X6I4K8NenkrI09LlPmiHg0YOb7CR+wJOraXwK9abpnE" crossorigin="anonymous"></script>
 <script defer src="{{url "assets/site.js"}}"></script>
-<script type="application/json" id="m2-macros">{{.Site.Macros}}</script>
 </head>
 <body data-base="{{url ""}}">
 <a class="skip" href="#content">Skip to the content</a>
