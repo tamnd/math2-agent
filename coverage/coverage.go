@@ -2,7 +2,7 @@
 //
 // Coverage has five levels on two planes (spec 18.1). C0 (recorded) and C1 (indexed) are on the record plane. C2 (mapped), C3 (standard) and C4 (formal) are on the statement plane. Each level is a share from 0 to 1.
 //
-// C0 is the share of the documents of an area that have a record in the record plane. The number of documents comes from a pinned count of zbMATH Open in manifests/coverage/expected.yaml. The count is for the top-level codes, thus C0 has a value for these codes only. C1 is the share of the same documents that have extracted results. M2 extracts no results (spec 19), thus C1 is 0 where C0 has a value. C2 to C4 are shares of the core of an area (spec 18.3). The cores are not written yet, thus these levels have no value.
+// C0 is the share of the documents of an area that have a record in the record plane. The number of documents comes from a pinned count of zbMATH Open in manifests/coverage/expected.yaml. The count is for the top-level codes, thus C0 has a value for these codes only. C1 is the share of the same documents that have extracted results. M2 extracts no results (spec 19), thus C1 is 0 where C0 has a value. C2 is the share of the items of the skeleton of a top-level class (topics/skeletons/) that have a live node with at least one source. A class with no skeleton has no C2. C3 and C4 are shares of the core of an area (spec 18.3). The cores are not written yet, thus these levels have no value.
 //
 // Compute gives one row for each code of the topic map. A record or a node counts once for each of its codes and once for each code above them. WriteParquet writes the rows, and Markdown writes a summary of the rows.
 package coverage
@@ -22,11 +22,12 @@ const Dir = "reports/coverage"
 
 // Input is what Compute measures.
 type Input struct {
-	Map      *msc.Map                   // the topic map, which gives the codes
-	Nodes    []*node.Node               // the nodes, with their MSC codes in the msc field
-	Status   []status.Status            // the status of each node. A node with no status has no level.
-	Records  map[string][]ingest.Record // the records of each source, by the id of the source. The codes of a record are in Meta["msc"].
-	Expected *Expected                  // the count of the documents of each class. Nil means that no count is known.
+	Map       *msc.Map                   // the topic map, which gives the codes
+	Nodes     []*node.Node               // the nodes, with their MSC codes in the msc field
+	Status    []status.Status            // the status of each node. A node with no status has no level.
+	Records   map[string][]ingest.Record // the records of each source, by the id of the source. The codes of a record are in Meta["msc"].
+	Expected  *Expected                  // the count of the documents of each class. Nil means that no count is known.
+	Skeletons []Skeleton                 // the skeletons of the top-level classes, which give C2
 }
 
 // Row is the coverage of one MSC2020 code.
@@ -47,6 +48,8 @@ type Row struct {
 	Conjectures int64 `parquet:"conjectures"` // the conjectures and the problems
 	E2          int64 `parquet:"e2"`          // the nodes at E2 or above
 	E5          int64 `parquet:"e5"`          // the nodes at E5 with F2 or above
+	Skeleton    int64 `parquet:"skeleton"`    // the items of the skeleton of a top-level code
+	Mapped      int64 `parquet:"mapped"`      // the items of the skeleton with a live node that has a source
 
 	// The levels. Nil means that the level has no value for the code.
 	C0 *float64 `parquet:"c0,optional"`
@@ -86,11 +89,14 @@ func Compute(in Input) []Row {
 	for _, s := range in.Status {
 		levels[s.Tag] = s
 	}
+	sourced := make(map[string]bool, len(in.Nodes))
 	for _, n := range in.Nodes {
 		s, ok := levels[n.ID]
 		if s.Retired || n.Meta["retired"] != nil {
 			continue
 		}
+		srcs, _ := n.Meta["sources"].([]any)
+		sourced[n.ID] = len(srcs) > 0
 		for _, c := range areas(in.Map, n.List("msc")) {
 			r := at[c]
 			r.Nodes++
@@ -109,6 +115,19 @@ func Compute(in Input) []Row {
 		}
 	}
 
+	for _, sk := range in.Skeletons {
+		r, ok := at[sk.Code]
+		if !ok {
+			continue
+		}
+		for _, it := range sk.Items {
+			r.Skeleton++
+			if sourced[it.Node] {
+				r.Mapped++
+			}
+		}
+	}
+
 	for i := range rows {
 		r := &rows[i]
 		if in.Expected != nil && r.Level == 1 {
@@ -117,6 +136,9 @@ func Compute(in Input) []Row {
 		if r.Expected > 0 {
 			r.C0 = share(r.Recorded, r.Expected)
 			r.C1 = share(r.Results, r.Expected)
+		}
+		if r.Skeleton > 0 {
+			r.C2 = share(r.Mapped, r.Skeleton)
 		}
 	}
 	return rows

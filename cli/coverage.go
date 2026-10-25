@@ -68,6 +68,9 @@ func runCoverage(args []string, stdout, stderr io.Writer) int {
 	if in.Expected, err = coverage.ReadExpected(*root); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fail(err)
 	}
+	if in.Skeletons, err = coverage.ReadSkeletons(*root); err != nil {
+		return fail(err)
+	}
 	if in.Nodes, err = node.Load(*root); err != nil {
 		return fail(err)
 	}

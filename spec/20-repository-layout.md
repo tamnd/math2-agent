@@ -66,6 +66,7 @@ math2/
     msc2020.yaml                 MSC2020 codes → topic tags, with our own short labels. The official class descriptions are CC BY-NC-SA, so they are
                                  not stored here; the site fetches them from a pinned snapshot and shows them with attribution (16.6)
     curricula/                   reading lists (undergraduate core, qualifying exams). Each one is a topic with ordered members
+    skeletons/                   the C2 skeleton of each top-level MSC2020 class, one file NN.yaml for each class (18.3)
 
   manifests/
     releases/2026.11.yaml        release manifests (document 06.2)
