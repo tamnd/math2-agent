@@ -220,6 +220,57 @@ jobs:
           path: ${{ runner.temp }}/report
           retention-days: 14
 
+  # Spec 08.6: a computation runs with no network, on a read-only image, as an unprivileged user. The probe in sandbox/testdata tries to open sockets and to write outside the scratch area, and each try must fail. The job runs the probe on x86-64 and on arm64, with the default runtime and with gVisor.
+  sandbox:
+    name: sandbox (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            sha512: 7cbc2aeeee809dcccfb40e612504a1b76f2c119790cee59e482f7b35428cccc4f71705e7e322442d07d1f7d29b5d9e72e31319fc3088d6dcbec9fc7c1f0d8881
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            sha512: 6b14b582cd3185169df54275eed8721d94c9b40e6cb1533d0d0c46573271c6d2d03db586ea1caac46a45e805797f00b115bead9fb93636a1ffa69f2430958977
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      GVISOR: "20261019"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+      - name: the default runtime
+        env:
+          M2_DOCKER: "1"
+        run: go test -run TestDocker -count=1 -v ./sandbox
+      - name: install gVisor
+        env:
+          ARCH: ${{ matrix.arch }}
+          SHA512: ${{ matrix.sha512 }}
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o gvisor.tar.bz2 "https://storage.googleapis.com/gvisor/releases/release/$GVISOR/$ARCH/gvisor.tar.bz2"
+          echo "$SHA512  gvisor.tar.bz2" | sha512sum -c -
+          mkdir gvisor
+          tar -xjf gvisor.tar.bz2 -C gvisor
+          runsc=$(find gvisor -type f -name runsc | head -1)
+          shim=$(find gvisor -type f -name containerd-shim-runsc-v1 | head -1)
+          sudo install -m 0755 "$runsc" "$shim" /usr/local/bin/
+          sudo /usr/local/bin/runsc install
+          sudo systemctl reload docker
+          docker info --format '{{range $k, $v := .Runtimes}}{{$k}} {{end}}'
+      - name: gVisor
+        env:
+          M2_DOCKER: "1"
+          M2_DOCKER_RUNTIME: runsc
+        run: go test -run TestDocker -count=1 -v ./sandbox
+
   # M2Extract must build with the pinned toolchain, and its records must agree with the golden files on Linux. The golden files come from macOS, thus this job also checks that the hashes are the same on two machines. The replay tests run the comparator in the sandbox, thus the seed binding with a review reaches E5 here.
   lean:
     name: M2Extract

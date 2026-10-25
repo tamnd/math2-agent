@@ -139,6 +139,19 @@ The steps are `lean`, `extract`, `replay`, `status`, `graph`, `store` and `searc
 
 `build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `replay.json`, `status.json`, `graph/`, `store.db` and `search.db`.
 
+## The sandbox
+
+The `sandbox` package runs a program in a container image with the isolation of spec 08.6. The image is named by its digest. The program runs with no network, on a read-only image, as the user `nobody`, with no capabilities. It reads its inputs at `/work`, which is read-only, and writes only to `/scratch` and `/tmp`, which are small tmpfs mounts. The run has limits on the CPU, the memory, the processes, the wall clock and the output. When the Docker daemon has the gVisor runtime `runsc`, `Docker.Detect` selects it.
+
+The `sandbox` job of CI runs a probe on x86-64 and on arm64, with the default runtime and with gVisor. The probe tries to open a TCP socket and a UDP socket, to resolve a name, and to write outside the scratch area. Each try must fail. To run the probe on your machine:
+
+```sh
+M2_DOCKER=1 go test -run TestDocker -v ./sandbox
+M2_DOCKER=1 M2_DOCKER_RUNTIME=runsc go test -run TestDocker -v ./sandbox
+```
+
+The test builds the probe as a static binary in an image `FROM scratch`, so it pulls no image.
+
 ## The replay of a proof
 
 The `replay` package checks a formal declaration again, outside the process that elaborated it (spec 07.7). It writes a challenge module that states the declaration again from its record, with `sorry` as the proof. It exports the challenge and the module of the declaration with `leanexport`, and runs `lake comparator --paranoid` on the two exports. The declaration passes when it has the statement of the challenge, uses only the standard axioms, and each kernel of the toolchain accepts it. The kernels are `leanchecker`, `leanchecker-paranoid`, `lean4lean`, `nanoda_bin`, `con-leche` and `con-ron`. A check takes about 20 seconds for a declaration that imports Mathlib.
