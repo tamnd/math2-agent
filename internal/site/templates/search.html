@@ -1,0 +1,11 @@
+{{define "search"}}
+<header class="page-head">
+  <h1>Search</h1>
+</header>
+<form class="search-box big" role="search" onsubmit="return false">
+  <input id="q" type="search" name="q" placeholder="A name, an alias, a tag or an MSC code" aria-label="Search" autocomplete="off" autofocus>
+</form>
+<p id="search-status" class="muted" aria-live="polite">Type to search the nodes and the spec documents.</p>
+<ol id="results" class="results"></ol>
+<noscript><p>Search needs JavaScript. You can read <a href="{{url "api/search.json"}}">api/search.json</a> or <a href="{{url "nodes/"}}">the list of all nodes</a>.</p></noscript>
+{{end}}

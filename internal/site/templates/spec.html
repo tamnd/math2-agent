@@ -1,0 +1,16 @@
+{{define "spec"}}
+<div class="spec">
+<nav class="toc" aria-label="Specification">
+  <h2><a href="{{url "spec/"}}">Specification</a></h2>
+  <ul class="bare">{{range .Docs}}<li{{if eq .Slug $.Doc.Slug}} class="here"{{end}}><a href="{{.URL}}">{{.Title}}</a></li>{{end}}</ul>
+</nav>
+<article class="prose">
+{{.Doc.Body}}
+<nav class="pager">
+  {{with .Prev}}<a class="prev" href="{{.URL}}">Previous: {{.Title}}</a>{{end}}
+  {{with .Next}}<a class="next" href="{{.URL}}">Next: {{.Title}}</a>{{end}}
+</nav>
+<p class="formats"><a href="{{url (print "spec/" .Doc.Slug ".md")}}">Markdown</a> · <a href="{{agentRepo}}/blob/main/spec/{{.Doc.File}}">Source</a> · <a href="{{agentRepo}}/edit/main/spec/{{.Doc.File}}">Edit</a></p>
+</article>
+</div>
+{{end}}

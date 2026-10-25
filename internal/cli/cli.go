@@ -20,18 +20,20 @@ const (
 
 // Milestone is one milestone of the project plan.
 type Milestone struct {
-	ID    string
-	Title string
+	ID     string
+	Title  string
+	Number int    // the GitHub milestone number in tamnd/math2-agent
+	Due    string // the month the milestone is due
 }
 
 // Milestones is the project plan, in order.
 var Milestones = []Milestone{
-	{"M0", "the skeleton"},
-	{"M1", "the seed and the trust core"},
-	{"M2", "the graph meets the world"},
-	{"M3", "open to readers"},
-	{"M4", "fidelity at scale"},
-	{"M5", "the research engine"},
+	{"M0", "the skeleton", 1, "December 2026"},
+	{"M1", "the seed and the trust core", 2, "March 2027"},
+	{"M2", "the graph meets the world", 3, "June 2027"},
+	{"M3", "open to readers", 4, "September 2027"},
+	{"M4", "fidelity at scale", 5, "December 2027"},
+	{"M5", "the research engine", 6, "June 2028"},
 }
 
 type runFunc func(args []string, stdout, stderr io.Writer) int
@@ -49,6 +51,7 @@ var commands = []command{
 	{name: "new", usage: "m2 new <kind>", summary: "Make a node file with a provisional id.", milestone: "M0"},
 	{name: "fmt", usage: "m2 fmt [path...]", summary: "Make front matter canonical and change aliases to tags.", milestone: "M0"},
 	{name: "check", usage: "m2 check [path...]", summary: "Check schema, body and links on the working tree. This does not use Lean.", milestone: "M0"},
+	{name: "site", usage: "m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-commit C] [-date now]", summary: "Build the wiki: a static site for people and agents.", run: runSite},
 	{name: "build", usage: "m2 build", summary: "Build everything: Lean, extraction, status, graph and search.", milestone: "M1"},
 	{name: "audit", usage: "m2 audit [-plane P] [-rule R] [-changed] [-release R]", summary: "Run the audit rules.", milestone: "M1"},
 	{name: "status", usage: "m2 status <tag>", summary: "Show the computed status of a node and the evidence for it.", milestone: "M1"},
@@ -67,8 +70,15 @@ var commands = []command{
 	{name: "orchestrate", usage: "m2 orchestrate", summary: "Run the job scheduler.", milestone: "M5"},
 }
 
+// version is the m2 version that Run got.
+var version = "dev"
+
+// Current is the milestone that the project works on now.
+const Current = "M0"
+
 // Run runs the command in args and returns the exit code.
-func Run(args []string, version string, stdout, stderr io.Writer) int {
+func Run(args []string, v string, stdout, stderr io.Writer) int {
+	version = v
 	if len(args) == 0 {
 		writeHelp(stderr)
 		return ExitUsage
