@@ -69,6 +69,8 @@ math2/
 
   manifests/
     releases/2026.11.yaml        release manifests (document 06.2)
+    releases/2026.11.levels      the evidence and fidelity level of each live node at the release
+    releases/2026.11.md          the release notes: a summary by a person, and the sections that m2 release notes writes
     sources.yaml                 every external snapshot used: URL, hash, date, licence (document 09)
     images.yaml                  computational images by digest
     ingest/                      per-source import manifests
@@ -79,6 +81,7 @@ math2/
     graph/                       graph health
     coverage/                    per-MSC coverage tables (document 18)
     releases/                    the full pre-release report per release
+    restore/                     one record for each quarterly restore drill (06.6, rule R04)
     agents/                      weekly agent acceptance and cost reports (document 12.9)
     eval/                        per-release evaluation reports (document 17.8)
 

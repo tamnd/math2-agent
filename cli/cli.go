@@ -60,7 +60,7 @@ var commands = []command{
 	{name: "ingest", usage: ingestUsage, summary: "Get a pinned snapshot of an external source and write its records.", run: runIngest},
 	{name: "align", usage: alignUsage, summary: "Propose crosswalk edges to an external source, and decide on them.", run: runAlign},
 	{name: "bump", usage: bumpUsage, summary: "Make a branch that moves Lean and Mathlib to the next release.", run: runBump},
-	{name: "release", usage: "m2 release cut|notes|verify", summary: "Cut, describe or verify a release.", milestone: "M2"},
+	{name: "release", usage: releaseUsage, summary: "Cut, describe or verify a release.", run: runRelease},
 	{name: "search", usage: "m2 search <query>", summary: "Search the knowledge graph.", milestone: "M3"},
 	{name: "serve", usage: "m2 serve [-addr A]", summary: "Serve the API, the MCP server and the workspace.", milestone: "M3"},
 	{name: "compute", usage: "m2 compute run|verify <tag>", summary: "Run or verify a computation.", milestone: "M3"},

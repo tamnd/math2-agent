@@ -97,6 +97,8 @@ var setup = map[string]func(t *testing.T){
 	// A02 and A04 compare a date with the date of the HEAD commit, thus the commits of the fixtures have a fixed date.
 	"A02": fixedDate,
 	"A04": fixedDate,
+	// The manifests of R05 name the commit of step 1.
+	"R05": fixedDate,
 	// The manifest of R01 names the commit of step 1, thus the commits of the fixtures have a fixed date.
 	"R01": func(t *testing.T) {
 		t.Setenv("GIT_AUTHOR_DATE", "2026-10-01T12:00:00Z")
@@ -211,9 +213,9 @@ func TestSelect(t *testing.T) {
 	var ids []string
 	for _, r := range rep.Results {
 		ids = append(ids, r.Rule)
-		reason := "not written yet"
-		if r.Rule == "R01" || r.Rule == "R02" {
-			reason = "the tree has no release manifest in manifests/releases"
+		reason := "the tree has no release manifest in manifests/releases"
+		if r.Rule == "R04" {
+			reason = "the tree has no record of a restore drill in reports/restore"
 		}
 		if r.State != check.Skip || r.Reason != reason {
 			t.Errorf("%s: the state is %s %q, and it must be skip with the reason %q", r.Rule, r.State, r.Reason, reason)

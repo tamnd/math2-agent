@@ -1,6 +1,12 @@
-// Package release makes and checks the release manifests of tamnd/math2 (spec 06.2).
+// Package release makes and checks the releases of tamnd/math2 (spec 06.2).
 //
-// A release is a git tag on tamnd/math2 and a manifest in manifests/releases/. The manifest pins the toolchain and gives the hash of each artefact of the release. [Make] makes a manifest from a working tree and its last m2 build. [RebuildGraph] rebuilds the derived graph from a commit, so that a second machine can compare the hash with the manifest (rule R01). [RebuildOleans] and [Compare] rebuild the .olean files and list each file that is different (rule R02).
+// A release has a name, YYYY.MM for the monthly release or YYYY.MM.N for a patch release, and three files in manifests/releases/: the manifest, the levels of the nodes and the release notes. [IsName], [NextName] and [List] work with the names. The release is also a git tag with the name.
+//
+// [Make] makes a manifest from a working tree and its last m2 build. The manifest pins the toolchain and gives the hash of each artefact. [Manifest.CheckPins] checks that it pins one stable Lean toolchain and one Mathlib commit (rule R05). [LevelsOf] gives the levels of the nodes, which the next release needs for its notes.
+//
+// [Load] reads the [Snapshot] of a release, and [Diff] makes the [Notes] of a release from the snapshot of the release before it. The notes give the cause of each change in a count of the manifest, which rule R03 checks with [Changes] and [ParseNotes]. A person writes the summary of the notes.
+//
+// [RebuildGraph] rebuilds the derived graph from a commit, so that a second machine can compare the hash with the manifest (rule R01). [RebuildOleans] and [Compare] rebuild the .olean files and list each file that is different (rule R02).
 package release
 
 import (
@@ -15,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -138,6 +145,23 @@ func Make(root, out, name string) (*Manifest, error) {
 		}
 	}
 	return m, nil
+}
+
+var (
+	stableLean = regexp.MustCompile(`^leanprover/lean4:v[0-9]+\.[0-9]+\.[0-9]+$`)
+	fullCommit = regexp.MustCompile(`^[0-9a-f]{40}$`)
+)
+
+// CheckPins checks that the manifest pins one stable Lean toolchain and one Mathlib commit (rule R05). A release candidate, a nightly toolchain, a branch or a short commit is not a pin.
+func (m *Manifest) CheckPins() error {
+	var errs []error
+	if !stableLean.MatchString(m.Toolchain.Lean) {
+		errs = append(errs, fmt.Errorf("the Lean toolchain %q is not one stable release of Lean", m.Toolchain.Lean))
+	}
+	if !fullCommit.MatchString(m.Toolchain.Mathlib) {
+		errs = append(errs, fmt.Errorf("the Mathlib pin %q is not one full commit", m.Toolchain.Mathlib))
+	}
+	return errors.Join(errs...)
 }
 
 func all(string) bool { return true }

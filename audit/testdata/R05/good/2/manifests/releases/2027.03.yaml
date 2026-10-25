@@ -1,0 +1,6 @@
+release: "2027.03"
+commit: 55b0f0f134803ee65e5b067003558dd2af1e9cbf
+toolchain: {m2: v0.2.0, lean: "leanprover/lean4:v4.35.0", mathlib: 4f1c7b2e9a0d3c5b6e8f7a1d2c3b4a5968778695}
+artefacts:
+  graph: {hash: "blake3:8d3ecfbe953683f5eb9799f6670232c2b6b12a486fb5eb1e0014a521ecf70744", size: 9000}
+counts: {nodes_live: 0, by_kind: {}, by_evidence: {}}

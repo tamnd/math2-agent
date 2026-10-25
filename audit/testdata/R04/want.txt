@@ -1,0 +1,3 @@
+manifests/releases/2027.06.yaml:1:1: R04: the last restore drill is of 2027-01-05, more than one quarter before the release 2027.06. Run a drill before the release
+reports/restore/2027-01-05.yaml:1:1: R04: the restore drill of 2027-01-05 on the release 2027.01 failed. A failed drill blocks the next release
+reports/restore/2027-01-06.yaml:1:1: R04: the record of the drill does not parse: the date "5 January" is not YYYY-MM-DD

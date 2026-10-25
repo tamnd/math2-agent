@@ -1,0 +1,9 @@
+manifests/releases/2027.03.yaml:3:1: R05: the Lean toolchain "leanprover/lean4:v4.36.0-rc1" is not one stable release of Lean
+manifests/releases/2027.03.yaml:3:1: R05: the Mathlib pin "4f1c7b2" is not one full commit
+manifests/releases/2027.03.yaml:3:1: R05: the commit of the release 2027.03 pins the Mathlib commit 4f1c7b2e9a0d3c5b6e8f7a1d2c3b4a5968778695, and the manifest has 4f1c7b2
+manifests/releases/2027.03.yaml:3:1: R05: the commit of the release 2027.03 pins Mathlib at master, which is not a release tag
+manifests/releases/2027.04.yaml:3:1: R05: the commit 0000000000000000000000000000000000000000 of the release 2027.04 has no lean/lean-toolchain, or the repository does not have the commit
+manifests/releases/2027.04.yaml:3:1: R05: the release 2027.04 pins the Mathlib commit of reports/bump/2027-04-28.md, and that bump is not green
+manifests/releases/2027.05.yaml:3:1: R05: the commit of the release 2027.05 pins the Lean toolchain leanprover/lean4:v4.36.0-rc1, and the manifest has leanprover/lean4:v4.35.0
+manifests/releases/2027.05.yaml:3:1: R05: the commit of the release 2027.05 pins Mathlib at master, which is not a release tag
+manifests/releases/2027.05.yaml:3:1: R05: the release 2027.05 pins the Mathlib commit of reports/bump/2027-04-28.md, and that bump is not green

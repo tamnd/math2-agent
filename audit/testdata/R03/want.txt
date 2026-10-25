@@ -1,0 +1,5 @@
+manifests/releases/2027.03.yaml:6:1: R03: the release 2027.03 has no notes in manifests/releases/2027.03.md. Run m2 release notes 2027.03
+manifests/releases/2027.04.md:7:1: R03: the notes give the change of nodes_live from 2 to 3, and the manifests give 2 to 4. Run m2 release notes 2027.04 again
+manifests/releases/2027.04.md:7:1: R03: the notes give no cause for the change of by_kind.example from 0 to 1
+manifests/releases/2027.04.md:7:1: R03: the notes do not give the change of by_kind.statement from 1 to 2
+manifests/releases/2027.04.md:7:1: R03: the notes give a change of by_evidence.E2, and the manifests give no change of it
