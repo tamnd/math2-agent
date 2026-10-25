@@ -96,11 +96,11 @@ func TestCommandTable(t *testing.T) {
 }
 
 func TestHelpForOneCommand(t *testing.T) {
-	code, stdout, _ := run("help", "ingest")
+	code, stdout, _ := run("help", "align")
 	if code != ExitOK {
 		t.Fatalf("exit code is %d, want %d", code, ExitOK)
 	}
-	if !strings.Contains(stdout, "Usage: m2 ingest") || !strings.Contains(stdout, "M2, the graph meets the world") {
+	if !strings.Contains(stdout, "Usage: m2 align") || !strings.Contains(stdout, "M2, the graph meets the world") {
 		t.Fatalf("unexpected help:\n%s", stdout)
 	}
 }

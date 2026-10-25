@@ -167,6 +167,7 @@ type auditor struct {
 	checkRun *check.Report   // the run of m2 check on the scope, made when a rule needs it
 	graph    *graph.Graph    // the graph of every node file that parses, made when a rule needs it
 	last     *built          // the files of the last m2 build, read when a rule needs them
+	imp      *imports        // the catalogue, the import manifests and the records, read when a rule needs them
 }
 
 func load(root string, opt Options) (*auditor, error) {

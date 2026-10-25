@@ -1,0 +1,21 @@
+# The external sources of math2 and each snapshot that math2 used (spec 09.2). m2 ingest writes this file. A maintainer approves the class of each new source.
+sources:
+  - id: oeis
+    name: The On-Line Encyclopedia of Integer Sequences
+    home: https://oeis.org
+    licence: CC-BY-SA-4.0
+    class: open
+    snapshots:
+      - url: https://example.org/oeisdata.tar.gz
+        hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        date: "2026-10-01"
+  - id: stacks
+    name: The Stacks Project
+    home: https://stacks.math.columbia.edu
+    licence: GFDL-1.3-or-later
+    class: gfdl
+    snapshots:
+      - url: https://example.org/stacks.tar.gz
+        hash: blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+        date: "2026-10-01"
+        commit: 0123456789abcdef0123456789abcdef01234567

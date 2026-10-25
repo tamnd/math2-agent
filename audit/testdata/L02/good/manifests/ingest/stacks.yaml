@@ -1,0 +1,8 @@
+# The import manifest of stacks. m2 ingest writes this file. Run m2 ingest stacks -snapshot blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb to make the same records again.
+source: stacks
+adapter: stacks/1
+snapshot: blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+records: 1
+hash: blake3:192867e577154633b249af909387b8e9957de16b7820ff8ccfb0ccace49670f6
+classes:
+  gfdl: 1

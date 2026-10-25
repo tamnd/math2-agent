@@ -1,0 +1,2 @@
+manifests/sources.yaml:3:1: L03: oeis has the share-alike licence CC-BY-SA-4.0 and no attribution line. Add attribution
+nodes/5Z/5ZQ1PM.md:3:1: L03: the body uses text of oeis A000045 under CC-BY-SA-4.0. Name the item in sources or same_as to give attribution

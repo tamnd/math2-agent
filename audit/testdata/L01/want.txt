@@ -1,0 +1,5 @@
+build/records/stacks.jsonl:1:1: L01: the records have the hash blake3:8831302b1a24c9c457003abfd453c827f1e89a5c0096ae4b4826b6ef49b8b294, and the manifest has blake3:87ff50b23147a836100089307c5ef159a0c8df2740e40f9fc2c2b21861f8bee0. Run m2 ingest stacks -snapshot blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb again
+build/records/stacks.jsonl:1:1: L01: the record 01H8 has the class "gfdl", and its licence gives open
+build/records/stacks.jsonl:1:1: L01: the record 01H8 stores text, and the class gfdl does not let math2 store it. Only the record and the fingerprints can be stored
+manifests/ingest/oeis.yaml:1:1: L01: the snapshot blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc is not a snapshot of oeis in manifests/sources.yaml
+manifests/sources.yaml:13:1: L01: stacks: the licence GFDL-1.3-or-later gives the class gfdl, and the source has the class open
