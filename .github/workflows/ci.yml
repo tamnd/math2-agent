@@ -105,7 +105,7 @@ jobs:
           test "$("$RUNNER_TEMP/m2" version)" = "m2 ci"
       - name: a command that is not written yet exits with code 3
         run: |
-          for cmd in new build audit graph search serve review agent; do
+          for cmd in build audit graph search serve review agent; do
             code=0
             "$RUNNER_TEMP/m2" "$cmd" 2> err.txt || code=$?
             if [ "$code" != 3 ]; then
@@ -133,6 +133,17 @@ jobs:
           "$RUNNER_TEMP/m2" fmt -root "$tree"
           test -z "$("$RUNNER_TEMP/m2" fmt -root "$tree")"
           "$RUNNER_TEMP/m2" check -root "$tree"
+      - name: m2 new makes a node, and m2 check reports only its placeholders
+        run: |
+          tree="$RUNNER_TEMP/new"
+          path=$("$RUNNER_TEMP/m2" new -root "$tree" statement)
+          test -f "$path"
+          "$RUNNER_TEMP/m2" fmt -check -root "$tree"
+          code=0
+          "$RUNNER_TEMP/m2" check -root "$tree" -q > findings.txt || code=$?
+          test "$code" = 1
+          test "$(wc -l < findings.txt)" = 2
+          test "$(grep -c 'has no value$' findings.txt)" = 2
       - name: an unknown command exits with code 2
         run: |
           code=0

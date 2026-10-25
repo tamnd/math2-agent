@@ -32,3 +32,21 @@ func ExampleSchema_Refs() {
 	fmt.Println(schema.Embedded().Refs[:4])
 	// Output: [about defines instance_of methods]
 }
+
+func ExampleSchema_Template() {
+	data, err := schema.Embedded().Template("statement", "~3fa94c01")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Print(string(data))
+	// Output:
+	// ---
+	// tag: ~3fa94c01
+	// kind: statement
+	// role: null
+	// name: null
+	// ---
+	//
+	// ## Statement
+}

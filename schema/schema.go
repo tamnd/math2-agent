@@ -24,6 +24,7 @@ import (
 	"golang.org/x/text/message"
 
 	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/tag"
 )
 
 // File is the path of the schema in a math2 working tree.
@@ -43,6 +44,8 @@ type Schema struct {
 	Refs      []string   // the field names whose values are references to other nodes, in byte order
 	sections  map[string]Sections
 	fields    map[string][]string // the fields that the branch of each kind adds
+	required  []string            // the fields that each node needs
+	needs     map[string][]string // the fields that the branch of each kind needs
 	compiled  *jsonschema.Schema
 }
 
@@ -104,7 +107,7 @@ func Parse(data []byte, source string) (*Schema, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", source, err)
 	}
-	s := &Schema{Source: source, Order: order, sections: map[string]Sections{}, fields: map[string][]string{}, compiled: compiled}
+	s := &Schema{Source: source, Order: order, sections: map[string]Sections{}, fields: map[string][]string{}, required: strs(root["required"]), needs: map[string][]string{}, compiled: compiled}
 	if names, ok := dig(root, "propertyNames", "not", "enum").([]any); ok {
 		for _, name := range names {
 			if n, ok := name.(string); ok {
@@ -120,6 +123,7 @@ func Parse(data []byte, source string) (*Schema, error) {
 			continue
 		}
 		s.sections[k] = Sections{Required: strs(sec["required"]), Allowed: strs(sec["allowed"])}
+		s.needs[k] = strs(dig(b, "then", "required"))
 		if props, ok := dig(b, "then", "properties").(map[string]any); ok {
 			for f := range props {
 				s.fields[k] = append(s.fields[k], f)
@@ -204,6 +208,59 @@ func (s *Schema) Kinds() []string {
 func (s *Schema) Sections(kind string) (Sections, bool) {
 	sec, ok := s.sections[kind]
 	return sec, ok
+}
+
+// Required returns the front matter fields that a node of the kind needs, in the key order of the canonical form. It returns false for a kind that the schema does not know.
+func (s *Schema) Required(kind string) ([]string, bool) {
+	if _, ok := s.sections[kind]; !ok {
+		return nil, false
+	}
+	out := slices.Concat(s.required, s.needs[kind])
+	known := s.Order[""]
+	rank := func(f string) int {
+		if i := slices.Index(known, f); i >= 0 {
+			return i
+		}
+		return len(known)
+	}
+	slices.SortStableFunc(out, func(a, b string) int { return rank(a) - rank(b) })
+	return slices.Compact(out), true
+}
+
+// Template returns a new node file of the kind, with id as its tag. The file is in canonical form. Each field that the kind needs, other than tag and kind, has the placeholder null. The body has the headings of the required sections. A kind with no required sections gets the heading of its first allowed section.
+//
+// m2 check reports each placeholder as S01, so a new file fails until each placeholder has a value. Template returns an error for a kind that the schema does not know.
+func (s *Schema) Template(kind, id string) ([]byte, error) {
+	fields, ok := s.Required(kind)
+	if !ok {
+		return nil, fmt.Errorf("schema: %q is not a kind. The kinds are %s", kind, strings.Join(s.Kinds(), ", "))
+	}
+	var b strings.Builder
+	b.WriteString("---\n")
+	for _, f := range fields {
+		switch f {
+		case "tag":
+			fmt.Fprintf(&b, "tag: %s\n", id)
+		case "kind":
+			fmt.Fprintf(&b, "kind: %s\n", kind)
+		default:
+			fmt.Fprintf(&b, "%s: null\n", f)
+		}
+	}
+	b.WriteString("---\n")
+	sec := s.sections[kind]
+	heads := sec.Required
+	if len(heads) == 0 && len(sec.Allowed) > 0 {
+		heads = sec.Allowed[:1]
+	}
+	for _, h := range heads {
+		fmt.Fprintf(&b, "\n## %s\n", h)
+	}
+	n, err := node.Parse("nodes/"+tag.Shard(id)+"/"+id+".md", []byte(b.String()))
+	if err != nil {
+		return nil, err
+	}
+	return node.Format(n, s.Order), nil
 }
 
 // Finding is one schema error in a node.
@@ -294,6 +351,12 @@ func (w *walker) collect(e *jsonschema.ValidationError) {
 			w.add("S01", append(slices.Clone(loc), p), fmt.Sprintf("the field %q is not allowed here", p))
 		}
 		return
+	}
+	if y := at(w.front, loc); len(loc) > 0 && y != nil && y.Kind == yaml.ScalarNode && y.Tag == "!!null" {
+		w.add("S01", loc, fmt.Sprintf("the field %q has no value", strings.Join(loc, ".")))
+		return
+	}
+	switch e.ErrorKind.(type) {
 	case *kind.AnyOf, *kind.OneOf:
 		switch {
 		case strings.HasSuffix(e.SchemaURL, "/$defs/ref"):
@@ -349,6 +412,31 @@ func locate(n *yaml.Node, loc []string) (line, col int) {
 		n = next
 	}
 	return line, col
+}
+
+// at returns the YAML node at the place loc in the front matter, or nil when the place does not exist.
+func at(n *yaml.Node, loc []string) *yaml.Node {
+	for _, tok := range loc {
+		var next *yaml.Node
+		switch n.Kind {
+		case yaml.MappingNode:
+			for i := 0; i+1 < len(n.Content); i += 2 {
+				if n.Content[i].Value == tok {
+					next = n.Content[i+1]
+					break
+				}
+			}
+		case yaml.SequenceNode:
+			if i, err := strconv.Atoi(tok); err == nil && i >= 0 && i < len(n.Content) {
+				next = n.Content[i]
+			}
+		}
+		if next == nil {
+			return nil
+		}
+		n = next
+	}
+	return n
 }
 
 // value changes a YAML node to the value that the validator reads. A date stays a string, as in the Python check of tamnd/math2. A number that JSON cannot hold, such as .inf, stays a string.
