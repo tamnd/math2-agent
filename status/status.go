@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/node"
@@ -49,10 +50,11 @@ const (
 // Input is the evidence of a build.
 type Input struct {
 	Nodes   []*node.Node
-	Records map[string]lean.Record // the extraction record of each declaration
-	Reviews map[string]Review      // the reviews by id
-	Replays map[string]Replay      // the replay result of each declaration. It is empty until the checker stack runs.
-	Battery map[string]bool        // the result of the machine checks of each declaration (spec 10.4). It is empty until M4.
+	Records map[string]lean.Record             // the extraction record of each declaration
+	Reviews map[string]Review                  // the reviews by id
+	Replays map[string]Replay                  // the replay result of each declaration. It is empty until the checker stack runs.
+	Battery map[string]bool                    // the result of the machine checks of each declaration (spec 10.4). It is empty until M4.
+	Runs    map[string]map[string]*compute.Run // the runs of each computation, by tag and architecture, from build/compute
 
 	Reviewers map[string]Reviewer // the reviewers of registers/reviewers.reg, by id
 	Authors   map[Key]string      // the author of each binding, from registers/bindings.reg
@@ -119,7 +121,7 @@ type ReviewState struct {
 }
 
 // evidenceKinds are the kinds that have an evidence level.
-var evidenceKinds = []string{"statement", "conjecture", "problem", "example", "counterexample", "proof"}
+var evidenceKinds = []string{"statement", "conjecture", "problem", "example", "counterexample", "proof", "computation"}
 
 // openKinds are the kinds that start at E0.
 var openKinds = []string{"conjecture", "problem"}
@@ -301,6 +303,13 @@ func base(in Input, g *graph.Graph, byTag map[string]*node.Node, n *node.Node) S
 	} else {
 		s.Evidence = Claimed
 		reason("The node states it, so it is at least E1.")
+	}
+	if s.Kind == "computation" {
+		computed(in, n, &s)
+		if !orphanFree(g, byTag, n) {
+			s.Flags = append(s.Flags, Orphan)
+		}
+		return s
 	}
 
 	// The sources of the node and of its proofs.

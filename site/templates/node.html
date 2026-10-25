@@ -27,6 +27,29 @@
 <div class="prose">
 {{.HTML}}
 </div>
+{{with .Run}}
+<section class="run" aria-labelledby="run-h">
+  <h2 id="run-h">Run this</h2>
+  <p>This command runs the computation again in the sandbox, with no network, and compares its output with the recorded hash{{if .Cert}}. Then the fixed checker of the kind checks the certificate{{end}}:</p>
+  <pre><code>{{.Command}}</code></pre>
+  <table class="plain">
+    <tr><th>Image</th><td><code>{{.Image}}</code></td></tr>
+    <tr><th>Entry point</th><td><a href="{{.Entry.URL}}"><code>{{.Entry.Text}}</code></a></td></tr>
+    {{with .Inputs}}<tr><th>Inputs</th><td><code>{{.}}</code></td></tr>{{end}}
+    <tr><th>Seed</th><td>{{.Seed}}</td></tr>
+    <tr><th>Recorded output</th><td>{{with .Output}}<code>{{.}}</code>{{else}}<span class="muted">none yet. The first run records it.</span>{{end}}{{with .Summary}}<br>{{.}}{{end}}</td></tr>
+    {{with .Cert}}<tr><th>Certificate</th><td>{{.Kind}}, <code>{{.Artefact}}</code>, checked in <code>{{.Checker}}</code>{{with $.Run.Checker.URL}} by <a href="{{.}}"><code>{{$.Run.Checker.Text}}</code></a>{{end}}</td></tr>{{end}}
+  </table>
+  {{if .HasBuild}}{{with .Runs}}
+  <table class="plain">
+    <caption>The runs of the build</caption>
+    <tr><th scope="col">Architecture</th><th scope="col">Output</th><th scope="col">Same as the record</th><th scope="col">Verified</th><th scope="col">Seconds</th></tr>
+    {{range .}}<tr><td>{{.Arch}}</td><td><code>{{.Output}}</code></td><td>{{if .Same}}yes{{else}}no{{end}}</td><td>{{if .Verified}}yes{{else}}no{{with .Problem}}: {{.}}{{end}}{{end}}</td><td>{{.Seconds}}</td></tr>
+    {{end}}
+  </table>
+  {{else}}<p class="muted">The build has no run of this computation.</p>{{end}}{{end}}
+</section>
+{{end}}
 {{with .Status}}{{with .Reasons}}
 <details class="reasons">
   <summary>Why the build gives this status</summary>
