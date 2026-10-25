@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -48,7 +49,7 @@ func ReadUsed(paths ...string) (map[string]bool, error) {
 	return used, nil
 }
 
-// Append adds entries to the register at path and keeps the records sorted. It does not change or remove a line that exists (rule T01). It fails if a tag is already in the register.
+// Append adds entries to the register at path and keeps the records sorted. It makes the register and its directory when they do not exist. It does not change or remove a line that exists (rule T01). It fails if a tag is already in the register.
 func Append(path string, entries []Entry) error {
 	data, err := os.ReadFile(path) // #nosec G304 -- the caller gives a path in the working tree.
 	if err != nil && !os.IsNotExist(err) {
@@ -77,6 +78,9 @@ func Append(path string, entries []Entry) error {
 		records = append(records, e.String())
 	}
 	slices.Sort(records)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- the registers are public.
+		return err
+	}
 	var b strings.Builder
 	for _, line := range append(header, records...) {
 		b.WriteString(line)

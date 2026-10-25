@@ -144,6 +144,18 @@ jobs:
           test "$code" = 1
           test "$(wc -l < findings.txt)" = 2
           test "$(grep -c 'has no value$' findings.txt)" = 2
+      - name: m2 mint changes the two provisional ids of the valid fixtures to tags
+        run: |
+          tree="$RUNNER_TEMP/mint"
+          cp -R testdata/nodes/valid "$tree"
+          "$RUNNER_TEMP/m2" mint -root "$tree" -commit "$GITHUB_SHA" > minted.txt
+          test "$(wc -l < minted.txt)" = 2
+          test "$(wc -l < "$tree/registers/tags.reg")" = 2
+          if grep -rqE '~[0-9a-f]{8}' "$tree"; then
+            echo "a provisional id is in the tree after m2 mint"
+            exit 1
+          fi
+          "$RUNNER_TEMP/m2" check -root "$tree" -q
       - name: an unknown command exits with code 2
         run: |
           code=0
