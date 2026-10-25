@@ -174,6 +174,43 @@ jobs:
           "$RUNNER_TEMP/m2" frobnicate || code=$?
           test "$code" = 2
 
+  # M2Extract must build with the pinned toolchain, and its records must agree with the golden files on Linux. The golden files come from macOS, thus this job also checks that the hashes are the same on two machines.
+  lean:
+    name: M2Extract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tamnd/math2
+          path: math2
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+      - name: build M2Extract
+        uses: leanprover/lean-action@24581d74d674803a25a81b10b059c5c0cdd344c6 # v1.6.2
+        with:
+          lake-package-directory: lean
+          use-mathlib-cache: false
+          build: true
+          test: false
+          lint: false
+      - name: get Mathlib for the math2 Lean package
+        uses: leanprover/lean-action@24581d74d674803a25a81b10b059c5c0cdd344c6 # v1.6.2
+        with:
+          lake-package-directory: math2/lean
+          use-mathlib-cache: true
+          build: true
+          test: false
+          lint: false
+      - name: test the fixtures, the seed and the Mathlib sample
+        run: M2_MATHLIB="$GITHUB_WORKSPACE/math2/lean" go test -count=1 -v ./lean
+
   workflows:
     name: workflow lint
     runs-on: ubuntu-latest

@@ -1,0 +1,266 @@
+package lean_test
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/tamnd/math2-agent/lean"
+)
+
+var update = flag.Bool("update", false, "write the golden files")
+
+var (
+	buildOnce sync.Once
+	buildErr  error
+)
+
+// local builds M2Extract and the fixtures in this directory, and returns the program. The test skips when lake is not on the PATH.
+func local(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("lake"); err != nil {
+		t.Skip("lake is not on the PATH")
+	}
+	buildOnce.Do(func() {
+		out, err := exec.Command("lake", "build", "m2extract", "Fixture").CombinedOutput()
+		if err != nil {
+			buildErr = fmt.Errorf("lake build: %w\n%s", err, out)
+		}
+	})
+	if buildErr != nil {
+		t.Fatal(buildErr)
+	}
+	exe, err := filepath.Abs(filepath.Join(".lake", "build", "bin", "m2extract"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return exe
+}
+
+func start(t *testing.T, exe, project string, modules ...string) *lean.Session {
+	t.Helper()
+	s, err := lean.Start(context.Background(), exe, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	if err := s.Import(modules...); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// golden compares got with the file testdata/name, or writes the file when -update is set.
+func golden(t *testing.T, name, got string) {
+	t.Helper()
+	path := filepath.Join("testdata", name)
+	if *update {
+		if err := os.WriteFile(path, []byte(got), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != string(want) {
+		t.Errorf("the records are\n%s\nand %s has\n%s", got, path, want)
+	}
+}
+
+func summary(rs []lean.Record) string {
+	var b strings.Builder
+	for _, r := range rs {
+		if r.Error != "" {
+			fmt.Fprintf(&b, "%s error %q\n", r.Decl, r.Error)
+			continue
+		}
+		fmt.Fprintf(&b, "%s %s %s\n  type %s\n  axioms %v native %d\n  uses_bound %v\n", r.Decl, r.Kind, r.Module, r.TypeHash, r.Axioms, len(r.NativeDecideAxioms), r.UsesBound)
+	}
+	return b.String()
+}
+
+func TestFixture(t *testing.T) {
+	s := start(t, local(t), ".", "Fixture")
+	v, err := s.Version()
+	if err != nil {
+		t.Fatal(err)
+	}
+	toolchain, err := lean.Toolchain(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(toolchain, ":v"+v.Lean) {
+		t.Errorf("the process runs Lean %s, and lean-toolchain has %s", v.Lean, toolchain)
+	}
+	decls := []string{"add_comm_a", "add_comm_b", "id_u", "id_v", "inhabited_inst", "inhabited_explicit", "em", "native", "incomplete", "uses_a", "absent"}
+	for i, d := range decls {
+		decls[i] = "Fixture." + d
+	}
+	rs, err := s.Extract(decls, []string{"Fixture.add_comm_a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rs) != len(decls) {
+		t.Fatalf("Extract gave %d records for %d declarations", len(rs), len(decls))
+	}
+	by := map[string]lean.Record{}
+	for _, r := range rs {
+		by[strings.TrimPrefix(r.Decl, "Fixture.")] = r
+	}
+	same := func(a, b string, want bool) {
+		if got := by[a].TypeHash == by[b].TypeHash; got != want {
+			t.Errorf("%s and %s: equal type hashes is %v, and it must be %v", a, b, got, want)
+		}
+	}
+	same("add_comm_a", "add_comm_b", true)
+	same("id_u", "id_v", true)
+	same("inhabited_inst", "inhabited_explicit", false)
+	if by["add_comm_a"].ValueHash != by["add_comm_b"].ValueHash || by["add_comm_a"].ValueHash == by["uses_a"].ValueHash {
+		t.Error("the value hash of add_comm_a must be equal to that of add_comm_b, and different from that of uses_a")
+	}
+	if r := by["em"]; !slices.Equal(r.Axioms, []string{"Classical.choice", "Quot.sound", "propext"}) {
+		t.Errorf("em has the axioms %v", r.Axioms)
+	}
+	if r := by["native"]; len(r.NativeDecideAxioms) != 1 || len(r.Axioms) != 0 {
+		t.Errorf("native has the axioms %v and the native_decide axioms %v", r.Axioms, r.NativeDecideAxioms)
+	}
+	if r := by["incomplete"]; !slices.Contains(r.Axioms, "sorryAx") {
+		t.Errorf("incomplete has the axioms %v, without sorryAx", r.Axioms)
+	}
+	if r := by["uses_a"]; !slices.Equal(r.UsesBound, []string{"Fixture.add_comm_a"}) {
+		t.Errorf("uses_a has uses_bound %v", r.UsesBound)
+	}
+	if r := by["absent"]; r.Error == "" {
+		t.Error("an unknown declaration has no error")
+	}
+	golden(t, "fixture.golden", summary(rs))
+}
+
+func TestErrors(t *testing.T) {
+	exe := local(t)
+	s, err := lean.Start(context.Background(), exe, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Extract([]string{"Nat"}, nil); err == nil {
+		t.Error("Extract worked before Import")
+	}
+	if err := s.Import("No.Such.Module"); err == nil {
+		t.Error("Import of a module that does not exist worked")
+	}
+	if err := s.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestInstall(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Install builds M2Extract")
+	}
+	local(t)
+	cache := t.TempDir()
+	exe, err := lean.Install(context.Background(), ".", cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	again, err := lean.Install(context.Background(), ".", cache)
+	if err != nil || again != exe {
+		t.Errorf("the second Install gave %q, %v, and the first gave %q", again, err, exe)
+	}
+	s := start(t, exe, ".", "Init")
+	axs, err := s.Axioms("Classical.em", "Nat.add_comm", "No.such")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(axs) != 2 || len(axs["Nat.add_comm"]) != 0 || !slices.Equal(axs["Classical.em"], lean.StandardAxioms) {
+		t.Errorf("the axioms are %v", axs)
+	}
+}
+
+// TestMathlib checks the seed bindings and 100 sampled Mathlib declarations. It needs a Lake project with Mathlib, for example lean/ of tamnd/math2. Set M2_MATHLIB to its directory.
+func TestMathlib(t *testing.T) {
+	project := os.Getenv("M2_MATHLIB")
+	if project == "" {
+		t.Skip("M2_MATHLIB is not set")
+	}
+	s := start(t, local(t), project, "Mathlib")
+	seed := []string{"Group", "Subgroup.card_subgroup_dvd_card"}
+	rs, err := s.Extract(seed, seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	golden(t, "seed.golden", summary(rs))
+
+	sample := lines(t, filepath.Join("testdata", "mathlib-sample.txt"))
+	if len(sample) != 100 {
+		t.Fatalf("the sample has %d declarations", len(sample))
+	}
+	got, err := s.Axioms(sample...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := printAxioms(t, project, sample)
+	for _, d := range sample {
+		g, w := got[d], want[d]
+		slices.Sort(g)
+		slices.Sort(w)
+		if !slices.Equal(g, w) {
+			t.Errorf("%s: Axioms gives %v, and #print axioms gives %v", d, g, w)
+		}
+	}
+}
+
+func lines(t *testing.T, path string) []string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Fields(string(b))
+}
+
+// axiomMsg is one message of #print axioms. Lean breaks a long list of axioms over more than one line.
+var axiomMsg = regexp.MustCompile(`(?m)^'(.+)' (?:depends on axioms: \[([^\]]*)\]|does not depend on any axioms)`)
+
+// printAxioms runs #print axioms for each declaration in a Lean file in project.
+func printAxioms(t *testing.T, project string, decls []string) map[string][]string {
+	t.Helper()
+	var src strings.Builder
+	src.WriteString("import Mathlib\n")
+	for _, d := range decls {
+		fmt.Fprintf(&src, "#print axioms %s\n", d)
+	}
+	file := filepath.Join(t.TempDir(), "Axioms.lean")
+	if err := os.WriteFile(file, []byte(src.String()), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("lake", "env", "lean", file)
+	cmd.Dir = project
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("lean: %v\n%s", err, out)
+	}
+	res := map[string][]string{}
+	for _, m := range axiomMsg.FindAllStringSubmatch(string(out), -1) {
+		res[m[1]] = []string{}
+		for ax := range strings.SplitSeq(m[2], ",") {
+			if ax = strings.TrimSpace(ax); ax != "" {
+				res[m[1]] = append(res[m[1]], ax)
+			}
+		}
+	}
+	return res
+}

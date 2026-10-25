@@ -1,0 +1,18 @@
+name = "M2Extract"
+version = "0.1.0"
+defaultTargets = ["m2extract"]
+
+# M2Extract uses only the Lean core library. It reads Mathlib and Math2 from the search path at run time. Thus the toolchain must be the same as the toolchain in lean/lean-toolchain of tamnd/math2.
+
+[[lean_lib]]
+name = "M2Extract"
+
+[[lean_exe]]
+name = "m2extract"
+root = "Main"
+supportInterpreter = true
+
+# The fixtures of the Go tests. Install does not build them.
+[[lean_lib]]
+name = "Fixture"
+srcDir = "M2Extract/test"

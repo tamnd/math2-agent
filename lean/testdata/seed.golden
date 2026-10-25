@@ -1,0 +1,8 @@
+Group inductive Mathlib.Algebra.Group.Defs
+  type blake3:c6fc7040ccd56af4515c63a54586da6c57f9b788776a6ad6900638b96a8cbfe5
+  axioms [] native 0
+  uses_bound []
+Subgroup.card_subgroup_dvd_card theorem Mathlib.GroupTheory.Coset.Card
+  type blake3:4550ab83e0c670b97ac5b09081019d483f2f9edba1daff359c01ca07d258f018
+  axioms [Classical.choice Quot.sound propext] native 0
+  uses_bound [Group]
