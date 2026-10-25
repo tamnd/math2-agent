@@ -1,6 +1,9 @@
 package status
 
 import (
+	"maps"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -104,6 +107,15 @@ func TestResolution(t *testing.T) {
 	}
 }
 
+// registered holds the reviewers of the tests. The reviewers a and e share an affiliation.
+var registered = map[string]Reviewer{
+	"github:a": {ID: "github:a", Affiliations: []string{"ror:01"}},
+	"github:b": {ID: "github:b", Affiliations: []string{"ror:02"}},
+	"github:c": {ID: "github:c"},
+	"github:d": {ID: "github:d"},
+	"github:e": {ID: "github:e", Affiliations: []string{"ror:03", "ror:01"}},
+}
+
 // bound is a statement with one binding and a node that uses it, so that it is not an orphan.
 func bound(match, adapter, reviews string) []string {
 	f := "1A0000 statement\nformal:\n  - system: lean4\n    library: math2\n    decl: X.thm\n    match: " + match
@@ -172,7 +184,7 @@ func TestKernel(t *testing.T) {
 			if tt.native {
 				rec.NativeDecideAxioms = []string{"X.thm._native.1"}
 			}
-			in := Input{Nodes: nodes, Records: map[string]lean.Record{checked: rec}, Reviews: map[string]Review{}, Replays: map[string]Replay{}, Battery: map[string]bool{checked: tt.battery}}
+			in := Input{Nodes: nodes, Records: map[string]lean.Record{checked: rec}, Reviews: map[string]Review{}, Reviewers: registered, Replays: map[string]Replay{}, Battery: map[string]bool{checked: tt.battery}}
 			for i, id := range ids {
 				in.Reviews[id] = review(id, tt.reviews[i], checked, nodes[0], rec)
 			}
@@ -196,10 +208,11 @@ func TestStale(t *testing.T) {
 	nodes := parse(t, bound("exact", "", "r-1A0000-01")...)
 	rec := theorem("X.thm", lean.StandardAxioms...)
 	in := Input{
-		Nodes:   nodes,
-		Records: map[string]lean.Record{"X.thm": rec},
-		Reviews: map[string]Review{"r-1A0000-01": review("r-1A0000-01", "github:a", "X.thm", nodes[0], rec)},
-		Replays: map[string]Replay{"X.thm": {Passed: true}},
+		Nodes:     nodes,
+		Records:   map[string]lean.Record{"X.thm": rec},
+		Reviews:   map[string]Review{"r-1A0000-01": review("r-1A0000-01", "github:a", "X.thm", nodes[0], rec)},
+		Reviewers: registered,
+		Replays:   map[string]Replay{"X.thm": {Passed: true}},
 	}
 	if s := find(t, Compute(in), "1A0000"); s.Evidence != Kernel || s.Fidelity != F2 {
 		t.Fatalf("before the change: %s %s, want E5 F2", s.Evidence, s.Fidelity)
@@ -222,7 +235,7 @@ func TestNeedsReplay(t *testing.T) {
 	rec := theorem("X.thm", lean.StandardAxioms...)
 	r := review("r-1A0000-01", "github:a", "X.thm", nodes[0], rec)
 	needs := func(in Input) bool { return find(t, Compute(in), "1A0000").Bindings[0].NeedsReplay() }
-	in := Input{Nodes: nodes, Records: map[string]lean.Record{"X.thm": rec}, Reviews: map[string]Review{r.ID: r}}
+	in := Input{Nodes: nodes, Records: map[string]lean.Record{"X.thm": rec}, Reviews: map[string]Review{r.ID: r}, Reviewers: registered}
 	if !needs(in) {
 		t.Error("a reviewed binding with no replay does not need a replay")
 	}
@@ -239,7 +252,7 @@ func TestNeedsReplay(t *testing.T) {
 		t.Error("a binding with no review needs a replay")
 	}
 	in.Records["X.thm"] = theorem("X.thm", "sorryAx")
-	in.Reviews = map[string]Review{r.ID: r}
+	in.Reviews, in.Reviewers = map[string]Review{r.ID: r}, registered
 	if needs(in) {
 		t.Error("a binding with sorry needs a replay")
 	}
@@ -251,7 +264,7 @@ func TestStatementStale(t *testing.T) {
 	rec := theorem("X.thm", lean.StandardAxioms...)
 	r := review("r-1A0000-01", "github:a", "X.thm", nodes[0], rec)
 	r.StatementHash = node.HashText("An old statement.")
-	in := Input{Nodes: nodes, Records: map[string]lean.Record{"X.thm": rec}, Reviews: map[string]Review{r.ID: r}}
+	in := Input{Nodes: nodes, Records: map[string]lean.Record{"X.thm": rec}, Reviews: map[string]Review{r.ID: r}, Reviewers: registered}
 	s := find(t, Compute(in), "1A0000")
 	if s.Fidelity != F0 || s.Bindings[0].Reviews[0].State != Stale {
 		t.Errorf("fidelity %s, state %q, want F0 and %q", s.Fidelity, s.Bindings[0].Reviews[0].State, Stale)
@@ -266,7 +279,7 @@ func TestReviewStates(t *testing.T) {
 	no.Verdict = NotFaithful
 	conv := review("r-1A0000-04", "github:d", "X.thm", nodes[0], rec)
 	conv.Verdict = FaithfulWithConventions
-	in := Input{Nodes: nodes, Records: map[string]lean.Record{"X.thm": rec}, Reviews: map[string]Review{other.ID: other, no.ID: no, conv.ID: conv}}
+	in := Input{Nodes: nodes, Records: map[string]lean.Record{"X.thm": rec}, Reviews: map[string]Review{other.ID: other, no.ID: no, conv.ID: conv}, Reviewers: registered}
 	s := find(t, Compute(in), "1A0000")
 	var got []string
 	for _, r := range s.Bindings[0].Reviews {
@@ -293,10 +306,11 @@ func TestSorryInClosure(t *testing.T) {
 	)
 	rec := theorem("X.thm", lean.StandardAxioms...)
 	in := Input{
-		Nodes:   nodes,
-		Records: map[string]lean.Record{"X.thm": rec},
-		Reviews: map[string]Review{"r-1A0000-01": review("r-1A0000-01", "github:a", "X.thm", nodes[0], rec)},
-		Replays: map[string]Replay{"X.thm": {Passed: true}},
+		Nodes:     nodes,
+		Records:   map[string]lean.Record{"X.thm": rec},
+		Reviews:   map[string]Review{"r-1A0000-01": review("r-1A0000-01", "github:a", "X.thm", nodes[0], rec)},
+		Reviewers: registered,
+		Replays:   map[string]Replay{"X.thm": {Passed: true}},
 	}
 	s := find(t, Compute(in), "1A0000")
 	if s.Evidence != Kernel || !slices.Contains(s.Flags, SorryInClosure) {
@@ -343,5 +357,86 @@ func TestLevelText(t *testing.T) {
 	}
 	if Kernel.Word() != "kernel" || Refuted.String() != "E⊥" {
 		t.Errorf("names %q %q", Kernel.Word(), Refuted.String())
+	}
+}
+
+// TestIndependence checks the registers in the fidelity level: a review counts only when its reviewer has a record and is not the author, and F3 needs two reviewers with no shared affiliation.
+func TestIndependence(t *testing.T) {
+	nodes := parse(t, bound("exact", "", "r-1A0000-01, r-1A0000-02")...)
+	rec := theorem("X.thm", lean.StandardAxioms...)
+	tests := []struct {
+		name     string
+		second   string
+		author   string
+		fidelity Fidelity
+		state    string // the state of the second review
+	}{
+		{"independent", "github:b", "", F3, Counts},
+		{"no affiliation", "github:c", "", F3, Counts},
+		{"shared affiliation", "github:e", "", F2, Counts},
+		{"same reviewer", "github:a", "", F2, Counts},
+		{"not in the register", "github:x", "", F2, Unregistered},
+		{"the author", "github:b", "github:b", F2, ByAuthor},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := Input{Nodes: nodes, Records: map[string]lean.Record{"X.thm": rec}, Reviewers: registered, Reviews: map[string]Review{
+				"r-1A0000-01": review("r-1A0000-01", "github:a", "X.thm", nodes[0], rec),
+				"r-1A0000-02": review("r-1A0000-02", tt.second, "X.thm", nodes[0], rec),
+			}}
+			if tt.author != "" {
+				in.Authors = map[Key]string{{Tag: "1A0000", Decl: "X.thm"}: tt.author}
+			}
+			s := find(t, Compute(in), "1A0000")
+			if got := s.Bindings[0].Reviews[1].State; s.Fidelity != tt.fidelity || got != tt.state {
+				t.Errorf("fidelity %s and state %q, want %s and %q", s.Fidelity, got, tt.fidelity, tt.state)
+			}
+		})
+	}
+}
+
+func TestLoadRegisters(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "registers"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	write := func(name, data string) {
+		if err := os.WriteFile(filepath.Join(root, "registers", name), []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("reviewers.reg", "# reviewer first areas affiliations\ngithub:a 2026-12-01 20D,20E ror:01,ror:02\norcid:0000-0002-1825-0097 2027-01-10 11A -\ngithub:b 2027-01-11 11A\n")
+	write("bindings.reg", `# tag system old new cause mathlib author
+1A0000 lean4 - X.old bind 0123 github:a
+1A0000 lean4 X.old X.thm rename 4567 github:bump-bot
+1B0000 lean4 - Y.thm bind 0123 -
+1C0000 lean4 - Z.thm bind 0123
+1D0000 lean4 - W.thm bind 0123 github:a
+1D0000 lean4 W.thm W.new rebind 4567 github:b
+1E0000 lean4 - V.thm bind 0123 github:a
+1E0000 lean4 V.thm - bind 4567 github:a
+1F0000 coq - U bind 0123 github:a
+`)
+	rs, err := LoadReviewers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a := rs["github:a"]; !slices.Equal(a.Areas, []string{"20D", "20E"}) || !slices.Equal(a.Affiliations, []string{"ror:01", "ror:02"}) || a.First != "2026-12-01" {
+		t.Errorf("github:a is %+v", a)
+	}
+	if o := rs["orcid:0000-0002-1825-0097"]; o.Affiliations != nil || len(rs) != 3 {
+		t.Errorf("the reviewers are %+v", rs)
+	}
+	authors, err := LoadAuthors(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[Key]string{{"1A0000", "X.thm"}: "github:a", {"1D0000", "W.new"}: "github:b"}
+	if !maps.Equal(authors, want) {
+		t.Errorf("the authors are %v, want %v", authors, want)
+	}
+	write("reviewers.reg", "github:a 2026-12-01\n")
+	if _, err := LoadReviewers(root); err == nil {
+		t.Error("a record with two fields gives no error")
 	}
 }

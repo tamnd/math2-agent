@@ -445,11 +445,17 @@ func formalDecls(nodes []*node.Node) []string {
 	return slices.Compact(out)
 }
 
-// input returns the evidence of the build for the status: the nodes, the records of extract.json and the reviews. It has the results of replay.json when replays is set.
+// input returns the evidence of the build for the status: the nodes, the records of extract.json, the reviews, the reviewers and the authors of the bindings. It has the results of replay.json when replays is set.
 func (b *builder) input(nodes []*node.Node, replays bool) (status.Input, error) {
 	in := status.Input{Nodes: nodes, Records: map[string]lean.Record{}, Replays: map[string]status.Replay{}}
 	var err error
 	if in.Reviews, err = status.LoadReviews(b.opt.Root); err != nil {
+		return in, err
+	}
+	if in.Reviewers, err = status.LoadReviewers(b.opt.Root); err != nil {
+		return in, err
+	}
+	if in.Authors, err = status.LoadAuthors(b.opt.Root); err != nil {
 		return in, err
 	}
 	if b.output(Extract) != "" {
@@ -549,7 +555,7 @@ func (b *builder) replay(ctx context.Context, nodes []*node.Node) (Step, error) 
 	return Step{Input: input, Output: out}, err
 }
 
-// status computes the status of each node and writes status.json. The step is fast, so it always runs, and the input hash only records the inputs: the output of the extract and replay steps, the content hash of each node and the reviews. The step is cached when status.json does not change, so that a new version of the rules always gives a new status.
+// status computes the status of each node and writes status.json. The step is fast, so it always runs, and the input hash only records the inputs: the output of the extract and replay steps, the content hash of each node, the reviews and the registers of the reviewers and the bindings. The step is cached when status.json does not change, so that a new version of the rules always gives a new status.
 func (b *builder) status(_ context.Context, nodes []*node.Node) (Step, error) {
 	lines := []string{"extract " + b.output(Extract), "replay " + b.output(Replay)}
 	for _, n := range nodes {
@@ -560,6 +566,13 @@ func (b *builder) status(_ context.Context, nodes []*node.Node) (Step, error) {
 		return Step{}, err
 	}
 	lines = append(lines, "reviews "+reviews)
+	for _, reg := range []string{"reviewers.reg", "bindings.reg"} {
+		data, err := os.ReadFile(filepath.Join(b.opt.Root, "registers", reg)) // #nosec G304 -- the caller names the root of the tree.
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return Step{}, err
+		}
+		lines = append(lines, reg+" "+hashString(string(data)))
+	}
 	input := hashString(strings.Join(lines, "\n"))
 
 	in, err := b.input(nodes, true)

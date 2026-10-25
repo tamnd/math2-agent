@@ -201,7 +201,17 @@ func TestReplayMath2(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := nodes[slices.IndexFunc(nodes, func(n *node.Node) bool { return n.ID == "3C53TD" })]
-	review := fmt.Sprintf("reviews:\n  - id: r-3C53TD-01\n    reviewer: github:tamnd\n    date: 2026-10-25\n    decl: Math2.Match.lagrange\n    statement_hash: %s\n    type_hash: %s\n    verdict: faithful\n", status.StatementHash(n), x.Records[i].TypeHash)
+	review := fmt.Sprintf("reviews:\n  - id: r-3C53TD-01\n    reviewer: github:octocat\n    date: 2026-10-25\n    decl: Math2.Match.lagrange\n    statement_hash: %s\n    type_hash: %s\n    verdict: faithful\n", status.StatementHash(n), x.Records[i].TypeHash)
+	reg, err := os.OpenFile(filepath.Join(root, "registers", "reviewers.reg"), os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reg.WriteString("github:octocat 2026-10-25 20D -\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.MkdirAll(filepath.Join(root, "reviews", "3C"), 0o750); err != nil {
 		t.Fatal(err)
 	}

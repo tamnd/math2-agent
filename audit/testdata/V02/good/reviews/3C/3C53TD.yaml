@@ -1,0 +1,15 @@
+reviews:
+  - id: r-3C53TD-01
+    reviewer: github:a
+    date: 2026-09-01
+    decl: Subgroup.card_subgroup_dvd_card
+    statement_hash: blake3:64abe9d6100a7e5c2ff460916d11d149838414cbcf85ee408ef32bc6a403d5a1
+    type_hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    verdict: faithful
+  - id: r-3C53TD-02
+    reviewer: github:b
+    date: 2026-09-01
+    decl: Subgroup.card_subgroup_dvd_card
+    statement_hash: blake3:64abe9d6100a7e5c2ff460916d11d149838414cbcf85ee408ef32bc6a403d5a1
+    type_hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    verdict: faithful

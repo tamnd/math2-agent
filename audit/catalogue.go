@@ -44,7 +44,7 @@ var catalogue = []entry{
 	{Rule{"F08", Formal, false, "Mathlib deprecation warnings on bound declarations, with the new name"}, nil},
 	{Rule{"F09", Formal, true, "each F1 or higher binding passes the checks for degenerate statements"}, nil},
 	{Rule{"V01", Formal, true, "each review is bound to the informal statement hash and to the elaborated-type hash"}, v01},
-	{Rule{"V02", Formal, true, "F3 by two reviews has two reviewers with no shared affiliation, and neither wrote the binding"}, nil},
+	{Rule{"V02", Formal, true, "F3 by two reviews has two reviewers with no shared affiliation, and neither wrote the binding"}, v02},
 	{Rule{"V03", Formal, true, "no agent is a reviewer, and no reviewer reviews a binding from an agent run that the reviewer started"}, v03},
 	{Rule{"V04", Formal, false, "a review is older than 24 months on a node whose neighbourhood changed"}, v04},
 	{Rule{"C01", Compute, true, "each computation names an image by digest, an entry point and inputs"}, nil},

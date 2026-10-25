@@ -1,0 +1,4 @@
+nodes/3C/3C53TD.md:8:5: V02: build/status.json gives F3 to Subgroup.card_subgroup_dvd_card, and it has no two independent reviews. Two reviewers must share no affiliation, and neither can be the author. Run m2 build
+nodes/7Q/7Q2K1B.md:8:5: V02: the reviewer github:b of r-7Q2K1B-01 is the author of the binding Subgroup.card_mul_index
+nodes/7Q/7Q2K1B.md:8:5: V02: the reviewer github:x of r-7Q2K1B-02 has no record in registers/reviewers.reg
+nodes/7Q/7Q2K1B.md:8:5: V02: build/status.json gives F3 to Subgroup.card_mul_index, and it has no two independent reviews. Two reviewers must share no affiliation, and neither can be the author. Run m2 build
