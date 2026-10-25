@@ -14,7 +14,7 @@
 <thead><tr><th>Path</th><th>Content</th></tr></thead>
 <tbody>
 <tr><td><a href="{{.Nodes}}"><code>api/nodes.json</code></a></td><td>The index: tag, kind, role, name, aliases, MSC codes and URLs of each node.</td></tr>
-<tr><td><code>api/node/&lt;TAG&gt;.json</code></td><td>One node: the front matter as it is in the file, the body as Markdown, the outgoing links and the backlinks.</td></tr>
+<tr><td><code>api/node/&lt;TAG&gt;.json</code></td><td>One node: the front matter as it is in the file, the body as Markdown, the outgoing links and the backlinks. The key <code>prov</code> links the provenance log, and it lists the fields that an agent wrote and that no person checked yet, and the fields in quarantine. The view, the Markdown copy and the page leave out the text in quarantine.</td></tr>
 <tr><td><code>node/&lt;TAG&gt;.md</code></td><td>The node file, byte for byte.</td></tr>
 <tr><td><a href="{{.Search}}"><code>api/search.json</code></a></td><td>The search index of this site.</td></tr>
 <tr><td><a href="{{.Spec}}"><code>api/spec.json</code></a></td><td>The spec documents. Each one is also at <code>spec/&lt;slug&gt;.md</code>.</td></tr>

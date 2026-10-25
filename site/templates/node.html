@@ -5,6 +5,8 @@
   <h1>{{.Name}}</h1>
 </header>
 {{with .Retired}}<div class="notice warn"><p><b>This node is retired.</b> The reason is: {{.reason}}.{{with .note}} {{.}}{{end}}</p></div>{{end}}
+{{with .Prov}}{{with .Quarantined}}<div class="notice warn"><p><b>Some text of this node is in quarantine.</b> An agent wrote it with a model or a prompt that is under review, and no person checked it since. This page does not show {{list .}}.</p></div>{{end}}
+{{with .Unchecked}}<div class="notice"><p><b>An agent wrote some of this node, and no person checked it yet:</b> {{list .}}.</p></div>{{end}}{{end}}
 <aside class="infobox" aria-label="Facts">
   <table>
     <caption>{{.Name}}</caption>
@@ -81,6 +83,18 @@
 <section class="sources">
   <h2>Sources</h2>
   <ol>{{range .}}<li>{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{with .Note}}, {{.}}{{end}}</li>{{end}}</ol>
+</section>
+{{end}}
+{{with .Prov}}
+<section class="history" aria-labelledby="history-h">
+  <h2 id="history-h">History</h2>
+  <p>Each change to this node, from its <a href="{{.LogURL}}">provenance log</a>. A change by an agent names its run.</p>
+  <table class="plain">
+    <caption>The changes to this node, the oldest first</caption>
+    <tr><th scope="col">Date</th><th scope="col">Change</th><th scope="col">Field</th><th scope="col">By</th></tr>
+    {{range .History}}<tr><td>{{.Day}}</td><td>{{.Op}}</td><td>{{.Field}}</td><td>{{with .By}}{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}<code>{{.Text}}</code>{{end}}{{with .Note}} <span class="muted">{{.}}</span>{{end}}{{end}}</td></tr>
+    {{end}}
+  </table>
 </section>
 {{end}}
 <section class="backlinks">

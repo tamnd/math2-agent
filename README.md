@@ -367,6 +367,8 @@ m2 prov confirm -by github:octocat 3C53TD body.explanations.L1
 
 `m2 prov record` compares the node files with a revision, `HEAD` by default, and it skips a field that has a new line since that revision already. `m2 prov credit` lists the changes of a person in the CRediT roles, with the changes of the agent runs that worked on behalf of the person. `m2 prov quarantine` lists the fields that an agent wrote with a model and a prompt version, and that no person changed or confirmed since (spec 06.5). With `-by`, it puts the fields in quarantine. A person clears a field when they change it or run `m2 prov confirm`. `m2 align accept` and `m2 align confirm` write the lines of their decisions. `m2 mint` moves the log of a provisional id to its tag.
 
+The site shows the history of each node from its log. It names the fields that an agent wrote and that no person checked yet. It hides each field in quarantine on the page, in the Markdown copy and in the JSON view, and the headings stay with a notice.
+
 The summary of each agent run is in `build/runs/<id>.json`, with the agent, the prompt version, the models, the tools, the images, the person or schedule that the run worked on behalf of, and the outcome.
 
 | Rule | What it checks |

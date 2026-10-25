@@ -21,7 +21,7 @@ type jsonLink struct {
 	Note   string `json:"note,omitempty"`
 }
 
-// nodeJSON is the agent view of a node: the front matter as it is in the file, the body as Markdown, and the links in both directions.
+// nodeJSON is the agent view of a node: the front matter as it is in the file, the body as Markdown, and the links in both directions. A field in quarantine is not in the view. The key prov has the URL of the provenance log, the fields that an agent wrote and that no person checked, and the fields in quarantine.
 func (b *builder) nodeJSON(v *nodeView) map[string]any {
 	var out, in []jsonLink
 	for _, g := range v.Refs {
@@ -33,6 +33,10 @@ func (b *builder) nodeJSON(v *nodeView) map[string]any {
 		for _, l := range g.Links {
 			in = append(in, jsonLink{Field: g.Field, Target: l.Tag})
 		}
+	}
+	var pv any
+	if p := v.Prov; p != nil {
+		pv = map[string]any{"log": p.LogURL, "unchecked": p.unchecked, "quarantine": p.quarantined}
 	}
 	return map[string]any{
 		"tag":       v.Tag,
@@ -50,6 +54,7 @@ func (b *builder) nodeJSON(v *nodeView) map[string]any {
 		"links":     out,
 		"backlinks": in,
 		"status":    nil,
+		"prov":      pv,
 		"commit":    b.opt.Commit,
 	}
 }
