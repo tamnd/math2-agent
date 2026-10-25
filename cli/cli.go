@@ -53,7 +53,7 @@ var commands = []command{
 	{name: "check", usage: "m2 check [-root DIR] [-rule R,...] [-json] [-q] [path...]", summary: "Check schema, body and links on the working tree. This does not use Lean.", run: runCheck},
 	{name: "mint", usage: "m2 mint [-root DIR] [-commit C]", summary: "Change the provisional ids to tags before merge, and add the tags to registers/tags.reg.", run: runMint},
 	{name: "site", usage: "m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-commit C] [-date now]", summary: "Build the wiki: a static site for people and agents.", run: runSite},
-	{name: "build", usage: "m2 build", summary: "Build everything: Lean, extraction, status, graph and search.", milestone: "M1"},
+	{name: "build", usage: "m2 build [-root DIR] [-out DIR] [-cache DIR] [-only STEP] [-json]", summary: "Build the derived data: Lean, extraction and graph. Status and search come later.", run: runBuild},
 	{name: "audit", usage: "m2 audit [-root DIR] [-plane P] [-rule R,...] [-changed] [-base REV] [-release R] [-json] [-q]", summary: "Run the audit rules and write the report to reports/.", run: runAudit},
 	{name: "status", usage: "m2 status <tag>", summary: "Show the computed status of a node and the evidence for it.", milestone: "M1"},
 	{name: "graph", usage: "m2 graph closure|rdeps|path|frontier <tag>", summary: "Run a graph query.", milestone: "M2"},
