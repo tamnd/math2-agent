@@ -18,7 +18,7 @@ var catalogue = []entry{
 	{Rule{"S02", Nodes, true, "the fields that the kind needs are present"}, fromCheck("S02")},
 	{Rule{"S03", Nodes, true, "no field states a status"}, fromCheck("S03")},
 	{Rule{"S04", Nodes, true, "the node file is at most 64 KB"}, fromCheck("S04")},
-	{Rule{"S09", Nodes, false, "no node uses a deprecated schema version during a migration window"}, nil},
+	{Rule{"S09", Nodes, false, "no node uses a deprecated schema version during a migration window"}, s09},
 	{Rule{"B01", Nodes, true, "each body renders in KaTeX and MathJax with only the declared macros"}, nil},
 	{Rule{"B02", Nodes, true, "each link targets a live tag or a retired tag with a successor, and the statement sections have no URLs"}, nil},
 	{Rule{"B03", Nodes, true, "the body has only the sections of its kind, in order"}, nil},
