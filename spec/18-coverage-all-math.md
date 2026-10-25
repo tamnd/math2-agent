@@ -28,9 +28,11 @@ Q11 (05.6) computes, for every MSC2020 code at every level of the hierarchy:
 - **open problems**: conjectures and problems, with their formal-statement status;
 - **movement**: the change in every count since the last release.
 
-The table goes to `reports/coverage/<release>.parquet`, with a Markdown summary per top-level code in `coverage/` (20.1). The workspace shows it as a map: one cell per MSC code, coloured by level. Nodes get MSC codes as topic edges (05.2). The codes come from the codes of the sources and from a classifier. For C2 nodes, a curator confirms them.
+The table goes to `reports/coverage/<release>.parquet`, with a Markdown summary of all classes in `reports/coverage/<release>.md` and a summary per top-level code in `reports/coverage/<release>/` (20.1). The workspace shows it as a map: one cell per MSC code, coloured by level. Nodes get MSC codes as topic edges (05.2). The codes come from the codes of the sources and from a classifier. For C2 nodes, a curator confirms them.
 
 MSC2020 has 63 top-level classes and about 6,000 codes in total. math2 computes coverage at all three levels. By default, it reports the top two levels.
+
+The denominator of C0 is the number of documents of zbMATH Open in each class. `m2 coverage -count` asks the REST interface of zbMATH Open for it, one class at a time, and pins the count with its date in `manifests/coverage/expected.yaml`. The count is for the top-level classes only, thus C0 has a value only at the top level. A record or a node counts for each of its codes and for each code above them. A code that is not in MSC2020, such as an MSC2010 code, counts for the nearest code above it.
 
 ### Which areas count
 

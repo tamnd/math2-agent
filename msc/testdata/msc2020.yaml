@@ -1,0 +1,11 @@
+# A small topic map for the tests. The labels are our own words.
+"11-XX": {label: number theory}
+"11-01": {label: textbooks on number theory}
+"11Axx": {label: elementary number theory}
+"11A41": {label: prime numbers, topic: 7K3QX2}
+"11A05": {label: divisibility and greatest common divisors}
+"11Nxx": {label: multiplicative number theory}
+"11N05": {label: distribution of prime numbers}
+"20-XX": {label: groups and their generalizations}
+"20Dxx": {label: finite groups}
+"20D60": {label: arithmetic and combinatorial problems on finite groups}
