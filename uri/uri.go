@@ -16,7 +16,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tamnd/math2-agent/internal/tag"
+	"github.com/tamnd/math2-agent/tag"
 )
 
 // Scheme is the URI scheme of math2.

@@ -1,6 +1,6 @@
 # 07. The formal engine: Lean 4, Mathlib, proof checking
 
-The formal engine is the middle box of the top row of the diagram, with the label "Lean 4, Mathlib, Proof Checker". It is the only component that can produce E5. Thus its specification is stricter than that of any other component. The content side is in `tamnd/math2/lean/`, the `Math2` Lake package. The toolchain side is in `tamnd/math2-agent/internal/lean` and in the `lean/M2Extract` package.
+The formal engine is the middle box of the top row of the diagram, with the label "Lean 4, Mathlib, Proof Checker". It is the only component that can produce E5. Thus its specification is stricter than that of any other component. The content side is in `tamnd/math2/lean/`, the `Math2` Lake package. The toolchain side is in `tamnd/math2-agent/lean` and in the `lean/M2Extract` package.
 
 The job of the engine is one sentence: **given the content at a commit, produce for every formal binding a checked declaration, its elaborated-type hash, its axiom profile, its formal dependencies, and the results of independent replay, all pinned to one Lean toolchain and one Mathlib version.**
 

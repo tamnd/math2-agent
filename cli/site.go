@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/tamnd/math2-agent/internal/site"
+	"github.com/tamnd/math2-agent/site"
 )
 
 func runSite(args []string, stdout, stderr io.Writer) int {
@@ -18,7 +18,7 @@ func runSite(args []string, stdout, stderr io.Writer) int {
 	}
 	fs := flag.NewFlagSet("m2 site build", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	opt := site.Options{Version: version, Current: Current}
+	opt := site.Options{Version: version, Current: current}
 	fs.StringVar(&opt.Content, "content", ".", "the math2 working tree")
 	fs.StringVar(&opt.Spec, "spec", "", "the spec directory of math2-agent. Leave it empty for no spec pages.")
 	fs.StringVar(&opt.Out, "out", "_site", "the output directory. The build removes it first.")
@@ -44,7 +44,7 @@ func runSite(args []string, stdout, stderr io.Writer) int {
 		}
 		opt.Date = time.Unix(sec, 0)
 	}
-	for _, m := range Milestones {
+	for _, m := range plan {
 		opt.Milestones = append(opt.Milestones, site.Milestone{
 			ID:    m.ID,
 			Title: m.Title,

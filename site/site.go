@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tamnd/math2-agent/internal/node"
-	"github.com/tamnd/math2-agent/internal/tag"
+	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/tag"
 )
 
 // Milestone is one milestone of the plan, as the home page shows it.
@@ -44,8 +44,8 @@ type Options struct {
 	Current    string      // the current milestone, for example M0
 }
 
-// Kinds are the 11 node kinds with a short description, in schema order.
-var Kinds = []struct{ Name, Plural, Text string }{
+// kinds are the 11 node kinds with a short description, in schema order.
+var kinds = []struct{ Name, Plural, Text string }{
 	{"concept", "Concepts", "A mathematical idea. It can have more than one definition."},
 	{"definition", "Definitions", "One definition of a concept."},
 	{"statement", "Statements", "A theorem, a lemma, a proposition, a corollary, a fact or an axiom."},
@@ -167,7 +167,7 @@ func (b *builder) load() error {
 		return fmt.Errorf("site: read the node files: %w", err)
 	}
 	for _, n := range nodes {
-		v := &nodeView{Node: n, Tag: n.ID, Kind: n.Kind(), Role: n.String("role"), Name: n.Name(), Aliases: n.Strings("aliases"), MSC: n.Strings("msc")}
+		v := &nodeView{Node: n, Tag: n.ID, Kind: n.Kind(), Role: n.Get("role"), Name: n.Name(), Aliases: n.List("aliases"), MSC: n.List("msc")}
 		v.URI = "m2://" + n.ID
 		if tag.IsProvisional(n.ID) {
 			v.URI = ""
@@ -177,7 +177,7 @@ func (b *builder) load() error {
 		v.JSONURL = b.url("api/node/" + n.ID + ".json")
 		v.EditURL = "https://github.com/" + b.opt.Repo + "/edit/main/" + n.Path
 		v.KindPlural = v.Kind
-		for _, k := range Kinds {
+		for _, k := range kinds {
 			if k.Name == v.Kind {
 				v.KindPlural = k.Plural
 			}

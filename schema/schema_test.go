@@ -9,7 +9,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/tamnd/math2-agent/internal/node"
+	"github.com/tamnd/math2-agent/node"
 )
 
 const image = "m2-sage@sha256:0000000000000000000000000000000000000000000000000000000000000000"
@@ -63,7 +63,7 @@ func TestEmbeddedIsCurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(data, embedded) {
-		t.Errorf("internal/schema/node.v1.json is not the same as %s. Copy the file again.", filepath.Join(root, File))
+		t.Errorf("schema/node.v1.json in this module is not the same as %s. Copy the file again.", filepath.Join(root, File))
 	}
 }
 
@@ -169,7 +169,7 @@ func TestMigrate(t *testing.T) {
 	}
 }
 
-// TestNodeFixtures checks that the canonical fixtures of internal/node are valid nodes.
+// TestNodeFixtures checks that the canonical fixtures of the node package are valid nodes.
 func TestNodeFixtures(t *testing.T) {
 	files, err := filepath.Glob("../node/testdata/canonical/*.md")
 	if err != nil || len(files) == 0 {

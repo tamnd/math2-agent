@@ -6,7 +6,7 @@ The top-right box of the diagram has the label "Papers, Books, Existing Librarie
 2. **Seed and source the statement plane.** The `sources:` of each node points at records with locators, and curation turns extracted results into nodes.
 3. **Join the existing libraries**: Mathlib and other formal libraries, encyclopedias and databases. Crosswalk edges (05.3) connect them to nodes. math2 does not copy what they hold.
 
-Ingestion code is in `tamnd/math2-agent/internal/ingest/<source>`, with one adapter for each source. Each pull is pinned in `tamnd/math2/manifests/sources.yaml` and `manifests/ingest/`.
+Ingestion code is in `tamnd/math2-agent/ingest/<source>`, with one adapter for each source. Each pull is pinned in `tamnd/math2/manifests/sources.yaml` and `manifests/ingest/`.
 
 ## 9.1 Principles
 

@@ -2,7 +2,7 @@
 
 Most people will use math2 through search first. Agents also use search to find premises, duplicates and prior work. A query from a mathematician can be a phrase ("finite subgroup of the multiplicative group of a field"), a formula (`\sum_{d \mid n} \varphi(d) = n`), a Lean type (`∀ n : ℕ, ∑ d ∈ n.divisors, φ d = n`), an identifier (`A000010`, `Q190026`, `0BQX`), or a mix of these. No single retrieval method can handle all of these queries. Thus math2 runs **four channels** and fuses their results.
 
-The code is in `tamnd/math2-agent/internal/search`. Three things serve it: `m2 search`, the `search*` and `premises` methods of the API (11.2), and the workspace (13.2).
+The code is in `tamnd/math2-agent/search`. Three things serve it: `m2 search`, the `search*` and `premises` methods of the API (11.2), and the workspace (13.2).
 
 ## 14.1 Channels
 

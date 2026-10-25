@@ -17,7 +17,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/tamnd/math2-agent/internal/tag"
+	"github.com/tamnd/math2-agent/tag"
 )
 
 // Node is one parsed node file.
@@ -38,6 +38,7 @@ type Error struct {
 	Msg  string
 }
 
+// Error returns the error in the form path:line:col: message. It leaves out the line and the column when the error has no line.
 func (e *Error) Error() string {
 	if e.Line == 0 {
 		return e.Path + ": " + e.Msg
@@ -198,25 +199,25 @@ func Load(root string) ([]*Node, error) {
 	return nodes, errors.Join(errs...)
 }
 
-// String returns the string value of a top-level key, or "".
-func (n *Node) String(key string) string {
+// Get returns the string value of the top-level key, or "" when the key is missing or its value is not a string.
+func (n *Node) Get(key string) string {
 	s, _ := n.Meta[key].(string)
 	return s
 }
 
 // Kind returns the kind of the node.
-func (n *Node) Kind() string { return n.String("kind") }
+func (n *Node) Kind() string { return n.Get("kind") }
 
 // Name returns the name of the node, or its id when it has no name.
 func (n *Node) Name() string {
-	if s := n.String("name"); s != "" {
+	if s := n.Get("name"); s != "" {
 		return s
 	}
 	return n.ID
 }
 
-// Strings returns the string items of a top-level list, or a top-level string as one item.
-func (n *Node) Strings(key string) []string {
+// List returns the string items of the top-level list key. A string value gives a list with one item. Items that are not strings are not in the result.
+func (n *Node) List(key string) []string {
 	switch v := n.Meta[key].(type) {
 	case string:
 		return []string{v}

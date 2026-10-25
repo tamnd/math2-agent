@@ -57,12 +57,12 @@ The architecture diagram has eight boxes. This table gives the location and the 
 
 | Box | Lives in | Specified in |
 |---|---|---|
-| Research Agents | `math2-agent`: `internal/agent/*` | 12 |
-| Mathematical API and Agent Orchestrator | `math2-agent`: `internal/api`, `internal/mcp`, `internal/orchestrator` | 11 |
-| Formal Engine | `math2`: `lean/`; `math2-agent`: `internal/lean`, `lean/M2Extract` | 07, 10 |
-| Computational Engine | `math2`: `compute/`; `math2-agent`: `internal/compute`, `images/` | 08 |
-| Literature Ingestion | `math2-agent`: `internal/ingest`, `internal/extract`, `internal/align` | 09 |
-| Knowledge Graph | `math2`: `nodes/`, `reviews/`; `math2-agent`: `internal/graph`, `internal/store` | 04, 05 |
+| Research Agents | `math2-agent`: `agent/*` | 12 |
+| Mathematical API and Agent Orchestrator | `math2-agent`: `api`, `mcp`, `orchestrator` | 11 |
+| Formal Engine | `math2`: `lean/`; `math2-agent`: `lean`, `lean/M2Extract` | 07, 10 |
+| Computational Engine | `math2`: `compute/`; `math2-agent`: `compute`, `images/` | 08 |
+| Literature Ingestion | `math2-agent`: `ingest`, `extract`, `align` | 09 |
+| Knowledge Graph | `math2`: `nodes/`, `reviews/`; `math2-agent`: `graph`, `store` | 04, 05 |
 | Versioned Storage | git, plus the content-addressed artefact store | 06 |
 | Research Workspace | `math2-agent`: `web/`, `m2 site`, `m2 tui` | 13, 14 |
 

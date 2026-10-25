@@ -40,7 +40,7 @@ type kindCount struct {
 
 func (b *builder) kindCounts() []kindCount {
 	var out []kindCount
-	for _, k := range Kinds {
+	for _, k := range kinds {
 		n := 0
 		for _, v := range b.order {
 			if v.Kind == k.Name {
@@ -116,7 +116,7 @@ func (b *builder) writeLists() error {
 	if err := b.writePage("nodes", "list", all, page{Title: "All nodes", Description: "Each node of Math 2.0.", Section: "nodes", JSONURL: b.url("api/nodes.json")}); err != nil {
 		return err
 	}
-	for _, k := range Kinds {
+	for _, k := range kinds {
 		var nodes []*nodeView
 		for _, v := range b.order {
 			if v.Kind == k.Name {

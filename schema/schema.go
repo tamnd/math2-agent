@@ -23,7 +23,7 @@ import (
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 
-	"github.com/tamnd/math2-agent/internal/node"
+	"github.com/tamnd/math2-agent/node"
 )
 
 // File is the path of the schema in a math2 working tree.
@@ -180,6 +180,7 @@ type Finding struct {
 	Msg   string
 }
 
+// String returns the finding in the form path:line:col: RULE: message.
 func (f Finding) String() string {
 	return fmt.Sprintf("%s:%d:%d: %s: %s", f.Path, f.Line, f.Col, f.Rule, f.Msg)
 }

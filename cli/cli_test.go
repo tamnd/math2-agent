@@ -63,7 +63,7 @@ func TestCommandNotWrittenNamesItsMilestone(t *testing.T) {
 		if stdout != "" {
 			t.Errorf("%s: a command that is not written must not write to stdout, got %q", c.name, stdout)
 		}
-		m := milestone(c.milestone)
+		m := goal(c.milestone)
 		if !strings.Contains(stderr, m.ID+", "+m.Title) {
 			t.Errorf("%s: stderr does not name %s: %q", c.name, m.ID, stderr)
 		}
@@ -89,7 +89,7 @@ func TestCommandTable(t *testing.T) {
 		if c.run != nil && c.milestone != "" {
 			t.Errorf("%s: a written command must not name a milestone", c.name)
 		}
-		if c.milestone != "" && milestone(c.milestone).Title == "an unknown milestone" {
+		if c.milestone != "" && goal(c.milestone).Title == "an unknown milestone" {
 			t.Errorf("%s: the milestone %q is not in the plan", c.name, c.milestone)
 		}
 	}
