@@ -345,3 +345,21 @@ func printAxioms(t *testing.T, project string, decls []string) map[string][]stri
 	}
 	return res
 }
+
+func TestInstallDefaultCache(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(home, "cache"))
+	t.Setenv("PATH", "")
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		t.Skip(err)
+	}
+	// lake is not on the PATH, thus Install fails after it makes the cache.
+	if _, err := lean.Install(context.Background(), ".", ""); err == nil {
+		t.Fatal("Install builds without lake")
+	}
+	if _, err := os.Stat(filepath.Join(cache, "m2")); err != nil {
+		t.Errorf("Install with an empty cache does not use m2 in the user cache directory: %v", err)
+	}
+}
