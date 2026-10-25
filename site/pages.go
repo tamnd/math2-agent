@@ -17,6 +17,7 @@ func parseTemplates(b *builder) (*template.Template, error) {
 	funcs := template.FuncMap{
 		"url":          b.url,
 		"join":         strings.Join,
+		"list":         list,
 		"repo":         func() string { return "https://github.com/" + b.opt.Repo },
 		"agentRepo":    func() string { return "https://github.com/" + b.opt.AgentRepo },
 		"mscName":      func(code string) string { return mscTop[code] },
@@ -30,6 +31,14 @@ func parseTemplates(b *builder) (*template.Template, error) {
 		},
 	}
 	return template.New("site").Funcs(funcs).ParseFS(files, "templates/*.html")
+}
+
+// list joins the items with commas and an "and" before the last item.
+func list(items []string) string {
+	if len(items) < 2 {
+		return strings.Join(items, "")
+	}
+	return strings.Join(items[:len(items)-1], ", ") + " and " + items[len(items)-1]
 }
 
 // kindCount is one row of the table of kinds.
@@ -94,6 +103,9 @@ func (b *builder) writeNodes() error {
 		src, err := os.ReadFile(filepath.Join(b.opt.Content, filepath.FromSlash(v.Path))) // #nosec G304 -- the path comes from node.Load.
 		if err != nil {
 			return err
+		}
+		if v.source != nil {
+			src = v.source(src)
 		}
 		if err := b.write("node/"+v.Tag+".md", src); err != nil {
 			return err

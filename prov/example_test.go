@@ -43,3 +43,19 @@ func ExampleLine_Validate() {
 	// the line of m2-agent/formalize@0.9.1 names no run
 	// <nil>
 }
+
+func ExampleHide() {
+	n, _ := node.Parse("nodes/7K/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n\n## Explanations\n\n### L1 agent\n\nA small group fits into a big group a whole number of times.\n"))
+	hidden := func(field string) bool { return prov.Under(field, "body.explanations") }
+	fmt.Print(prov.Hide(n, hidden, "This text is in quarantine."))
+	// Output:
+	// ## Statement
+	//
+	// The order of a subgroup divides the order of the group.
+	//
+	// ## Explanations
+	//
+	// ### L1 agent
+	//
+	// This text is in quarantine.
+}

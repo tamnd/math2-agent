@@ -115,8 +115,10 @@ type nodeView struct {
 	Closure, Blueprint                     *dagView
 	Run                                    *runView // the "run this" panel of a computation
 	UsedBy                                 []link
+	Prov                                   *provView // nil when the node has no provenance log
 	HTML                                   template.HTML
 	URL, MarkdownURL, JSONURL, EditURL     string
+	source                                 func(file []byte) []byte // the Markdown copy of a node with fields in quarantine, or nil
 }
 
 type specDoc struct {
@@ -213,6 +215,9 @@ func (b *builder) load() error {
 		return fmt.Errorf("site: %w", err)
 	}
 	b.nodeMD = newMarkdown(b.math)
+	if err := b.loadProv(); err != nil {
+		return err
+	}
 	for _, v := range b.order {
 		if err := b.resolve(v); err != nil {
 			return err

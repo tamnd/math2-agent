@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -279,5 +280,23 @@ func TestRuns(t *testing.T) {
 	bad.OnBehalfOf = explain
 	if WriteRun(dir, &bad) == nil {
 		t.Error("WriteRun wrote a run that acted on behalf of an agent")
+	}
+}
+
+func TestHide(t *testing.T) {
+	n := parse(t, "---\ntag: 7K3QX2\nkind: statement\n---\n\nText before.\n\n## Statement\n\nThe text.\n\n## Explanations\n\nAn opening.\n\n### L1 agent\n\nOne.\n\n### L2 agent\n\nTwo.\n")
+	hide := func(fields ...string) string {
+		return Hide(n, func(f string) bool { return slices.Contains(fields, f) }, "Hidden.")
+	}
+	if got := hide(); got != n.Body {
+		t.Errorf("no hidden field gives %q", got)
+	}
+	want := "\nText before.\n\n## Statement\n\nThe text.\n\n## Explanations\n\nAn opening.\n\n### L1 agent\n\nHidden.\n\n### L2 agent\n\nTwo.\n"
+	if got := hide("body.explanations.L1"); got != want {
+		t.Errorf("hide L1 gives\n%q\nwant\n%q", got, want)
+	}
+	want = "\nHidden.\n\n## Statement\n\nHidden.\n\n## Explanations\n\nAn opening.\n\n### L1 agent\n\nOne.\n\n### L2 agent\n\nHidden.\n"
+	if got := hide("body", "body.statement", "body.explanations.L2"); got != want {
+		t.Errorf("hide three fields gives\n%q\nwant\n%q", got, want)
 	}
 }

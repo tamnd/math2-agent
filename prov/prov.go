@@ -245,8 +245,8 @@ func within(a, b string) bool {
 	return a == b || strings.HasPrefix(a, b) && (a[len(b)] == '.' || a[len(b)] == '[')
 }
 
-// under reports whether a change to the field b changes the field a: a is b or a part of b, or b is the whole node.
-func under(a, b string) bool { return b == Whole || within(a, b) }
+// Under reports whether a line on the field b is about all of the field a: a is b or a part of b, or b is [Whole]. For example a quarantine of body.explanations hides body.explanations.L1, and a quarantine of body.explanations.L1 does not hide the opening text of the section.
+func Under(a, b string) bool { return b == Whole || within(a, b) }
 
 // Unconfirmed returns the fields of the log whose value is from an agent, and that no person changed or confirmed after it, with the line of the agent. A line of a person who quarantined the field does not confirm it.
 func Unconfirmed(lines []Line) map[string]Line {
@@ -258,7 +258,7 @@ func Unconfirmed(lines []Line) map[string]Line {
 			out[l.Field] = l
 		default:
 			for f := range out {
-				if under(f, l.Field) {
+				if Under(f, l.Field) {
 					delete(out, f)
 				}
 			}
@@ -276,7 +276,7 @@ func Quarantined(lines []Line) map[string]Line {
 			out[l.Field] = l
 		case l.Human != "":
 			for f := range out {
-				if under(f, l.Field) {
+				if Under(f, l.Field) {
 					delete(out, f)
 				}
 			}
