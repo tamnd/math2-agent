@@ -59,8 +59,11 @@ var newLean = func(ctx context.Context, tree string, box *tools.Box) (tools.Lean
 }
 
 func runAgent(args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "report" {
+		return runAgentReport(args[1:], stdout, stderr)
+	}
 	if len(args) == 0 || args[0] != "run" {
-		fmt.Fprintf(stderr, "Usage: %s\n", agentUsage)
+		fmt.Fprintf(stderr, "Usage: %s\n       %s\n", agentUsage, agentReportUsage)
 		return ExitUsage
 	}
 	flags := flag.NewFlagSet("m2 agent run", flag.ContinueOnError)

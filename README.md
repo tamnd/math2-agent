@@ -85,6 +85,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 review export [reviewer]` | List the reviews of each reviewer, for a CV or a grant report. | written |
 | `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
 | `m2 agent run formalize\|prove` | Do one agent run of the formalize or the prove role in a new work tree, and write its run record. | written |
+| `m2 agent report` | Write the weekly agent report of the runs: volume, acceptance, cost and incidents. | written |
 | `m2 orchestrate` | Run the jobs of the agent roles from a queue, with budgets and the escalation ladder. | written |
 
 ## The wiki
@@ -478,6 +479,8 @@ workers: 2                                  # the most runs at the same time
 ```
 
 Each run gets the least of the money that is left to its job, to its role and to its project in the month, and the run cannot spend more. A job starts on the cheapest rung of the ladder with a recorded success, and each failed run moves it one rung up. A job with the target and the goal of a job in the queue merges into it. The orchestrator takes the roles in turn, and in a role it takes first the project that spent the least in the month. The past spend and failures come from the run records in the store, thus a restart counts them again. A job that ends goes to `queue/done/<id>.json` with its outcome. The work tree of a run that reaches the goal stays in `-work`, and the orchestrator removes the others. With `-once`, the command stops when no job can start. Without it, the command reads the queue again after each `-interval`. The exit code is 1 when a run spent more than its budget. The orchestrator runs with no person to watch it, thus give it `-sandbox` in the same way as `m2 agent run`.
+
+`m2 agent report` writes the weekly agent report (spec 12.9) to `reports/agents/<yyyy>-W<ww>.md` and its JSON twin, and prints the Markdown, or the JSON with `-json`. The week is the last full ISO week, or `-week 2026-W43`. The report counts the runs that started in the week, from the run records in `-store`. It gives the jobs, the runs, the successes, the failures, the stuck runs and the partial runs of each role, the acceptance of each role and model, and the cost of each role, model and MSC area for each accepted run. The trend of the cost comes from the report of the week before. A run is accepted when a provenance line on the branch names it. The incidents are the quarantines of the week, the runs in which the pinned statement caught a change to its closure, and the runs that spent more than their budget. The runs do not open pull requests yet, thus the report has no counts of pull requests and no audit sample, and it lists them as not measured.
 
 ## The Mathlib bump
 

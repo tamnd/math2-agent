@@ -1,0 +1,100 @@
+{
+  "week": "2026-W43",
+  "from": "2026-10-19",
+  "to": "2026-10-25",
+  "made": "2026-10-26",
+  "roles": [
+    {
+      "role": "formalize",
+      "jobs": 1,
+      "runs": 1,
+      "succeeded": 0,
+      "failed": 0,
+      "stuck": 0,
+      "partial": 1,
+      "accepted": 1,
+      "usd": 0.5,
+      "usd_per_accepted": 0.5
+    },
+    {
+      "role": "prove",
+      "jobs": 4,
+      "runs": 4,
+      "succeeded": 2,
+      "failed": 2,
+      "stuck": 1,
+      "partial": 0,
+      "accepted": 1,
+      "usd": 2.7,
+      "usd_per_accepted": 2.7,
+      "prev_usd_per_accepted": 2
+    }
+  ],
+  "tiers": [
+    {
+      "role": "formalize",
+      "model": "model-a",
+      "runs": 1,
+      "succeeded": 0,
+      "accepted": 1,
+      "usd": 0.5,
+      "usd_per_accepted": 0.5
+    },
+    {
+      "role": "prove",
+      "model": "model-a",
+      "runs": 3,
+      "succeeded": 1,
+      "accepted": 1,
+      "usd": 1.9000000000000001,
+      "usd_per_accepted": 1.9000000000000001
+    },
+    {
+      "role": "prove",
+      "model": "model-b",
+      "runs": 1,
+      "succeeded": 1,
+      "accepted": 0,
+      "usd": 0.8
+    }
+  ],
+  "areas": [
+    {
+      "role": "prove",
+      "area": "11",
+      "runs": 2,
+      "accepted": 1,
+      "usd": 1.2000000000000002,
+      "usd_per_accepted": 1.2000000000000002
+    },
+    {
+      "role": "prove",
+      "area": "20",
+      "runs": 2,
+      "accepted": 0,
+      "usd": 1.5
+    }
+  ],
+  "incidents": {
+    "quarantines": [
+      {
+        "node": "7K3QX2",
+        "field": "body.explanations.L1",
+        "human": "orcid:0000-0002-1825-0097",
+        "at": "2026-10-23T12:00:00Z"
+      }
+    ],
+    "tampering": [
+      "r-2026-10-21-0004"
+    ],
+    "over_budget": [
+      "r-2026-10-21-0004"
+    ]
+  },
+  "not_measured": [
+    "pull requests opened, merged, closed and changed before merge: the runs do not open pull requests yet, thus a run counts as accepted when a provenance line on the branch names it",
+    "the audit sample of auto-merged pull requests: no pull request merges with no review yet",
+    "injection detections and stale reviews from bumps",
+    "ladder changes: the ladder of each role changes only with a new role version"
+  ]
+}

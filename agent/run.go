@@ -346,6 +346,28 @@ func (r *Record) Summary(transcript string) *prov.Run {
 	}
 }
 
+// ReadRecords reads each run record in store/records, in the order of their start. A store with no records gives none.
+func ReadRecords(store string) ([]*Record, error) {
+	files, err := filepath.Glob(filepath.Join(store, RecordsDir, "r-*.json"))
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*Record, 0, len(files))
+	for _, f := range files {
+		data, err := os.ReadFile(f) // #nosec G304 -- the file is a run record in the store.
+		if err != nil {
+			return nil, err
+		}
+		r := &Record{}
+		if err := json.Unmarshal(data, r); err != nil {
+			return nil, fmt.Errorf("agent: %s: %w", f, err)
+		}
+		out = append(out, r)
+	}
+	slices.SortStableFunc(out, func(a, b *Record) int { return cmp.Or(a.Started.Compare(b.Started), cmp.Compare(a.ID, b.ID)) })
+	return out, nil
+}
+
 // WriteRecord writes the full record to store/records/<id>.json and its summary to store/runs/<id>.json, and returns the summary. A run with no model turn gives no summary, because a summary names its models.
 func WriteRecord(store string, r *Record) (*prov.Run, error) {
 	if !prov.IsRun(r.ID) {

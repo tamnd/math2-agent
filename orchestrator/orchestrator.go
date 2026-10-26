@@ -16,13 +16,11 @@ package orchestrator
 import (
 	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 	"math"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -115,24 +113,14 @@ func AttemptOf(r *agent.Record) Attempt {
 
 // ReadAttempts reads the attempt of each run record in store/records, in the order of their start.
 func ReadAttempts(store string) ([]Attempt, error) {
-	dir := filepath.Join(store, agent.RecordsDir)
-	files, err := filepath.Glob(filepath.Join(dir, "r-*.json"))
+	recs, err := agent.ReadRecords(store)
 	if err != nil {
 		return nil, err
 	}
-	var out []Attempt
-	for _, f := range files {
-		data, err := os.ReadFile(f) // #nosec G304 -- the file is a run record in the store.
-		if err != nil {
-			return nil, err
-		}
-		var r agent.Record
-		if err := json.Unmarshal(data, &r); err != nil {
-			return nil, fmt.Errorf("%s: %w", f, err)
-		}
-		out = append(out, AttemptOf(&r))
+	out := make([]Attempt, 0, len(recs))
+	for _, r := range recs {
+		out = append(out, AttemptOf(r))
 	}
-	slices.SortStableFunc(out, func(a, b Attempt) int { return cmp.Or(a.Started.Compare(b.Started), cmp.Compare(a.Run, b.Run)) })
 	return out, nil
 }
 
