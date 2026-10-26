@@ -20,11 +20,11 @@ import (
 // The Lean directories that no role writes: the attribute and the adapters, the certificate checkers, and the named hypotheses, which are the only place where an axiom can be (spec 20).
 var leanFixed = []string{"lean/Math2/Meta/", "lean/Math2/Cert/", "lean/Math2/Hypotheses/"}
 
-// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of formalize, prove, explain, curate and align. The sets of the other roles come with their roles.
+// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of formalize, prove, explain, curate, align and bump. The sets of the other roles come with their roles.
 //
-// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
+// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
 func Permit(role, target string, changes []workspace.Change) error {
-	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align"}, role) {
+	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump"}, role) {
 		return fmt.Errorf("agent: the field permission set of %s is not written yet", role)
 	}
 	var errs []error
@@ -44,7 +44,7 @@ func permit(role, target string, c workspace.Change) error {
 	switch {
 	case c.New == nil:
 		return errors.New("a role does not delete a file")
-	case (role == "explain" || role == "curate" || role == "align") && strings.HasPrefix(p, "lean/"):
+	case slices.Contains([]string{"explain", "curate", "align", "bump"}, role) && strings.HasPrefix(p, "lean/"):
 		return fmt.Errorf("%s writes no Lean", role)
 	case role == "curate" && p == align.DedupQueue:
 		return permitQueue(c.Old, c.New)
@@ -146,14 +146,14 @@ func permitNode(role, target string, c workspace.Change) error {
 		return nil
 	}
 	if len(formal) != len(old) {
-		return errors.New("prove changes formal[].decl and does not add or remove bindings")
+		return fmt.Errorf("%s changes formal[].decl and does not add or remove bindings", role)
 	}
 	for i := range old {
 		a, b := maps.Clone(old[i]), maps.Clone(formal[i])
 		delete(a, "decl")
 		delete(b, "decl")
 		if !reflect.DeepEqual(a, b) {
-			return fmt.Errorf("prove changes only formal[%d].decl", i)
+			return fmt.Errorf("%s changes only formal[%d].decl", role, i)
 		}
 	}
 	return nil

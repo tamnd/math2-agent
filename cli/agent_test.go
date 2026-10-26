@@ -289,3 +289,29 @@ func TestAgentRunAlign(t *testing.T) {
 		t.Errorf("the output is\n%s", stdout)
 	}
 }
+
+func TestAgentRunBump(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
+	root, out := agentTree(t)
+	if err := os.WriteFile(filepath.Join(root, "nodes", "7K", "7K3QX2.md"), []byte(agentNode("Math2.T.r")), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := exec.Command("git", "-C", root, "-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "-am", "the bump").CombinedOutput(); err != nil {
+		t.Fatalf("git commit: %v\n%s", err, b)
+	}
+	u := llm.Usage{Input: 1000, Output: 200}
+	oldModel, oldLean := newModel, newLean
+	newModel = func() (llm.Model, error) {
+		return llmtest.New(llmtest.Call("rebind", map[string]string{"decl": "Math2.T.r", "new": "Math2.T.s", "why": "the library renamed r to s."}, u)), nil
+	}
+	newLean = func(_ context.Context, tree string, _ *tools.Box) (tools.Lean, error) { return agentLean{tree}, nil }
+	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
+
+	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", t.TempDir(), "-work", filepath.Join(t.TempDir(), "w"), "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "-no-sandbox", "bump")
+	if code != ExitOK {
+		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/bump@0.1.0, 1 turns") || !strings.Contains(stdout, "nodes/7K/7K3QX2.md") {
+		t.Errorf("the output is\n%s", stdout)
+	}
+}
