@@ -11,25 +11,28 @@ import (
 // math checks each math span of the body (rule B01). It reports the first problem in each span. The scan stops at a span that is not closed, because the rest of the body has no clear meaning after it.
 func (r *run) math(n *node.Node, b *body) {
 	text := strings.Join(b.masked, "\n")
-	starts := make([]int, len(b.lines))
-	for i, off := 1, 0; i < len(b.lines); i++ {
-		off += len(b.lines[i-1]) + 1
-		starts[i] = off
-	}
+	place := b.offsets()
 	report := func(off int, msg string) {
-		i := 0
-		for i+1 < len(starts) && starts[i+1] <= off {
-			i++
-		}
-		line, col := b.place(i, off-starts[i])
+		line, col := place(off)
 		r.add("B01", n.Path, line, col, msg)
 	}
-	span := func(from, to int) {
+	mathSpans(text, func(from, to int) {
 		r.checked["B01"]++
 		if at, msg := checkTeX(text[from:to], r.macros); msg != "" {
 			report(from+at, msg)
 		}
-	}
+	}, func(at int, display bool) {
+		r.checked["B01"]++
+		if display {
+			report(at, "a display math span is not closed")
+		} else {
+			report(at, "an inline math span is not closed on its line")
+		}
+	})
+}
+
+// mathSpans calls span with the offsets of the TeX source of each math span of text, and unclosed with the offset of each span that is not closed. The scan stops after a display span that is not closed, and it goes on at the next line after an inline span that is not closed.
+func mathSpans(text string, span func(from, to int), unclosed func(at int, display bool)) {
 	for i := 0; i < len(text); i++ {
 		switch {
 		case text[i] == '\\':
@@ -37,8 +40,7 @@ func (r *run) math(n *node.Node, b *body) {
 		case strings.HasPrefix(text[i:], "$$"):
 			end := strings.Index(text[i+2:], "$$")
 			if end < 0 {
-				r.checked["B01"]++
-				report(i, "a display math span is not closed")
+				unclosed(i, true)
 				return
 			}
 			span(i+2, i+2+end)
@@ -46,8 +48,7 @@ func (r *run) math(n *node.Node, b *body) {
 		case text[i] == '$':
 			end := closeInline(text, i+1)
 			if end < 0 {
-				r.checked["B01"]++
-				report(i, "an inline math span is not closed on its line")
+				unclosed(i, false)
 				i += strings.IndexByte(text[i:]+"\n", '\n')
 				continue
 			}
@@ -55,6 +56,35 @@ func (r *run) math(n *node.Node, b *body) {
 			i = end
 		}
 	}
+}
+
+// Command is one use of a control word in a math span of a body.
+type Command struct {
+	Name string // the name with no backslash, for example ip
+	Line int    // the line in the file
+	Col  int    // the column in the file, in runes
+}
+
+// Commands returns the control words in the math spans of the body of n, in body order. Code spans and code blocks are not math, and a span that is not closed gives no commands.
+func Commands(n *node.Node) []Command {
+	b := parseBody(n)
+	text := strings.Join(b.masked, "\n")
+	place := b.offsets()
+	var out []Command
+	mathSpans(text, func(from, to int) {
+		for i := from; i < to; i++ {
+			if text[i] != '\\' {
+				continue
+			}
+			name, next := command(text, i)
+			if name != "" && isLetter(rune(name[0])) {
+				line, col := place(i)
+				out = append(out, Command{Name: name, Line: line, Col: col})
+			}
+			i = next - 1
+		}
+	}, func(int, bool) {})
+	return out
 }
 
 // closeInline returns the offset of the $ that closes the inline span that starts at from, or -1 when the line has no such $.

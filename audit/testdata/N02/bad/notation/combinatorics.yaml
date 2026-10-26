@@ -1,0 +1,5 @@
+- macro: \card
+  denotes: 6CARD0
+  args: 1
+  latex: '\left|#1\right|'
+  reads: 'the number of elements of #1'

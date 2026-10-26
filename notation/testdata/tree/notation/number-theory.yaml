@@ -1,0 +1,10 @@
+- macro: \totient
+  denotes: 2HQ7XKM4CP
+  args: 1
+  latex: '\varphi(#1)'
+  reads: "phi of #1"
+  lean: Nat.totient
+  introduced_by: 2HQ7XKM4CP
+  variants:
+    - {name: phi, latex: '\phi(#1)'}
+  conflicts: [geometry.goldenratio]

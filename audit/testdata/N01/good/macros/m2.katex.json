@@ -1,0 +1,6 @@
+{
+  "\\R": "\\mathbb{R}",
+  "\\ord": "\\operatorname{ord}(#1)",
+  "\\idx": "[#1 : #2]",
+  "\\grp": "\\mathcal{G}"
+}

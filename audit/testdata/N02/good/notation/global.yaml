@@ -1,0 +1,5 @@
+- macro: \abs
+  denotes: 0FFXKT
+  args: 1
+  latex: '\left|#1\right|'
+  reads: 'the absolute value of #1'

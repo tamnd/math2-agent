@@ -97,6 +97,22 @@ func maskCode(l string) string {
 	return string(out)
 }
 
+// offsets returns a function that gives the file line and the column of an offset in the masked lines joined with newlines.
+func (b *body) offsets() func(off int) (line, col int) {
+	starts := make([]int, len(b.lines))
+	for i, off := 1, 0; i < len(b.lines); i++ {
+		off += len(b.lines[i-1]) + 1
+		starts[i] = off
+	}
+	return func(off int) (int, int) {
+		i := 0
+		for i+1 < len(starts) && starts[i+1] <= off {
+			i++
+		}
+		return b.place(i, off-starts[i])
+	}
+}
+
 // place returns the file line and the column of the byte at offset in line i. The column counts runes.
 func (b *body) place(i, offset int) (line, col int) {
 	return b.start + i, utf8.RuneCountInString(b.lines[i][:offset]) + 1

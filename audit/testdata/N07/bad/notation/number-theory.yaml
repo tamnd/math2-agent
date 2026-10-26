@@ -1,0 +1,6 @@
+- macro: \totient
+  denotes: 2HQ7XK
+  args: 1
+  latex: '\varphi(#1)'
+  reads: 'phi of #1'
+  introduced_by: 2HQ7XK

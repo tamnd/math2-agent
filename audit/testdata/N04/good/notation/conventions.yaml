@@ -1,0 +1,8 @@
+- id: natural-numbers
+  concept: 4NAT00
+  default: with-zero
+  options:
+    - option: with-zero
+      sources: ['isbn:9780000000002']
+    - option: without-zero
+      sources: ['isbn:9780471433347', 'https://example.org/notes']

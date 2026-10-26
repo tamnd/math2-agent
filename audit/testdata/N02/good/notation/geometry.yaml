@@ -1,0 +1,12 @@
+- macro: \goldenratio
+  denotes: 3G0DRT
+  args: 0
+  latex: \varphi
+  reads: phi
+  scope: [geometry, number-theory]
+  conflicts: [number-theory.totient]
+- macro: \pair
+  denotes: 4PA1RS
+  args: 2
+  latex: '(#1, #2)'
+  reads: 'the pair #1, #2'

@@ -1,0 +1,1 @@
+topics/curricula/algebra.yaml:6:1: N03: the course groups puts 3C53TD before G5S1M9, which it needs

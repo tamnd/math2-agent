@@ -1,0 +1,1 @@
+nodes/R1N/R1NG00.md:5:1: N05: the concept has no specializes edge and no topic. Add a specializes edge to a more general concept, or a topic

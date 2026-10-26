@@ -1,0 +1,6 @@
+macros/m2.katex.json:1:1: N06: the file is not the output of the notation register. Run m2 notation build, and do not change the file by hand
+macros/m2.sty:10:23: N06: the file is not the output of the notation register. Run m2 notation build, and do not change the file by hand
+notation/global.yaml:1:1: N06: the macro \R has no denotes. Give the tag of the concept or the definition that it means
+notation/global.yaml:6:1: N06: the macro \Z denotes 2ZZZZZ, which is not a node
+notation/global.yaml:11:1: N06: the macro \Q denotes 9RET00, which is retired
+notation/group-theory.yaml:6:1: N06: the macro \R has an entry at notation/global.yaml:1 too. A macro has one entry and one meaning

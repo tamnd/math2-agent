@@ -1,0 +1,13 @@
+# The symbols of all areas.
+- macro: \R
+  denotes: 08J2M1JYAG
+  args: 0
+  latex: \mathbb{R}
+  reads: R
+  lean: Real
+- macro: \ip
+  denotes: 0NB0AWGJBW
+  args: 2
+  latex: '\left\langle #1, #2\right\rangle'
+  reads: "the inner product of #1 and #2"
+  lean: inner
