@@ -161,7 +161,7 @@ prompts/prove/
 
 - The package `prompts` embeds the role directories, and `agent.LoadRole` reads one. The first versions are formalize 0.1.0 and prove 0.1.0. They have no examples yet, because there is no merged run yet.
 - Each run records the role version and the hashes of each prompt file that it loaded.
-- A change to any file bumps the version. A minor bump must pass the evaluation suite of the role (17.3), with results no worse than the previous version. A major bump also needs a shadow week. In that week, the new version runs with the old one on the same jobs, and the system uses only the output of the old one.
+- A change to any file bumps the version. `prompts/roles.sum` has the version and the digest of the files of each role, and the tests of the `prompts` package fail when the files change and the version does not go up. A minor bump must pass the evaluation suite of the role (17.3), with results no worse than the previous version. A major bump also needs a shadow week. In that week, the new version runs with the old one on the same jobs, and the system uses only the output of the old one.
 - Provenance can be queried by role version. Thus "everything prove 3.2.x produced" is one command, and quarantine can use it as a target (06.5).
 
 ## 12.9 The weekly agent report
