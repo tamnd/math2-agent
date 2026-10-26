@@ -47,6 +47,14 @@ const (
 // String returns the name of the level, W0 to W3.
 func (l Level) String() string { return "W" + strconv.Itoa(int(l)) }
 
+// Word returns the short name of the level: stub, stated, usable or complete.
+func (l Level) Word() string {
+	if l < W0 || l > W3 {
+		return ""
+	}
+	return [...]string{"stub", "stated", "usable", "complete"}[l]
+}
+
 // MarshalText gives the name of the level.
 func (l Level) MarshalText() ([]byte, error) { return []byte(l.String()), nil }
 

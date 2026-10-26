@@ -6,6 +6,7 @@ package site
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"html/template"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/card"
 	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/inventory"
@@ -119,6 +121,7 @@ type nodeView struct {
 	Sources, SameAs                        []link
 	Retired                                map[string]any
 	Status                                 *status.Status // nil when the site has no build
+	Writing                                *card.Result   // the writing level and the work list
 	Closure, Blueprint                     *dagView
 	Run                                    *runView // the "run this" panel of a computation
 	UsedBy                                 []link
@@ -126,6 +129,14 @@ type nodeView struct {
 	HTML                                   template.HTML
 	URL, MarkdownURL, JSONURL, EditURL     string
 	source                                 func(file []byte) []byte // the Markdown copy of a node with fields in quarantine, or nil
+}
+
+// NextLevel returns the writing level above the level of the node, or "" at W3 or with no level.
+func (v *nodeView) NextLevel() string {
+	if v.Writing == nil || v.Writing.Level >= card.W3 {
+		return ""
+	}
+	return (v.Writing.Level + 1).String()
 }
 
 type specDoc struct {
@@ -144,6 +155,7 @@ type builder struct {
 	katex     *katex.Renderer
 	graph     *graph.Graph
 	status    map[string]status.Status           // nil when the site has no build
+	levels    map[string]int                     // the number of nodes at each writing level
 	runs      map[string]map[string]*compute.Run // the runs of the computations in the build, by tag and architecture
 	tmpl      *template.Template
 	reviewers []*reviewerView
@@ -178,7 +190,7 @@ func Build(opt Options) error {
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory}
+	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeLevels}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
@@ -250,6 +262,9 @@ func (b *builder) load() error {
 	if err := b.loadStatus(); err != nil {
 		return err
 	}
+	if err := b.loadWriting(nodes); err != nil {
+		return err
+	}
 	if err := b.loadRuns(); err != nil {
 		return err
 	}
@@ -280,6 +295,42 @@ func (b *builder) loadStatus() error {
 	for _, v := range b.order {
 		if s, ok := st.Status(v.Tag); ok {
 			b.status[v.Tag] = s
+		}
+	}
+	return nil
+}
+
+// loadWriting gives each node its writing level and its work list. It reads writing.json of the build when the site has a build with that file. Else it computes them from the tree, as the writing step of m2 build does. When the schema or the macros of the tree do not load, the site has no writing levels.
+func (b *builder) loadWriting(nodes []*node.Node) error {
+	var w *build.Levels
+	if b.opt.Build != "" {
+		data, err := os.ReadFile(filepath.Join(b.opt.Build, build.WritingFile)) // #nosec G304 -- the path is in the build.
+		switch {
+		case err == nil:
+			w = &build.Levels{}
+			if err := json.Unmarshal(data, w); err != nil {
+				return fmt.Errorf("site: %s: %w", build.WritingFile, err)
+			}
+		case !errors.Is(err, fs.ErrNotExist):
+			return fmt.Errorf("site: %w", err)
+		}
+	}
+	if w == nil {
+		cards, err := card.Load(b.opt.Content)
+		if err != nil {
+			return fmt.Errorf("site: %w", err)
+		}
+		if w, err = build.WritingLevels(b.opt.Content, cards, nodes); err != nil {
+			// m2 check reports a schema or a macro file that does not load. The site is still useful without the levels.
+			return nil
+		}
+	}
+	b.levels = map[string]int{}
+	for i := range w.Nodes {
+		r := &w.Nodes[i]
+		if v := b.nodes[r.Tag]; v != nil {
+			v.Writing = r
+			b.levels[r.Level.String()]++
 		}
 	}
 	return nil

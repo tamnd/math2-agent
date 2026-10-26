@@ -954,25 +954,42 @@ func (b *builder) writing(_ context.Context, nodes []*node.Node) (Step, error) {
 			return s, nil
 		}
 	}
-	rows, err := b.rowNodes(nodes)
+	w, err := WritingLevels(b.opt.Root, cards, nodes)
 	if err != nil {
 		return Step{}, err
 	}
+	data, err := json.MarshalIndent(w, "", "  ")
+	if err != nil {
+		return Step{}, err
+	}
+	if err := write(filepath.Join(b.opt.Out, WritingFile), append(data, '\n')); err != nil {
+		return Step{}, err
+	}
+	out, err := hashFiles(b.opt.Out, []string{WritingFile})
+	return Step{Input: input, Output: out}, err
+}
+
+// WritingLevels computes the writing level and the work list of each node of the tree at root with cards, as the writing step does. It does not use the cache of a build, and it writes no file.
+func WritingLevels(root string, cards *card.Cards, nodes []*node.Node) (*Levels, error) {
+	rows, err := rowNodes(root, nodes)
+	if err != nil {
+		return nil, err
+	}
 	files := make([]check.File, 0, len(nodes))
 	for _, n := range nodes {
-		data, err := os.ReadFile(filepath.Join(b.opt.Root, filepath.FromSlash(n.Path))) // #nosec G304 -- the path is in the tree.
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(n.Path))) // #nosec G304 -- the path is in the tree.
 		if err != nil {
-			return Step{}, err
+			return nil, err
 		}
 		files = append(files, check.File{Path: n.Path, Data: data})
 	}
 	broken := map[string]bool{}
 	c := &check.Checker{Only: []string{"B01", "B02", "B03"}}
-	if c.Schema, err = schema.Load(b.opt.Root); err != nil {
-		return Step{}, err
+	if c.Schema, err = schema.Load(root); err != nil {
+		return nil, err
 	}
-	if c.Macros, err = check.LoadMacros(b.opt.Root); err != nil {
-		return Step{}, err
+	if c.Macros, err = check.LoadMacros(root); err != nil {
+		return nil, err
 	}
 	for _, f := range c.Check(files, nil).Findings {
 		broken[f.Path] = true
@@ -986,35 +1003,27 @@ func (b *builder) writing(_ context.Context, nodes []*node.Node) (Step, error) {
 		Row:   func(tag string) bool { return rows[tag] },
 		Clean: func(tag string) bool { return !broken[paths[tag]] },
 	}
-	w := Levels{Cards: cards.Source, Levels: map[string]int{}, Nodes: []card.Result{}}
+	w := &Levels{Cards: cards.Source, Levels: map[string]int{}, Nodes: []card.Result{}}
 	for _, n := range nodes {
 		r := cards.Assess(n, env)
 		w.Levels[r.Level.String()]++
 		w.Nodes = append(w.Nodes, r)
 	}
 	slices.SortFunc(w.Nodes, func(x, y card.Result) int { return strings.Compare(x.Tag, y.Tag) })
-	data, err := json.MarshalIndent(w, "", "  ")
-	if err != nil {
-		return Step{}, err
-	}
-	if err := write(filepath.Join(b.opt.Out, WritingFile), append(data, '\n')); err != nil {
-		return Step{}, err
-	}
-	out, err := hashFiles(b.opt.Out, []string{WritingFile})
-	return Step{Input: input, Output: out}, err
+	return w, nil
 }
 
 // rowNodes returns the tags of the nodes that a row of the inventory accounts for.
-func (b *builder) rowNodes(nodes []*node.Node) (map[string]bool, error) {
+func rowNodes(root string, nodes []*node.Node) (map[string]bool, error) {
 	out := map[string]bool{}
-	if !hasInventory(b.opt.Root) {
+	if !hasInventory(root) {
 		return out, nil
 	}
-	rows, err := inventory.ReadRows(b.opt.Root)
+	rows, err := inventory.ReadRows(root)
 	if err != nil {
 		return nil, err
 	}
-	ms, err := inventory.ReadMentions(b.opt.Root)
+	ms, err := inventory.ReadMentions(root)
 	if err != nil {
 		return nil, err
 	}

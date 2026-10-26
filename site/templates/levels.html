@@ -1,0 +1,23 @@
+{{define "levels"}}
+<header class="page-head">
+  <h1>Writing levels</h1>
+  <p class="lead">The writing level says how complete the text of a node is, from W0 to W3. Each level needs the items of the levels below it. The card of each kind lists the sections and the links of a good node of that kind. The level does not measure the truth of a node. The evidence level does that.</p>
+</header>
+<table class="plain">
+  <thead><tr><th scope="col">Level</th><th scope="col">Nodes</th><th scope="col">What the level needs</th></tr></thead>
+  {{range .Levels}}<tr><th scope="row"><a href="{{.URL}}">{{.Name}} {{.Word}}</a></th><td class="num">{{.Count}}</td><td class="muted">{{.Text}}</td></tr>
+  {{end}}
+</table>
+{{with .Needs}}
+<section>
+  <h2>What the nodes need most</h2>
+  <p>The items that most nodes lack for their next level. The page of each node has its own list.</p>
+  <table class="plain">
+    <thead><tr><th scope="col">Item</th><th scope="col">For</th><th scope="col">Nodes</th></tr></thead>
+    {{range .}}<tr><td>{{.What}}</td><td>{{.Level}}</td><td class="num">{{.Count}}</td></tr>
+    {{end}}
+  </table>
+</section>
+{{end}}
+<p>{{with .Spec}}The cards and the levels are in the corpus spec, <a href="{{.}}">The node card</a>. {{end}}To compute the levels of a working tree, run <code>m2 build</code>. It writes <code>build/writing.json</code>.</p>
+{{end}}

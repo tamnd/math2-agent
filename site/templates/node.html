@@ -14,6 +14,7 @@
     {{with .URI}}<tr><th>URI</th><td><code class="copy" title="Click to copy">{{.}}</code></td></tr>{{end}}
     {{with .Aliases}}<tr><th>Aliases</th><td>{{range $i, $a := .}}{{if $i}}, {{end}}<code>{{$a}}</code>{{end}}</td></tr>{{end}}
     <tr><th>Kind</th><td>{{.Kind}}{{with .Role}}, {{.}}{{end}}</td></tr>
+    {{with .Writing}}<tr><th>Writing</th><td><a href="{{url (print "levels/" .Level "/")}}" title="The writing level of the node">{{.Level}}</a> <span class="muted">{{.Level.Word}}</span></td></tr>{{end}}
     {{with .MSC}}<tr><th>MSC</th><td>{{range $i, $c := .}}{{if $i}}, {{end}}<a href="{{url (print "msc/" (top $c) "/")}}" title="{{mscName (top $c)}}">{{$c}}</a>{{end}}</td></tr>{{end}}
     {{with .Status}}<tr><th>Evidence</th><td>{{if .Evidence.String}}{{.Evidence}} <span class="muted">{{.Evidence.Word}}</span>{{else}}<span class="muted">none for this kind</span>{{end}}</td></tr>
     {{if ge .Fidelity 0}}<tr><th>Fidelity</th><td>{{.Fidelity}}</td></tr>{{end}}
@@ -56,6 +57,13 @@
 <details class="reasons">
   <summary>Why the build gives this status</summary>
   <ul>{{range .}}<li>{{.}}</li>{{end}}</ul>
+</details>
+{{end}}{{end}}
+{{with .Writing}}{{with .Next}}
+<details class="reasons">
+  <summary>What this node needs for {{$.NextLevel}}</summary>
+  <ul>{{range .}}<li>{{.What}}{{with .Note}}: {{.}}{{end}} <span class="muted">({{.Have}} of {{.Want}})</span></li>{{end}}</ul>
+  <p class="muted">The <a href="{{url "levels/"}}">writing levels</a> say how complete the text of a node is. They do not measure its truth.</p>
 </details>
 {{end}}{{end}}
 {{with .Closure}}
