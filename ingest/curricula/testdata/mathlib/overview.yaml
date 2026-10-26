@@ -1,0 +1,15 @@
+# An excerpt of docs/overview.yaml of leanprover-community/mathlib4 at the commit 2b2e96747ca44b376def99bf9571ef72cc6a7f2d, for the tests of the package curricula.
+# Mathlib is under the Apache License 2.0. Copyright the Mathlib Community.
+
+General algebra:
+  Category theory:
+    category: 'CategoryTheory.Category'
+    small category: 'CategoryTheory.SmallCategory'
+    functor: 'CategoryTheory.Functor'
+    natural transformation: 'CategoryTheory.NatTrans'
+    Yoneda embedding: 'CategoryTheory.yoneda'
+    isomorphism: 'CategoryTheory.Iso'
+    adjunction: 'CategoryTheory.Adjunction'
+    monad: 'CategoryTheory.Monad'
+    comma category: 'CategoryTheory.Comma'
+    limits: 'CategoryTheory.Limits.IsLimit'

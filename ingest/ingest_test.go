@@ -55,6 +55,7 @@ func TestClassOf(t *testing.T) {
 		"CC-BY-SA-4.0":      ingest.Open,
 		"CC0-1.0":           ingest.Open,
 		"Apache-2.0":        ingest.Open,
+		"Unlicense":         ingest.Open,
 		"CC-BY-NC-SA-4.0":   ingest.ShareAlikeNC,
 		"CC-BY-NC-ND-4.0":   ingest.Verbatim,
 		"GFDL-1.3-or-later": ingest.GFDL,

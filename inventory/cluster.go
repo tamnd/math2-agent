@@ -213,8 +213,7 @@ func SystemOf(source string) string {
 }
 
 var sourceSystems = map[string]string{
-	"erdosproblems":     "erdos",
-	"formalconjectures": "formal_conjectures",
+	"erdosproblems": "erdos",
 }
 
 // titleSystems have page titles as ids. Their keys ignore the case of the first letter and read _ as a space.
@@ -232,7 +231,7 @@ func key(sys, id string) string {
 }
 
 // namePriority orders the sources whose names a row prefers. A source that is not in the list comes after them.
-var namePriority = []string{"wikidata", "wikipedia", "proofwiki", "nlab", "planetmath", "oeis", "erdosproblems", "stacks", "lmfdb", "mathlib", "formalconjectures"}
+var namePriority = []string{"wikidata", "wikipedia", "proofwiki", "nlab", "planetmath", "oeis", "erdosproblems", "stacks", "lmfdb", "mathlib", "formal_conjectures"}
 
 // derive computes the fields of a row from its mentions: the kind, the name, the MSC codes, the layer and the spread.
 func derive(r *Row, byID map[string]*Mention) {
