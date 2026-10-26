@@ -263,7 +263,7 @@ Each result shows the channels that found it and its rank in each one, for examp
 
 ## Serve
 
-`m2 serve` serves the read API (spec 11.2) from the last `m2 build`. It reads `build/store.db`, `build/search.db` and the node files of the tree. The API has no write path. A write is a pull request against tamnd/math2.
+`m2 serve` serves the read API (spec 11.2) from the last `m2 build`. It reads `build/store.db`, `build/search.db` and the node files of the tree. A write is a pull request against tamnd/math2, and `m2 serve -propose` serves the write methods (see below).
 
 ```
 m2 serve -addr localhost:8080
@@ -287,6 +287,19 @@ The gRPC service `m2.v1.ReadService` (spec 11.2) has one rpc for each method, fo
 m2 serve -grpc localhost:9090
 grpcurl -plaintext -d '{"ref": "Q529ES"}' localhost:9090 m2.v1.ReadService/Status
 ```
+
+### Writes
+
+`m2 serve -propose` also serves the write methods of spec 11.2 over HTTP: `propose_node`, `propose_edit`, `propose_binding` and `propose_alignment`. Each write opens a pull request against tamnd/math2 (`-repo`) under the identity of the caller, thus the root must be a git clone of that repository. A write is a POST request with the header `Authorization: Bearer TOKEN`, where TOKEN is a GitHub token of the caller with the scope to fork the repository and to open a pull request. The server does not keep the token.
+
+```
+m2 serve -propose -root ~/math2
+curl -H "Authorization: Bearer $GITHUB_TOKEN" -d '{"ref": "TAG", "edge": "same_as", "system": "wikidata", "id": "QID", "message": "Why the two are the same."}' http://localhost:8080/v1/propose_alignment
+```
+
+The `propose` package does the work. It makes the change from the tree, adds a provenance line for each changed field under the identity `github:LOGIN`, and runs the audit of `m2 audit -changed` on the change in a new git worktree. A change that fails a hard rule gives 400 with the findings, and no pull request opens. A change that passes goes to a new branch `m2-api/METHOD/TAG-ID`, in the fork of the caller or in the repository when the caller is its owner. The answer gives the number and the URL of the pull request, the files, the audit and the cap of the method. A new node gets a provisional id in `nodes/~/`, and the mint workflow gives it a tag when the pull request merges. A binding starts with no review, so it is F1 at most.
+
+Each write method has a cap on its pull requests (spec 11.5). Seven days can have twice the pull requests of the method that were closed or merged in a week, over the last four weeks, and at least 10. A write over the cap gets 429. A write with no token, or with a token that GitHub does not accept, gets 401.
 
 ## Ingest
 
@@ -596,7 +609,7 @@ CI runs the same checks on each pull request. It also runs govulncheck, CodeQL, 
 ```
 cmd/m2/   the m2 binary
 align/    the aligner: candidates, scores, the curation queues and the register of decisions (spec 05.3, 05.4 and 16.3)
-api/      the read API of spec 11.2, its HTTP handler and its rate limit
+api/      the API of spec 11.2: the read methods, the write methods, the HTTP handler and the rate limit
 audit/    the audit rules of spec 15, with a fixture pair for each rule
 battery/  the F1 battery: the ten machine checks of the fidelity of a Lean binding (spec 10.4)
 bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, bench/extract measures the extraction of results from papers, bench/search measures the quality of search, and bench/fidelity measures the F1 battery
@@ -612,6 +625,7 @@ ingest/   the adapters of the external sources, the licence gate, the snapshots 
 lean/     M2Extract, its Lake package and the Go package that drives it
 mcp/      the MCP server: a read-only tool for each method of the API (spec 11.2 and 11.7)
 node/     read node files, write the canonical form and compute the content hash
+propose/  the writes of spec 11.1: the change of each write method, the audit gate, the cap and the pull request on GitHub
 prov/     the provenance logs, the agent runs, the credit of a person and the quarantine of a model (spec 04.8 and 06.5)
 release/  the release manifest, the levels and the notes of spec 06.2, and the rebuild checks R01 and R02
 replay/   the replay of a declaration in the comparator and the independent kernels

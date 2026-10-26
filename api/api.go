@@ -1,8 +1,8 @@
-// Package api is the read surface of math2 (spec 11.2).
+// Package api is the read surface of math2 (spec 11.2), and the write surface of spec 11.1 over HTTP.
 //
 // A Service answers the read methods from the derived data of one build: the serving store, the search index and the node files of the tree that the build read. Methods returns the methods with their parameters. Service.Call runs one method, and Service.Handler serves each method over HTTP with JSON. The MCP server of the mcp package uses the same methods, so the encodings cannot drift apart.
 //
-// The API has no write path. A write is a pull request against tamnd/math2 (spec 11.1).
+// A write is a pull request against tamnd/math2 (spec 11.1). Writes returns the write methods. When Options.Propose is set, Service.Handler serves them, and each write opens a pull request through package propose with the GitHub token of the caller. The audit of the change is the gate, and the API has no other write path. The gRPC service and the MCP server serve only the read methods.
 //
 // Each response says what it is about (spec 11.1). It has the version of the API, the commit of the tree, the output hash of the build, and the content hash and the evidence level of each node in the result. The API serves the status that the build computed and no other status.
 package api

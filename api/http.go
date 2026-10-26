@@ -10,12 +10,17 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/tamnd/math2-agent/propose"
 )
 
 // Options are the options of Handler, Limit and LimitGRPC.
 type Options struct {
 	Rate  float64 // the requests per second of each client. Zero means 10. A negative rate means no limit.
 	Burst int     // the requests that a client can send at once. Zero means 20.
+
+	// Propose turns on the write methods of Writes, as POST /v1/{method}. Each write opens a pull request with the proposer. Nil means that the handler serves only the read methods.
+	Propose *propose.Proposer
 
 	// Client returns the key of the client of a request, for the rate limit. Nil means the IP address of the peer. Behind a proxy, give a function that reads the address that the proxy sets. LimitGRPC does not use it, and the key of a gRPC client is the IP address of the peer.
 	Client func(*http.Request) string
@@ -32,32 +37,34 @@ const maxBody = 1 << 20
 //	GET  /healthz            ok
 //
 // A call gives a Response with the status 200, or an Error in {"error": ...} with the status of its code. Each client has the rate limit of Limit.
+//
+// When opt.Propose is set, the handler also serves each write method of Writes as POST /v1/{method}, with the header Authorization: Bearer and the GitHub token of a person. The result of a write is the propose.Result of its pull request. A write with no token, or with a token that GitHub does not accept, gets the status 401. A write that fails the audit gets 400 with the findings, and a write over the cap of its method gets 429.
 func (s *Service) Handler(opt Options) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte("ok\n"))
 	})
+	ix := index{API: Version, Methods: methods}
+	if opt.Propose != nil {
+		ix.Writes = writes
+		for _, m := range writes {
+			mux.HandleFunc("POST /"+Version+"/"+m.Name, s.write(opt.Propose, m))
+			mux.HandleFunc("OPTIONS /"+Version+"/"+m.Name, func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Access-Control-Allow-Methods", "POST")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+				w.WriteHeader(http.StatusNoContent)
+			})
+		}
+	}
 	mux.HandleFunc("GET /"+Version, func(w http.ResponseWriter, _ *http.Request) {
-		write(w, http.StatusOK, index{API: Version, Methods: methods})
+		write(w, http.StatusOK, ix)
 	})
 	call := func(w http.ResponseWriter, r *http.Request) {
-		params := map[string]any{}
-		if r.Method == http.MethodPost {
-			dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBody))
-			dec.UseNumber()
-			if err := dec.Decode(&params); err != nil {
-				fail(w, r.PathValue("method"), invalid("the body is not a JSON object of parameters: %v", err))
-				return
-			}
-		} else {
-			for name, vs := range r.URL.Query() {
-				if len(vs) != 1 {
-					fail(w, r.PathValue("method"), invalid("the parameter %s has %d values, and it must have one", name, len(vs)))
-					return
-				}
-				params[name] = vs[0]
-			}
+		params, err := body(w, r)
+		if err != nil {
+			fail(w, r.PathValue("method"), err)
+			return
 		}
 		resp, err := s.Call(r.PathValue("method"), params)
 		if err != nil {
@@ -93,10 +100,31 @@ func Limit(h http.Handler, opt Options) http.Handler {
 	})
 }
 
+// body returns the parameters of a call: the JSON object of the body of a POST, or the query of a GET.
+func body(w http.ResponseWriter, r *http.Request) (map[string]any, error) {
+	params := map[string]any{}
+	if r.Method == http.MethodPost {
+		dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBody))
+		dec.UseNumber()
+		if err := dec.Decode(&params); err != nil {
+			return nil, invalid("the body is not a JSON object of parameters: %v", err)
+		}
+		return params, nil
+	}
+	for name, vs := range r.URL.Query() {
+		if len(vs) != 1 {
+			return nil, invalid("the parameter %s has %d values, and it must have one", name, len(vs))
+		}
+		params[name] = vs[0]
+	}
+	return params, nil
+}
+
 // index is the answer of GET /v1.
 type index struct {
 	API     string   `json:"api"`
 	Methods []Method `json:"methods"`
+	Writes  []Method `json:"writes,omitempty"` // the write methods, when the handler serves them
 }
 
 // failure is the body of an error.
@@ -106,7 +134,7 @@ type failure struct {
 	Error  *Error `json:"error"`
 }
 
-var httpCodes = map[string]int{Invalid: http.StatusBadRequest, NotFound: http.StatusNotFound, RateLimited: http.StatusTooManyRequests, InternalError: http.StatusInternalServerError}
+var httpCodes = map[string]int{Invalid: http.StatusBadRequest, Unauthorized: http.StatusUnauthorized, NotFound: http.StatusNotFound, RateLimited: http.StatusTooManyRequests, InternalError: http.StatusInternalServerError}
 
 func fail(w http.ResponseWriter, method string, err error) {
 	var e *Error
