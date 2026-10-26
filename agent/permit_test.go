@@ -245,3 +245,44 @@ func TestPermit(t *testing.T) {
 		t.Error("the role planner has no permission set, and Permit gave no error")
 	}
 }
+
+func TestPermitInformalize(t *testing.T) {
+	const decl = "mathlib:Subgroup.card_subgroup_dvd_card"
+	path := "nodes/3C5/3C53TD.md"
+	added := strings.Replace(strings.Replace(target, "tag: 3C53TD", "tag: ~1a2b3c4d", 1), "match: stronger", "match: exact", 1)
+	newPath := "nodes/~/~1a2b3c4d.md"
+	for _, tc := range []struct {
+		name, target string
+		c            workspace.Change
+		err          string
+	}{
+		{"a new statement", decl, workspace.Change{Path: newPath, New: []byte(added)}, ""},
+		{"a new definition", "mathlib:IsCyclic", workspace.Change{Path: newPath, New: []byte(strings.NewReplacer("kind: statement\nrole: theorem", "kind: definition", "Subgroup.card_subgroup_dvd_card", "IsCyclic", "## Statement", "## Definition").Replace(added))}, ""},
+		{"a new concept", decl, workspace.Change{Path: newPath, New: []byte("---\ntag: ~1a2b3c4d\nkind: concept\nname: Cyclic group\n---\n\n## Summary\n\nA group that one element generates.\n")}, ""},
+		{"a bound concept", decl, workspace.Change{Path: newPath, New: []byte(strings.Replace(added, "kind: statement\nrole: theorem", "kind: concept", 1))}, "a new concept of informalize has no field formal"},
+		{"a new example", decl, workspace.Change{Path: newPath, New: []byte(strings.Replace(added, "kind: statement\nrole: theorem", "kind: example", 1))}, "of the kind example"},
+		{"another declaration", decl, workspace.Change{Path: newPath, New: []byte(strings.Replace(added, "card_subgroup_dvd_card", "card_dvd", 1))}, "has one binding"},
+		{"a binding that is not exact", decl, workspace.Change{Path: newPath, New: []byte(target)}, "has one binding"},
+		{"two bindings", decl, workspace.Change{Path: newPath, New: []byte(strings.Replace(added, "match: exact\n", "match: exact\n  - system: lean4\n    library: math2\n    decl: Math2.A\n    match: exact\n", 1))}, "has one binding"},
+		{"a reviewed binding", decl, workspace.Change{Path: newPath, New: []byte(strings.Replace(added, "match: exact\n", "match: exact\n    fidelity_reviews: [r-3C53TD-01]\n", 1))}, "has one binding"},
+		{"a crosswalk edge", decl, workspace.Change{Path: newPath, New: []byte(strings.Replace(added, "---\n\n", "same_as: {wikidata: Q190546}\n---\n\n", 1))}, "no field same_as"},
+		{"an explanation", decl, workspace.Change{Path: newPath, New: []byte(added + "\n## Explanations\n\n### L2 agent\n\nA text.\n")}, "writes no explanations"},
+		{"a section of the bound node", decl, workspace.Change{Path: path, Old: []byte(target), New: []byte(target + "\n## Remarks\n\nThe converse is false.\n")}, ""},
+		{"the name of the bound node", decl, workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "name: Lagrange's theorem", "name: Theorem of Lagrange", 1))}, ""},
+		{"the msc of the bound node", decl, workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "[20D60]", "[20D99]", 1))}, "changes the field msc"},
+		{"the binding of the bound node", decl, workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "match: stronger", "match: exact", 1))}, "changes the field formal"},
+		{"a node that does not bind it", "mathlib:IsCyclic", workspace.Change{Path: path, Old: []byte(target), New: []byte(target + "\nMore.\n")}, "does not bind it"},
+		{"a target that is a tag", "3C53TD", workspace.Change{Path: newPath, New: []byte(added)}, "not in the form mathlib:DECL"},
+		{"Lean", decl, workspace.Change{Path: "lean/Math2/A.lean", New: []byte("a")}, "writes no Lean"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := agent.Permit("informalize", tc.target, []workspace.Change{tc.c})
+			switch {
+			case tc.err == "" && err != nil:
+				t.Errorf("error %v", err)
+			case tc.err != "" && (err == nil || !strings.Contains(err.Error(), tc.err)):
+				t.Errorf("error %v, want %q", err, tc.err)
+			}
+		})
+	}
+}

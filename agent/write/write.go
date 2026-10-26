@@ -217,6 +217,31 @@ func list(fs []check.Finding) string {
 	return strings.Join(lines, "; ")
 }
 
+// Own checks the change of the node from old to n against the provenance log of the node in the tree at dir: the agent of each body field that the change changes must have the prefix agent, for example m2-agent/write@, and no person can have confirmed the field. A role changes only its own sections. Own returns the reason when the check fails, and "" when it passes.
+func Own(dir, agent string, old, n *node.Node) (string, error) {
+	log, err := prov.Read(dir, old.ID)
+	if err != nil {
+		return "", err
+	}
+	role := strings.TrimSuffix(strings.TrimPrefix(agent, "m2-agent/"), "@")
+	was, now := prov.Fields(old), prov.Fields(n)
+	for _, f := range slices.Sorted(maps.Keys(union(was, now))) {
+		if !strings.HasPrefix(f, "body.") || was[f] == "" || was[f] == now[f] {
+			continue
+		}
+		l, ok := prov.Author(log, f)
+		switch {
+		case !ok:
+			return fmt.Sprintf("the provenance log of %s does not show who wrote %s, thus %s does not change it. Put the text back as it was", old.ID, f, role), nil
+		case l.Human != "":
+			return fmt.Sprintf("%s wrote or confirmed %s, and %s does not change it. Put the text back as it was", l.Human, f, role), nil
+		case !strings.HasPrefix(l.Agent, agent):
+			return fmt.Sprintf("%s wrote %s, and %s changes only its own sections. Put the text back as it was", l.Agent, f, role), nil
+		}
+	}
+	return "", nil
+}
+
 // Goal returns the goal of a write run on the job, with the cards of the tree. A nil corpus skips the copy check, which then runs only in CI.
 func Goal(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, corpus *copycheck.Corpus) agent.Goal {
 	return agent.OnChanges(ws, func(_ context.Context, changes []workspace.Change) (bool, string, error) {
@@ -241,26 +266,10 @@ func Goal(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, corpus *co
 		if old == nil || n == nil {
 			return false, fmt.Sprintf("the tree has no node %s", job.Target), nil
 		}
-		log, err := prov.Read(ws.Dir, job.Target)
-		if err != nil {
-			return false, "", err
+		if why, err := Own(ws.Dir, Agent, old, n); why != "" || err != nil {
+			return false, why, err
 		}
-		was := prov.Fields(old)
 		mine := written(old, n)
-		for _, f := range slices.Sorted(maps.Keys(union(was, prov.Fields(n)))) {
-			if !strings.HasPrefix(f, "body.") || was[f] == "" || was[f] == prov.Fields(n)[f] {
-				continue
-			}
-			l, ok := prov.Author(log, f)
-			switch {
-			case !ok:
-				return false, fmt.Sprintf("the provenance log of %s does not show who wrote %s, thus write does not change it. Put the text back as it was", job.Target, f), nil
-			case l.Human != "":
-				return false, fmt.Sprintf("%s wrote or confirmed %s, and write does not change it. Put the text back as it was", l.Human, f), nil
-			case !strings.HasPrefix(l.Agent, Agent):
-				return false, fmt.Sprintf("%s wrote %s, and write changes only its own sections. Put the text back as it was", l.Agent, f), nil
-			}
-		}
 		level := Level(cards, old, graph.Build(before), job.Goal)
 		if needs := Needs(cards, n, graph.Build(after), level); len(needs) > 0 {
 			var what []string
