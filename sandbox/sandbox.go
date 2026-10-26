@@ -209,6 +209,25 @@ func (d *Docker) Run(ctx context.Context, s Spec) (*Result, error) {
 	return res, nil
 }
 
+// Command returns the command that runs s with the stdin of the command as the stdin of the program. It is for a program that the caller talks to through its stdin and its stdout, such as a Lean session. The caller sets the stdin, the stdout and the stderr, then starts the command and waits for it. Command does not use s.Wall and s.Output: ctx limits the time of the run, and the caller reads the output. When ctx is done, the sandbox stops the container.
+func (d *Docker) Command(ctx context.Context, s Spec) (*exec.Cmd, error) {
+	name := "m2-" + randomHex(8)
+	args, err := d.Args(s, name)
+	if err != nil {
+		return nil, err
+	}
+	args = slices.Insert(args, 1, "--interactive")
+	cmd := exec.CommandContext(ctx, d.binary(), args...) // #nosec G204 -- Args checks each value that comes from the spec.
+	cmd.Cancel = func() error {
+		kctx, kcancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer kcancel()
+		_ = exec.CommandContext(kctx, d.binary(), "kill", name).Run() // #nosec G204 -- the name is random hex.
+		return cmd.Process.Kill()
+	}
+	cmd.WaitDelay = 30 * time.Second
+	return cmd, nil
+}
+
 // capped keeps the first max bytes that it gets, and counts the rest.
 type capped struct {
 	buf  bytes.Buffer

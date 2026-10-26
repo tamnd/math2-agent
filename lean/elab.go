@@ -54,6 +54,11 @@ func (e *Elaboration) Sorry() bool {
 func Elaborate(ctx context.Context, project, file string) (*Elaboration, error) {
 	cmd := exec.CommandContext(ctx, "lake", "env", "lean", "--json", file) // #nosec G204 -- the caller names the file, and no shell reads the arguments.
 	cmd.Dir = project
+	return ElaborateWith(ctx, cmd, file)
+}
+
+// ElaborateWith runs cmd, a command that runs "lean --json" on the file, and reads its messages as Elaborate does. Thus a caller can run Lean in a sandbox. The command must not have its stdout or its stderr set, and ctx must be the context of the command.
+func ElaborateWith(ctx context.Context, cmd *exec.Cmd, file string) (*Elaboration, error) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	start := time.Now()

@@ -25,7 +25,7 @@ import (
 	"github.com/tamnd/math2-agent/prompts"
 )
 
-const orchestrateUsage = "m2 orchestrate [-root DIR] [-out DIR] [-store DIR] [-config FILE] [-queue DIR] [-work DIR] [-once] [-interval D] [-json]"
+const orchestrateUsage = "m2 orchestrate [-root DIR] [-out DIR] [-store DIR] [-config FILE] [-queue DIR] [-work DIR] [-once] [-interval D] [-sandbox IMAGE | -no-sandbox] [-json]"
 
 func runOrchestrate(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("m2 orchestrate", flag.ContinueOnError)
@@ -39,6 +39,7 @@ func runOrchestrate(args []string, stdout, stderr io.Writer) int {
 	once := flags.Bool("once", false, "run the jobs in the queue until no job can start, then stop")
 	interval := flags.Duration("interval", 5*time.Minute, "the time between two reads of the queue")
 	asJSON := flags.Bool("json", false, "write the report of each pass as JSON")
+	box := sandboxFlags(flags)
 	if err := flags.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -69,8 +70,12 @@ func runOrchestrate(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
+	b, err := box(*root)
+	if err != nil {
+		return fail(err)
+	}
 	var roles []*agent.Role
-	rs := &runSetup{root: *root, store: *store, roles: map[string]*agent.Role{}}
+	rs := &runSetup{root: *root, store: *store, roles: map[string]*agent.Role{}, box: b}
 	for _, name := range slices.Sorted(maps.Keys(goals)) {
 		r, err := agent.LoadRole(prompts.FS, name)
 		if err != nil {

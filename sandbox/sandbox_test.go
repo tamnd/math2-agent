@@ -170,3 +170,26 @@ func probeImage(t *testing.T) string {
 	t.Cleanup(func() { _ = exec.Command("docker", "rmi", "-f", id).Run() })
 	return id
 }
+
+func TestCommand(t *testing.T) {
+	echo, err := exec.LookPath("echo")
+	if err != nil {
+		t.Skip("there is no echo")
+	}
+	d := &Docker{Binary: echo}
+	cmd, err := d.Command(context.Background(), Spec{Image: testImage, Command: []string{"/bin/lake", "env", "/bin/m2extract"}, Out: "/data/tree"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := strings.Fields(string(out))
+	if len(f) < 3 || f[0] != "run" || f[1] != "--interactive" || !slices.Contains(f, "none") || !strings.HasSuffix(string(out), testImage+" /bin/lake env /bin/m2extract\n") {
+		t.Errorf("the arguments are %s", out)
+	}
+	if _, err := d.Command(context.Background(), Spec{Image: "python:3", Command: []string{"python"}}); err == nil {
+		t.Error("Command accepts an image with no digest")
+	}
+}

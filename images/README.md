@@ -30,5 +30,5 @@ These images of spec 08.1 are not here yet:
 
 - `m2-flint`: FLINT needs a C compiler in the image, or a driver program. Until then, use the FLINT of `m2-sage`.
 - `m2-julia`: Oscar.jl comes from the Julia registry, not from nixpkgs, so the build is not pinned by Nix yet.
-- `m2-lean`: the Lean toolchain and the Mathlib cache come from `lean-toolchain` and `lake`. The `lean` job of CI pins them now.
+- `m2-lean`: the Lean toolchain and the Mathlib cache come from `lean-toolchain` and `lake`. The `lean` job of CI pins them now. The Lean sandbox of the agent runs (`m2 agent run -sandbox`) needs this image. It must have `lake`, the toolchain of the tree on the `PATH` and M2Extract at `/usr/local/bin/m2extract`. Each run mounts `lean/` of the work tree at `/out` and the Lake packages of the tree at `/work`, and runs `lake -d /out ...` as the user 65534.
 - `cake_lpr` for `m2-sat`: it is not in nixpkgs. Until it is, an `lrat` certificate cannot reach E4.

@@ -457,12 +457,14 @@ P02 and P03 need the run summaries in `build/runs/`. When they do not exist, the
 `m2 agent run` does one run of the formalize or the prove role (spec 12.4) on one target node:
 
 ```sh
-m2 agent run -target 7K3QX2 -on-behalf-of github:octocat -budget 2 prove
+m2 agent run -target 7K3QX2 -on-behalf-of github:octocat -budget 2 -sandbox ghcr.io/tamnd/m2-lean@sha256:... prove
 ```
 
 The command needs the last build of the tree for the read API, and `ANTHROPIC_API_KEY` for the Claude API. It makes a new git work tree at `HEAD` in the temporary directory, or in `-work`. It links `lean/.lake/packages` of the tree into the work tree, so that the run uses the Mathlib build that is there. The role, the prompts and the model ladder come from `prompts/<role>/`, and `-rung` selects the rung of the ladder. A job file in YAML (spec 11.4) can give the job with `-job`. The person, the project or the schedule on whose behalf the run works comes from `-on-behalf-of` or `$M2_ON_BEHALF_OF`.
 
 The model sees only the tools of the role. It cannot use a shell. The run stops when the goal of the role holds, when the budget is used up, when the model makes no progress, or when it reports that it is stuck. For prove, a statement with no proof is a definition `def S : Prop`. The run must write a theorem of type `S`, move the attribute `@[m2 "TAG"]` to it, and change the `decl` of the binding. The goal checks that the theorem has no `sorry`, uses only the standard axioms, uses `native_decide` only with `-native-decide`, and leaves `S` and its closure unchanged.
+
+A Lean file can run programs when Lean elaborates it, and the model writes the Lean files of the run. Thus the command runs lake, Lean and M2Extract in the sandbox (spec 11.7) when `-sandbox` or `$M2_LEAN_IMAGE` gives an image by digest. Each call is a container with no network, 4 CPUs and 8 GiB of memory. The directory `lean/` of the work tree is writable at `/out`, and the Lake packages of the tree are read-only at `/work`. The image must have lake, the Lean toolchain of `lean/lean-toolchain` and M2Extract at `/usr/local/bin/m2extract`. The command refuses to run with no image. `-no-sandbox` runs the Lean programs on the host, and you use it only for a run that you watch. The image `m2-lean` is not built yet (see `images/README.md`).
 
 The full run record goes to `records/<id>.json` and its summary to `runs/<id>.json` in `-store`, which is `build/` by default. Thus the rules P02 and P03 read the summary. The command prints the outcome, the spend and the changed files, and it leaves the work tree for a person to see. The exit code is 0 when the goal holds, and 1 when it does not. The command does not open a pull request yet.
 
@@ -475,7 +477,7 @@ retry: 168h                                 # do not try a failed target, goal a
 workers: 2                                  # the most runs at the same time
 ```
 
-Each run gets the least of the money that is left to its job, to its role and to its project in the month, and the run cannot spend more. A job starts on the cheapest rung of the ladder with a recorded success, and each failed run moves it one rung up. A job with the target and the goal of a job in the queue merges into it. The orchestrator takes the roles in turn, and in a role it takes first the project that spent the least in the month. The past spend and failures come from the run records in the store, thus a restart counts them again. A job that ends goes to `queue/done/<id>.json` with its outcome. The work tree of a run that reaches the goal stays in `-work`, and the orchestrator removes the others. With `-once`, the command stops when no job can start. Without it, the command reads the queue again after each `-interval`. The exit code is 1 when a run spent more than its budget.
+Each run gets the least of the money that is left to its job, to its role and to its project in the month, and the run cannot spend more. A job starts on the cheapest rung of the ladder with a recorded success, and each failed run moves it one rung up. A job with the target and the goal of a job in the queue merges into it. The orchestrator takes the roles in turn, and in a role it takes first the project that spent the least in the month. The past spend and failures come from the run records in the store, thus a restart counts them again. A job that ends goes to `queue/done/<id>.json` with its outcome. The work tree of a run that reaches the goal stays in `-work`, and the orchestrator removes the others. With `-once`, the command stops when no job can start. Without it, the command reads the queue again after each `-interval`. The exit code is 1 when a run spent more than its budget. The orchestrator runs with no person to watch it, thus give it `-sandbox` in the same way as `m2 agent run`.
 
 ## The Mathlib bump
 

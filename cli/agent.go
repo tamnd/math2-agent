@@ -26,10 +26,11 @@ import (
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/claude"
 	"github.com/tamnd/math2-agent/prompts"
+	"github.com/tamnd/math2-agent/sandbox"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-json] formalize|prove"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] formalize|prove"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
@@ -45,8 +46,11 @@ var newModel = func() (llm.Model, error) {
 	return claude.New(), nil
 }
 
-// newLean makes the Lean environment of a work tree. The tests replace it.
-var newLean = func(ctx context.Context, tree string) (tools.Lean, error) {
+// newLean makes the Lean environment of a work tree, in the sandbox box when it is not nil. The tests replace it.
+var newLean = func(ctx context.Context, tree string, box *tools.Box) (tools.Lean, error) {
+	if box != nil {
+		return &tools.Lake{Tree: tree, Exe: boxExtract, Box: box}, nil
+	}
 	exe, err := lean.Install(ctx, filepath.Join(tree, "lean"), "")
 	if err != nil {
 		return nil, err
@@ -73,6 +77,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	rung := flags.Int("rung", 0, "the rung of the escalation ladder of the role, from 0")
 	native := flags.Bool("native-decide", false, "permit a proof that uses native_decide. Rule F04 records each use.")
 	asJSON := flags.Bool("json", false, "write the summary of the run as JSON")
+	box := sandboxFlags(flags)
 	if err := flags.Parse(args[1:]); err != nil {
 		return ExitUsage
 	}
@@ -132,6 +137,10 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	if err := job.Validate(); err != nil {
 		return fail(err)
 	}
+	b, err := box(*root)
+	if err != nil {
+		return fail(err)
+	}
 	r, err := agent.LoadRole(prompts.FS, role)
 	if err != nil {
 		return fail(err)
@@ -158,7 +167,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	if *work == "" {
 		*work = filepath.Join(os.TempDir(), "m2-agent", job.ID)
 	}
-	rs := &runSetup{root: *root, store: *store, svc: svc, model: model, roles: map[string]*agent.Role{role: r}}
+	rs := &runSetup{root: *root, store: *store, svc: svc, model: model, roles: map[string]*agent.Role{role: r}, box: b}
 	rec, ws, changes, err := rs.run(context.Background(), job, *rung, *work)
 	if ws != nil {
 		defer func() { _ = ws.Close() }()
@@ -198,6 +207,7 @@ type runSetup struct {
 	svc   *api.Service
 	model llm.Model
 	roles map[string]*agent.Role
+	box   *tools.Box // the sandbox of the Lean programs, or nil
 }
 
 // run does one run of the job on the rung in a new work tree at dir, and writes the record of the run to the store. It returns the record, the work tree and its changes. A record with an error is a run that the model service stopped.
@@ -213,10 +223,10 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err := linkPackages(rs.root, ws.Dir); err != nil {
+	if err := linkPackages(rs.root, ws.Dir, rs.box != nil); err != nil {
 		return nil, ws, nil, err
 	}
-	env, err := newLean(ctx, ws.Dir)
+	env, err := newLean(ctx, ws.Dir, rs.box)
 	if err != nil {
 		return nil, ws, nil, err
 	}
@@ -259,18 +269,67 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 	return rec, ws, changes, runErr
 }
 
-// linkPackages links lean/.lake/packages of the tree into the new work tree. Thus the work tree uses the Mathlib build of the tree, and the run does not get Mathlib again.
-func linkPackages(root, tree string) error {
+// linkPackages links lean/.lake/packages of the tree into the new work tree. Thus the work tree uses the Mathlib build of the tree, and the run does not get Mathlib again. For a run in the sandbox, the link goes to the read-only mount of the packages in the container, and each directory of lean/ in the work tree becomes writable for the user of the container.
+func linkPackages(root, tree string, boxed bool) error {
 	src, err := filepath.Abs(filepath.Join(root, "lean", ".lake", "packages"))
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stat(src); errors.Is(err, fs.ErrNotExist) {
+	if _, err := os.Stat(src); errors.Is(err, fs.ErrNotExist) && !boxed {
 		return nil
 	}
 	dir := filepath.Join(tree, "lean", ".lake")
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
-	return os.Symlink(src, filepath.Join(dir, "packages"))
+	if !boxed {
+		return os.Symlink(src, filepath.Join(dir, "packages"))
+	}
+	if err := os.Symlink(sandbox.WorkDir, filepath.Join(dir, "packages")); err != nil {
+		return err
+	}
+	r, err := os.OpenRoot(filepath.Join(tree, "lean"))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = r.Close() }()
+	return fs.WalkDir(r.FS(), ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || !d.IsDir() {
+			return err
+		}
+		return r.Chmod(p, 0o777) // #nosec G302 -- the work tree is new, and the container runs as the user 65534.
+	})
+}
+
+// boxExtract is the path of M2Extract in the image of the Lean sandbox.
+const boxExtract = "/usr/local/bin/m2extract"
+
+// The limits of a container of the Lean sandbox. Mathlib needs much memory.
+const (
+	boxCPU    = 4
+	boxMemory = 8 << 30
+)
+
+// sandboxFlags adds the flags -sandbox and -no-sandbox to the flag set. After the parse, the function that it returns gives the sandbox of the Lean programs for the tree root, or nil for -no-sandbox. One of the two flags must be set, because the Lean files that a model writes can run programs when Lean elaborates them.
+func sandboxFlags(flags *flag.FlagSet) func(root string) (*tools.Box, error) {
+	image := flags.String("sandbox", os.Getenv("M2_LEAN_IMAGE"), "the image of the Lean sandbox by digest, for example ghcr.io/tamnd/m2-lean@sha256:... The default is $M2_LEAN_IMAGE.")
+	none := flags.Bool("no-sandbox", false, "run lake, Lean and M2Extract on the host. Use it only for a run that you watch.")
+	return func(root string) (*tools.Box, error) {
+		switch {
+		case *none:
+			return nil, nil
+		case *image == "":
+			return nil, errors.New("give the image of the Lean sandbox with -sandbox, or run on the host with -no-sandbox")
+		case !sandbox.ValidImage(*image):
+			return nil, fmt.Errorf("the image %q has no digest", *image)
+		}
+		packages, err := filepath.Abs(filepath.Join(root, "lean", ".lake", "packages"))
+		if err != nil {
+			return nil, err
+		}
+		if packages, err = filepath.EvalSymlinks(packages); err != nil {
+			return nil, fmt.Errorf("the sandbox needs the Lake packages of the tree: %w", err)
+		}
+		return &tools.Box{Docker: &sandbox.Docker{}, Image: *image, Packages: packages, CPU: boxCPU, Memory: boxMemory}, nil
+	}
 }
