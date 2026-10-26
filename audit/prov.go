@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/fs"
 	"maps"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -62,16 +63,16 @@ func p01(a *auditor) outcome {
 		o.reason = err.Error()
 		return o
 	}
-	for _, p := range paths {
-		id := trimExt(p)
-		before, after := a.nodeAt(from, p), a.nodeAt(to, p)
+	for _, f := range byTag(paths) {
+		id, p := f.id, f.to
+		before, after := a.nodeAt(from, f.from), a.nodeAt(to, f.to)
 		changes := prov.Changes(before, after, prov.Line{})
 		if len(changes) == 0 {
 			continue
 		}
 		o.checked++
 		logPath := prov.Path(id)
-		old, now := readLog(a.blob(from, logPath)), readLog(a.blob(to, logPath))
+		old, now := readLog(a.blob(from, oldLog(f.from, id))), readLog(a.blob(to, logPath))
 		if len(old) > len(now) || !slices.EqualFunc(old, now[:len(old)], func(x, y logLine) bool { return x.raw == y.raw }) {
 			o.add(logPath, 1, 1, "the merge rewrote the provenance log of %s. A log only grows: add a new line to correct a line", id)
 			continue
@@ -101,6 +102,37 @@ func p01(a *auditor) outcome {
 		}
 	}
 	return o
+}
+
+// moved is the node file of one tag in a merge, at its path before and after. A merge that moves the file to another shard changes both paths, and the rules compare the two versions as one node.
+type moved struct {
+	id, from, to string
+}
+
+// byTag groups the changed node files by tag, in the order of the paths. A tag with one path has that path before and after. A tag with two paths was moved: the path in the shard of the tag is the path after, and the other path is the path before.
+func byTag(paths []string) []moved {
+	var out []moved
+	at := map[string]int{}
+	for _, p := range paths {
+		id := trimExt(p)
+		i, ok := at[id]
+		if !ok {
+			at[id] = len(out)
+			out = append(out, moved{id, p, p})
+			continue
+		}
+		if path.Base(path.Dir(p)) == tag.Shard(id) {
+			out[i].to = p
+		} else {
+			out[i].from = p
+		}
+	}
+	return out
+}
+
+// oldLog returns the path of the provenance log of id before the merge, in the shard of the node file before the merge.
+func oldLog(nodePath, id string) string {
+	return "prov/" + path.Base(path.Dir(nodePath)) + "/" + id + ".jsonl"
 }
 
 // mergeRange returns the revisions before and after the merge. An empty to is the working tree, and an empty from is the empty tree.
