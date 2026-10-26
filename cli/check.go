@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"cmp"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -11,10 +13,13 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/card"
 	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/project"
 	"github.com/tamnd/math2-agent/schema"
+	"github.com/tamnd/math2-agent/style"
 )
 
 func runCheck(args []string, stdout, stderr io.Writer) int {
@@ -24,14 +29,20 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 	only := fs.String("rule", "", "the rules to run, separated by commas. Empty means all the rules.")
 	asJSON := fs.Bool("json", false, "write the report as JSON")
 	quiet := fs.Bool("q", false, "do not write the table of rule states")
+	withStyle := fs.Bool("style", false, "also run the rules Y01 to Y04 of the house style (corpus K8.2)")
+	levels := fs.String("levels", "", "the writing.json of a build, for -style. A style finding in a node at W3 is an error. Empty means build/writing.json in the tree, when it exists.")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
+	}
+	known := check.Rules()
+	if *withStyle {
+		known = append(known, style.Rules()...)
 	}
 	var c check.Checker
 	if *only != "" {
 		for r := range strings.SplitSeq(*only, ",") {
 			r = strings.ToUpper(strings.TrimSpace(r))
-			if !slices.ContainsFunc(check.Rules(), func(x check.Rule) bool { return x.ID == r }) {
+			if !slices.ContainsFunc(known, func(x check.Rule) bool { return x.ID == r }) {
 				fmt.Fprintf(stderr, "m2 check: %q is not a rule of m2 check\n", r)
 				return ExitUsage
 			}
@@ -65,6 +76,12 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	rep := c.Check(files, ix)
+	if *withStyle {
+		if err := addStyle(rep, files, *root, *levels, c.Only); err != nil {
+			fmt.Fprintf(stderr, "m2 check: %v\n", err)
+			return ExitFailure
+		}
+	}
 	if fs.NArg() == 0 && *only == "" {
 		if err := checkProjects(*root, files); err != nil {
 			fmt.Fprintf(stderr, "m2 check: %v\n", err)
@@ -90,6 +107,49 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	return ExitOK
+}
+
+// addStyle runs the rules of the house style on the files that parse, and adds the results and the findings to rep. A node is strict when the levels file gives it W3.
+func addStyle(rep *check.Report, files []check.File, root, levels string, only []string) error {
+	path := levels
+	if path == "" {
+		path = filepath.Join(root, "build", build.WritingFile)
+	}
+	w3 := map[string]bool{}
+	data, err := os.ReadFile(path) // #nosec G304 -- the path is a flag or in the tree.
+	switch {
+	case err == nil:
+		var l build.Levels
+		if err := json.Unmarshal(data, &l); err != nil {
+			return fmt.Errorf("%s: %v", path, err)
+		}
+		for _, r := range l.Nodes {
+			if r.Level == card.W3 {
+				w3[r.Tag] = true
+			}
+		}
+	case levels != "" || !errors.Is(err, fs.ErrNotExist):
+		return err
+	}
+	var nodes []*node.Node
+	for _, f := range files {
+		if n, err := node.Parse(f.Path, f.Data); err == nil {
+			nodes = append(nodes, n)
+		}
+	}
+	results, findings := style.Lint(nodes, func(tag string) bool { return w3[tag] })
+	for _, res := range results {
+		if len(only) > 0 && !slices.Contains(only, res.Rule) {
+			res = check.Result{Rule: res.Rule, State: check.Skip, Reason: "not selected"}
+		} else {
+			rep.Findings = append(rep.Findings, slices.DeleteFunc(slices.Clone(findings), func(f check.Finding) bool { return f.Rule != res.Rule })...)
+		}
+		rep.Results = append(rep.Results, res)
+	}
+	slices.SortStableFunc(rep.Findings, func(a, b check.Finding) int {
+		return cmp.Or(strings.Compare(a.Path, b.Path), cmp.Compare(a.Line, b.Line), cmp.Compare(a.Col, b.Col), strings.Compare(a.Rule, b.Rule))
+	})
+	return nil
 }
 
 // checkProjects reads the projects of the tree, and reports the first project that is not valid or whose topic is not a topic node of the files.
