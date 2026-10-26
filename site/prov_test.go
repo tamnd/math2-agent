@@ -44,7 +44,7 @@ func TestProvenance(t *testing.T) {
 	writeFile(t, content, "prov/7K3/7K3QX2.jsonl", provLog)
 	out := buildSite(t, content, "")
 
-	page := readFile(t, out, "node/7K3QX2/index.html")
+	page := readNode(t, out, "7K3QX2")
 	for _, want := range []string{
 		"This page does not show the explanation L2 and the field same_as.wikidata.",
 		"no person checked it yet:</b> the explanation L1.",
@@ -96,7 +96,7 @@ func TestNoProvenance(t *testing.T) {
 	content := newContent(t)
 	writeFile(t, content, "nodes/7K3/7K3QX2.md", provStatement)
 	out := buildSite(t, content, "")
-	if page := readFile(t, out, "node/7K3QX2/index.html"); strings.Contains(page, "History") || !strings.Contains(page, "The cosets") {
+	if page := readNode(t, out, "7K3QX2"); strings.Contains(page, "History") || !strings.Contains(page, "The cosets") {
 		t.Error("a node with no log has a history, or hides text")
 	}
 	if md := readFile(t, out, "node/7K3QX2.md"); md != provStatement {

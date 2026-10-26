@@ -116,7 +116,7 @@ func TestArchiveFixtures(t *testing.T) {
 		}
 	}
 
-	node := readFile(t, root, "node/Q529ES/index.html")
+	node := readNode(t, root, "Q529ES")
 	for _, s := range []string{`<body data-base="../../">`, `href="../../assets/site.css"`, `href="../../nodes/index.html"`, `href="../../index.html"`, `action="../../search/index.html"`} {
 		if !strings.Contains(node, s) {
 			t.Errorf("the node page has no %s", s)
@@ -126,7 +126,7 @@ func TestArchiveFixtures(t *testing.T) {
 		t.Error("the search page does not load assets/search.js before assets/site.js")
 	}
 	index := readFile(t, root, "assets/search.js")
-	if !strings.Contains(index, "window.m2Search = [") || !strings.Contains(index, `"u":"node/Q529ES/index.html"`) || strings.Contains(index, "/math2/") {
+	if !strings.Contains(index, "window.m2Search = [") || !strings.Contains(index, `"u":"wiki/lagranges-theorem/index.html"`) || strings.Contains(index, "/math2/") {
 		t.Errorf("the search index of the archive is wrong: %.300s", index)
 	}
 }

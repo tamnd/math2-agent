@@ -31,7 +31,7 @@ func TestExplore(t *testing.T) {
 	out := buildFixtures(t, true)
 
 	// Lagrange's theorem: the closure, the status and the dependents.
-	page := readFile(t, out, "node/Q529ES/index.html")
+	page := readNode(t, out, "Q529ES")
 	for _, want := range []string{
 		`<h2 id="closure-h">What this needs</h2>`,
 		`<svg class="dag" viewBox=`,
@@ -50,7 +50,7 @@ func TestExplore(t *testing.T) {
 	}
 
 	// Finite groups: the blueprint marks the members of the topic.
-	page = readFile(t, out, "node/ZZZJE6/index.html")
+	page = readNode(t, out, "ZZZJE6")
 	for _, want := range []string{`<h2 id="blueprint-h">Blueprint</h2>`, `aria-labelledby="blueprint-caption"`, `class="box ev-e1 member"`, `<span class="muted">member</span>`} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page of ZZZJE6 has no %q", want)
@@ -73,7 +73,7 @@ func TestExplore(t *testing.T) {
 
 func TestExploreNoBuild(t *testing.T) {
 	out := buildFixtures(t, false)
-	page := readFile(t, out, "node/Q529ES/index.html")
+	page := readNode(t, out, "Q529ES")
 	if !strings.Contains(page, "This copy of the site has no build data") {
 		t.Error("a site with no build does not say that it has no status")
 	}

@@ -29,6 +29,19 @@ func readFile(t *testing.T, root, rel string) string {
 	return string(data)
 }
 
+// shortLink matches the target of the page at node/TAG/.
+var shortLink = regexp.MustCompile(`url=\.\./\.\./(wiki/[^"/]+/)`)
+
+// readNode returns the page of the node with the tag, through its short link at node/TAG/.
+func readNode(t *testing.T, root, tag string) string {
+	t.Helper()
+	m := shortLink.FindStringSubmatch(readFile(t, root, "node/"+tag+"/index.html"))
+	if m == nil {
+		t.Fatalf("node/%s/index.html is not a short link", tag)
+	}
+	return readFile(t, root, m[1]+"index.html")
+}
+
 // newContent returns a content tree with the files that each real tree has.
 func newContent(t *testing.T) string {
 	t.Helper()
@@ -124,9 +137,9 @@ func TestNodes(t *testing.T) {
 	writeFile(t, content, "nodes/1H8/1H8D2C.md", concept)
 	out := buildSite(t, content, "")
 
-	page := readFile(t, out, "node/7K3QX2/index.html")
+	page := readNode(t, out, "7K3QX2")
 	for _, want := range []string{
-		`<a href="/math2/node/1H8D2C/">group</a>`,
+		`<a href="/math2/wiki/group/">group</a>`,
 		`class="missing"`,
 		`<span class="math"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML">`,
 		`<annotation encoding="application/x-tex">G</annotation>`,
@@ -135,15 +148,15 @@ func TestNodes(t *testing.T) {
 		`<link rel="stylesheet" href="/math2/assets/katex/katex.min.css">`,
 		`m2://7K3QX2`,
 		`<a href="/math2/msc/20/"`,
-		`<link rel="canonical" href="https://example.org/math2/node/7K3QX2/">`,
+		`<link rel="canonical" href="https://example.org/math2/wiki/lagranges-theorem/">`,
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the node page does not contain %s", want)
 		}
 	}
 
-	group := readFile(t, out, "node/1H8D2C/index.html")
-	if !strings.Contains(group, "What links here") || !strings.Contains(group, `<a href="/math2/node/7K3QX2/">Lagrange&#39;s theorem</a>`) {
+	group := readNode(t, out, "1H8D2C")
+	if !strings.Contains(group, "What links here") || !strings.Contains(group, `<a href="/math2/wiki/lagranges-theorem/">Lagrange&#39;s theorem</a>`) {
 		t.Error("the backlink from 7K3QX2 is not on the page of 1H8D2C")
 	}
 	if !strings.Contains(group, `<code class="tex-error" title="KaTeX parse error: Undefined control sequence: \nosuch`) {

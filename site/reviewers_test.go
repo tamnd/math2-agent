@@ -21,7 +21,7 @@ func TestReviewers(t *testing.T) {
 		}
 	}
 	p := readFile(t, out, "reviewers/github-octocat/index.html")
-	for _, want := range []string{`<a href="https://github.com/octocat">octocat</a>`, `href="/math2/node/7K3QX2/"`, "Lagrange&#39;s theorem", `href="https://github.com/o/math2/blob/main/reviews/7K3/7K3QX2.yaml"`, "a finite group", "in the MSC areas 20"} {
+	for _, want := range []string{`<a href="https://github.com/octocat">octocat</a>`, `href="/math2/wiki/lagranges-theorem/"`, "Lagrange&#39;s theorem", `href="https://github.com/o/math2/blob/main/reviews/7K3/7K3QX2.yaml"`, "a finite group", "in the MSC areas 20"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("the page of the reviewer has no %s:\n%s", want, p)
 		}

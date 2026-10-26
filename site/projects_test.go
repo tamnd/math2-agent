@@ -81,7 +81,7 @@ func TestProjects(t *testing.T) {
 		"<tr><td>2026-10</td><td>2</td><td>$5.25 <span class=\"muted\">over the budget</span></td><td>$5.00</td></tr>",
 		"<tr><td>2026-09</td><td>1</td><td>$1.50</td><td>$5.00</td></tr>",
 		"<code>r-2026-10-02-0000000b</code>",
-		`href="/math2/node/Q529ES/"`,
+		`href="/math2/wiki/lagranges-theorem/"`,
 		`<a href="https://doi.org/10.1234/example">Notes on finite groups</a> (2027)`,
 		`Cite this page as <a href="https://example.org/math2/projects/finite-groups/">`,
 	} {

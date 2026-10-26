@@ -111,6 +111,7 @@ type refGroup struct {
 type nodeView struct {
 	*node.Node
 	Tag, URI, Kind, KindPlural, Role, Name string
+	Slug                                   string // the page of the node is wiki/Slug/
 	Aliases, MSC                           []string
 	Refs, Backlinks                        []refGroup
 	Formal                                 []link
@@ -187,7 +188,13 @@ func Build(opt Options) error {
 // url returns the site URL path for p.
 func (b *builder) url(p string) string { return b.base + "/" + strings.TrimPrefix(p, "/") }
 
-func (b *builder) nodeURL(id string) string { return b.url("node/" + id + "/") }
+// nodeURL returns the URL path of the page of a node. The page is wiki/SLUG/. For an id with no node, it is node/ID/, the short link of the node.
+func (b *builder) nodeURL(id string) string {
+	if v := b.nodes[id]; v != nil && v.Slug != "" {
+		return b.url("wiki/" + v.Slug + "/")
+	}
+	return b.url("node/" + id + "/")
+}
 
 func (b *builder) load() error {
 	nodes, err := node.Load(b.opt.Content)
@@ -200,7 +207,6 @@ func (b *builder) load() error {
 		if tag.IsProvisional(n.ID) {
 			v.URI = ""
 		}
-		v.URL = b.nodeURL(n.ID)
 		v.MarkdownURL = b.url("node/" + n.ID + ".md")
 		v.JSONURL = b.url("api/node/" + n.ID + ".json")
 		v.EditURL = "https://github.com/" + b.opt.Repo + "/edit/main/" + n.Path
@@ -215,6 +221,10 @@ func (b *builder) load() error {
 		}
 		b.nodes[n.ID] = v
 		b.order = append(b.order, v)
+	}
+	assignSlugs(b.order)
+	for _, v := range b.order {
+		v.URL = b.nodeURL(v.Tag)
 	}
 	var macros map[string]string
 	if data, err := os.ReadFile(filepath.Join(b.opt.Content, "macros", "m2.katex.json")); err == nil {
