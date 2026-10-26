@@ -55,6 +55,7 @@ func (b *builder) nodeJSON(v *nodeView) map[string]any {
 		"links":     out,
 		"backlinks": in,
 		"status":    nil,
+		"writing":   v.Writing,
 		"prov":      pv,
 		"commit":    b.opt.Commit,
 	}
@@ -67,6 +68,7 @@ type nodeEntry struct {
 	Name    string   `json:"name"`
 	Aliases []string `json:"aliases,omitempty"`
 	MSC     []string `json:"msc,omitempty"`
+	Level   string   `json:"level,omitempty"` // the writing level
 	URL     string   `json:"url"`
 	JSON    string   `json:"json"`
 }
@@ -79,7 +81,11 @@ type agentsData struct {
 func (b *builder) writeAgents() error {
 	entries := []nodeEntry{}
 	for _, v := range b.order {
-		entries = append(entries, nodeEntry{v.Tag, v.Kind, v.Role, v.Name, v.Aliases, v.MSC, b.abs(strings.TrimPrefix(v.URL, b.base)), b.abs("api/node/" + v.Tag + ".json")})
+		level := ""
+		if v.Writing != nil {
+			level = v.Writing.Level.String()
+		}
+		entries = append(entries, nodeEntry{v.Tag, v.Kind, v.Role, v.Name, v.Aliases, v.MSC, level, b.abs(strings.TrimPrefix(v.URL, b.base)), b.abs("api/node/" + v.Tag + ".json")})
 	}
 	index := map[string]any{
 		"name":    "Math 2.0",

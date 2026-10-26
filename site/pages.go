@@ -136,6 +136,7 @@ func (b *builder) writeLists() error {
 	type listData struct {
 		Title, Text string
 		Kinds       []kindCount
+		Levels      []levelCount
 		Nodes       []*nodeView
 		Groups      []*mscGroup
 	}
@@ -292,6 +293,7 @@ func (b *builder) writeDocs() error {
 
 type homeData struct {
 	Kinds      []kindCount
+	Levels     []levelCount
 	Total      int
 	Recent     []*nodeView
 	Groups     []*mscGroup
@@ -303,7 +305,7 @@ type homeData struct {
 }
 
 func (b *builder) writeHome() error {
-	d := homeData{Kinds: b.kindCounts(), Total: len(b.order), Groups: b.mscGroups(), Milestones: b.opt.Milestones, Current: b.opt.Current, Specs: b.specs, Letters: b.invLetters}
+	d := homeData{Kinds: b.kindCounts(), Levels: b.levelCounts(), Total: len(b.order), Groups: b.mscGroups(), Milestones: b.opt.Milestones, Current: b.opt.Current, Specs: b.specs, Letters: b.invLetters}
 	if b.invSummary != nil && b.invSummary.Rows > 0 {
 		d.Inventory = b.invSummary
 	}

@@ -29,6 +29,7 @@
       {{range .Kinds}}<tr><th scope="row"><a href="{{.URL}}">{{.Plural}}</a></th><td class="num">{{.Count}}</td>{{if $.Inventory}}<td class="num">{{.Rows}}</td>{{end}}<td class="muted">{{.Text}}</td></tr>
       {{end}}
     </table>
+    {{if .Total}}{{with .Levels}}<p><a href="{{url "levels/"}}">Writing levels</a>: {{range $i, $l := .}}{{if $i}} · {{end}}<a href="{{$l.URL}}">{{$l.Name}}</a> {{$l.Count}}{{end}}.</p>{{end}}{{end}}
   </section>
 
   <section class="card">
