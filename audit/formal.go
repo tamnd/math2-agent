@@ -400,7 +400,7 @@ func f09(a *auditor) outcome {
 		}
 		for _, sb := range s.Bindings {
 			r, ok := b.records[sb.Checked]
-			if sb.Fidelity < status.F1 || !ok || r.Error != "" || r.Kind != "theorem" {
+			if sb.Fidelity < status.F1 || !ok || !r.Statement() {
 				continue
 			}
 			o.checked++

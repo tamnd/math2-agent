@@ -227,14 +227,14 @@ func decls(n *node.Node) []binding {
 	return out
 }
 
-// checked returns the first declaration that the kernel checks for the node with the tag, and whether the node has a binding with a record of a theorem.
+// checked returns the first declaration that the kernel checks for the node with the tag, and whether the node has a binding with a record of a statement.
 func (r *runner) checked(tag string) (string, bool) {
 	n, ok := r.byTag[tag]
 	if !ok {
 		return "", false
 	}
 	for _, d := range decls(n) {
-		if rec, ok := r.in.Records[d.checked]; ok && rec.Error == "" && rec.Kind == "theorem" {
+		if rec, ok := r.in.Records[d.checked]; ok && rec.Statement() {
 			return d.checked, true
 		}
 	}
@@ -337,9 +337,9 @@ func judge(cs []Concern) (Result, string, string) {
 
 // degenerate sets the checks 4, 5 and 6 from the degenerate-statement checks of the record.
 func (r *runner) degenerate(rec lean.Record, set func(int, Result, string, string)) {
-	if rec.Kind != "theorem" {
+	if !rec.Statement() {
 		for _, num := range []int{4, 5, 6} {
-			set(num, Skip, "", "The declaration is a "+rec.Kind+", not a theorem.")
+			set(num, Skip, "", "The declaration is a "+rec.Kind+", not a theorem or a definition of a proposition.")
 		}
 		return
 	}

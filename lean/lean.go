@@ -64,6 +64,11 @@ type Record struct {
 	Error string `json:"error,omitempty"` // the reason when Lean has no record, for example "unknown declaration"
 }
 
+// Statement reports whether the declaration is a statement: a theorem, or a definition whose type is Prop. The library states a result that has no proof yet as a definition of a proposition, because rule F06 refuses sorry in it (spec 07.2). The degenerate-statement checks and the F1 battery run on statements.
+func (r *Record) Statement() bool {
+	return r.Error == "" && (r.Kind == "theorem" || r.Kind == "def" && r.Type == "s 0\n")
+}
+
 // Deprecation is the entry of the @[deprecated] attribute of a declaration.
 type Deprecation struct {
 	NewName string `json:"new_name,omitempty"` // the replacement, for example Nat.add_comm. It is empty when the entry names no replacement.
@@ -195,7 +200,7 @@ func (s *Session) Extract(decls, bound []string) ([]Record, error) {
 	return resp.Records, nil
 }
 
-// Checks runs the degenerate-statement checks on each theorem in decls (spec 10.4, checks 4 to 6). Each tactic stops after heartbeats thousand heartbeats. The map has a result for each theorem that Lean knows. A declaration that is not a theorem is not in the map.
+// Checks runs the degenerate-statement checks on each statement in decls (spec 10.4, checks 4 to 6): each theorem, and each definition of a proposition, whose value is the statement. Each tactic stops after heartbeats thousand heartbeats. The map has a result for each statement that Lean knows. A declaration that is not a statement is not in the map.
 func (s *Session) Checks(heartbeats int, decls ...string) (map[string]Checks, error) {
 	var resp struct {
 		Checks []struct {

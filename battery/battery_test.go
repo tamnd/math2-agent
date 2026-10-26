@@ -79,6 +79,7 @@ func fixture(t testing.TB) (battery.Input, battery.Options) {
 		"VACST1 statement\n"+bound("Vac.t"),
 		"TRVSTA statement\n"+bound("Triv.t"),
 		"REFST1 statement\n"+bound("Ref.t"),
+		"PRPST1 statement\n"+bound("Prop.s"),
 		"STRNG1 statement\nabout: [CNCPT2]\n"+bound("Strong.t"),
 		"EXMPA2 example\ninstance_of: [CNCPT2]\n"+bound("Ex.two"),
 		"MSSHYP statement\nabout: [CNCPT3]\n"+bound("Missh.t"),
@@ -96,6 +97,7 @@ func fixture(t testing.TB) (battery.Input, battery.Options) {
 	for _, r := range []lean.Record{
 		{Decl: "Group", Kind: "def"},
 		{Decl: "Ring", Kind: "def"},
+		{Decl: "Prop.s", Kind: "def", Type: "s 0\n"},
 		theorem("Good.t", "Group", "Eq", "HMul.hMul", "instHMul"),
 		theorem("Ex.one"),
 		theorem("Bad.t", "Group", "Ring"),
@@ -122,7 +124,7 @@ func fixture(t testing.TB) (battery.Input, battery.Options) {
 	junk.StatementPPAll = "∀ (n : Nat), @Eq.{1} Nat (@HSub.hSub.{0, 0, 0} Nat Nat Nat (@instHSub.{0} Nat instSubNat) n n) n"
 	records["Junk.t"] = junk
 	records["Err.t"] = lean.Record{Decl: "Err.t", Error: "unknown declaration"}
-	for d, c := range map[string]lean.Checks{"Vac.t": {Vacuous: "omega"}, "Triv.t": {Trivial: "rfl"}, "Ref.t": {Refuted: "decide"}} {
+	for d, c := range map[string]lean.Checks{"Vac.t": {Vacuous: "omega"}, "Triv.t": {Trivial: "rfl"}, "Ref.t": {Refuted: "decide"}, "Prop.s": {Refuted: "decide"}} {
 		r := records[d]
 		r.Checks = &c
 		records[d] = r
@@ -182,6 +184,8 @@ func TestRun(t *testing.T) {
 		{"DEFGRP", 4, battery.Skip, ""},
 		{"TRVSTA", 5, battery.Flag, battery.Junk},
 		{"REFST1", 6, battery.Fail, battery.Strong},
+		{"PRPST1", 4, battery.Pass, ""},
+		{"PRPST1", 6, battery.Fail, battery.Strong},
 		{"GDSTMT", 7, battery.Pass, ""},
 		{"STRNG1", 7, battery.Fail, battery.Strong},
 		{"MSSHYP", 7, battery.Fail, battery.HypMissing},

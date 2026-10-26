@@ -161,7 +161,7 @@ func TestFixture(t *testing.T) {
 
 func TestChecks(t *testing.T) {
 	s := start(t, local(t), ".", "Fixture")
-	decls := []string{"vacuous", "small", "false_claim", "em", "id_u", "absent"}
+	decls := []string{"vacuous", "small", "false_claim", "em", "false_statement", "lt_self_statement", "id_u", "absent"}
 	for i, d := range decls {
 		decls[i] = "Fixture." + d
 	}
@@ -170,10 +170,12 @@ func TestChecks(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]lean.Checks{
-		"Fixture.vacuous":     {Vacuous: "omega", Trivial: "grind"},
-		"Fixture.small":       {Trivial: "rfl"},
-		"Fixture.false_claim": {Refuted: "decide"},
-		"Fixture.em":          {Trivial: "grind"},
+		"Fixture.vacuous":           {Vacuous: "omega", Trivial: "grind"},
+		"Fixture.small":             {Trivial: "rfl"},
+		"Fixture.false_claim":       {Refuted: "decide"},
+		"Fixture.em":                {Trivial: "grind"},
+		"Fixture.false_statement":   {Refuted: "decide"},
+		"Fixture.lt_self_statement": {Refuted: "simp"},
 	}
 	if len(got) != len(want) {
 		t.Errorf("Checks gives %d results, and it must give %d: %v", len(got), len(want), got)
@@ -181,6 +183,15 @@ func TestChecks(t *testing.T) {
 	for d, w := range want {
 		if got[d] != w {
 			t.Errorf("%s: Checks gives %+v, and it must give %+v", d, got[d], w)
+		}
+	}
+	rs, err := s.Extract(decls, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range rs {
+		if _, ok := want[r.Decl]; r.Statement() != ok {
+			t.Errorf("%s: Statement gives %v", r.Decl, r.Statement())
 		}
 	}
 }
@@ -192,6 +203,7 @@ func TestImplies(t *testing.T) {
 		{"le_add", "lt_self"},
 		{"add_comm_a", "fermat"},
 		{"add_comm_a", "add_comm_b"},
+		{"le_add", "lt_self_statement"},
 		{"id_u", "em"},
 		{"absent", "em"},
 	}
@@ -207,6 +219,7 @@ func TestImplies(t *testing.T) {
 		{Contradicts: "(intro h hb; simp_all)"},
 		{},
 		{Implies: "(intro h; exact h)"},
+		{Contradicts: "(intro h hb; simp_all)"},
 		{Error: "not a statement"},
 		{Error: "unknown declaration"},
 	}
@@ -227,7 +240,7 @@ func TestLibrary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total != len(all) || total != 18 {
+	if total != len(all) || total != 20 {
 		t.Fatalf("Library gives %d records and a total of %d", len(all), total)
 	}
 	by := map[string]lean.Decl{}
