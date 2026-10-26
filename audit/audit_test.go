@@ -101,6 +101,8 @@ var setup = map[string]func(t *testing.T){
 	"X03": fixedDate,
 	// The manifests of R05 name the commit of step 1.
 	"R05": fixedDate,
+	// The README of T10 names the commit of step 1 as the cut-over commit.
+	"T10": fixedDate,
 	// The manifest of R01 names the commit of step 1, thus the commits of the fixtures have a fixed date.
 	"R01": func(t *testing.T) {
 		t.Setenv("GIT_AUTHOR_DATE", "2026-10-01T12:00:00Z")
@@ -184,8 +186,8 @@ func TestFixtures(t *testing.T) {
 
 func TestCatalogue(t *testing.T) {
 	rules := Rules()
-	if len(rules) != 71 {
-		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K4.9 have 71", len(rules))
+	if len(rules) != 74 {
+		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7 and K4.9 have 74", len(rules))
 	}
 	planes := map[byte]string{'T': Nodes, 'S': Nodes, 'B': Nodes, 'G': Graph, 'F': Formal, 'V': Formal, 'C': Compute, 'A': Align, 'L': Licence, 'P': Prov, 'R': Release, 'X': Agents, 'I': Inventory}
 	id := regexp.MustCompile(`^[A-Z][0-9]{2}$`)

@@ -41,8 +41,8 @@ func TestAuditGoodTree(t *testing.T) {
 	var rep struct {
 		Results []struct{ Rule, State string }
 	}
-	if err := json.Unmarshal(data, &rep); err != nil || len(rep.Results) != 16 {
-		t.Errorf("reports/audit/nodes.json has %d results, and the nodes plane has 16 rules: %v", len(rep.Results), err)
+	if err := json.Unmarshal(data, &rep); err != nil || len(rep.Results) != 19 {
+		t.Errorf("reports/audit/nodes.json has %d results, and the nodes plane has 19 rules: %v", len(rep.Results), err)
 	}
 }
 

@@ -1,0 +1,1 @@
+registers/tags.reg:3:1: T10: the tag G5S1M9 has six characters, and the commit 0920e9ce2e96 added it after the cut-over commit 4ecf29b84ff98d3dcccc02675c94e1ca18fe1dab. A new tag has ten characters
