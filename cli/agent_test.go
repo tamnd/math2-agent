@@ -315,3 +315,32 @@ func TestAgentRunBump(t *testing.T) {
 		t.Errorf("the output is\n%s", stdout)
 	}
 }
+
+func TestAgentRunReviewAssist(t *testing.T) {
+	root, _ := agentTree(t)
+	// The build of the node needs no Lean, thus it reads a copy of the node with no lean/ directory.
+	nodes, out := t.TempDir(), t.TempDir()
+	if err := os.MkdirAll(filepath.Join(nodes, "nodes", "7K"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nodes, "nodes", "7K", "7K3QX2.md"), []byte(agentNode("Math2.T.s")), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := build.Run(context.Background(), build.Options{Root: nodes, Out: out}); err != nil {
+		t.Fatal(err)
+	}
+	u := llm.Usage{Input: 1000, Output: 200}
+	oldModel := newModel
+	newModel = func() (llm.Model, error) {
+		return llmtest.New(llmtest.Call("write_packet", map[string]string{"concerns": "Math2.T.s M-type: the statement is about natural numbers, and the node does not say which numbers."}, u)), nil
+	}
+	t.Cleanup(func() { newModel = oldModel })
+
+	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", t.TempDir(), "-work", filepath.Join(t.TempDir(), "w"), "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "review-assist")
+	if code != ExitOK {
+		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/review-assist@0.1.0, 1 turns") || !strings.Contains(stdout, "reports/review/7K3QX2.md") {
+		t.Errorf("the output is\n%s", stdout)
+	}
+}

@@ -155,6 +155,12 @@ func TestPermit(t *testing.T) {
 		{"bump adds a node", "bump", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(lemma)}, "bump does not add nodes"},
 		{"bump writes Lean", "bump", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", Old: []byte("a"), New: []byte("b")}, "writes no Lean"},
 		{"bump writes the register", "bump", workspace.Change{Path: "registers/bindings.reg", Old: []byte("# tag\n"), New: []byte("# tag\n3C53TD lean4 a b rename c -\n")}, "does not write this file"},
+		{"review-assist writes the packet", "review-assist", workspace.Change{Path: "reports/review/3C53TD.md", New: []byte("# Review packet of 3C53TD\n")}, ""},
+		{"review-assist changes the packet", "review-assist", workspace.Change{Path: "reports/review/3C53TD.md", Old: []byte("a"), New: []byte("b")}, ""},
+		{"review-assist writes another packet", "review-assist", workspace.Change{Path: "reports/review/AA0001.md", New: []byte("a")}, "only the review packet of the target"},
+		{"review-assist writes a review", "review-assist", workspace.Change{Path: "reviews/3C/r-3C53TD-01.md", New: []byte("a")}, "only the review packet of the target"},
+		{"review-assist changes the node", "review-assist", workspace.Change{Path: path, Old: []byte(target), New: []byte(rebind)}, "only the review packet of the target"},
+		{"review-assist removes the packet", "review-assist", workspace.Change{Path: "reports/review/3C53TD.md", Old: []byte("a")}, "does not delete a file"},
 		{"an option", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(root + "set_option maxHeartbeats 0\n")}, "does more than add imports"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -167,7 +173,7 @@ func TestPermit(t *testing.T) {
 			}
 		})
 	}
-	if err := agent.Permit("review-assist", "3C53TD", nil); err == nil {
-		t.Error("review-assist has no permission set yet, and Permit gave no error")
+	if err := agent.Permit("explore", "3C53TD", nil); err == nil {
+		t.Error("explore has no permission set yet, and Permit gave no error")
 	}
 }
