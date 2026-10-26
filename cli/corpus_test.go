@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -31,6 +33,36 @@ func TestCorpusImport(t *testing.T) {
 	// A second import of the same records adds no row.
 	if _, stdout, _ = run("corpus", "import", "-root", root, "-commit", "c", "words"); !strings.Contains(stdout, "rows: 2, new 0") {
 		t.Fatalf("the second import gave %q", stdout)
+	}
+	// m2 corpus cluster reads only the mentions, so it gives the same rows.
+	if code, stdout, stderr := run("corpus", "cluster", "-root", root, "-commit", "c"); code != ExitOK || !strings.Contains(stdout, "rows: 2, new 0, with new mentions 0, merged 0") {
+		t.Fatalf("m2 corpus cluster gave %d, %q, %q", code, stdout, stderr)
+	}
+	if code, _, stderr := run("corpus", "gold", "-root", root); code != ExitFailure || !strings.Contains(stderr, "no gold set") {
+		t.Fatalf("a tree with no gold set gave %d, %q", code, stderr)
+	}
+	ms, err := inventory.ReadMentions(root)
+	if err != nil || len(ms) != 2 {
+		t.Fatalf("the mentions are %v, %v", ms, err)
+	}
+	gold := filepath.Join(root, filepath.FromSlash(inventory.GoldFile))
+	if err := os.MkdirAll(filepath.Dir(gold), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	line := `{"a":"` + ms[0].ID + `","b":"` + ms[1].ID + `","same":false,"layer":"textbook","by":"tamnd","on":"2026-10-27"}` + "\n"
+	if err := os.WriteFile(gold, []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code, stdout, stderr := run("corpus", "gold", "-root", root, "-write"); code != ExitOK || !strings.Contains(stdout, "identifiers  textbook  1      -          -") {
+		t.Fatalf("m2 corpus gold gave %d, %q, %q", code, stdout, stderr)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "reports", "inventory", "clustering.json"))
+	var report struct {
+		Gold   int
+		Scores []inventory.Score
+	}
+	if err != nil || json.Unmarshal(data, &report) != nil || report.Gold != 1 || len(report.Scores) != 4 || report.Scores[3].TrueNeg != 1 {
+		t.Fatalf("the report is %s, %v", data, err)
 	}
 	code, stdout, stderr = run("corpus", "status", "-root", root, "-json")
 	if code != ExitOK {

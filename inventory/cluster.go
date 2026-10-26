@@ -30,9 +30,11 @@ type Result struct {
 	Merged  int      // the number of rows that the run merged into other rows
 	Touched int      // the number of old rows that got new mentions
 	Waiting int      // the number of groups of mentions that wait, because only models give them (rule I03)
+	// Equivalent is the number of joins of pass 2: each join puts two groups of pass 1 into one group, because they have statements with the same canonical type.
+	Equivalent int
 }
 
-// Cluster runs the first pass of corpus spec K4.3 on the mentions: two mentions with the same identifier, or with identifiers that a crosswalk links, belong to one row. Mentions that a row holds stay in one row, so Cluster never splits a row. Only a curator splits a row. When one group of mentions touches more than one row, Cluster keeps one row and gives the others the outcome merged.
+// Cluster runs the first two passes of corpus spec K4.3 on the mentions. Pass 1 joins two mentions with the same identifier, or with identifiers that a crosswalk links. Pass 2 joins two statements of formal libraries with the same canonical type hash: Lean then proves each from the other with the identity, so they are one statement. Pass 2 never joins definitions, because two definitions with one type, such as two functions from ℕ to ℕ, are not one item. A row that a pass merged names the pass as its rule: identifiers or equivalence. Mentions that a row holds stay in one row, so Cluster never splits a row. Only a curator splits a row. When one group of mentions touches more than one row, Cluster keeps one row and gives the others the outcome merged.
 //
 // Cluster gives each new row the outcome of the first rule of Rules that matches it. A group of mentions that only models give gets no row (rule I03). The mentions of the group wait until a source confirms them.
 func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
@@ -47,24 +49,7 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 	}
 	rows = slices.Clone(rows)
 	sortRows(rows)
-	// The union-find of the mentions.
-	parent := map[string]string{}
-	var find func(string) string
-	find = func(x string) string {
-		p, ok := parent[x]
-		if !ok || p == x {
-			parent[x] = x
-			return x
-		}
-		r := find(p)
-		parent[x] = r
-		return r
-	}
-	union := func(a, b string) {
-		if ra, rb := find(a), find(b); ra != rb {
-			parent[max(ra, rb)] = min(ra, rb)
-		}
-	}
+	u := unionFind{}
 	owner := map[string]int{} // the index of the row of each mention
 	for i, r := range rows {
 		if r.Outcome != nil && r.Outcome.Value == OutcomeMerged {
@@ -79,28 +64,18 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 			if first == "" {
 				first = id
 			} else {
-				union(first, id)
+				u.union(first, id)
 			}
 		}
 	}
-	keyOwner := map[string]string{}
-	for i := range ms {
-		m := &ms[i]
-		find(m.ID)
-		for _, k := range Keys(m) {
-			if o, ok := keyOwner[k]; ok {
-				union(o, m.ID)
-			} else {
-				keyOwner[k] = m.ID
-			}
-		}
-	}
+	joinIdentifiers(u, ms)
+	pass1 := u.roots(ms)
+	res := &Result{Equivalent: joinEquivalent(u, ms)}
 	groups := map[string][]string{}
 	for i := range ms {
-		r := find(ms[i].ID)
+		r := u.find(ms[i].ID)
 		groups[r] = append(groups[r], ms[i].ID)
 	}
-	res := &Result{}
 	added := map[string]bool{}
 	used := func(id string) bool { return added[id] || opt.Used != nil && opt.Used(id) }
 	for _, root := range slices.Sorted(maps.Keys(groups)) {
@@ -134,9 +109,13 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 		before := slices.Clone(keep.Mentions)
 		for _, i := range touched[1:] {
 			r := &rows[i]
+			rule, why := "identifiers", "a shared identifier"
+			if pass1[firstIn(r, byID)] != pass1[firstIn(keep, byID)] {
+				rule, why = "equivalence", "an equal formal statement"
+			}
 			r.Mentions = nil
-			r.Outcome = &Outcome{Value: OutcomeMerged, Target: []string{keep.ID}, Rule: "identifiers", By: opt.By}
-			r.History = append(r.History, Event{Op: "merge", At: day, By: opt.By, Note: "merged into " + keep.ID + " by a shared identifier"})
+			r.Outcome = &Outcome{Value: OutcomeMerged, Target: []string{keep.ID}, Rule: rule, By: opt.By}
+			r.History = append(r.History, Event{Op: "merge", At: day, By: opt.By, Note: "merged into " + keep.ID + " by " + why})
 			keep.History = append(keep.History, Event{Op: "merge", At: day, By: opt.By, Note: "took the mentions of " + r.ID})
 			res.Merged++
 		}
@@ -159,6 +138,92 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 	slices.Sort(res.Added)
 	res.Rows = rows
 	return res, nil
+}
+
+// firstIn returns the first mention of the row that is in this import.
+func firstIn(r *Row, byID map[string]*Mention) string {
+	for _, id := range r.Mentions {
+		if byID[id] != nil {
+			return id
+		}
+	}
+	return ""
+}
+
+// unionFind holds groups of mentions. The root of a group is its smallest mention, so the groups do not depend on the order of the joins.
+type unionFind map[string]string
+
+func (u unionFind) find(x string) string {
+	p, ok := u[x]
+	if !ok || p == x {
+		u[x] = x
+		return x
+	}
+	r := u.find(p)
+	u[x] = r
+	return r
+}
+
+// union joins the groups of a and b. It reports whether they were two groups.
+func (u unionFind) union(a, b string) bool {
+	ra, rb := u.find(a), u.find(b)
+	if ra == rb {
+		return false
+	}
+	u[max(ra, rb)] = min(ra, rb)
+	return true
+}
+
+// roots returns the root of the group of each mention.
+func (u unionFind) roots(ms []Mention) map[string]string {
+	out := make(map[string]string, len(ms))
+	for i := range ms {
+		out[ms[i].ID] = u.find(ms[i].ID)
+	}
+	return out
+}
+
+// joinIdentifiers is pass 1: it joins the mentions that have a key in common.
+func joinIdentifiers(u unionFind, ms []Mention) {
+	owner := map[string]string{}
+	for i := range ms {
+		m := &ms[i]
+		u.find(m.ID)
+		for _, k := range Keys(m) {
+			if o, ok := owner[k]; ok {
+				u.union(o, m.ID)
+			} else {
+				owner[k] = m.ID
+			}
+		}
+	}
+}
+
+// joinEquivalent is pass 2: it joins the statements with the same canonical type hash. It returns the number of joins.
+func joinEquivalent(u unionFind, ms []Mention) int {
+	n := 0
+	owner := map[string]string{}
+	for i := range ms {
+		m := &ms[i]
+		if m.Kind != "statement" || m.TypeHash == "" {
+			continue
+		}
+		if o, ok := owner[m.TypeHash]; !ok {
+			owner[m.TypeHash] = m.ID
+		} else if u.union(o, m.ID) {
+			n++
+		}
+	}
+	return n
+}
+
+// Passes returns the group of each mention after each pass of Cluster, with no rows: the first map after pass 1, and the second after passes 1 and 2. A group is named by its smallest mention.
+func Passes(ms []Mention) []map[string]string {
+	u := unionFind{}
+	joinIdentifiers(u, ms)
+	p1 := u.roots(ms)
+	joinEquivalent(u, ms)
+	return []map[string]string{p1, u.roots(ms)}
 }
 
 // keepFirst orders the rows of one group: the row to keep comes first. A row with an outcome other than merged comes first, then the row with more mentions, then the row with the smaller identifier.
