@@ -49,6 +49,18 @@ func TestPermit(t *testing.T) {
 		}
 		return string(data)
 	}
+	edge := func(n, e, system, to, by string) string {
+		p := align.NewProposal(n, e, system, to)
+		p.Source, p.By, p.Proposed, p.Why = system, by, "2026-10-26", "The two state the same theorem."
+		data, err := align.FormatQueue([]align.Proposal{p})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+	wd := edge("3C53TD", "same_as", "wikidata", "Q1", "m2-agent/align@0.1.0")
+	other := `{"id":"bbbbbbbbbbbb","node":"3C53TD","edge":"close_to","system":"wikidata","target":"Q2","source":"wikidata","score":0.8,"centrality":3,"proposed":"2026-10-01","by":"m2/0.2.0 align","records":"-"}` + "\n"
+	mathlib := strings.Replace(target, "---\n\n", "  - system: lean4\n    library: mathlib\n    decl: Subgroup.card_dvd_of_le\n    match: exact\n---\n\n", 1)
 	imported := strings.Replace(root, "public import Math2.Meta.Attr\n", "public import Math2.Meta.Attr\npublic import Math2.Algebra.Lagrange\n", 1)
 	for _, tc := range []struct {
 		name, role string
@@ -117,6 +129,24 @@ func TestPermit(t *testing.T) {
 		{"curate proposes a node with itself", "curate", workspace.Change{Path: "queues/dedup.jsonl", New: []byte(same("G5S1M9", "G5S1M9", "m2-agent/curate@0.1.0"))}, "does not name two nodes"},
 		{"curate forges an id", "curate", workspace.Change{Path: "queues/dedup.jsonl", New: []byte(strings.Replace(same("G5S1M9", "3C53TD", "m2-agent/curate@0.1.0"), `"edge":"duplicate"`, `"edge":"same_as"`, 1))}, "is not a duplicate proposal"},
 		{"curate writes the align queue", "curate", workspace.Change{Path: "queues/align/oeis.jsonl", New: []byte(queue)}, "does not write this file"},
+		{"align proposes", "align", workspace.Change{Path: "queues/align/wikidata.jsonl", New: []byte(wd)}, ""},
+		{"align adds a proposal", "align", workspace.Change{Path: "queues/align/wikidata.jsonl", Old: []byte(other), New: []byte(other + wd)}, ""},
+		{"align changes its proposal", "align", workspace.Change{Path: "queues/align/wikidata.jsonl", Old: []byte(wd), New: []byte(strings.Replace(wd, "same theorem", "same result", 1))}, ""},
+		{"align removes its proposal", "align", workspace.Change{Path: "queues/align/wikidata.jsonl", Old: []byte(other + wd), New: []byte(other)}, ""},
+		{"align removes a proposal of the aligner", "align", workspace.Change{Path: "queues/align/wikidata.jsonl", Old: []byte(other + wd), New: []byte(wd)}, "changes or removes the proposal bbbbbbbbbbbb"},
+		{"align proposes from another node", "align", workspace.Change{Path: "queues/align/wikidata.jsonl", New: []byte(edge("AA0001", "same_as", "wikidata", "Q1", "m2-agent/align@0.1.0"))}, "only from the target"},
+		{"align proposes as the aligner", "align", workspace.Change{Path: "queues/align/wikidata.jsonl", New: []byte(edge("3C53TD", "same_as", "wikidata", "Q1", "m2/0.2.0 align"))}, "adds only its own proposals"},
+		{"align proposes a duplicate", "align", workspace.Change{Path: "queues/align/wikidata.jsonl", New: []byte(edge("3C53TD", "duplicate", "wikidata", "Q1", "m2-agent/align@0.1.0"))}, "align proposes only"},
+		{"align writes the wrong file", "align", workspace.Change{Path: "queues/align/oeis.jsonl", New: []byte(wd)}, "the queue file is of oeis"},
+		{"align forges an id", "align", workspace.Change{Path: "queues/align/wikidata.jsonl", New: []byte(strings.Replace(wd, `"target":"Q1"`, `"target":"Q3"`, 1))}, "the wrong id"},
+		{"align writes the dedup queue", "align", workspace.Change{Path: "queues/dedup.jsonl", New: []byte(same("G5S1M9", "3C53TD", "m2-agent/align@0.1.0"))}, "does not write this file"},
+		{"align binds Mathlib", "align", workspace.Change{Path: path, Old: []byte(target), New: []byte(mathlib)}, ""},
+		{"align binds Math2", "align", workspace.Change{Path: path, Old: []byte(target), New: []byte(bind)}, "library mathlib"},
+		{"align reviews", "align", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(mathlib, "match: exact\n", "match: exact\n    fidelity_reviews: [r-3C53TD-01]\n", 1))}, "no fidelity reviews"},
+		{"align rebinds", "align", workspace.Change{Path: path, Old: []byte(target), New: []byte(rebind)}, "does not change the bindings"},
+		{"align writes same_as", "align", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "msc: [20D60]", "msc: [20D60]\nsame_as: {wikidata: Q1}", 1))}, "the field same_as"},
+		{"align binds another node", "align", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(mathlib, "3C53TD", "AA0001", 1))}, "not the target"},
+		{"align writes Lean", "align", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", New: []byte("module\n")}, "writes no Lean"},
 		{"an option", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(root + "set_option maxHeartbeats 0\n")}, "does more than add imports"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -129,7 +159,7 @@ func TestPermit(t *testing.T) {
 			}
 		})
 	}
-	if err := agent.Permit("align", "3C53TD", nil); err == nil {
-		t.Error("align has no permission set yet, and Permit gave no error")
+	if err := agent.Permit("bump", "3C53TD", nil); err == nil {
+		t.Error("bump has no permission set yet, and Permit gave no error")
 	}
 }

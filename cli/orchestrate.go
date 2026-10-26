@@ -75,7 +75,7 @@ func runOrchestrate(args []string, stdout, stderr io.Writer) int {
 		return fail(err)
 	}
 	var roles []*agent.Role
-	rs := &runSetup{root: *root, store: *store, roles: map[string]*agent.Role{}, box: b}
+	rs := &runSetup{root: *root, out: *out, store: *store, roles: map[string]*agent.Role{}, box: b}
 	for _, name := range slices.Sorted(maps.Keys(goals)) {
 		r, err := agent.LoadRole(prompts.FS, name)
 		if err != nil {

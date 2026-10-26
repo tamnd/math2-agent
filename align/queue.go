@@ -51,10 +51,14 @@ type Proposal struct {
 	Why        string             `json:"why,omitempty"`      // the reason that an agent gives for a duplicate, with the map between the two statements
 }
 
+// NewProposal returns the proposal of the edge from the node to the target in the system, with its ID. The caller sets the other fields. An agent proposal has no score and no centrality.
+func NewProposal(node, edge, system, target string) Proposal {
+	return Proposal{ID: proposalID(node, edge, system, target), Node: node, Edge: edge, System: system, Target: target}
+}
+
 // NewDuplicate returns the proposal that the nodes a and b can be the same node. The node of the proposal is the smaller of the two ids, and the target is the larger. The caller sets the other fields. An agent proposal has no score and no centrality.
 func NewDuplicate(a, b string) Proposal {
-	a, b = min(a, b), max(a, b)
-	return Proposal{ID: proposalID(a, Duplicate, "math2", b), Node: a, Edge: Duplicate, System: "math2", Target: b}
+	return NewProposal(min(a, b), Duplicate, "math2", max(a, b))
 }
 
 // proposalID returns the ID of a proposal.

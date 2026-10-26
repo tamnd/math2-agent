@@ -9,5 +9,5 @@ import "embed"
 
 // FS holds the directory of each role that is written.
 //
-//go:embed curate explain formalize prove
+//go:embed align curate explain formalize prove
 var FS embed.FS
