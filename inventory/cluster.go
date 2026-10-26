@@ -85,12 +85,13 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 	}
 	keyOwner := map[string]string{}
 	for i := range ms {
-		find(ms[i].ID)
-		for _, k := range Keys(&ms[i]) {
+		m := &ms[i]
+		find(m.ID)
+		for _, k := range Keys(m) {
 			if o, ok := keyOwner[k]; ok {
-				union(o, ms[i].ID)
+				union(o, m.ID)
 			} else {
-				keyOwner[k] = ms[i].ID
+				keyOwner[k] = m.ID
 			}
 		}
 	}

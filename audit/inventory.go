@@ -227,7 +227,7 @@ func outcomeValue(r *inventory.Row) string {
 
 // outcomeRules reads the rules of schema/outcomes.v1.yaml and gives the outcome of each rule.
 func outcomeRules(path string) (map[string]string, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- the path is in the tree that the caller audits.
 	if err != nil {
 		return nil, err
 	}

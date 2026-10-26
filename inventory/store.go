@@ -185,7 +185,7 @@ func walkFiles(dir, ext string, fn func(path string, data []byte) error) error {
 		if d.IsDir() || filepath.Ext(path) != ext {
 			return nil
 		}
-		data, err := os.ReadFile(path) // #nosec G304 -- the caller owns the tree.
+		data, err := os.ReadFile(path) // #nosec G304 G122 -- the caller owns the tree.
 		if err != nil {
 			return err
 		}

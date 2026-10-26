@@ -85,7 +85,7 @@ func ExampleMoveShards() {
 		fmt.Println(err)
 		return
 	}
-	defer os.RemoveAll(root)
+	defer func() { _ = os.RemoveAll(root) }()
 	// A node in the old shard of two characters.
 	dir := filepath.Join(root, "nodes", "7K")
 	if err := os.MkdirAll(dir, 0o750); err != nil {
@@ -167,7 +167,7 @@ func ExampleAppend() {
 		fmt.Println(err)
 		return
 	}
-	defer os.RemoveAll(root)
+	defer func() { _ = os.RemoveAll(root) }()
 	path := filepath.Join(root, "registers", "tags.reg")
 	if err := tag.Append(path, []tag.Entry{{Tag: "G5S1M9", Commit: "aaaaaaa", Kind: "concept"}, {Tag: "3C53TD", Commit: "aaaaaaa", Kind: "statement"}}); err != nil {
 		fmt.Println(err)
@@ -186,7 +186,7 @@ func ExampleReadUsed() {
 		fmt.Println(err)
 		return
 	}
-	defer os.RemoveAll(root)
+	defer func() { _ = os.RemoveAll(root) }()
 	path := filepath.Join(root, "tags.reg")
 	if err := os.WriteFile(path, []byte("# The tags.\n3C53TD aaaaaaa statement\n\nG5S1M9 aaaaaaa concept\n"), 0o600); err != nil {
 		fmt.Println(err)
@@ -203,7 +203,7 @@ func ExampleReadAliases() {
 		fmt.Println(err)
 		return
 	}
-	defer os.RemoveAll(root)
+	defer func() { _ = os.RemoveAll(root) }()
 	path := filepath.Join(root, "aliases.reg")
 	if err := os.WriteFile(path, []byte("# The aliases.\ngroup G5S1M9 2026-05-01 -\n"), 0o600); err != nil {
 		fmt.Println(err)
@@ -238,7 +238,7 @@ func rewriteTree() (string, error) {
 
 func ExampleRewrite() {
 	root, err := rewriteTree()
-	defer os.RemoveAll(root)
+	defer func() { _ = os.RemoveAll(root) }()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -258,7 +258,7 @@ func ExampleRewrite() {
 
 func ExampleRewriteSeed() {
 	root, err := rewriteTree()
-	defer os.RemoveAll(root)
+	defer func() { _ = os.RemoveAll(root) }()
 	if err != nil {
 		fmt.Println(err)
 		return

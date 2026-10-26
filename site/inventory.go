@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/tamnd/math2-agent/inventory"
 )
@@ -181,12 +182,9 @@ func (b *builder) loadInventory() error {
 
 // letterOf returns the first letter of a name in upper case, or # when the name does not start with a letter of A to Z.
 func letterOf(name string) string {
-	for _, r := range name {
-		r = unicode.ToUpper(r)
-		if 'A' <= r && r <= 'Z' {
-			return string(r)
-		}
-		return "#"
+	r, _ := utf8.DecodeRuneInString(name)
+	if r = unicode.ToUpper(r); 'A' <= r && r <= 'Z' {
+		return string(r)
 	}
 	return "#"
 }
