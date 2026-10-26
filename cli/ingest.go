@@ -46,7 +46,7 @@ func runIngest(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "m2 ingest: the source %q has no adapter. The sources with an adapter: %s\n", source, sourceList())
 		return ExitFailure
 	}
-	opt.UserAgent = "m2/" + version + " (+https://github.com/tamnd/math2-agent)"
+	opt.UserAgent = userAgent()
 	res, err := ingest.Pull(context.Background(), a, opt)
 	if err != nil {
 		fmt.Fprintf(stderr, "m2 ingest: %v\n", err)
@@ -79,6 +79,9 @@ func runIngest(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "  mentions %d in %s/%s/\n", n, inventory.MentionsDir, m.Source)
 	return ExitOK
 }
+
+// userAgent is the User-Agent header of each request of an importer.
+func userAgent() string { return "m2/" + version + " (+https://github.com/tamnd/math2-agent)" }
 
 // sourceList returns the sources that have an adapter, or "none".
 func sourceList() string {

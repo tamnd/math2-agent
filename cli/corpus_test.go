@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +14,95 @@ import (
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/queue"
 )
+
+// treeFiles returns the files of the tree at root, by their paths.
+func treeFiles(t *testing.T, root string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		data, err := os.ReadFile(path) // #nosec G304 -- a file of the test tree.
+		out[path] = string(data)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+func TestCorpusImportPlan(t *testing.T) {
+	body := "w2 two\nw1 one\n"
+	var agents []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		agents = append(agents, r.UserAgent())
+		_, _ = io.WriteString(w, body)
+	}))
+	defer srv.Close()
+	root, cache, dir := t.TempDir(), t.TempDir(), t.TempDir()
+	plan, summary := filepath.Join(dir, "plan.yaml"), filepath.Join(dir, "summary.md")
+	if err := os.WriteFile(plan, []byte("imports:\n  - source: words\n    url: "+srv.URL+"/words.txt\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := run("corpus", "import", "-plan", plan, "-root", root, "-commit", "c", "-cache", cache, "-summary", summary)
+	if code != ExitOK || !strings.Contains(stdout, "words: 2 records from a new snapshot of") || !strings.Contains(stdout, "rows: 2, new 2") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	data, err := os.ReadFile(summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(data); !strings.Contains(s, "| words | new, ") || !strings.Contains(s, "| 2 | 2 | 2 |") || !strings.Contains(s, "The run added 2 mentions and 2 rows. The inventory has 2 rows, and the open count is 2 (it was 0).") {
+		t.Errorf("the summary is:\n%s", s)
+	}
+	if len(agents) != 1 || !strings.HasPrefix(agents[0], "m2/") || !strings.Contains(agents[0], "(+https://github.com/tamnd/math2-agent)") {
+		t.Errorf("the User-Agent headers are %q", agents)
+	}
+
+	// A run with no change in the source writes no change in the tree.
+	first := treeFiles(t, root)
+	code, stdout, stderr = run("corpus", "import", "-plan", plan, "-root", root, "-commit", "d", "-cache", cache)
+	if code != ExitOK || !strings.Contains(stdout, "from a pinned snapshot") || !strings.Contains(stdout, "The run added 0 mentions and 0 rows.") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	again := treeFiles(t, root)
+	if len(again) != len(first) {
+		t.Errorf("the tree had %d files and has %d", len(first), len(again))
+	}
+	for path, data := range first {
+		if again[path] != data {
+			t.Errorf("the run with no change changed %s", path)
+		}
+	}
+
+	// A new item in the source gives one new mention and one new row.
+	body = "w2 two\nw1 one\nw3 three\n"
+	if code, stdout, stderr = run("corpus", "import", "-plan", plan, "-root", root, "-commit", "e", "-cache", cache); code != ExitOK || !strings.Contains(stdout, "| words | new, ") || !strings.Contains(stdout, "The run added 1 mentions and 1 rows. The inventory has 3 rows, and the open count is 3 (it was 2).") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+}
+
+func TestCorpusImportPlanErrors(t *testing.T) {
+	root, dir := t.TempDir(), t.TempDir()
+	plan := filepath.Join(dir, "plan.yaml")
+	if err := os.WriteFile(plan, []byte("imports:\n  - source: nothing\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, stderr := run("corpus", "import", "-plan", plan, "-root", root, "-commit", "c"); code != ExitFailure || !strings.Contains(stderr, "the source nothing has no adapter") {
+		t.Errorf("a source with no adapter gave %d, %q", code, stderr)
+	}
+	for _, args := range [][]string{
+		{"corpus", "import", "-plan", plan, "-root", root, "words"},
+		{"corpus", "import", "-root", root, "-summary", "x.md"},
+		{"corpus", "import", "-root", root, "-cache", dir},
+	} {
+		if code, _, _ := run(args...); code != ExitUsage {
+			t.Errorf("%q gave %d, want %d", args, code, ExitUsage)
+		}
+	}
+}
 
 func TestCorpusImport(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
