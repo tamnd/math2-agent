@@ -85,6 +85,7 @@
 <section class="card inv-card" id="{{.ID}}">
   <h2>{{.Name}} <span class="tag">{{.ID}}</span></h2>
   <table class="plain">
+    <tr><th scope="row">URI</th><td><code>{{.URI}}</code></td></tr>
     <tr><th scope="row">Kind</th><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td></tr>
     <tr><th scope="row">Layer</th><td>{{.Layer}}</td></tr>
     {{with .MSC}}<tr><th scope="row">MSC</th><td>{{range $i, $c := .}}{{if $i}}, {{end}}{{$c}}{{end}}</td></tr>{{end}}

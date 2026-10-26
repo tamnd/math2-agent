@@ -1,5 +1,5 @@
 #!/bin/sh
-# report.sh M2 OUT builds the wiki of the fixtures with the m2 binary M2, tests it against the targets of spec 13.7 and writes a Markdown report to OUT. It puts the Lighthouse reports in the directory lighthouse-report next to OUT. It exits with 1 when a page misses a target. Run it from the root of the repository, after npm ci in this directory. Set LHCI to use another Lighthouse CI binary.
+# report.sh M2 OUT builds the wiki of the fixtures and the inventory rows in records/ with the m2 binary M2, tests it against the targets of spec 13.7 and writes a Markdown report to OUT. It puts the Lighthouse reports in the directory lighthouse-report next to OUT. It exits with 1 when a page misses a target. Run it from the root of the repository, after npm ci in this directory. Set LHCI to use another Lighthouse CI binary.
 set -eu
 m2=$1
 out=$2
@@ -8,8 +8,11 @@ lhci=${LHCI:-$here/node_modules/.bin/lhci}
 work=$(mktemp -d)
 url=http://127.0.0.1:8000/math2
 
-"$m2" build -root testdata/nodes/valid -out "$work/build" > /dev/null
-"$m2" site build -content testdata/nodes/valid -spec spec -build "$work/build" -out "$work/site" -url "$url" > /dev/null
+# The tree is the valid fixtures with two inventory rows, so that the audit covers the pages of the inventory.
+cp -R testdata/nodes/valid "$work/tree"
+cp -R "$here/records" "$work/tree/records"
+"$m2" build -root "$work/tree" -out "$work/build" > /dev/null
+"$m2" site build -content "$work/tree" -spec spec -build "$work/build" -out "$work/site" -url "$url" > /dev/null
 
 status=0
 "$m2" site check -url "$url" -json "$work/site" > "$work/check.json" || status=1

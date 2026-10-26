@@ -17,6 +17,10 @@
         "http://127.0.0.1:8000/math2/spec/13-research-workspace/",
         "http://127.0.0.1:8000/math2/contribute/",
         "http://127.0.0.1:8000/math2/agents/",
+        "http://127.0.0.1:8000/math2/inventory/",
+        "http://127.0.0.1:8000/math2/inventory/l/",
+        "http://127.0.0.1:8000/math2/inventory/row/7K/",
+        "http://127.0.0.1:8000/math2/levels/",
         "http://127.0.0.1:8000/math2/404.html"
       ],
       "numberOfRuns": 3,

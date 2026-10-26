@@ -548,6 +548,8 @@ func (ix *Index) identifier(text string) ([]cand, error) {
 			return nil, err
 		}
 		switch {
+		case u.IsRow():
+			return nil, nil // a row is not a node
 		case !u.IsAlias():
 			where = u.Tag
 		case u.Namespace == "lean":

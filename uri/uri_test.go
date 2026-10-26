@@ -16,6 +16,7 @@ func TestParseAndPrint(t *testing.T) {
 		"m2://lean/Subgroup.card_subgroup_dvd_card": {Namespace: "lean", Name: "Subgroup.card_subgroup_dvd_card"},
 		"m2://release/2026.11":                      {Namespace: "release", Name: "2026.11"},
 		"m2://ext/wikidata/Q180967":                 {Namespace: "ext", Name: "wikidata/Q180967"},
+		"m2://inv/7K3QX2M9R2":                       {Namespace: "inv", Name: "7K3QX2M9R2"},
 	}
 	for s, want := range good {
 		got, err := Parse(s)
@@ -46,6 +47,8 @@ func TestParseErrors(t *testing.T) {
 		"m2://ext/wikidata",
 		"m2://wiki/compact-space",
 		"m2://concept/",
+		"m2://inv/7K3QX2",
+		"m2://inv/7K3QX2M9R3",
 	} {
 		if u, err := Parse(s); err == nil {
 			t.Errorf("Parse(%q) = %+v, want an error", s, u)

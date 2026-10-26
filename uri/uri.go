@@ -8,6 +8,8 @@
 //	m2://7K3QX2#proof      a section of the node
 //
 // An alias URI names a node through a namespace, for example m2://concept/compact-space or m2://lean/Subgroup.card_subgroup_dvd_card. An alias resolves to a tag. Never store an alias as a reference (rule T04).
+//
+// The URI m2://inv/<id> names a row of the inventory, not a node (corpus K3.3). The id has the form of a tag of ten characters.
 package uri
 
 import (
@@ -34,6 +36,9 @@ var Kinds = []string{"concept", "definition", "statement", "conjecture", "proble
 
 // Namespaces are the alias namespaces that are not kinds.
 var Namespaces = []string{"msc", "lean", "release", "ext"}
+
+// Inv is the namespace of the URIs of inventory rows.
+const Inv = "inv"
 
 // URI is a parsed m2:// URI. Exactly one of Tag and Namespace is set.
 type URI struct {
@@ -97,6 +102,10 @@ func parseAlias(s, ns, name string) (URI, error) {
 		if !ok || system == "" || id == "" {
 			return URI{}, fmt.Errorf("uri: %q: write m2://ext/<system>/<id>", s)
 		}
+	case ns == Inv:
+		if tag.IsLegacy(name) || !tag.IsTag(name) {
+			return URI{}, fmt.Errorf("uri: %q: %q is not the id of an inventory row", s, name)
+		}
 	case ns == "msc" || ns == "lean":
 	default:
 		return URI{}, fmt.Errorf("uri: %q: %q is not an alias namespace", s, ns)
@@ -113,8 +122,14 @@ func isKind(s string) bool {
 	return false
 }
 
-// IsAlias reports whether u is an alias URI.
+// IsAlias reports whether u is an alias URI. A URI of an inventory row is also an alias URI, but it resolves to a row and not to a tag.
 func (u URI) IsAlias() bool { return u.Namespace != "" }
+
+// IsRow reports whether u names an inventory row. Name is then the id of the row.
+func (u URI) IsRow() bool { return u.Namespace == Inv }
+
+// Row returns the URI of the inventory row with the id.
+func Row(id string) string { return Scheme + Inv + "/" + id }
 
 // String prints u in the form that Parse reads.
 func (u URI) String() string {

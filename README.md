@@ -262,7 +262,7 @@ m2 review export -json
 
 ## The status of a node
 
-`m2 status` shows the status of a node from the last `m2 build`. It reads `build/status.json`. Give a tag, an alias or an m2:// URI.
+`m2 status` shows the status of a node from the last `m2 build`. It reads `build/status.json`. Give a tag, an alias or an m2:// URI. A URI of the form `m2://inv/<id>` names an inventory row, not a node. The wiki shows it on the card of the row, at `inventory/row/<prefix>/#<id>`.
 
 ```sh
 m2 status 3C53TD

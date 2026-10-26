@@ -15,6 +15,7 @@ import (
 
 	"github.com/tamnd/math2-agent/build"
 	"github.com/tamnd/math2-agent/format"
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/status"
 	"github.com/tamnd/math2-agent/tag"
@@ -108,6 +109,8 @@ func resolve(root string, all []status.Status, ref string) ([]status.Status, err
 			return nil, fmt.Errorf("%s names a release or a commit. m2 status shows only the last build of the working tree", ref)
 		}
 		switch {
+		case u.IsRow():
+			return nil, fmt.Errorf("%s names an inventory row, not a node. The row is in %s", ref, inventory.RowsDir)
 		case !u.IsAlias():
 			return byTag(u.Tag)
 		case u.Namespace == "lean":
