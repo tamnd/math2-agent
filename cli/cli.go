@@ -58,6 +58,7 @@ var commands = []command{
 	{name: "status", usage: "m2 status [-root DIR] [-out DIR] [-json] <tag|alias|uri>", summary: "Show the computed status of a node and the evidence for it.", run: runStatus},
 	{name: "graph", usage: graphUsage, summary: "Run a graph query.", run: runGraph},
 	{name: "ingest", usage: ingestUsage, summary: "Get a pinned snapshot of an external source and write its records.", run: runIngest},
+	{name: "corpus", usage: corpusUsage, summary: "Change the records of the sources to inventory mentions and rows, and show the counts of the inventory.", run: runCorpus},
 	{name: "align", usage: alignUsage, summary: "Propose crosswalk edges to an external source, and decide on them.", run: runAlign},
 	{name: "bump", usage: bumpUsage, summary: "Make a branch that moves Lean and Mathlib to the next release.", run: runBump},
 	{name: "coverage", usage: coverageUsage, summary: "Write the coverage report of each MSC2020 code to reports/coverage/.", run: runCoverage},
