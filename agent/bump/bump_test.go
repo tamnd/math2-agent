@@ -71,6 +71,7 @@ var mathlib = fakeLean{
 	"Subgroup.card_subgroup_dvd_card": {Decl: "Subgroup.card_subgroup_dvd_card", Kind: "theorem", TypeHash: "lagrange", Deprecated: &lean.Deprecation{NewName: "Subgroup.card_dvd_card", Since: "2026-09-01"}},
 	"Subgroup.card_dvd_card":          {Decl: "Subgroup.card_dvd_card", Kind: "theorem", TypeHash: "lagrange"},
 	"Subgroup.index_dvd_card":         {Decl: "Subgroup.index_dvd_card", Kind: "theorem", TypeHash: "index"},
+	"Subgroup.index_dvd":              {Decl: "Subgroup.index_dvd", Kind: "theorem", TypeHash: "lagrange", Deprecated: &lean.Deprecation{NewName: "Subgroup.index_dvd_card", Since: "2026-09-01"}},
 	"Subgroup.index_def":              {Decl: "Subgroup.index_def", Kind: "def"},
 	"Math2.Algebra.lagrange":          {Decl: "Math2.Algebra.lagrange", Kind: "theorem"},
 }
@@ -111,7 +112,7 @@ func TestRebinds(t *testing.T) {
 }
 
 func TestAutoMerge(t *testing.T) {
-	recs, err := mathlib.Extract(context.Background(), []string{"Subgroup.card_subgroup_dvd_card"}, false)
+	recs, err := mathlib.Extract(context.Background(), []string{"Subgroup.card_subgroup_dvd_card", "Subgroup.card_dvd_card", "Subgroup.index_dvd", "Subgroup.index_dvd_card"}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,6 +124,7 @@ func TestAutoMerge(t *testing.T) {
 	}{
 		{"the deprecation", change("Subgroup.card_subgroup_dvd_card", "Subgroup.card_dvd_card"), true},
 		{"another declaration", change("Subgroup.card_subgroup_dvd_card", "Subgroup.index_def"), false},
+		{"a replacement of another type", change("Subgroup.index_dvd", "Subgroup.index_dvd_card"), false},
 		{"another file", append(change("Subgroup.card_subgroup_dvd_card", "Subgroup.card_dvd_card"), other), false},
 		{"no rebind", change("Subgroup.card_subgroup_dvd_card", "Subgroup.card_subgroup_dvd_card"), false},
 		{"no change", nil, false},

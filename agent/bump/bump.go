@@ -2,7 +2,7 @@
 //
 // m2 bump moves the tree to a new release of Mathlib, and it applies each rename that the deprecation data or the type hashes give. The bump role does the rest of the rebinding. The target of a bump job is a node with a Lean binding that does not resolve or is deprecated with the pinned Mathlib. The run finds the declaration that states the same result and changes formal[].decl of the binding with the tool rebind. The role writes no Lean, thus a break of the build of the library of math2 is not a job of bump. A binding has no commit field in schema node.v1, because the commit is the pin in lean/lake-manifest.json. Thus the role changes only the decl.
 //
-// [Goal] holds when the changes are inside the field permission set of bump, the run changed at least one binding, each changed binding did not resolve or was deprecated before the run, and each Lean binding of the target resolves and is not deprecated after it. When the old declaration resolves, the new declaration must have its kind. [AutoMerge] reports a run whose rebinds all take the new name from the deprecation data of Mathlib. Such a run can merge with no review. A person reviews each other rebind. No role writes a register, thus the run does not record the rebind in registers/bindings.reg as m2 bump does, and the person who merges the pull request records it. [Brief] gives the first message of a run.
+// [Goal] holds when the changes are inside the field permission set of bump, the run changed at least one binding, each changed binding did not resolve or was deprecated before the run, and each Lean binding of the target resolves and is not deprecated after it. When the old declaration resolves, the new declaration must have its kind and its type hash, unless the job has the constraint type_change. [AutoMerge] reports a run whose rebinds all take the new name from the deprecation data of Mathlib and keep the type hash. Such a run can merge with no review. A person reviews each other rebind. No role writes a register, thus the run does not record the rebind in registers/bindings.reg as m2 bump does, and the person who merges the pull request records it. [Brief] gives the first message of a run.
 package bump
 
 import (
@@ -175,7 +175,7 @@ func Goal(ws *workspace.Workspace, env tools.Lean, job *agent.Job) agent.Goal {
 	})
 }
 
-// AutoMerge reports whether the changes of a bump run on the target can merge with no review: the run rebinds at least one binding, and each new declaration is the replacement that the deprecation of the old declaration names (spec 07.9, step 3). recs are the records of the old declarations with the pinned Mathlib. Each other rebind needs a person.
+// AutoMerge reports whether the changes of a bump run on the target can merge with no review: the run rebinds at least one binding, and each new declaration is the replacement that the deprecation of the old declaration names (spec 07.9, step 3) and has the type hash of the old declaration. recs are the records of the old and the new declarations with the pinned Mathlib. Each other rebind needs a person.
 func AutoMerge(target string, changes []workspace.Change, recs []lean.Record) (bool, error) {
 	if len(changes) == 0 {
 		return false, nil
@@ -191,8 +191,8 @@ func AutoMerge(target string, changes []workspace.Change, recs []lean.Record) (b
 	}
 	rs := byDecl(recs)
 	for _, rb := range rbs {
-		d := rs[rb.Old].Deprecated
-		if d == nil || d.NewName == "" || d.NewName != rb.New {
+		o, cur := rs[rb.Old], rs[rb.New]
+		if o.Deprecated == nil || o.Deprecated.NewName == "" || o.Deprecated.NewName != rb.New || cur.TypeHash != o.TypeHash {
 			return false, nil
 		}
 	}

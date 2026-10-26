@@ -497,7 +497,7 @@ A bump run comes after `m2 bump` (see "The Mathlib bump"). Its target is a node 
 m2 agent run -target 3C53TD -on-behalf-of github:octocat -budget 1 bump
 ```
 
-The run finds the declaration that states the same result, and it changes `formal[].decl` of the binding with the tool `rebind`. It writes no Lean and changes no other field. The goal holds when each changed binding was broken before the run, a new declaration has the kind and the type hash of an old declaration that resolves, and each Lean binding of the node resolves and is not deprecated. A rebind to another type hash needs `-type-change`. The Lean environment of the run imports Mathlib and Math2, because a binding can name any declaration of Mathlib. `bump.AutoMerge` reports a run whose rebinds all take the replacement that the deprecation names, and such a run can merge with no review. A person reviews each other rebind and records it in `registers/bindings.reg`, because no role writes a register.
+The run finds the declaration that states the same result, and it changes `formal[].decl` of the binding with the tool `rebind`. It writes no Lean and changes no other field. The goal holds when each changed binding was broken before the run, a new declaration has the kind and the type hash of an old declaration that resolves, and each Lean binding of the node resolves and is not deprecated. A rebind to another type hash needs `-type-change`. The Lean environment of the run imports Mathlib and Math2, because a binding can name any declaration of Mathlib. `bump.AutoMerge` reports a run whose rebinds all take the replacement that the deprecation names and keep the type hash, and such a run can merge with no review. A person reviews each other rebind and records it in `registers/bindings.reg`, because no role writes a register.
 
 A review-assist run helps the person who reviews a binding (spec 10.6). It writes no Lean, and it needs the last build of the tree:
 
@@ -709,6 +709,12 @@ go test ./bench/agents/reviewassist -v
 
 ```sh
 go test ./bench/agents/align -v
+```
+
+`bench/agents/bump` is the suite of the bump role, and it needs no Lean. Each item is a replay of a bump: the Lean bindings of a node before the bump, a pinned Mathlib after the bump that the file gives, the rebinds that repair the node, and whether the repair can merge with no review. The public items are made up. Without flags, a scripted model makes the rebinds, the goal must hold, and `bump.AutoMerge` must give the value of the item. A rebind to another type hash needs `type_change`, thus its item must fail without it. Then the goal or the tool must refuse each wrong attempt: no rebind, a write of the node, the same declaration, another kind or type, a declaration that does not resolve, a binding that is not broken, and a repair of only one of two broken bindings. With `-live`, the report gives the share of the breakages that the role repaired, the share that can merge with no review, and the repairs that change a type hash with no `type_change`, which must be zero.
+
+```sh
+go test ./bench/agents/bump -v
 ```
 
 ## Rules that the toolchain keeps

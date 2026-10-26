@@ -1,0 +1,80 @@
+# The public items of the suite of the bump role. Each item is a replay of a bump: the Lean bindings of the target before the bump, and the rebinds that repair them with the pinned Mathlib after the bump. The declarations and the bumps are made up, and they are in the namespace Bench. The held-out items are replays of real bumps from the history of Mathlib, in a private repository, and -items reads them from a file of the same form.
+#
+# mathlib is the pinned Mathlib after the bump. A declaration that it does not have does not resolve. A deprecated declaration names its replacement, or no replacement. math2 has the declarations of the Math2 library, which are theorems.
+
+mathlib:
+  - {decl: Bench.Subgroup.card_subgroup_dvd_card, kind: theorem, type_hash: lagrange, deprecated: true, replacement: Bench.Subgroup.card_dvd_card}
+  - {decl: Bench.Subgroup.card_dvd_card, kind: theorem, type_hash: lagrange}
+  - {decl: Bench.Subgroup.index_dvd_card, kind: theorem, type_hash: index}
+  - {decl: Bench.Subgroup.index, kind: def, type_hash: index-def}
+  - {decl: Bench.Nat.infinite_primes_old, kind: theorem, type_hash: primes, deprecated: true}
+  - {decl: Bench.Nat.exists_prime_gt, kind: theorem, type_hash: primes}
+  - {decl: Bench.Nat.exists_infinite_primes, kind: theorem, type_hash: primes, deprecated: true, replacement: Bench.Nat.infinite_setOf_prime}
+  - {decl: Bench.Nat.infinite_setOf_prime, kind: theorem, type_hash: primes-set}
+
+math2: [Math2.Algebra.lagrange, Math2.NumberTheory.infinite_primes]
+
+items:
+  # The deprecation names a replacement with the same type, thus the rebind merges with no review.
+  - target: 3C53TD
+    bindings: [Bench.Subgroup.card_subgroup_dvd_card]
+    rebind:
+      - {decl: Bench.Subgroup.card_subgroup_dvd_card, new: Bench.Subgroup.card_dvd_card}
+    auto: true
+    wrong:
+      - name: the same declaration
+        rebind: [{decl: Bench.Subgroup.card_subgroup_dvd_card, new: Bench.Subgroup.card_subgroup_dvd_card}]
+        why: the new declaration is the declaration of the binding
+      - name: another type
+        rebind: [{decl: Bench.Subgroup.card_subgroup_dvd_card, new: Bench.Subgroup.index_dvd_card}]
+        why: Bench.Subgroup.card_subgroup_dvd_card has the type hash lagrange and Bench.Subgroup.index_dvd_card has the type hash index
+      - name: a def
+        rebind: [{decl: Bench.Subgroup.card_subgroup_dvd_card, new: Bench.Subgroup.index}]
+        why: Bench.Subgroup.card_subgroup_dvd_card is a theorem and Bench.Subgroup.index is a def
+      - name: a lost declaration
+        rebind: [{decl: Bench.Subgroup.card_subgroup_dvd_card, new: Bench.Subgroup.card_dvd}]
+        why: "the binding of Bench.Subgroup.card_dvd still fails: it does not resolve"
+      - name: the Math2 binding
+        rebind: [{decl: Math2.Algebra.lagrange, new: Bench.Subgroup.card_dvd_card}]
+        why: Math2.Algebra.lagrange resolves and is not deprecated, thus bump does not change formal[1]
+
+  # The bump removed the declaration, thus a person reviews the rebind.
+  - target: 3C53TD
+    bindings: [Bench.Subgroup.lagrange]
+    rebind:
+      - {decl: Bench.Subgroup.lagrange, new: Bench.Subgroup.card_dvd_card}
+    wrong:
+      - name: another binding
+        rebind: [{decl: Bench.Subgroup.card_subgroup_dvd_card, new: Bench.Subgroup.card_dvd_card}]
+        why: the target has no Lean binding of Bench.Subgroup.card_subgroup_dvd_card
+      - name: a lost declaration
+        rebind: [{decl: Bench.Subgroup.lagrange, new: Bench.Subgroup.lagrange_of_finite}]
+        why: "the binding of Bench.Subgroup.lagrange_of_finite still fails: it does not resolve"
+
+  # The deprecation names no replacement. The run must find a declaration of the same type.
+  - target: Q4E7NW
+    bindings: [Bench.Nat.infinite_primes_old]
+    rebind:
+      - {decl: Bench.Nat.infinite_primes_old, new: Bench.Nat.exists_prime_gt}
+    wrong:
+      - name: another type
+        rebind: [{decl: Bench.Nat.infinite_primes_old, new: Bench.Nat.infinite_setOf_prime}]
+        why: Bench.Nat.infinite_primes_old has the type hash primes and Bench.Nat.infinite_setOf_prime has the type hash primes-set
+
+  # The replacement of the deprecation states the result in another form, thus the rebind needs type_change, and a person reviews it.
+  - target: Q4E7NW
+    bindings: [Bench.Nat.exists_infinite_primes]
+    rebind:
+      - {decl: Bench.Nat.exists_infinite_primes, new: Bench.Nat.infinite_setOf_prime}
+    type_change: true
+
+  # Two bindings fail, and the run must repair both.
+  - target: Q4E7NW
+    bindings: [Bench.Nat.primes_infinite, Bench.Nat.infinite_primes_old]
+    rebind:
+      - {decl: Bench.Nat.primes_infinite, new: Bench.Nat.infinite_setOf_prime}
+      - {decl: Bench.Nat.infinite_primes_old, new: Bench.Nat.exists_prime_gt}
+    wrong:
+      - name: one binding
+        rebind: [{decl: Bench.Nat.primes_infinite, new: Bench.Nat.infinite_setOf_prime}]
+        why: "the binding of Bench.Nat.infinite_primes_old still fails: it is deprecated"
