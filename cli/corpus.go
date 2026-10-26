@@ -17,10 +17,11 @@ import (
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/queue"
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus status [-root DIR] [-json]"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -32,6 +33,8 @@ func runCorpus(args []string, stdout, stderr io.Writer) int {
 		return runCorpusImport(args[1:], stdout, stderr)
 	case "status":
 		return runCorpusStatus(args[1:], stdout, stderr)
+	case "queue", "plan":
+		return runCorpusQueue(args[0], args[1:], stdout, stderr)
 	}
 	fmt.Fprintln(stderr, "usage: "+corpusUsage)
 	return ExitUsage
@@ -200,6 +203,80 @@ func runCorpusStatus(args []string, stdout, stderr io.Writer) int {
 	}{{"layer", s.Layers}, {"kind", s.Kinds}, {"outcome", s.Outcomes}, {"source", s.Sources}} {
 		for _, k := range slices.Sorted(maps.Keys(part.m)) {
 			fmt.Fprintf(tw, "%s %s\t%d\n", part.name, k, part.m[k])
+		}
+	}
+	if err := tw.Flush(); err != nil {
+		return ExitFailure
+	}
+	return ExitOK
+}
+
+// runCorpusQueue prints a standing queue in priority order, or the plan of its first jobs. It calls no model.
+func runCorpusQueue(cmd string, args []string, stdout, stderr io.Writer) int {
+	name := "m2 corpus " + cmd
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	root := fs.String("root", ".", "the math2 working tree")
+	n := fs.Int("n", 20, "the number of jobs. -1 means each job of the queue.")
+	asJSON := fs.Bool("json", false, "print JSON")
+	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if fs.NArg() != 1 {
+		fmt.Fprintf(stderr, "usage: %s [-root DIR] [-n N] [-json] NAME\nThe queues are %s.\n", name, strings.Join(queue.Names(), ", "))
+		return ExitUsage
+	}
+	ms, err := inventory.ReadMentions(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	rows, err := inventory.ReadRows(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	q, err := queue.Compute(fs.Arg(0), queue.Input{Rows: rows, Mentions: ms, Day: time.Now().UTC()})
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitUsage
+	}
+	total := len(q.Items)
+	if *n >= 0 && *n < total {
+		q.Items = q.Items[:*n]
+	}
+	var out any = q
+	if cmd == "plan" {
+		out = queue.MakePlan(q, -1)
+	}
+	if *asJSON {
+		enc := json.NewEncoder(stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(out); err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		return ExitOK
+	}
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	if cmd == "plan" {
+		p := out.(queue.Plan)
+		fmt.Fprintf(tw, "queue\t%s\n", p.Queue)
+		fmt.Fprintf(tw, "jobs\t%d of %d\n", p.Jobs, total)
+		fmt.Fprintf(tw, "tokens\t%d in, %d out\n", p.TokensIn, p.TokensOut)
+		fmt.Fprintf(tw, "model cost\t$%.2f to $%.2f\n", p.CostLow, p.CostHigh)
+		fmt.Fprintf(tw, "review\t%.1f to %.1f hours\n", p.ReviewLow, p.ReviewHigh)
+		for _, note := range p.Notes {
+			fmt.Fprintf(tw, "note\t%s\n", note)
+		}
+		fmt.Fprintln(tw, "This is a plan. No model run starts without a budget that a person approved.")
+	} else {
+		fmt.Fprintf(tw, "%s: %d items, role %s, goal: %s\n", q.Name, total, q.Role, q.Goal)
+		if q.Reason != "" {
+			fmt.Fprintf(tw, "%s\n", q.Reason)
+		}
+		for _, it := range q.Items {
+			fmt.Fprintf(tw, "%g\t%s\t%s\t%s\n", it.Priority, it.Target, it.Kind, it.Name)
 		}
 	}
 	if err := tw.Flush(); err != nil {
