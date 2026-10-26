@@ -1,0 +1,10 @@
+# The Lake project of the work tree of the agent suite. It uses only the Lean core library, thus a run does not need Mathlib. The test writes lean-toolchain from lean/lean-toolchain of the repository, the root module and a module for each prove item.
+name = "Math2"
+defaultTargets = ["Math2"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[lean_lib]]
+name = "Math2"

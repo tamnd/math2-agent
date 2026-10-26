@@ -62,6 +62,8 @@ Each role in 12.1 has a suite of tasks with an objective outcome:
 | **bump** | replays of past Mathlib bumps from git history | share of breakages repaired automatically; repairs that change a statement's type hash (these must be zero without a flag) |
 | **review-assist** | packets for bindings with known verdicts | verdict-relevant concerns surfaced (the critic's recall); length of packet |
 
+The suite of formalize and prove is in `bench/agents`. Its first items are public, use only the Lean core library, and have a reference solution. Without a model service, a scripted model writes the reference and some wrong attempts, thus the suite checks the goal predicates of the roles on real Lean. A live run with the Claude models gives the items solved and the dollars of each item.
+
 Every role suite has three splits. **Public** items can be anywhere. **Held-out** items are never published. They are in a private repository that the tools of the agents cannot reach. **Fresh** items were made after the training cutoff of the model. Fresh items come from new Mathlib declarations, new formal-conjectures statements, new arXiv results with formal statements, and items that the maintainers write. Each model version is compared on all three splits. If public scores are much higher than fresh scores, the report gives the difference as a contamination signal.
 
 ### 17.3.5 Explanations

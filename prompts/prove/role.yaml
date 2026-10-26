@@ -1,5 +1,5 @@
 role: prove
-version: 0.1.0
+version: 0.1.1
 tools: [get, get_formal, neighbours, search, search_formal, premises, read_file, write_file, lean_check]
 ladder:
   - model: claude-sonnet-5-5

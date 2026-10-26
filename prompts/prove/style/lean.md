@@ -6,4 +6,5 @@
 - Give each declaration a docstring `/-- ... -/` in plain words.
 - Write `by` at the end of the line of the statement, and each tactic on its own line, with two spaces of indentation. Keep the lines at most 100 characters long.
 - Prefer a short proof that uses Mathlib lemmas to a long proof that unfolds definitions. Do not use `set_option maxHeartbeats` to make a slow proof pass.
-- Do not use `axiom`, `sorry`, `admit` or `native_decide` in a proof. Do not redeclare, shadow or change a declaration that the statement uses.
+- Do not use `axiom`, `sorry` or `admit` in a proof, and use `native_decide` only when the first message of the run permits it. Do not redeclare, shadow or change a declaration that the statement uses.
+- The statement is a definition `def S : Prop`. Most tactics, such as `intro`, `omega` and `simp`, see through it. Instance search does not unfold a definition, thus `decide` cannot find a `Decidable S` instance. Write `unfold S` or `show` with the proposition first.

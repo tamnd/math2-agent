@@ -1,0 +1,12 @@
+# The public items of the agent suite (spec 17.3.4). The columns are: id, role, kind, the Lean declaration after its name, the reference proof, and the statement. For a prove item, the declaration is the pinned statement and the reference is a proof of it. For a formalize item, the declaration is a reference formal statement, and the reference is -. The statements are in our own words.
+B00001	prove	statement	: Prop := ∀ n : Nat, 0 + n = n	by intro n; omega	Zero plus a natural number n is n.
+B00002	prove	statement	: Prop := ∀ a b : Nat, a + b = b + a	fun a b => Nat.add_comm a b	The addition of natural numbers is commutative.
+B00003	prove	statement	: Prop := ∀ n : Nat, 2 * n = n + n	by intro n; omega	Two times a natural number n is n plus n.
+B00004	prove	statement	: Prop := ∀ n : Nat, n < n + 1	fun n => Nat.lt_succ_self n	Each natural number is less than the next natural number.
+B00005	prove	statement	: Prop := ∀ xs ys : List Nat, (xs ++ ys).length = xs.length + ys.length	by intro xs ys; simp	The length of two lists of natural numbers, one after the other, is the sum of their lengths.
+B00006	prove	statement	: Prop := ∀ n : Nat, n % 2 = 0 → n * n % 2 = 0	by intro n h; simp [Nat.mul_mod, h]	The square of an even natural number is even.
+B00007	prove	statement	: Prop := 2 ^ 10 = 1024	by unfold Math2.Bench.B00007.statement; decide	Two to the power ten is 1024.
+B00008	prove	statement	: Prop := ∀ n : Nat, n ≤ n * n	fun n => Nat.le_mul_self n	Each natural number is at most its square.
+B000F1	formalize	statement	: Prop := ∀ a b : Nat, a % 2 = 0 → b % 2 = 0 → (a + b) % 2 = 0	-	The sum of two even natural numbers is even.
+B000F2	formalize	statement	: Prop := ∀ n : Nat, 0 < n → ∃ m : Nat, n = m + 1	-	Each positive natural number is the next natural number after some natural number.
+B000F3	formalize	definition	(n : Nat) : Prop := ∃ k : Nat, k * k = n	-	A natural number is a perfect square when it is the square of a natural number.
