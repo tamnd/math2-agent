@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -174,5 +175,30 @@ func TestLinkPackagesBoxed(t *testing.T) {
 		if err != nil || fi.Mode().Perm() != 0o777 {
 			t.Errorf("%s: %v %v", dir, fi.Mode(), err)
 		}
+	}
+}
+
+func TestAgentRunExplain(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
+	root, out := agentTree(t)
+	u := llm.Usage{Input: 1000, Output: 200}
+	text := agentNode("Math2.T.s") + "\n## Explanations\n\n### L2 agent\n\nThe [[statement|7K3QX2]] says that each natural number is equal to itself.\n"
+	labels := map[string]any{"labels": []map[string]any{{"sentence": 1, "label": "supported", "why": "The node states it."}}}
+	oldModel, oldLean := newModel, newLean
+	newModel = func() (llm.Model, error) {
+		return llmtest.New(llmtest.Call("write_file", map[string]string{"path": "nodes/7K/7K3QX2.md", "text": text}, u), llmtest.Call("label", labels, u)), nil
+	}
+	newLean = func(context.Context, string, *tools.Box) (tools.Lean, error) {
+		return nil, errors.New("explain needs no Lean")
+	}
+	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
+
+	store := t.TempDir()
+	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", store, "-work", filepath.Join(t.TempDir(), "w"), "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "explain")
+	if code != ExitOK {
+		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/explain@0.1.0, 1 turns") || !strings.Contains(stdout, "nodes/7K/7K3QX2.md") {
+		t.Errorf("the output is\n%s", stdout)
 	}
 }

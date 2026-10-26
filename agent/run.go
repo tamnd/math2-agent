@@ -46,14 +46,16 @@ type Runner struct {
 	Goal   Goal                 // the goal predicate. It runs after each turn. Nil means that no goal can hold, which is for tests.
 	Prices map[string]llm.Price // the prices of the models. Nil means llm.Prices.
 	Now    func() time.Time     // the clock. Nil means time.Now.
+	Meter  *Meter               // the model that the goal calls, or nil
 }
 
 // Turn is one model turn of a run: the response and the results of its tool calls.
 type Turn struct {
-	Response *llm.Response `json:"response"`
-	USD      float64       `json:"usd"`
-	Results  []llm.Block   `json:"results,omitempty"`
-	Why      string        `json:"why,omitempty"` // why the goal did not hold after the turn
+	Response *llm.Response   `json:"response"`
+	USD      float64         `json:"usd"`
+	Results  []llm.Block     `json:"results,omitempty"`
+	Why      string          `json:"why,omitempty"`    // why the goal did not hold after the turn
+	Checks   []*llm.Response `json:"checks,omitempty"` // the responses of the [Meter] in the goal check after the turn. USD has their cost.
 }
 
 // Spend is the spend of a run (spec 11.5).
@@ -207,7 +209,7 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 			rec.Turns = append(rec.Turns, t)
 			return stop(Partial, "the model stopped at the limit of the output tokens")
 		case len(calls) == 0:
-			done, why, err := rn.goal(ctx)
+			done, why, err := rn.goal(ctx, rec, b, prices, &t)
 			t.Why = why
 			rec.Turns = append(rec.Turns, t)
 			if err != nil {
@@ -242,7 +244,7 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 				return stop(Failure, "stuck: "+res.Text)
 			}
 		}
-		done, why, err := rn.goal(ctx)
+		done, why, err := rn.goal(ctx, rec, b, prices, &t)
 		t.Why = why
 		rec.Turns = append(rec.Turns, t)
 		if err != nil {
@@ -264,10 +266,17 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 	}
 }
 
-func (rn *Runner) goal(ctx context.Context) (bool, string, error) {
+// goal runs the goal check after the turn t. The spend of the meter in the check goes to the record and to t.
+func (rn *Runner) goal(ctx context.Context, rec *Record, b Budget, prices map[string]llm.Price, t *Turn) (bool, string, error) {
 	if rn.Goal == nil {
 		return false, "", nil
 	}
+	m := rn.Meter
+	if m == nil {
+		return rn.Goal(ctx)
+	}
+	m.start(prices, b, rec.Spend.USD)
+	defer m.charge(rec, t)
 	return rn.Goal(ctx)
 }
 
