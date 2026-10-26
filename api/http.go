@@ -12,12 +12,12 @@ import (
 	"time"
 )
 
-// Options are the options of Handler and Limit.
+// Options are the options of Handler, Limit and LimitGRPC.
 type Options struct {
 	Rate  float64 // the requests per second of each client. Zero means 10. A negative rate means no limit.
 	Burst int     // the requests that a client can send at once. Zero means 20.
 
-	// Client returns the key of the client of a request, for the rate limit. Nil means the IP address of the peer. Behind a proxy, give a function that reads the address that the proxy sets.
+	// Client returns the key of the client of a request, for the rate limit. Nil means the IP address of the peer. Behind a proxy, give a function that reads the address that the proxy sets. LimitGRPC does not use it, and the key of a gRPC client is the IP address of the peer.
 	Client func(*http.Request) string
 }
 
@@ -76,19 +76,13 @@ func (s *Service) Handler(opt Options) http.Handler {
 
 // Limit gives each client of h the rate limit of opt. A client over the limit gets the status 429 with a Retry-After header and an Error with the code RateLimited. m2 serve puts the API and the MCP server behind one limit.
 func Limit(h http.Handler, opt Options) http.Handler {
-	if opt.Rate < 0 {
+	lim := newLimiter(opt)
+	if lim == nil {
 		return h
-	}
-	if opt.Rate == 0 {
-		opt.Rate = 10
-	}
-	if opt.Burst <= 0 {
-		opt.Burst = 20
 	}
 	if opt.Client == nil {
 		opt.Client = peer
 	}
-	lim := &limiter{rate: opt.Rate, burst: float64(opt.Burst), clients: map[string]*bucket{}}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if wait, ok := lim.allow(opt.Client(r), time.Now()); !ok {
 			w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(wait.Seconds()))))
@@ -112,14 +106,14 @@ type failure struct {
 	Error  *Error `json:"error"`
 }
 
-var codes = map[string]int{Invalid: http.StatusBadRequest, NotFound: http.StatusNotFound, RateLimited: http.StatusTooManyRequests, InternalError: http.StatusInternalServerError}
+var httpCodes = map[string]int{Invalid: http.StatusBadRequest, NotFound: http.StatusNotFound, RateLimited: http.StatusTooManyRequests, InternalError: http.StatusInternalServerError}
 
 func fail(w http.ResponseWriter, method string, err error) {
 	var e *Error
 	if !errors.As(err, &e) {
 		e = &Error{Code: InternalError, Message: err.Error()}
 	}
-	write(w, codes[e.Code], failure{API: Version, Method: method, Error: e})
+	write(w, httpCodes[e.Code], failure{API: Version, Method: method, Error: e})
 }
 
 func write(w http.ResponseWriter, code int, v any) {
@@ -136,12 +130,15 @@ func write(w http.ResponseWriter, code int, v any) {
 	_, _ = w.Write(b.Bytes())
 }
 
-func peer(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
+func peer(r *http.Request) string { return host(r.RemoteAddr) }
+
+// host returns the host of an address, or the address when it has no port.
+func host(addr string) string {
+	h, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		return r.RemoteAddr
+		return addr
 	}
-	return host
+	return h
 }
 
 // limiter is a token bucket for each client.
@@ -149,6 +146,20 @@ type limiter struct {
 	rate, burst float64
 	mu          sync.Mutex
 	clients     map[string]*bucket
+}
+
+// newLimiter returns the limiter of opt, or nil when the rate is negative.
+func newLimiter(opt Options) *limiter {
+	if opt.Rate < 0 {
+		return nil
+	}
+	if opt.Rate == 0 {
+		opt.Rate = 10
+	}
+	if opt.Burst <= 0 {
+		opt.Burst = 20
+	}
+	return &limiter{rate: opt.Rate, burst: float64(opt.Burst), clients: map[string]*bucket{}}
 }
 
 type bucket struct {

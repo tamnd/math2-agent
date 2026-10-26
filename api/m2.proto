@@ -1,0 +1,247 @@
+// The read methods of the Mathematical API of math2 (spec 11 of tamnd/math2-agent).
+// This file is made from the table of methods in methods.go. Do not edit it. To make it again, run make proto.
+
+syntax = "proto3";
+
+package m2.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/tamnd/math2-agent/api/m2pb";
+
+// ReadService has the read methods. Each method is also the HTTP endpoint GET /v1/{method}, an MCP tool and an m2 subcommand with the same name.
+service ReadService {
+  // Find the nodes that an identifier names: a tag, an alias, an m2:// URI, a Lean declaration or an external id such as a Wikidata QID or an OEIS A-number.
+  rpc Resolve(ResolveRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/resolve"};
+  }
+
+  // Get a node: its front matter, its body and its computed status.
+  rpc Get(GetRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/get"};
+  }
+
+  // Get the status that the build computed for a node: the evidence level, the fidelity level and the reasons.
+  rpc Status(StatusRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/status"};
+  }
+
+  // Get the Lean bindings of a node, with their axioms, their fidelity, their reviews and their replay.
+  rpc GetFormal(GetFormalRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/get_formal"};
+  }
+
+  // Get the nodes and the edges near a node.
+  rpc Neighbours(NeighboursRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/neighbours"};
+  }
+
+  // Get the best alternative of the proofs of a node, with its trust profile and its axioms.
+  rpc Closure(ClosureRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/closure"};
+  }
+
+  // Get the nodes that use a node, and the nodes that lose each proof when the node is false.
+  rpc Rdeps(RdepsRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/rdeps"};
+  }
+
+  // Get the shortest learning path from one node to another.
+  rpc Path(PathRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/path"};
+  }
+
+  // Get the formal statements with no proof, or the open problems with the statements that bound them.
+  rpc Frontier(FrontierRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/frontier"};
+  }
+
+  // Search the nodes with free text, LaTeX, a Lean type or an identifier. Each result gives the channels that found it.
+  rpc Search(SearchRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/search"};
+  }
+
+  // Search the nodes and the Mathlib declarations with a Lean type pattern, a Lean goal or a list of constants.
+  rpc SearchFormal(SearchFormalRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/search_formal"};
+  }
+
+  // Search the nodes by the structure of a LaTeX formula. The names of the variables do not matter.
+  rpc SearchFormula(SearchFormulaRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/search_formula"};
+  }
+
+  // Get the nodes whose text is near the text of a node.
+  rpc Similar(SimilarRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/similar"};
+  }
+
+  // Rank the Lean declarations that can help to prove a goal.
+  rpc Premises(PremisesRequest) returns (Response) {
+    option (google.api.http) = {get: "/v1/premises"};
+  }
+}
+
+// ResolveRequest has the parameters of resolve.
+message ResolveRequest {
+  // The identifier.
+  string ref = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// GetRequest has the parameters of get.
+message GetRequest {
+  // A tag, an alias or an m2:// URI.
+  string ref = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// StatusRequest has the parameters of status.
+message StatusRequest {
+  // A tag, an alias or an m2:// URI.
+  string ref = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// GetFormalRequest has the parameters of get_formal.
+message GetFormalRequest {
+  // A tag, an alias or an m2:// URI.
+  string ref = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// NeighboursRequest has the parameters of neighbours.
+message NeighboursRequest {
+  // A tag, an alias or an m2:// URI.
+  string ref = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The number of edges from the node, from 0 to 3. The default is 1.
+  optional int32 depth = 2;
+}
+
+// ClosureRequest has the parameters of closure.
+message ClosureRequest {
+  // A tag, an alias or an m2:// URI.
+  string ref = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // Min-depth or min-size. The default is min-depth.
+  string strategy = 2;
+}
+
+// RdepsRequest has the parameters of rdeps.
+message RdepsRequest {
+  // A tag, an alias or an m2:// URI.
+  string ref = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// PathRequest has the parameters of path.
+message PathRequest {
+  // The node to start from: a tag, an alias or an m2:// URI.
+  string from = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The node to learn: a tag, an alias or an m2:// URI.
+  string to = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// FrontierRequest has the parameters of frontier.
+message FrontierRequest {
+  // The open problems, not the formal statements with no proof.
+  optional bool open = 1;
+
+  // Only the nodes with an MSC code that starts with this.
+  string msc = 2;
+
+  // Only the nodes that are part of this topic: a tag, an alias or an m2:// URI.
+  string topic = 3;
+
+  // Only the nodes at this evidence level, from E0 to E5.
+  string evidence = 4;
+}
+
+// SearchRequest has the parameters of search.
+message SearchRequest {
+  // The query.
+  string q = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The number of results, from 1 to 100. The default is 10.
+  optional int32 k = 2;
+
+  // The channels to run, separated by commas: identifier, lexical, formula, formal, embedding. The default is all of them.
+  string channel = 3;
+
+  // Only nodes of these kinds, separated by commas.
+  string kind = 4;
+
+  // Rank the open problems and the weak evidence first.
+  optional bool open = 5;
+}
+
+// SearchFormalRequest has the parameters of search_formal.
+message SearchFormalRequest {
+  // The Lean type, the goal or the constants.
+  string q = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The number of results, from 1 to 100. The default is 10.
+  optional int32 k = 2;
+}
+
+// SearchFormulaRequest has the parameters of search_formula.
+message SearchFormulaRequest {
+  // The formula in LaTeX.
+  string q = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The number of results, from 1 to 100. The default is 10.
+  optional int32 k = 2;
+}
+
+// SimilarRequest has the parameters of similar.
+message SimilarRequest {
+  // A tag, an alias or an m2:// URI.
+  string ref = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The number of results, from 1 to 100. The default is 10.
+  optional int32 k = 2;
+}
+
+// PremisesRequest has the parameters of premises.
+message PremisesRequest {
+  // The goal, as Lean prints it, with the hypotheses before ⊢.
+  string goal = 1;
+
+  // The node of the goal. The declarations of the nodes that it uses rank higher.
+  string tag = 2;
+
+  // The number of results, from 1 to 100. The default is 10.
+  optional int32 k = 3;
+}
+
+// Response is the answer to one call. It has the fields of the JSON answer of the HTTP API.
+message Response {
+  // The version of the API.
+  string api = 1;
+
+  // The name of the method.
+  string method = 2;
+
+  // The commit of the tree that the build read.
+  string commit = 3;
+
+  // The output hash of the build.
+  string build = 4;
+
+  // Each node in the result, in the order of the result.
+  repeated About about = 5;
+
+  // The result, as the JSON value of the HTTP answer.
+  google.protobuf.Value result = 6;
+}
+
+// About is a node that a response is about, as the build saw it.
+message About {
+  // The tag of the node.
+  string tag = 1;
+
+  // The content hash of the node file.
+  string hash = 2;
+
+  // The evidence level, or the empty string when the node has none.
+  string evidence = 3;
+}

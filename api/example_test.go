@@ -5,10 +5,16 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http/httptest"
 	"os"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+
 	"github.com/tamnd/math2-agent/api"
+	"github.com/tamnd/math2-agent/api/m2pb"
 	"github.com/tamnd/math2-agent/build"
 )
 
@@ -61,4 +67,38 @@ func ExampleService_Handler() {
 	fmt.Print(resp.StatusCode, " ", string(body))
 	// Output:
 	// 404 {"api":"v1","method":"status","error":{"code":"not_found","message":"no node has the alias nope"}}
+}
+
+func ExampleService_RegisterGRPC() {
+	s, done := service()
+	defer done()
+	ln, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		panic(err)
+	}
+	srv := grpc.NewServer(grpc.UnaryInterceptor(api.LimitGRPC(api.Options{})))
+	s.RegisterGRPC(srv)
+	go func() { _ = srv.Serve(ln) }()
+	defer srv.Stop()
+
+	conn, err := grpc.NewClient(ln.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = conn.Close() }()
+	r, err := m2pb.NewReadServiceClient(conn).Path(context.Background(), &m2pb.PathRequest{From: "DSG7KN", To: "Q529ES"})
+	if err != nil {
+		panic(err)
+	}
+	for _, v := range r.Result.GetListValue().GetValues() {
+		fmt.Println(v.GetStringValue())
+	}
+	_, err = m2pb.NewReadServiceClient(conn).Get(context.Background(), &m2pb.GetRequest{Ref: "ZZZZZZ"})
+	fmt.Println(status.Code(err))
+	// Output:
+	// DSG7KN
+	// GY1XDB
+	// E18G47
+	// Q529ES
+	// NotFound
 }
