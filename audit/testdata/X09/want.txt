@@ -1,0 +1,3 @@
+nodes/3C5/3C53TD.md:9:1: X09: a judge verdict on body.statement of 3C53TD in the run r-2026-09-01-1 is from claude-sonnet-5-5, and the writer claude-opus-5-5 is of the same family claude. Give the judge a model of another family (corpus K7.6)
+nodes/3C5/3C53TD.md:13:1: X09: a judge verdict on body.proof of 3C53TD in the run r-2026-09-01-1 names no model
+nodes/3C5/3C53TD.md:13:1: X09: a judge verdict on body.proof of 3C53TD in the run r-2026-09-01-1 is from the model gpt-0, which has no entry in the model register models/models.yaml

@@ -12,6 +12,7 @@ import (
 	"github.com/tamnd/math2-agent/agent"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/llmtest"
+	"github.com/tamnd/math2-agent/models"
 	"github.com/tamnd/math2-agent/prov"
 )
 
@@ -227,6 +228,11 @@ func TestRunErrors(t *testing.T) {
 	rn.Tools = nil
 	if _, err := rn.Run(context.Background(), job(), 0, "x"); err == nil {
 		t.Error("Run starts with no tool of the profile")
+	}
+	rn, _ = runner(t, llmtest.New())
+	rn.Models = &models.Register{Version: models.Version}
+	if _, err := rn.Run(context.Background(), job(), 0, "x"); err == nil || !strings.Contains(err.Error(), "no entry in the model register") {
+		t.Errorf("a model with no entry in the register gives %v", err)
 	}
 	rn, _ = runner(t, llmtest.New())
 	if _, err := rn.Run(context.Background(), job(), 0, "x"); !errors.Is(err, llmtest.ErrEnd) {
