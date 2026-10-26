@@ -52,10 +52,10 @@ func tree(t *testing.T, dir string) string {
 
 func itoa(i int) string { return string(rune('0' + i)) }
 
-// run runs git in root and fails the test on an error.
+// run runs git in root and fails the test on an error. It turns off the automatic gc and maintenance, because a detached gc can still write to .git when the test removes its temporary directory.
 func run(t *testing.T, root string, args ...string) string {
 	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", root, "-c", "user.name=audit", "-c", "user.email=audit@example.com", "-c", "commit.gpgsign=false"}, args...)...)
+	cmd := exec.Command("git", append([]string{"-C", root, "-c", "user.name=audit", "-c", "user.email=audit@example.com", "-c", "commit.gpgsign=false", "-c", "gc.auto=0", "-c", "maintenance.auto=false"}, args...)...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
