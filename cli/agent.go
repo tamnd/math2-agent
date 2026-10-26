@@ -27,6 +27,7 @@ import (
 	"github.com/tamnd/math2-agent/agent/explain"
 	"github.com/tamnd/math2-agent/agent/formalize"
 	"github.com/tamnd/math2-agent/agent/prove"
+	"github.com/tamnd/math2-agent/agent/reviewassist"
 	"github.com/tamnd/math2-agent/agent/tools"
 	"github.com/tamnd/math2-agent/api"
 	"github.com/tamnd/math2-agent/build"
@@ -38,16 +39,17 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|explain|formalize|prove"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|explain|formalize|prove|review-assist"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
-	"align":     "the node has a proposal of each crosswalk edge that the records give, or a Mathlib binding with the type hash of its Math2 binding",
-	"bump":      "each Lean binding of the node resolves in the pinned Mathlib and is not deprecated",
-	"curate":    "the record has a node in the words of math2 that states the same result, or the node has the right uses, about and msc",
-	"explain":   "the node has an L2 explanation marked agent, with each claim grounded in a cited node",
-	"formalize": "the node has a Lean binding that passes the checks of the run",
-	"prove":     "the statement of the node has a Lean proof",
+	"align":         "the node has a proposal of each crosswalk edge that the records give, or a Mathlib binding with the type hash of its Math2 binding",
+	"bump":          "each Lean binding of the node resolves in the pinned Mathlib and is not deprecated",
+	"curate":        "the record has a node in the words of math2 that states the same result, or the node has the right uses, about and msc",
+	"explain":       "the node has an L2 explanation marked agent, with each claim grounded in a cited node",
+	"formalize":     "the node has a Lean binding that passes the checks of the run",
+	"prove":         "the statement of the node has a Lean proof",
+	"review-assist": "the node has a review packet in reports/review with the packet of the last build and the concerns of the critic",
 }
 
 // leanRoles are the roles whose goal builds the Lean library. The other roles need no Lean and no sandbox.
@@ -288,6 +290,17 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		}
 		check = bump.Goal(ws, env, job)
 		extra = []agent.Tool{bump.Rebind(ws)}
+	case "review-assist":
+		// The packet comes from the build of the tree, and the nodes come from the work tree.
+		in, err := reviewInput(ws.Dir, cmp.Or(rs.out, filepath.Join(rs.root, "build")))
+		if err != nil {
+			return nil, ws, nil, err
+		}
+		if brief, err = reviewassist.Brief(ws, in, job); err != nil {
+			return nil, ws, nil, err
+		}
+		check = reviewassist.Goal(ws, in, job)
+		extra = []agent.Tool{reviewassist.Write(ws, in, "m2-agent/review-assist@"+r.Version)}
 	case "curate":
 		// The records are in build/records of the tree, which git does not track, thus they are not in the work tree.
 		records := &curate.Records{Root: rs.root}
