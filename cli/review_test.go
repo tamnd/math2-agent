@@ -152,3 +152,51 @@ func TestReviewExport(t *testing.T) {
 		t.Errorf("two reviewers: exit code %d", code)
 	}
 }
+
+func TestReviewQueue(t *testing.T) {
+	root := reviewTree(t)
+	if code, stdout, stderr := run("review", "queue", "-root", root); code != ExitOK || stdout != "No binding waits for a first review.\n" {
+		t.Errorf("a binding at F0: exit code %d, %s%s", code, stdout, stderr)
+	}
+	// The battery passes, thus the binding is at F1.
+	nodes, err := node.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := lean.Record{Decl: "Nat.zero_add", Kind: "theorem", TypeHash: "blake3:zeroadd"}
+	st := status.Compute(status.Input{Nodes: nodes, Records: map[string]lean.Record{rec.Decl: rec}, Battery: map[status.Key]bool{{Tag: "1B0000", Decl: "Nat.zero_add"}: true}})
+	data, err := json.Marshal(st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "build", build.StatusFile), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := run("review", "queue", "-root", root, "-reviewer", "github:reviewer")
+	if code != ExitOK || !strings.HasPrefix(stdout, "1 binding waits for a first review.\n\nTAG     USED BY  DECLARATION   NAME\n1B0000  0        Nat.zero_add  Zero add\n") {
+		t.Errorf("exit code %d, %s%s", code, stdout, stderr)
+	}
+	if _, stdout, _ := run("review", "queue", "-root", root, "-reviewer", "github:author"); !strings.HasPrefix(stdout, "No binding") {
+		t.Errorf("the author of the binding: %s", stdout)
+	}
+	if _, stdout, _ := run("review", "queue", "-root", root, "-second"); stdout != "No binding waits for a second review.\n" {
+		t.Errorf("-second: %s", stdout)
+	}
+	code, stdout, _ = run("review", "queue", "-root", root, "-json")
+	var tasks []struct {
+		Tag      string `json:"tag"`
+		Fidelity string `json:"fidelity"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &tasks); code != ExitOK || err != nil || len(tasks) != 1 || tasks[0].Fidelity != "F1" {
+		t.Errorf("-json: exit code %d, %v, %s", code, err, stdout)
+	}
+	if _, stdout, _ := run("review", "queue", "-root", root, "-area", "20", "-json"); stdout != "[]\n" {
+		t.Errorf("an area with no binding: %s", stdout)
+	}
+	if code, _, _ := run("review", "queue", "-root", root, "x"); code != ExitUsage {
+		t.Errorf("an argument: exit code %d", code)
+	}
+	if code, _, stderr := run("review", "queue", "-root", t.TempDir()); code != ExitFailure || !strings.Contains(stderr, "Run m2 build first") {
+		t.Errorf("no build: exit code %d, %s", code, stderr)
+	}
+}

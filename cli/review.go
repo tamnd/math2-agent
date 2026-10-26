@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/tamnd/math2-agent/build"
 	"github.com/tamnd/math2-agent/lean"
@@ -20,11 +21,14 @@ import (
 	"github.com/tamnd/math2-agent/status"
 )
 
-const reviewUsage = "m2 review [-root DIR] [-out DIR] [-decl D] [-json] [-reviewer ID -verdict V [-convention C]... [-class M-X] [-notes TEXT] [-date D] [-dry-run] [-commit]] <tag|alias|uri>\n       m2 review export [-root DIR] [-url URL] [-json] [reviewer]"
+const reviewUsage = "m2 review [-root DIR] [-out DIR] [-decl D] [-json] [-reviewer ID -verdict V [-convention C]... [-class M-X] [-notes TEXT] [-date D] [-dry-run] [-commit]] <tag|alias|uri>\n       m2 review queue [-root DIR] [-out DIR] [-reviewer ID] [-area MSC] [-second] [-n N] [-json]\n       m2 review export [-root DIR] [-url URL] [-json] [reviewer]"
 
 func runReview(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "export" {
 		return runReviewExport(args[1:], stdout, stderr)
+	}
+	if len(args) > 0 && args[0] == "queue" {
+		return runReviewQueue(args[1:], stdout, stderr)
 	}
 	flags := flag.NewFlagSet("m2 review", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -138,6 +142,67 @@ func runReview(args []string, stdout, stderr io.Writer) int {
 }
 
 // runReviewExport writes the reviews of a reviewer, or of each reviewer, for the credit of spec 16.4.
+func runReviewQueue(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("m2 review queue", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	root := flags.String("root", ".", "the math2 working tree")
+	out := flags.String("out", "", "the output directory of m2 build. Empty means build/ in the tree.")
+	reviewer := flags.String("reviewer", os.Getenv("M2_REVIEWER"), "leave out the bindings that this reviewer wrote or reviewed. The default is $M2_REVIEWER.")
+	area := flags.String("area", "", "show only the nodes with an MSC2020 code that starts with this code, for example 20 or 20D")
+	second := flags.Bool("second", false, "show the bindings at F2, which wait for a second review for F3, in place of the bindings at F1")
+	limit := flags.Int("n", 20, "the largest number of bindings to show. Zero means each binding.")
+	asJSON := flags.Bool("json", false, "write the queue as JSON")
+	if err := flags.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if flags.NArg() != 0 || *limit < 0 {
+		fmt.Fprintln(stderr, "usage: "+reviewUsage)
+		return ExitUsage
+	}
+	if *out == "" {
+		*out = filepath.Join(*root, "build")
+	}
+	in, err := reviewInput(*root, *out)
+	if err != nil {
+		fmt.Fprintf(stderr, "m2 review queue: %v\n", err)
+		return ExitFailure
+	}
+	tasks := review.Queue(in, review.Filter{Reviewer: *reviewer, Area: *area, Second: *second})
+	all := len(tasks)
+	if *limit > 0 && all > *limit {
+		tasks = tasks[:*limit]
+	}
+	if *asJSON {
+		if tasks == nil {
+			tasks = []review.Task{}
+		}
+		return writeJSON(stdout, stderr, "m2 review queue", tasks)
+	}
+	what := "a first review"
+	if *second {
+		what = "a second review"
+	}
+	switch all {
+	case 0:
+		fmt.Fprintf(stdout, "No binding waits for %s.\n", what)
+		return ExitOK
+	case 1:
+		fmt.Fprintf(stdout, "1 binding waits for %s.\n\n", what)
+	default:
+		fmt.Fprintf(stdout, "%d bindings wait for %s. The nodes that more nodes use come first.\n\n", all, what)
+	}
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "TAG\tUSED BY\tDECLARATION\tNAME")
+	for _, t := range tasks {
+		fmt.Fprintf(tw, "%s\t%d\t%s\t%s\n", t.Tag, t.Dependents, t.Decl, t.Name)
+	}
+	_ = tw.Flush()
+	if len(tasks) < all {
+		fmt.Fprintf(stdout, "\nand %d more. Give -n 0 to show each binding.\n", all-len(tasks))
+	}
+	return ExitOK
+}
+
 func runReviewExport(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("m2 review export", flag.ContinueOnError)
 	flags.SetOutput(stderr)

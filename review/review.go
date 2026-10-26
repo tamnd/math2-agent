@@ -4,6 +4,8 @@
 //
 // [Write] adds a review to the tree. It gives the review the next id of the node, writes it to reviews/XX/TAG.yaml and adds the id to the binding. Write checks the review before it changes a file. The tool never signs a review: the reviewer signs the commit with their own key.
 //
+// [Queue] gives the fidelity queue of spec 16.3: the bindings that wait for a review, with the nodes that most nodes use first.
+//
 // [Exports] gives the reviews of each reviewer, for the credit of spec 16.4. [Export.WriteText] writes them as text for a CV, and [Slug] gives the last segment of the stable link of a reviewer on the site.
 package review
 

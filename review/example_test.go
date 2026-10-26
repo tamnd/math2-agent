@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/tamnd/math2-agent/lean"
+	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/review"
 	"github.com/tamnd/math2-agent/status"
 )
@@ -47,4 +49,18 @@ func ExampleSlug() {
 	// Output:
 	// github-octocat
 	// orcid-0000-0002-1825-0097
+}
+
+func ExampleQueue() {
+	n, err := node.Parse("nodes/1B/1B0000.md", []byte("---\ntag: 1B0000\nkind: statement\nname: Zero add\nformal:\n  - {system: lean4, library: mathlib, decl: Nat.zero_add, match: exact}\n---\n\n## Statement\n\nFor each natural number n, 0 + n = n.\n"))
+	if err != nil {
+		panic(err)
+	}
+	records := map[string]lean.Record{"Nat.zero_add": {Decl: "Nat.zero_add", TypeHash: "blake3:zeroadd"}}
+	passed := map[status.Key]bool{{Tag: "1B0000", Decl: "Nat.zero_add"}: true}
+	st := status.Compute(status.Input{Nodes: []*node.Node{n}, Records: records, Battery: passed})
+	for _, t := range review.Queue(review.Input{Nodes: []*node.Node{n}, Status: st}, review.Filter{}) {
+		fmt.Println(t.Tag, t.Fidelity, t.Decl, t.Dependents)
+	}
+	// Output: 1B0000 F1 Nat.zero_add 0
 }
