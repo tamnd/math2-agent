@@ -186,6 +186,8 @@ The letter tells the subject of the rule. Rules with the mark **H** are hard, an
 | X03 | S | agent acceptance rate per role and model below threshold over 7 days (flag for prompt or model review) |
 | X04 | H | no agent wrote a status-like field or a review |
 
+A merge is an agent PR when one of the new lines of its provenance logs is of an agent with no person. The runs of the PR are the runs that those lines name, and the audit reads their summaries in `build/runs/`. `X01` checks each changed file, except the provenance logs, with `agent.Permit` for the role and the target of each run. A change passes when the set of one run allows it. `X02` needs `spend_usd` and `budget_usd` in each summary. `X03` counts the runs that started in the week that ends 7 days before the date of the HEAD commit, so that each PR had a week for review. A run is accepted when a provenance line on the branch names it. A role and a model with fewer than 5 runs in the week are not checked, and the threshold is 25%. `X04` looks for a part of a field name that is a status word of `S03`, `fidelity_reviews` or `reviews`, in the lines of agents and in the fields of the nodes that an agent PR changes. It also fails an agent PR that changes a file below `reviews/`.
+
 There are 65 rules. A new rule needs a fixture pair and a line in this table. Both must be in the same pull request.
 
 ## 15.4 Propagation when trust changes

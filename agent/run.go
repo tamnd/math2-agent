@@ -82,6 +82,7 @@ type Record struct {
 	Outcome  string            `json:"outcome"`
 	Reason   string            `json:"reason"`          // why the run stopped
 	Claim    string            `json:"claim,omitempty"` // the last text of the model: its own assessment, which the run records and never uses
+	Budget   Budget            `json:"budget"`          // the budget of the run: the budget of the job, with the budget of the role for each limit that the job does not give
 	Spend    Spend             `json:"spend"`
 }
 
@@ -156,6 +157,7 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 		Spend: Spend{Tokens: map[string]llm.Usage{}},
 	}
 	b := job.budget(role)
+	rec.Budget = b
 	msgs := []llm.Message{{Role: llm.User, Content: []llm.Block{llm.TextBlock(brief)}}}
 	cache := map[string]llm.Block{}
 	idle := 0
@@ -340,7 +342,7 @@ func (r *Record) Summary(transcript string) *prov.Run {
 	return &prov.Run{
 		ID: r.ID, Agent: r.Agent, Prompt: r.Prompt, Models: r.Models(), OnBehalfOf: r.Job.OnBehalfOf,
 		Started: r.Started.UTC().Format(time.RFC3339), Outcome: r.Outcome, Targets: []string{r.Job.Target},
-		Seconds: r.Spend.Seconds, SpendUSD: r.Spend.USD, Transcript: transcript,
+		Seconds: r.Spend.Seconds, SpendUSD: r.Spend.USD, BudgetUSD: r.Budget.USD, Transcript: transcript,
 	}
 }
 

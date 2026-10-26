@@ -275,7 +275,7 @@ func TestRunBudgetBound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rec.Spend.USD > j.Budget.USD || rec.Reason != "the budget of $0.00 is used up" || len(rec.Turns) < 2 {
+	if rec.Spend.USD > j.Budget.USD || rec.Budget.USD != j.Budget.USD || rec.Reason != "the budget of $0.00 is used up" || len(rec.Turns) < 2 {
 		t.Errorf("the run spends $%.6f of $%.6f in %d turns, and stops with %q", rec.Spend.USD, j.Budget.USD, len(rec.Turns), rec.Reason)
 	}
 }

@@ -1,0 +1,16 @@
+{
+  "id": "r-2026-09-10-9",
+  "agent": "m2-agent/prove@0.1.1",
+  "prompt": "prove/1",
+  "models": [
+    "claude-sonnet-5-5"
+  ],
+  "on_behalf_of": "github:writer",
+  "started": "2026-09-10T09:00:00Z",
+  "outcome": "success",
+  "targets": [
+    "3C53TD"
+  ],
+  "spend_usd": 1,
+  "budget_usd": 5
+}

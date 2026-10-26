@@ -1,0 +1,4 @@
+nodes/3C/3C53TD.md:7:1: X04: the agent pull request changes the field formal[0].fidelity_reviews, which states a status or a review
+prov/3C/3C53TD.jsonl:2:1: X04: the agent m2-agent/prove@0.1.1 wrote the field formal[0].fidelity_reviews, which states a status or a review. The build computes the status, and only a person writes a review
+prov/3C/3C53TD.jsonl:3:1: X04: the agent m2-agent/prove@0.1.1 wrote the field status, which states a status or a review. The build computes the status, and only a person writes a review
+reviews/3C/3C53TD.yaml:1:1: X04: the agent pull request changes a review file. Only a person writes a review

@@ -1,0 +1,4 @@
+{"field":"*","op":"add","agent":null,"human":"github:writer","at":"2026-09-01T10:00:00Z"}
+{"field":"formal[0].decl","op":"change","agent":"m2-agent/prove@0.1.1","model":"claude-sonnet-5-5","run":"r-2026-09-02-1","human":null,"at":"2026-09-02T10:00:00Z"}
+{"field":"formal[0].decl","op":"change","agent":"m2-agent/prove@0.1.1","model":"claude-sonnet-5-5","run":"r-2026-09-02-2","human":null,"at":"2026-09-02T10:00:00Z"}
+{"field":"formal[0].decl","op":"change","agent":"m2-agent/prove@0.1.1","model":"claude-sonnet-5-5","run":"r-2026-09-02-3","human":null,"at":"2026-09-02T10:00:00Z"}
