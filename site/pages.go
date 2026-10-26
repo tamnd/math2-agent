@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/tamnd/math2-agent/inventory"
 )
 
 //go:embed assets templates
@@ -45,6 +47,7 @@ func list(items []string) string {
 type kindCount struct {
 	Name, Plural, Text, URL string
 	Count                   int
+	Rows                    int // the rows of the inventory of this kind
 }
 
 func (b *builder) kindCounts() []kindCount {
@@ -56,7 +59,11 @@ func (b *builder) kindCounts() []kindCount {
 				n++
 			}
 		}
-		out = append(out, kindCount{k.Name, k.Plural, k.Text, b.url("kind/" + k.Name + "/"), n})
+		rows := 0
+		if b.invSummary != nil {
+			rows = b.invSummary.Kinds[k.Name]
+		}
+		out = append(out, kindCount{k.Name, k.Plural, k.Text, b.url("kind/" + k.Name + "/"), n, rows})
 	}
 	return out
 }
@@ -283,10 +290,15 @@ type homeData struct {
 	Milestones []Milestone
 	Current    string
 	Specs      []*specDoc
+	Inventory  *inventory.Summary
+	Letters    []*invLetter
 }
 
 func (b *builder) writeHome() error {
-	d := homeData{Kinds: b.kindCounts(), Total: len(b.order), Groups: b.mscGroups(), Milestones: b.opt.Milestones, Current: b.opt.Current, Specs: b.specs}
+	d := homeData{Kinds: b.kindCounts(), Total: len(b.order), Groups: b.mscGroups(), Milestones: b.opt.Milestones, Current: b.opt.Current, Specs: b.specs, Letters: b.invLetters}
+	if b.invSummary != nil && b.invSummary.Rows > 0 {
+		d.Inventory = b.invSummary
+	}
 	d.Recent = b.order[:min(len(b.order), 12)]
 	p := page{Title: "", Description: "Math 2.0 is a versioned knowledge graph of mathematics for people and for agents.", Section: "home", JSONURL: b.url("api/nodes.json")}
 	return b.writePage("", "home", d, p)

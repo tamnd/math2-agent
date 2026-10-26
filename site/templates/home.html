@@ -7,6 +7,14 @@
   </form>
 </section>
 
+{{with .Inventory}}
+<section class="notice">
+  <h2>The inventory</h2>
+  <p>The <a href="{{url "inventory/"}}">inventory</a> lists {{.Rows}} items of mathematics that external sources present, from {{.Mentions}} mentions. {{.Open}} rows are open: they wait for a node or for a decision. Each row links to the item in its sources. The import workflow adds new rows each week.</p>
+  {{template "invletters" $.Letters}}
+</section>
+{{end}}
+
 {{if eq .Total 0}}
 <div class="notice">
   <p><b>The graph has no nodes yet.</b> The project is at milestone {{.Current}}. The schema, the checks and this site are ready. The seed of about 2,000 nodes arrives in M1. Each merge to <code>main</code> in the content repository rebuilds this site. To add the first node, read <a href="{{url "contribute/"}}">Contribute</a>.</p>
@@ -17,8 +25,8 @@
   <section class="card">
     <h2>Browse by kind</h2>
     <table class="plain">
-      <thead class="sr-only"><tr><th scope="col">Kind</th><th scope="col">Nodes</th><th scope="col">What it is</th></tr></thead>
-      {{range .Kinds}}<tr><th scope="row"><a href="{{.URL}}">{{.Plural}}</a></th><td class="num">{{.Count}}</td><td class="muted">{{.Text}}</td></tr>
+      <thead{{if not .Inventory}} class="sr-only"{{end}}><tr><th scope="col">Kind</th><th scope="col">Nodes</th>{{if .Inventory}}<th scope="col">Inventory</th>{{end}}<th scope="col">What it is</th></tr></thead>
+      {{range .Kinds}}<tr><th scope="row"><a href="{{.URL}}">{{.Plural}}</a></th><td class="num">{{.Count}}</td>{{if $.Inventory}}<td class="num">{{.Rows}}</td>{{end}}<td class="muted">{{.Text}}</td></tr>
       {{end}}
     </table>
   </section>
