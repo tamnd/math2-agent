@@ -48,6 +48,13 @@ type Proposal struct {
 	By         string             `json:"by"`                 // the program that proposed the edge, for example m2/0.2.0 align
 	Embedder   string             `json:"embedder,omitempty"` // the Embedder of the scores
 	Records    string             `json:"records"`            // the hash of the records file of the source
+	Why        string             `json:"why,omitempty"`      // the reason that an agent gives for a duplicate, with the map between the two statements
+}
+
+// NewDuplicate returns the proposal that the nodes a and b can be the same node. The node of the proposal is the smaller of the two ids, and the target is the larger. The caller sets the other fields. An agent proposal has no score and no centrality.
+func NewDuplicate(a, b string) Proposal {
+	a, b = min(a, b), max(a, b)
+	return Proposal{ID: proposalID(a, Duplicate, "math2", b), Node: a, Edge: Duplicate, System: "math2", Target: b}
 }
 
 // proposalID returns the ID of a proposal.
@@ -91,6 +98,15 @@ func readFile(path string) ([]Proposal, error) {
 	if err != nil {
 		return nil, err
 	}
+	ps, err := ParseQueue(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s:%w", path, err)
+	}
+	return ps, nil
+}
+
+// ParseQueue returns the proposals of the text of a queue file, in the order of the lines. An error gives the number of the line.
+func ParseQueue(data []byte) ([]Proposal, error) {
 	var out []Proposal
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	sc.Buffer(nil, 1<<20)
@@ -100,11 +116,28 @@ func readFile(path string) ([]Proposal, error) {
 		}
 		var p Proposal
 		if err := json.Unmarshal(sc.Bytes(), &p); err != nil {
-			return nil, fmt.Errorf("%s:%d: %w", path, n, err)
+			return nil, fmt.Errorf("%d: %w", n, err)
 		}
 		out = append(out, p)
 	}
 	return out, sc.Err()
+}
+
+// FormatQueue returns the text of a queue file with the proposals in the order of the work: the most central first, then the highest scores. It sorts ps.
+func FormatQueue(ps []Proposal) ([]byte, error) {
+	slices.SortFunc(ps, func(a, b Proposal) int {
+		return cmp.Or(cmp.Compare(b.Centrality, a.Centrality), cmp.Compare(b.Score, a.Score),
+			cmp.Compare(a.Node, b.Node), cmp.Compare(a.Edge, b.Edge), cmp.Compare(a.Target, b.Target))
+	})
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	for _, p := range ps {
+		if err := enc.Encode(p); err != nil {
+			return nil, err
+		}
+	}
+	return buf.Bytes(), nil
 }
 
 // writeFile writes the proposals to a queue file in the order of the work. It removes the file when there are no proposals.
@@ -116,22 +149,14 @@ func writeFile(path string, ps []Proposal) error {
 		}
 		return err
 	}
-	slices.SortFunc(ps, func(a, b Proposal) int {
-		return cmp.Or(cmp.Compare(b.Centrality, a.Centrality), cmp.Compare(b.Score, a.Score),
-			cmp.Compare(a.Node, b.Node), cmp.Compare(a.Edge, b.Edge), cmp.Compare(a.Target, b.Target))
-	})
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	for _, p := range ps {
-		if err := enc.Encode(p); err != nil {
-			return err
-		}
+	data, err := FormatQueue(ps)
+	if err != nil {
+		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- the queue is part of the working tree, which others read.
 		return err
 	}
-	return os.WriteFile(path, buf.Bytes(), 0o644) // #nosec G306 -- the queue is part of the working tree, which others read.
+	return os.WriteFile(path, data, 0o644) // #nosec G306 -- the queue is part of the working tree, which others read.
 }
 
 // remove takes the proposal with the id out of its queue file.

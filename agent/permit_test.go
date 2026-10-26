@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tamnd/math2-agent/agent"
+	"github.com/tamnd/math2-agent/align"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
@@ -37,6 +38,17 @@ func TestPermit(t *testing.T) {
 	example := strings.Replace(lemma, "kind: statement", "kind: example", 1)
 	explained := target + "\n## Explanations\n\n### L2 agent\n\nThe order of a [[subgroup|G5S1M9]] is a whole number that divides the order of the group.\n"
 	human := target + "\n## Explanations\n\n### L2 human\n\nThe cosets of a subgroup have the same size.\n"
+	concept := "---\ntag: ~1a2b3c4d\nkind: concept\nname: Coset\n---\n\n## Summary\n\nA coset of a subgroup.\n"
+	queue := `{"id":"aaaaaaaaaaaa","node":"3C53TD","edge":"duplicate","system":"math2","target":"G5S1M9","source":"oeis","score":0.9,"centrality":3,"proposed":"2026-10-01","by":"m2/0.2.0 align","records":"-"}` + "\n"
+	same := func(a, b, by string) string {
+		p := align.NewDuplicate(a, b)
+		p.By, p.Proposed, p.Why = by, "2026-10-26", "The two nodes state the same theorem."
+		data, err := align.FormatQueue([]align.Proposal{p})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
 	imported := strings.Replace(root, "public import Math2.Meta.Attr\n", "public import Math2.Meta.Attr\npublic import Math2.Algebra.Lagrange\n", 1)
 	for _, tc := range []struct {
 		name, role string
@@ -86,6 +98,25 @@ func TestPermit(t *testing.T) {
 		{"explain explains another node", "explain", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(explained, "3C53TD", "AA0001", 1))}, "not the target"},
 		{"explain writes Lean", "explain", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", New: []byte("module\n")}, "writes no Lean"},
 		{"explain imports", "explain", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(imported)}, "writes no Lean"},
+		{"curate adds a statement", "curate", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(lemma)}, ""},
+		{"curate adds a concept", "curate", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(concept)}, ""},
+		{"curate adds an example", "curate", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(example)}, "of the kind example"},
+		{"curate binds a new node", "curate", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(strings.Replace(lemma, "---\n\n", "formal: []\n---\n\n", 1))}, "no field formal"},
+		{"curate aligns a new node", "curate", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(strings.Replace(lemma, "---\n\n", "same_as: {wikidata: Q2}\n---\n\n", 1))}, "no field same_as"},
+		{"curate explains a new node", "curate", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(lemma + "\n## Explanations\n\n### L2 agent\n\nMore.\n")}, "writes no explanations"},
+		{"curate renames", "curate", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "name: Lagrange's", "name: The", 1))}, ""},
+		{"curate changes the msc", "curate", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "msc: [20D60]", "msc: [20D60, 20E07]\nuses: [G5S1M9]\naliases: [lagrange]", 1))}, ""},
+		{"curate curates another node", "curate", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(target, "3C53TD\n", "AA0001\naliases: [lagrange]\n", 1))}, ""},
+		{"curate changes the body", "curate", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "finite group divides", "group divides", 1))}, "does not change the body"},
+		{"curate changes a binding", "curate", workspace.Change{Path: path, Old: []byte(target), New: []byte(rebind)}, "the field formal"},
+		{"curate writes Lean", "curate", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", New: []byte("module\n")}, "writes no Lean"},
+		{"curate proposes", "curate", workspace.Change{Path: "queues/dedup.jsonl", New: []byte(same("G5S1M9", "3C53TD", "m2-agent/curate@0.1.0"))}, ""},
+		{"curate adds a proposal", "curate", workspace.Change{Path: "queues/dedup.jsonl", Old: []byte(queue), New: []byte(queue + same("AA0001", "3C53TD", "m2-agent/curate@0.1.0"))}, ""},
+		{"curate removes a proposal", "curate", workspace.Change{Path: "queues/dedup.jsonl", Old: []byte(queue), New: []byte(same("AA0001", "3C53TD", "m2-agent/curate@0.1.0"))}, "does not change or remove the proposal aaaaaaaaaaaa"},
+		{"curate proposes as align", "curate", workspace.Change{Path: "queues/dedup.jsonl", New: []byte(same("G5S1M9", "3C53TD", "m2/0.2.0 align"))}, "adds only its own proposals"},
+		{"curate proposes a node with itself", "curate", workspace.Change{Path: "queues/dedup.jsonl", New: []byte(same("G5S1M9", "G5S1M9", "m2-agent/curate@0.1.0"))}, "does not name two nodes"},
+		{"curate forges an id", "curate", workspace.Change{Path: "queues/dedup.jsonl", New: []byte(strings.Replace(same("G5S1M9", "3C53TD", "m2-agent/curate@0.1.0"), `"edge":"duplicate"`, `"edge":"same_as"`, 1))}, "is not a duplicate proposal"},
+		{"curate writes the align queue", "curate", workspace.Change{Path: "queues/align/oeis.jsonl", New: []byte(queue)}, "does not write this file"},
 		{"an option", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(root + "set_option maxHeartbeats 0\n")}, "does more than add imports"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -98,7 +129,7 @@ func TestPermit(t *testing.T) {
 			}
 		})
 	}
-	if err := agent.Permit("curate", "3C53TD", nil); err == nil {
-		t.Error("curate has no permission set yet, and Permit gave no error")
+	if err := agent.Permit("align", "3C53TD", nil); err == nil {
+		t.Error("align has no permission set yet, and Permit gave no error")
 	}
 }

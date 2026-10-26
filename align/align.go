@@ -136,11 +136,10 @@ func Propose(root, source string, opt Options) (*Result, error) {
 		if decided[[3]string{a, "math2", b}] {
 			return
 		}
-		res.Duplicates = append(res.Duplicates, Proposal{
-			ID: proposalID(a, Duplicate, "math2", b), Node: a, Edge: Duplicate, System: "math2", Target: b,
-			Source: source, Score: score, Centrality: len(g.Dependents(a)) + len(g.Dependents(b)),
-			Proposed: opt.Date, By: opt.By, Embedder: opt.Embedder.Name(), Records: hash,
-		})
+		d := NewDuplicate(a, b)
+		d.Source, d.Score, d.Centrality = source, score, len(g.Dependents(a))+len(g.Dependents(b))
+		d.Proposed, d.By, d.Embedder, d.Records = opt.Date, opt.By, opt.Embedder.Name(), hash
+		res.Duplicates = append(res.Duplicates, d)
 	}
 
 	for _, n := range live {
