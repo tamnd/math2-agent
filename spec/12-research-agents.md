@@ -29,6 +29,8 @@ Each role has a bot account, a tool profile and a **field permission set**. Rule
 
 No role may write a status, a review, a register entry or a retirement (rules `S03`, `X04`, `V03`). An agent can give the reasons to retire a node, but only a curator can retire it.
 
+A run writes only in its own work tree, through the `workspace` package. Its tools read and write files by their paths in the tree, and they cannot reach a file outside it. `agent.Permit` checks the changes of the run against the set of its role before the run opens a pull request. The sets of formalize and prove are written. The sets of the other roles come with their roles, and rule `X01` (#61) will use the same check.
+
 ## 12.2 The common loop
 
 All roles run the same loop. Only the tools, the prompts and the stop condition are different.
