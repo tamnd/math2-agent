@@ -68,6 +68,8 @@ The suites of explain and curate are in `bench/agents/explain` and `bench/agents
 
 The suite of review-assist is in `bench/agents/reviewassist`, and it needs no Lean. Its items are bindings with known verdicts, as the table says. The scripted model writes the packet with the reference concern of each item, and some wrong packets that the goal or the tool must refuse. A live run gives the recall of the critic on the not-faithful items, the concerns on the faithful items, and the length of the packets.
 
+The suite of align is in `bench/agents/align`, and it needs no Lean. Its items are crosswalk edges and Mathlib bindings with a known reference. The scripted model makes the reference change and some wrong changes, and the scripted judge gives the verdicts of the items. Thus the suite checks the mechanical parts of the goal: the edges that a source allows, the decisions of the register and the type hash of a Mathlib binding. A live run gives the precision and the recall of the edges, as 17.3.3 says, and it grades the judge alone against the verdicts of the items.
+
 Every role suite has three splits. **Public** items can be anywhere. **Held-out** items are never published. They are in a private repository that the tools of the agents cannot reach. **Fresh** items were made after the training cutoff of the model. Fresh items come from new Mathlib declarations, new formal-conjectures statements, new arXiv results with formal statements, and items that the maintainers write. Each model version is compared on all three splits. If public scores are much higher than fresh scores, the report gives the difference as a contamination signal.
 
 ### 17.3.5 Explanations

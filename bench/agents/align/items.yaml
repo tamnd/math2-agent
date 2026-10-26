@@ -1,0 +1,57 @@
+# The public items of the suite of the align role (spec 17.3.4). The records are made up for the suite: the ids of Wikidata and arXiv name no real item or paper, and the type hashes are not real hashes. The texts are in our own words.
+#
+# Each item is a target node of tree/ and its reference change: a proposal of an edge to a record, or a Mathlib binding (the edge mathlib). A wrong attempt has the verdict that the judge must give it, or the reason that the role must give with no judge.
+records:
+  wikidata:
+    - {id: Q90001, title: Lagrange's theorem, text: "The theorem of group theory that the order of each subgroup of a finite group divides the order of the group."}
+    - {id: Q90002, title: coset decomposition, text: "The result that the left cosets of a subgroup split a group into disjoint sets of the same size."}
+    - {id: Q90003, title: index of a subgroup, text: "The number of left cosets of a subgroup in a group."}
+    - {id: Q90004, title: Fermat's little theorem, text: "The theorem that a^p - a is a multiple of p for each integer a and each prime p."}
+    - {id: Q90011, title: Euclid's theorem, text: "The theorem that the set of the prime numbers is infinite."}
+    - {id: Q90012, title: twin prime conjecture, text: "The open conjecture that infinitely many primes p have p + 2 prime too."}
+    - {id: Q90013, title: Bertrand's postulate, text: "The theorem that for each integer n greater than 1 there is a prime between n and 2n."}
+  arxiv:
+    - {id: "2401.90001", title: A short proof that subgroup orders divide group orders, text: "We give a counting proof that the order of a subgroup of a finite group divides the order of the group."}
+    - {id: "2401.90002", title: Prime gaps in arithmetic progressions, text: "We bound the gaps between consecutive primes in an arithmetic progression."}
+  mathlib:
+    - {id: Subgroup.card_subgroup_dvd_card, locator: Mathlib.Algebra.Group.Subgroup.Finite, type_hash: "bench:lagrange"}
+    - {id: Subgroup.index_mul_card, locator: Mathlib.GroupTheory.Index, type_hash: "bench:index"}
+math2:
+  Math2.Algebra.lagrange: "bench:lagrange"
+  Math2.NumberTheory.infinite_primes: "bench:primes"
+rejected:
+  - {target: 3C53TD, edge: same_as, ref: "wikidata:Q90003"}
+items:
+  - target: 3C53TD
+    edge: same_as
+    ref: "wikidata:Q90001"
+    verdict: same
+    wrong:
+      - {name: the cosets, edge: same_as, ref: "wikidata:Q90002", verdict: related}
+      - {name: another theorem, edge: close_to, ref: "wikidata:Q90004", verdict: different}
+      - {name: a rejected edge, edge: same_as, ref: "wikidata:Q90003", why: "Do not propose it again"}
+  - target: 3C53TD
+    edge: aligned
+    ref: "arxiv:2401.90001"
+    verdict: same
+    wrong:
+      - {name: the wrong paper, edge: aligned, ref: "arxiv:2401.90002", verdict: different}
+  - target: 3C53TD
+    edge: mathlib
+    ref: "mathlib:Subgroup.card_subgroup_dvd_card"
+    match: exact
+    wrong:
+      - {name: another type, edge: mathlib, ref: "mathlib:Subgroup.index_mul_card", match: exact, why: "no Math2 binding of 3C53TD has it"}
+      - {name: another match, edge: mathlib, ref: "mathlib:Subgroup.card_subgroup_dvd_card", match: weaker, why: "thus its match is exact"}
+  - target: Q4E7NW
+    edge: same_as
+    ref: "wikidata:Q90011"
+    verdict: same
+    wrong:
+      - {name: the twin primes, edge: same_as, ref: "wikidata:Q90012", verdict: related}
+  - target: Q4E7NW
+    edge: close_to
+    ref: "wikidata:Q90013"
+    verdict: specializes
+    wrong:
+      - {name: same as a stronger theorem, edge: same_as, ref: "wikidata:Q90013", verdict: specializes}
