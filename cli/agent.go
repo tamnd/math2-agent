@@ -86,8 +86,11 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "report" {
 		return runAgentReport(args[1:], stdout, stderr)
 	}
+	if len(args) > 0 && args[0] == "dataset" {
+		return runAgentDataset(args[1:], stdout, stderr)
+	}
 	if len(args) == 0 || args[0] != "run" {
-		fmt.Fprintf(stderr, "Usage: %s\n       %s\n", agentUsage, agentReportUsage)
+		fmt.Fprintf(stderr, "Usage: %s\n       %s\n       %s\n", agentUsage, agentReportUsage, agentDatasetUsage)
 		return ExitUsage
 	}
 	flags := flag.NewFlagSet("m2 agent run", flag.ContinueOnError)
