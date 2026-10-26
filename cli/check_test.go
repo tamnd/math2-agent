@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,6 +17,37 @@ func TestCheckValidTree(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "nothing failed") {
 		t.Errorf("stderr has no summary:\n%s", stderr)
+	}
+}
+
+func TestCheckProjects(t *testing.T) {
+	root := t.TempDir()
+	if err := os.CopyFS(root, os.DirFS(validRoot)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "projects"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(text string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(root, "projects", "groups.yaml"), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const valid = "name: Groups\ngoal: Prove the members of the topic.\ntopic: ZZZJE6\nbudget: 1\nmembers:\n  - {id: github:octocat, role: owner}\n"
+	write(valid)
+	if code, _, stderr := run("check", "-root", root, "-q"); code != ExitOK {
+		t.Fatalf("a valid project gives the exit code %d: %s", code, stderr)
+	}
+	for _, c := range []struct{ text, want string }{
+		{strings.Replace(valid, "owner", "member", 1), "has no owner"},
+		{strings.Replace(valid, "ZZZJE6", "Q529ES", 1), "the topic Q529ES is not a topic node"},
+		{valid + "color: red\n", "field color not found"},
+	} {
+		write(c.text)
+		if code, _, stderr := run("check", "-root", root, "-q"); code != ExitFailure || !strings.Contains(stderr, c.want) {
+			t.Errorf("the exit code is %d and stderr is %q, want %q", code, stderr, c.want)
+		}
 	}
 }
 

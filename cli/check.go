@@ -13,6 +13,7 @@ import (
 
 	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/project"
 	"github.com/tamnd/math2-agent/schema"
 )
 
@@ -64,6 +65,12 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	rep := c.Check(files, ix)
+	if fs.NArg() == 0 && *only == "" {
+		if err := checkProjects(*root, files); err != nil {
+			fmt.Fprintf(stderr, "m2 check: %v\n", err)
+			return ExitFailure
+		}
+	}
 	if *asJSON {
 		enc := json.NewEncoder(stdout)
 		enc.SetIndent("", "  ")
@@ -83,6 +90,26 @@ func runCheck(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	return ExitOK
+}
+
+// checkProjects reads the projects of the tree, and reports the first project that is not valid or whose topic is not a topic node of the files.
+func checkProjects(root string, files []check.File) error {
+	ps, err := project.Read(root)
+	if err != nil || len(ps) == 0 {
+		return err
+	}
+	topics := map[string]bool{}
+	for _, f := range files {
+		if n, err := node.Parse(f.Path, f.Data); err == nil && n.Kind() == "topic" {
+			topics[n.ID] = true
+		}
+	}
+	for _, p := range ps {
+		if !topics[p.Topic] {
+			return fmt.Errorf("project %s: the topic %s is not a topic node of the tree", p.ID, p.Topic)
+		}
+	}
+	return nil
 }
 
 // readPaths reads the node files at paths. A directory gives each .md file below it. The path of each file is relative to root when the file is in root.
