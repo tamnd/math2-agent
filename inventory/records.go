@@ -34,6 +34,8 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 			switch {
 			case k == "msc":
 				m.MSC = append(m.MSC, split(v)...)
+			case k == "instance_of":
+				m.Types = split(v)
 			case crosswalk.Known(k) || src.ID == "wikidata":
 				if m.Same == nil {
 					m.Same = map[string][]string{}
@@ -51,9 +53,15 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 func kindOf(source string, r *ingest.Record) string {
 	switch source {
 	case "wikidata":
-		switch pw := r.Meta["proofwiki"]; {
-		case r.Meta["msc"] != "":
+		if r.Meta["msc"] != "" {
 			return "topic"
+		}
+		for _, q := range split(r.Meta["instance_of"]) {
+			if k := classKinds[q]; k != "" {
+				return k
+			}
+		}
+		switch pw := r.Meta["proofwiki"]; {
 		case strings.HasPrefix(pw, "Definition:"):
 			return "definition"
 		case strings.HasPrefix(pw, "Axiom:"):
@@ -71,6 +79,20 @@ func kindOf(source string, r *ingest.Record) string {
 		return "conjecture"
 	}
 	return Unknown
+}
+
+// classKinds gives the kind of a Wikidata item from its class (P31). The classes are in the list of the Wikidata adapter.
+var classKinds = map[string]string{
+	"Q24034552": "concept",    // mathematical concept
+	"Q65943":    "statement",  // theorem
+	"Q207505":   "statement",  // lemma
+	"Q319141":   "conjecture", // conjecture
+	"Q1166625":  "problem",    // mathematical problem
+	"Q1936384":  "topic",      // branch of mathematics
+	"Q20026918": "topic",      // mathematical theory
+	"Q186509":   "object",     // mathematical constant
+	"Q172937":   "object",     // polyhedron
+	"Q2297602":  "object",     // integer sequence
 }
 
 // split splits the values of a meta field, which ingest joins with "|".

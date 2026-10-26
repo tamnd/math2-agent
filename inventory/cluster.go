@@ -152,6 +152,7 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 			res.Touched++
 		}
 		derive(keep, byID)
+		applyRules(keep, byID, opt.By)
 	}
 	sortRows(rows)
 	slices.Sort(res.Added)

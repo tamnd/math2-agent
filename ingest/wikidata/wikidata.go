@@ -15,6 +15,8 @@
 //
 // The last column is the key of the id in the meta of the record. When an item has more than one id in a system, the meta has the ids in order, with "|" between them. The data of Wikidata is under CC0.
 //
+// For each property, a second query asks for the classes of the items (P31, instance of) that are in the list Classes. The meta key instance_of has them. The inventory reads the kind of an item from them, and its rules find the people, the works and the places.
+//
 // The adapter does not ask for the items with a defining formula (P2534). There are more than 100,000 of them, most are single numbers such as large primes, and the query does not end in the 60 seconds that the service gives it.
 //
 // The m2 command imports this package for its side effect:
@@ -30,6 +32,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"slices"
 	"strings"
@@ -60,6 +63,31 @@ var properties = []property{
 	{"P14106", "erdos"},
 }
 
+// Classes are the classes of P31 that the adapter keeps, with their English labels. The list has the most common classes of the items of the crosswalk on 2026-10-26 that tell the kind of an item, or that tell that it is not an item of mathematics.
+var Classes = map[string]string{
+	"Q5":        "human",
+	"Q24034552": "mathematical concept",
+	"Q65943":    "theorem",
+	"Q207505":   "lemma",
+	"Q319141":   "conjecture",
+	"Q1166625":  "mathematical problem",
+	"Q1936384":  "branch of mathematics",
+	"Q20026918": "mathematical theory",
+	"Q186509":   "mathematical constant",
+	"Q172937":   "polyhedron",
+	"Q2297602":  "integer sequence",
+	"Q8366":     "algorithm",
+	"Q483372":   "paradox",
+	"Q47461344": "written work",
+	"Q7725634":  "literary work",
+	"Q5633421":  "scientific journal",
+	"Q6256":     "country",
+	"Q3624078":  "sovereign state",
+}
+
+// classProperty is the property of Wikidata for the class of an item.
+const classProperty = "P31"
+
 // Adapter is the adapter of Wikidata.
 type Adapter struct{}
 
@@ -78,7 +106,7 @@ func (Adapter) Source() ingest.Source {
 }
 
 // Version returns the version of the adapter.
-func (Adapter) Version() string { return "wikidata/1" }
+func (Adapter) Version() string { return "wikidata/2" }
 
 // Dump returns the SPARQL service of Wikidata.
 func (Adapter) Dump() string { return Endpoint }
@@ -96,6 +124,16 @@ func query(p string) string {
 	return `SELECT ?item ?label ?value WHERE { ?item wdt:` + p + ` ?value . OPTIONAL { ?item rdfs:label ?label FILTER(LANG(?label) = "en") } }`
 }
 
+// classQuery returns the SPARQL query of the classes in Classes of the items with the property p.
+func classQuery(p string) string {
+	var vs []string
+	for _, q := range slices.Sorted(maps.Keys(Classes)) {
+		vs = append(vs, "wd:"+q)
+	}
+	// A filter and not VALUES, so that the service starts from the items of p and not from the classes. Q5 alone has millions of items.
+	return `SELECT ?item ?value WHERE { ?item wdt:` + p + ` [] . ?item wdt:` + classProperty + ` ?class . FILTER(?class IN (` + strings.Join(vs, ", ") + `)) BIND(STRAFTER(STR(?class), "entity/") AS ?value) }`
+}
+
 // Fetch asks the SPARQL service at req.URL one query for each property of the crosswalk. The snapshot is one JSON line for each answer, compressed with gzip. The lines of each query are in order, thus two fetches of the same data give the same bytes.
 func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) error {
 	zw := gzip.NewWriter(w)
@@ -103,13 +141,15 @@ func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) erro
 	enc := json.NewEncoder(bw)
 	enc.SetEscapeHTML(false)
 	for _, p := range properties {
-		rows, err := ask(ctx, req.Get, req.URL, p.id)
-		if err != nil {
-			return fmt.Errorf("%s: %w", p.id, err)
-		}
-		for _, r := range rows {
-			if err := enc.Encode(r); err != nil {
-				return err
+		for _, q := range []struct{ p, query string }{{p.id, query(p.id)}, {classProperty, classQuery(p.id)}} {
+			rows, err := ask(ctx, req.Get, req.URL, q.p, q.query)
+			if err != nil {
+				return fmt.Errorf("%s: %w", p.id, err)
+			}
+			for _, r := range rows {
+				if err := enc.Encode(r); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -119,9 +159,9 @@ func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) erro
 	return zw.Close()
 }
 
-// ask runs the query of the property p and returns the rows in order.
-func ask(ctx context.Context, get ingest.Getter, endpoint, p string) ([]row, error) {
-	body, err := get(ctx, endpoint+"?format=json&query="+url.QueryEscape(query(p)))
+// ask runs a query and returns its rows in order. The field P of each row is p.
+func ask(ctx context.Context, get ingest.Getter, endpoint, p, q string) ([]row, error) {
+	body, err := get(ctx, endpoint+"?format=json&query="+url.QueryEscape(q))
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +242,9 @@ func (Adapter) Read(r io.Reader, emit func(ingest.Record) error) error {
 			it.label = rw.Label
 		}
 		key, ok := keys[rw.P]
+		if rw.P == classProperty {
+			key, ok = "instance_of", Classes[rw.Value] != ""
+		}
 		if !ok {
 			return fmt.Errorf("line %d: the property %s is not in the crosswalk", n, rw.P)
 		}

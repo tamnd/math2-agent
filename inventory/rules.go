@@ -1,6 +1,9 @@
 package inventory
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // Rule is a decision that a curator approved once and that applies to many rows (corpus spec K4.4). Each outcome that a rule gives names the rule. The file schema/outcomes.v1.yaml of the math2 tree lists the rules, and rule I04 checks that each rule that a row names is in it.
 type Rule struct {
@@ -14,26 +17,38 @@ type Rule struct {
 func Rules() []Rule { return rules }
 
 var rules = []Rule{
-	{ID: "person", Outcome: OutcomeOutOfScope, Reason: "a person, not an item of mathematics", match: allProofWiki("Mathematician:")},
-	{ID: "book", Outcome: OutcomeOutOfScope, Reason: "a book, not an item of mathematics", match: allProofWiki("Book:")},
-	{ID: "symbol", Outcome: OutcomeOutOfScope, Reason: "a notation: the notation register holds it (corpus spec K10.4)", match: allProofWiki("Symbols:")},
+	{ID: "person", Outcome: OutcomeOutOfScope, Reason: "a person, not an item of mathematics", match: each(proofWiki("Mathematician:"), wikidataClass("Q5"))},
+	{ID: "book", Outcome: OutcomeOutOfScope, Reason: "a book or a journal, not an item of mathematics", match: each(proofWiki("Book:"), wikidataClass("Q47461344", "Q7725634", "Q5633421"))},
+	{ID: "symbol", Outcome: OutcomeOutOfScope, Reason: "a notation: the notation register holds it (corpus spec K10.4)", match: each(proofWiki("Symbols:"))},
+	{ID: "place", Outcome: OutcomeOutOfScope, Reason: "a country, not an item of mathematics", match: each(wikidataClass("Q6256", "Q3624078"))},
 }
 
-// allProofWiki matches a row when each of its mentions names a ProofWiki page in the namespace, and no mention is of another kind of page.
-func allProofWiki(ns string) func(ms []*Mention) bool {
+// each matches a row when each of its mentions passes one of the tests.
+func each(tests ...func(m *Mention) bool) func(ms []*Mention) bool {
 	return func(ms []*Mention) bool {
 		for _, m := range ms {
-			ok := false
-			for _, p := range m.Same["proofwiki"] {
-				if strings.HasPrefix(p, ns) {
-					ok = true
-				}
-			}
-			if !ok {
+			if !slices.ContainsFunc(tests, func(t func(*Mention) bool) bool { return t(m) }) {
 				return false
 			}
 		}
 		return len(ms) > 0
+	}
+}
+
+// proofWiki reports whether a mention names a ProofWiki page in the namespace ns.
+func proofWiki(ns string) func(m *Mention) bool {
+	return func(m *Mention) bool {
+		return slices.ContainsFunc(m.Same["proofwiki"], func(p string) bool { return strings.HasPrefix(p, ns) })
+	}
+}
+
+// wikidataClass reports whether a mention is a Wikidata item of one of the classes, and of no class that gives a kind.
+func wikidataClass(classes ...string) func(m *Mention) bool {
+	return func(m *Mention) bool {
+		if m.Source != "wikidata" || slices.ContainsFunc(m.Types, func(q string) bool { return classKinds[q] != "" }) {
+			return false
+		}
+		return slices.ContainsFunc(m.Types, func(q string) bool { return slices.Contains(classes, q) })
 	}
 }
 
