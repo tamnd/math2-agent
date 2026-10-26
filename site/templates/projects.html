@@ -56,6 +56,12 @@
   <p>An owner sets the goal and the budget. A member can request agent work for the project.</p>
   <ul>{{range .Members}}<li>{{if .Who.URL}}<a href="{{.Who.URL}}">{{.Who.Text}}</a>{{else}}{{.Who.Text}}{{end}} <span class="muted">{{.ID}}, {{.Role}}</span></li>{{end}}</ul>
 </section>
+<section aria-labelledby="pubs-h">
+  <h2 id="pubs-h">Publications</h2>
+  <p>The works in which the people of the project published what they did in it.</p>
+  {{with .Publications}}<ul>{{range .}}<li><a href="{{.Link}}">{{.Title}}</a>{{with .Year}} ({{.}}){{end}}{{with .DOI}} <span class="muted">doi:{{.}}</span>{{end}}</li>{{end}}</ul>
+  {{else}}<p class="muted">None yet. An owner adds each one to <code>publications</code> in the project file.</p>{{end}}
+</section>
 <section aria-labelledby="spend-h">
   <h2 id="spend-h">Spend</h2>
   {{if not .HasRuns}}<p class="notice">This copy of the site has no run records, so it gives no spend and no run log.</p>

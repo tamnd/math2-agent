@@ -148,20 +148,21 @@ func (b *builder) projectOf(p *project.Project, f frontier, recs []*agent.Record
 
 // projectJSON is the agent view of a project.
 type projectJSON struct {
-	ID         string           `json:"id"`
-	Name       string           `json:"name"`
-	Goal       string           `json:"goal"`
-	Topic      string           `json:"topic"`
-	Level      string           `json:"level,omitempty"`
-	Budget     float64          `json:"budget"`
-	Roles      []string         `json:"roles"`
-	Members    []project.Person `json:"members"`
-	OnBehalfOf string           `json:"on_behalf_of"`
-	Blueprint  []string         `json:"blueprint"`
-	Tasks      []jsonTask       `json:"tasks"`
-	Months     []monthItem      `json:"months"`
-	URL        string           `json:"url"`
-	Source     string           `json:"source"`
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	Goal         string                `json:"goal"`
+	Topic        string                `json:"topic"`
+	Level        string                `json:"level,omitempty"`
+	Budget       float64               `json:"budget"`
+	Roles        []string              `json:"roles"`
+	Members      []project.Person      `json:"members"`
+	OnBehalfOf   string                `json:"on_behalf_of"`
+	Blueprint    []string              `json:"blueprint"`
+	Tasks        []jsonTask            `json:"tasks"`
+	Months       []monthItem           `json:"months"`
+	Publications []project.Publication `json:"publications"`
+	URL          string                `json:"url"`
+	Source       string                `json:"source"`
 }
 
 type jsonTask struct {
@@ -177,6 +178,9 @@ func (b *builder) projectJSON(v *projectView) projectJSON {
 	}
 	if j.Roles == nil {
 		j.Roles = []string{}
+	}
+	if j.Publications = v.Publications; j.Publications == nil {
+		j.Publications = []project.Publication{}
 	}
 	if j.Months == nil {
 		j.Months = []monthItem{}
