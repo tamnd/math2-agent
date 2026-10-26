@@ -38,7 +38,7 @@ Curators cannot curate a graph of all mathematics if they approve PRs one at a t
 
 - **dedup queue:** candidate `same` pairs (05.4), ranked by how much of the graph the merge would connect;
 - **alignment queue:** agent-proposed `same_as` edges, grouped by external system and ranked by centrality;
-- **fidelity queue:** bindings at F1 that wait for a human review, ranked by `unlock` (11.4). A review of a statement that 300 nodes depend on is worth more than a review of a leaf;
+- **fidelity queue:** bindings at F1 that wait for a human review, ranked by `unlock` (11.4). A review of a statement that 300 nodes depend on is worth more than a review of a leaf. `m2 review queue` lists it;
 - **extraction queue:** paper results that the extractor could not align, sampled by topic;
 - **retirement queue:** nodes flagged by graph health rules (orphans, hubs that are too small, conflicting `same_as`).
 
