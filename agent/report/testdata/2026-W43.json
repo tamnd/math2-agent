@@ -75,6 +75,19 @@
       "usd": 1.5
     }
   ],
+  "shadows": [
+    {
+      "role": "prove",
+      "candidate": "m2-agent/prove@1.0.0",
+      "jobs": 1,
+      "runs": 1,
+      "succeeded": 1,
+      "usd": 0.3,
+      "main_runs": 1,
+      "main_succeeded": 1,
+      "main_usd": 0.4
+    }
+  ],
   "incidents": {
     "quarantines": [
       {

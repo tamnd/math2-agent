@@ -278,3 +278,61 @@ func TestReadConfig(t *testing.T) {
 		}
 	}
 }
+
+func TestShadow(t *testing.T) {
+	f := &fake{plays: map[string]string{"7K3QX2 1": "success the goal holds"}, spend: 0.25}
+	sf := &fake{plays: map[string]string{"7K3QX2 0": "success the goal holds", "7K3QX2 1": "error"}, spend: 0.5}
+	shadow := func(ctx context.Context, job *agent.Job, rung int) (*agent.Record, error) {
+		rec, err := sf.dispatch(ctx, job, rung)
+		if rec != nil {
+			rec.ID, rec.Shadow = rec.ID+"0000", true
+		}
+		return rec, err
+	}
+	c := config()
+	c.OnBehalfOf = map[string]float64{"project:p": 5}
+	o := orchestrator.New(c, []*agent.Role{role()}, f.dispatch, nil, clock)
+	o.Shadow("prove", shadow)
+	if _, err := o.Add(job("a1", "7K3QX2", "project:p")); err != nil {
+		t.Fatal(err)
+	}
+	rep := o.Drain(context.Background())
+	if got := strings.Join(f.calls, ", "); got != "7K3QX2 0 $4.00, 7K3QX2 1 $3.00" {
+		t.Errorf("the runs are %s", got)
+	}
+	if got := strings.Join(sf.calls, ", "); got != "7K3QX2 0 $4.00, 7K3QX2 1 $3.00" {
+		t.Errorf("the shadow runs are %s", got)
+	}
+	if len(rep.Runs) != 3 || !rep.Runs[1].Shadow || rep.Runs[1].Budget != 4 || len(rep.Done) != 1 || rep.Done[0].Outcome != agent.Success {
+		t.Errorf("the report is %+v", rep)
+	}
+	if len(rep.Shadows) != 1 || !strings.Contains(rep.Shadows[0], "the work tree cannot be made") {
+		t.Errorf("the shadow errors are %q", rep.Shadows)
+	}
+
+	// The success of the shadow run on rung 0 does not move the ladder, and its spend is not in the cap of the project.
+	f.calls, sf.calls = nil, nil
+	if _, err := o.Add(job("a2", "4F2M9A", "project:p")); err != nil {
+		t.Fatal(err)
+	}
+	o.Drain(context.Background())
+	if got := strings.Join(f.calls, ", "); got != "4F2M9A 1 $3.25, 4F2M9A 2 $2.44" {
+		t.Errorf("the runs are %s", got)
+	}
+}
+
+func TestShadowMoney(t *testing.T) {
+	f := &fake{spend: 1}
+	sf := &fake{spend: 1}
+	c := config()
+	c.Roles["prove"] = 4.02
+	o := orchestrator.New(c, []*agent.Role{role()}, f.dispatch, nil, clock)
+	o.Shadow("prove", sf.dispatch)
+	if _, err := o.Add(job("a1", "7K3QX2", "github:octocat")); err != nil {
+		t.Fatal(err)
+	}
+	rep := o.Drain(context.Background())
+	if len(sf.calls) != 0 || len(rep.Shadows) != 1 || !strings.Contains(rep.Shadows[0], "the money of prove for the month is used up") {
+		t.Errorf("the shadow runs are %q, and the errors are %q", sf.calls, rep.Shadows)
+	}
+}

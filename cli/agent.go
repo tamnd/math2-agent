@@ -205,12 +205,13 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 
 // runSetup is what the runs of m2 agent run and m2 orchestrate share.
 type runSetup struct {
-	root  string // the math2 working tree
-	store string // the directory of the run records
-	svc   *api.Service
-	model llm.Model
-	roles map[string]*agent.Role
-	box   *tools.Box // the sandbox of the Lean programs, or nil
+	root   string // the math2 working tree
+	store  string // the directory of the run records
+	svc    *api.Service
+	model  llm.Model
+	roles  map[string]*agent.Role
+	box    *tools.Box // the sandbox of the Lean programs, or nil
+	shadow bool       // the runs are shadow runs of candidate role versions
 }
 
 // run does one run of the job on the rung in a new work tree at dir, and writes the record of the run to the store. It returns the record, the work tree and its changes. A record with an error is a run that the model service stopped.
@@ -262,6 +263,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 	if rec == nil {
 		return nil, ws, nil, runErr
 	}
+	rec.Shadow = rs.shadow
 	if _, err := agent.WriteRecord(rs.store, rec); err != nil && len(rec.Turns) > 0 {
 		return rec, ws, nil, err
 	}

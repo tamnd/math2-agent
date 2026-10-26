@@ -1,6 +1,6 @@
 // Package report makes the weekly agent report (spec 12.9).
 //
-// The report of an ISO week counts the runs that started in the week: the jobs and the outcomes of each role, the acceptance and the cost of each role and model, the cost of each role in each area of the MSC, and the incidents. A run is accepted when a provenance line on the branch names it, as for rule X03. Thus the counts of acceptance are as of the day that the report is made, and a later report of the same week can count more. [Make] makes the report from the run records and the provenance logs, and [Report.Markdown] writes its text. The JSON form of a [Report] is its twin.
+// The report of an ISO week counts the runs that started in the week: the jobs and the outcomes of each role, the acceptance and the cost of each role and model, the cost of each role in each area of the MSC, and the incidents. A role version in its shadow week has its own table, which compares the candidate with the current version on the same jobs. A run is accepted when a provenance line on the branch names it, as for rule X03. Thus the counts of acceptance are as of the day that the report is made, and a later report of the same week can count more. [Make] makes the report from the run records and the provenance logs, and [Report.Markdown] writes its text. The JSON form of a [Report] is its twin.
 package report
 
 import (
@@ -75,6 +75,7 @@ type Report struct {
 	Roles     []Role    `json:"roles"`
 	Tiers     []Tier    `json:"tiers"`
 	Areas     []Area    `json:"areas"`
+	Shadows   []Shadow  `json:"shadows"`
 	Incidents Incidents `json:"incidents"`
 	Missing   []string  `json:"not_measured"` // the parts of spec 12.9 that the report does not measure yet
 }
@@ -113,6 +114,19 @@ type Area struct {
 	Accepted  int     `json:"accepted"`
 	USD       float64 `json:"usd"`
 	PerOutput float64 `json:"usd_per_accepted,omitempty"`
+}
+
+// Shadow compares a candidate role version in its shadow week with the current version on the same jobs (spec 12.8). The system uses none of the output of a shadow run, thus no shadow run is accepted, and the other tables do not count the shadow runs.
+type Shadow struct {
+	Role          string  `json:"role"`
+	Candidate     string  `json:"candidate"` // the candidate as an agent id, for example m2-agent/prove@1.0.0
+	Jobs          int     `json:"jobs"`      // the jobs with a shadow run in the week
+	Runs          int     `json:"runs"`
+	Succeeded     int     `json:"succeeded"`
+	USD           float64 `json:"usd"`
+	MainRuns      int     `json:"main_runs"` // the runs of the current version on the same jobs in the week
+	MainSucceeded int     `json:"main_succeeded"`
+	MainUSD       float64 `json:"main_usd"`
 }
 
 // Incidents are the events of the week that a person must see.
@@ -162,11 +176,37 @@ func Make(w Week, in Input) *Report {
 	jobs := map[string]map[string]bool{}
 	tiers := map[[2]string]*Tier{}
 	areas := map[[2]string]*Area{}
+	shadows := map[[2]string]*Shadow{}
+	shadowJobs := map[[2]string]map[string]bool{}
+	var main []*agent.Record
 	for _, r := range in.Records {
 		if r.Started.Before(start) || !r.Started.Before(end) {
 			continue
 		}
+		if slices.ContainsFunc(r.Turns, func(t agent.Turn) bool { return strings.Contains(t.Why, prove.Tampered) }) {
+			rep.Incidents.Tampering = append(rep.Incidents.Tampering, r.ID)
+		}
+		if b := r.Budget.USD; b > 0 && r.Spend.USD > b {
+			rep.Incidents.OverBudget = append(rep.Incidents.OverBudget, r.ID)
+		}
 		name := r.Job.Role
+		if r.Shadow {
+			k := [2]string{name, r.Agent}
+			sh := shadows[k]
+			if sh == nil {
+				sh = &Shadow{Role: name, Candidate: r.Agent}
+				shadows[k] = sh
+				shadowJobs[k] = map[string]bool{}
+			}
+			shadowJobs[k][r.Job.ID] = true
+			sh.Runs++
+			if r.Outcome == agent.Success {
+				sh.Succeeded++
+			}
+			sh.USD += r.Spend.USD
+			continue
+		}
+		main = append(main, r)
 		ro := roles[name]
 		if ro == nil {
 			ro = &Role{Role: name}
@@ -212,12 +252,6 @@ func Make(w Week, in Input) *Report {
 			var none int
 			count(&a.Runs, &none, &a.Accepted, &a.USD)
 		}
-		if slices.ContainsFunc(r.Turns, func(t agent.Turn) bool { return strings.Contains(t.Why, prove.Tampered) }) {
-			rep.Incidents.Tampering = append(rep.Incidents.Tampering, r.ID)
-		}
-		if b := r.Budget.USD; b > 0 && r.Spend.USD > b {
-			rep.Incidents.OverBudget = append(rep.Incidents.OverBudget, r.ID)
-		}
 	}
 	prev := map[string]float64{}
 	if in.Prev != nil {
@@ -241,6 +275,21 @@ func Make(w Week, in Input) *Report {
 		a := areas[k]
 		a.PerOutput = per(a.USD, a.Accepted)
 		rep.Areas = append(rep.Areas, *a)
+	}
+	rep.Shadows = []Shadow{}
+	for _, k := range slices.SortedFunc(maps.Keys(shadows), cmpKey) {
+		sh := shadows[k]
+		sh.Jobs = len(shadowJobs[k])
+		for _, r := range main {
+			if r.Job.Role == sh.Role && shadowJobs[k][r.Job.ID] {
+				sh.MainRuns++
+				if r.Outcome == agent.Success {
+					sh.MainSucceeded++
+				}
+				sh.MainUSD += r.Spend.USD
+			}
+		}
+		rep.Shadows = append(rep.Shadows, *sh)
 	}
 	return rep
 }
@@ -310,6 +359,15 @@ func (r *Report) Markdown() []byte {
 			}
 		}
 		b.WriteString("\nA dash means that no run is accepted.\n\n")
+	}
+
+	if len(r.Shadows) > 0 {
+		b.WriteString("## Shadow weeks\n\n")
+		b.WriteString("| Role | Candidate | Jobs | Runs | Succeeded | Spend | Current runs | Current succeeded | Current spend |\n|---|---|---|---|---|---|---|---|---|\n")
+		for _, x := range r.Shadows {
+			fmt.Fprintf(&b, "| %s | %s | %d | %d | %d | $%.2f | %d | %d | $%.2f |\n", x.Role, x.Candidate, x.Jobs, x.Runs, x.Succeeded, x.USD, x.MainRuns, x.MainSucceeded, x.MainUSD)
+		}
+		b.WriteString("\nThe candidate ran the same jobs as the current version, and the system used none of its output. The other tables do not count the shadow runs.\n\n")
 	}
 
 	b.WriteString("## Incidents\n\n")

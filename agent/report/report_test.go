@@ -62,6 +62,8 @@ func record(id, role, target, model, outcome, reason string, at time.Time, usd, 
 
 func input() report.Input {
 	mon := time.Date(2026, 10, 19, 9, 0, 0, 0, time.UTC)
+	shadow := record("r-2026-10-19-0008", "prove", "7K3QX2", "model-a", agent.Success, "the goal holds", mon.Add(30*time.Minute), 0.30, 1)
+	shadow.Job.ID, shadow.Agent, shadow.Shadow = "j-2026-10-19-0001", "m2-agent/prove@1.0.0", true
 	return report.Input{
 		Records: []*agent.Record{
 			record("r-2026-10-19-0001", "prove", "7K3QX2", "model-a", agent.Success, "the goal holds", mon, 0.40, 1),
@@ -69,6 +71,7 @@ func input() report.Input {
 			record("r-2026-10-20-0003", "prove", "4F2M9A", "model-a", agent.Failure, "stuck: false at n = 7", mon.Add(24*time.Hour), 0.20, 1),
 			record("r-2026-10-21-0004", "prove", "4F2M9A", "model-a", agent.Failure, "the run used its turns", mon.Add(48*time.Hour), 1.30, 1, "the goal does not hold", prove.Tampered+": the run changed Math2.X, which the statement uses; put it back as it was"),
 			record("r-2026-10-22-0005", "formalize", "9QW3E8", "model-a", agent.Partial, "the model stopped at the limit of the output tokens", mon.Add(72*time.Hour), 0.50, 2),
+			shadow,
 			// Not in the week.
 			record("r-2026-10-12-0006", "prove", "7K3QX2", "model-a", agent.Success, "the goal holds", mon.Add(-7*24*time.Hour), 9, 10),
 			record("r-2026-10-26-0007", "prove", "7K3QX2", "model-a", agent.Success, "the goal holds", mon.Add(7*24*time.Hour-9*time.Hour), 9, 10),
@@ -117,6 +120,10 @@ func TestMake(t *testing.T) {
 	}
 	if a := rep.Areas; len(a) != 2 || a[0].Area != "11" || a[0].Runs != 2 || a[0].Accepted != 1 || a[1].Area != "20" || a[1].Accepted != 0 {
 		t.Errorf("the areas are %+v", a)
+	}
+	want2 := []report.Shadow{{Role: "prove", Candidate: "m2-agent/prove@1.0.0", Jobs: 1, Runs: 1, Succeeded: 1, USD: 0.3, MainRuns: 1, MainSucceeded: 1, MainUSD: 0.4}}
+	if !slices.Equal(rep.Shadows, want2) {
+		t.Errorf("the shadows are %+v", rep.Shadows)
 	}
 	in := rep.Incidents
 	if len(in.Quarantines) != 1 || in.Quarantines[0].Field != "body.explanations.L1" {
