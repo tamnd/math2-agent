@@ -217,7 +217,7 @@ func TestGraph(t *testing.T) {
 		{"Q4E7NW", "---\ntag: Q4E7NW\nkind: statement\nrole: theorem\nname: Infinitude of the primes\n---\n\n## Statement\n\nThere are infinitely many prime numbers.\n"},
 		{"AA0001", "---\ntag: AA0001\nkind: statement\nrole: conjecture\nname: Infinitude of the twin primes\n---\n\n## Statement\n\nThere are infinitely many primes $p$ such that $p + 2$ is prime.\n"},
 	} {
-		nd, err := node.Parse("nodes/"+n.tag[:2]+"/"+n.tag+".md", []byte(n.text))
+		nd, err := node.Parse("nodes/"+n.tag[:3]+"/"+n.tag+".md", []byte(n.text))
 		if err != nil {
 			t.Fatal(err)
 		}

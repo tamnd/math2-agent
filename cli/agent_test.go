@@ -73,9 +73,9 @@ func agentTree(t *testing.T) (root, out string) {
 	}
 	root = t.TempDir()
 	for name, text := range map[string]string{
-		"nodes/7K/7K3QX2.md": agentNode("Math2.T.s"),
-		"lean/Math2.lean":    "module\n\npublic import Math2.T\n",
-		"lean/Math2/T.lean":  agentLeanFile,
+		"nodes/7K3/7K3QX2.md": agentNode("Math2.T.s"),
+		"lean/Math2.lean":     "module\n\npublic import Math2.T\n",
+		"lean/Math2/T.lean":   agentLeanFile,
 	} {
 		p := filepath.Join(root, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
@@ -107,7 +107,7 @@ func proveModel(t *testing.T) {
 	proved := "module\n\ndef Math2.T.s : Prop := ∀ n : Nat, n = n\n\n@[m2 \"7K3QX2\"]\ntheorem Math2.T.t : Math2.T.s := fun _ => rfl\n"
 	oldModel, oldLean := newModel, newLean
 	newModel = func() (llm.Model, error) {
-		return llmtest.New(write("lean/Math2/T.lean", proved), write("nodes/7K/7K3QX2.md", agentNode("Math2.T.t"))), nil
+		return llmtest.New(write("lean/Math2/T.lean", proved), write("nodes/7K3/7K3QX2.md", agentNode("Math2.T.t"))), nil
 	}
 	newLean = func(_ context.Context, tree string, _ *tools.Box) (tools.Lean, error) { return agentLean{tree}, nil }
 	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
@@ -134,7 +134,7 @@ func TestAgentRun(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &sum); err != nil {
 		t.Fatal(err)
 	}
-	if sum.Outcome != agent.Success || sum.Turns != 2 || sum.WorkTree != work || strings.Join(sum.Changes, " ") != "lean/Math2/T.lean nodes/7K/7K3QX2.md" {
+	if sum.Outcome != agent.Success || sum.Turns != 2 || sum.WorkTree != work || strings.Join(sum.Changes, " ") != "lean/Math2/T.lean nodes/7K3/7K3QX2.md" {
 		t.Errorf("the summary is %+v", sum)
 	}
 	if _, err := os.Stat(filepath.Join(store, agent.RecordsDir, sum.Run+".json")); err != nil {
@@ -189,7 +189,7 @@ func TestAgentRunExplain(t *testing.T) {
 	labels := map[string]any{"labels": []map[string]any{{"sentence": 1, "label": "supported", "why": "The node states it."}}}
 	oldModel, oldLean := newModel, newLean
 	newModel = func() (llm.Model, error) {
-		return llmtest.New(llmtest.Call("write_file", map[string]string{"path": "nodes/7K/7K3QX2.md", "text": text}, u), llmtest.Call("label", labels, u)), nil
+		return llmtest.New(llmtest.Call("write_file", map[string]string{"path": "nodes/7K3/7K3QX2.md", "text": text}, u), llmtest.Call("label", labels, u)), nil
 	}
 	newLean = func(context.Context, string, *tools.Box) (tools.Lean, error) {
 		return nil, errors.New("explain needs no Lean")
@@ -201,7 +201,7 @@ func TestAgentRunExplain(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 	}
-	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/explain@0.1.0, 1 turns") || !strings.Contains(stdout, "nodes/7K/7K3QX2.md") {
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/explain@0.1.0, 1 turns") || !strings.Contains(stdout, "nodes/7K3/7K3QX2.md") {
 		t.Errorf("the output is\n%s", stdout)
 	}
 }
@@ -295,7 +295,7 @@ func TestAgentRunAlign(t *testing.T) {
 func TestAgentRunBump(t *testing.T) {
 	t.Setenv("M2_LEAN_IMAGE", "")
 	root, out := agentTree(t)
-	if err := os.WriteFile(filepath.Join(root, "nodes", "7K", "7K3QX2.md"), []byte(agentNode("Math2.T.r")), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "nodes", "7K3", "7K3QX2.md"), []byte(agentNode("Math2.T.r")), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if b, err := exec.Command("git", "-C", root, "-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "-am", "the bump").CombinedOutput(); err != nil {
@@ -313,7 +313,7 @@ func TestAgentRunBump(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 	}
-	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/bump@0.1.0, 1 turns") || !strings.Contains(stdout, "nodes/7K/7K3QX2.md") {
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/bump@0.1.0, 1 turns") || !strings.Contains(stdout, "nodes/7K3/7K3QX2.md") {
 		t.Errorf("the output is\n%s", stdout)
 	}
 }
@@ -322,10 +322,10 @@ func TestAgentRunReviewAssist(t *testing.T) {
 	root, _ := agentTree(t)
 	// The build of the node needs no Lean, thus it reads a copy of the node with no lean/ directory.
 	nodes, out := t.TempDir(), t.TempDir()
-	if err := os.MkdirAll(filepath.Join(nodes, "nodes", "7K"), 0o750); err != nil {
+	if err := os.MkdirAll(filepath.Join(nodes, "nodes", "7K3"), 0o750); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(nodes, "nodes", "7K", "7K3QX2.md"), []byte(agentNode("Math2.T.s")), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(nodes, "nodes", "7K3", "7K3QX2.md"), []byte(agentNode("Math2.T.s")), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := build.Run(context.Background(), build.Options{Root: nodes, Out: out}); err != nil {
@@ -364,7 +364,7 @@ func TestAgentRunExplore(t *testing.T) {
 	image := "m2-python@" + digest
 	fermat := "---\ntag: 4N9QX2\nkind: statement\nrole: fact\nname: The Fermat numbers are prime\n---\n\n## Statement\n\nFor each $n \\ge 0$, the number $2^{2^n} + 1$ is prime.\n"
 	for name, text := range map[string]string{
-		"nodes/4N/4N9QX2.md":   fermat,
+		"nodes/4N9/4N9QX2.md":  fermat,
 		compute.ImagesFile:     "images:\n  - name: m2-python\n    contents: Python 3\n    amd64: " + digest + "\n    arm64: " + digest + "\n",
 		"projects/fermat.yaml": "name: The Fermat numbers\ngoal: Test the Fermat numbers for primes.\ntopic: T0PC1X\nbudget: 10\nroles: [explore]\nmembers:\n  - {id: github:octocat, role: owner}\n",
 	} {

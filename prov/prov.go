@@ -144,7 +144,7 @@ func (l Line) Validate() error {
 	return nil
 }
 
-// Path returns the path of the provenance log of the tag from the tree root, for example prov/7K/7K3QX2.jsonl.
+// Path returns the path of the provenance log of the tag from the tree root, for example prov/7K3/7K3QX2.jsonl.
 func Path(t string) string { return Dir + "/" + tag.Shard(t) + "/" + t + ".jsonl" }
 
 // Parse reads a provenance log. An empty line is skipped. A line that is not JSON gives an error with its line number.

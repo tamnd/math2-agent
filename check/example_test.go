@@ -24,14 +24,14 @@ Divisibility in $\Z$ and the fraction $\frac{a}{b$ of two [[integers|DSG7KN]].
 `)
 	ix := check.Index{"DSG7KN": {}}
 	var c check.Checker
-	rep := c.Check([]check.File{{Path: "nodes/3E/3EYFQZ.md", Data: data}}, ix)
+	rep := c.Check([]check.File{{Path: "nodes/3EY/3EYFQZ.md", Data: data}}, ix)
 	for _, f := range rep.Findings {
 		fmt.Println(f)
 	}
 	_ = rep.WriteSummary(os.Stdout)
 	// Output:
-	// nodes/3E/3EYFQZ.md:6:10: G01: the topics target W96C20 is not a node
-	// nodes/3E/3EYFQZ.md:11:48: B01: a brace is not closed
+	// nodes/3EY/3EYFQZ.md:6:10: G01: the topics target W96C20 is not a node
+	// nodes/3EY/3EYFQZ.md:11:48: B01: a brace is not closed
 	// rule  state  checked  findings
 	// S01   pass   1
 	// S02   pass   1
@@ -55,7 +55,7 @@ func ExampleParseMacros() {
 }
 
 func ExampleLinks() {
-	n, err := node.Parse("nodes/3C/3C53TD.md", []byte("---\ntag: 3C53TD\nkind: statement\n---\n\n## Statement\n\nLet $G$ be a finite [[group|G5S1M9]]. The text `[[a|B]]` is code.\n"))
+	n, err := node.Parse("nodes/3C5/3C53TD.md", []byte("---\ntag: 3C53TD\nkind: statement\n---\n\n## Statement\n\nLet $G$ be a finite [[group|G5S1M9]]. The text `[[a|B]]` is code.\n"))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -69,7 +69,7 @@ func ExampleLinks() {
 
 func ExampleSections() {
 	src := "---\ntag: 3C53TD\nkind: statement\n---\n\n## Statement\n\nThe order of $H$ divides the order of $G$.\n\n## Explanations\n\n### L2 human\n\nCount the cosets.\n\n```\n## Not a heading\n```\n"
-	n, err := node.Parse("nodes/3C/3C53TD.md", []byte(src))
+	n, err := node.Parse("nodes/3C5/3C53TD.md", []byte(src))
 	if err != nil {
 		fmt.Println(err)
 		return

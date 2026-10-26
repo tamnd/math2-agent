@@ -20,8 +20,8 @@ func ExampleRun() {
 	_ = rep.WriteSummary(os.Stdout)
 	fmt.Println("failed:", rep.Failed())
 	// Output:
-	// nodes/3C/3C53TD.md:1:1: T05: the tag 3C53TD is not in registers/tags.reg. Only the mint workflow gives tags
-	// nodes/G5/G5S1M9.md:1:1: T05: the kind is concept, and registers/tags.reg gives definition
+	// nodes/3C5/3C53TD.md:1:1: T05: the tag 3C53TD is not in registers/tags.reg. Only the mint workflow gives tags
+	// nodes/G5S/G5S1M9.md:1:1: T05: the kind is concept, and registers/tags.reg gives definition
 	// rule  state  checked  findings
 	// T05   fail   3        2
 	// 2 files, 2 findings, 1 rule failed

@@ -1,2 +1,2 @@
-nodes/3C/3C53TD.md:15:21: B02: the link target 9ZZZZZ is not a node
-nodes/3C/3C53TD.md:16:52: B02: the Statement section has a URL. Put the source in the sources field
+nodes/3C5/3C53TD.md:15:21: B02: the link target 9ZZZZZ is not a node
+nodes/3C5/3C53TD.md:16:52: B02: the Statement section has a URL. Put the source in the sources field

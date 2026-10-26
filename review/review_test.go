@@ -50,8 +50,8 @@ func tree(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
-		"nodes/1A/1A0000.md":      groupNode,
-		"nodes/1B/1B0000.md":      lagrangeNode,
+		"nodes/1A0/1A0000.md":     groupNode,
+		"nodes/1B0/1B0000.md":     lagrangeNode,
 		"registers/reviewers.reg": "# reviewer first areas affiliations\ngithub:reviewer 2026-01-01 20 -\n",
 		"registers/bindings.reg":  "# tag system old new cause mathlib author\n1B0000 lean4 - Subgroup.card_subgroup_dvd_card bind abc github:author\n",
 	}
@@ -186,10 +186,10 @@ func TestWrite(t *testing.T) {
 	if r.ID != "r-1B0000-01" || r.Decl != "Math2.Match.lagrange" || r.StatementHash != p.StatementHash || r.TypeHash != "blake3:lagrange" || r.Notes != "The adapter reads the theorem for a finite group." {
 		t.Errorf("the review is %+v", r)
 	}
-	if len(paths) != 2 || paths[0] != "reviews/1B/1B0000.yaml" || paths[1] != "nodes/1B/1B0000.md" {
+	if len(paths) != 2 || paths[0] != "reviews/1B0/1B0000.yaml" || paths[1] != "nodes/1B0/1B0000.md" {
 		t.Errorf("Write changed %v", paths)
 	}
-	data, err := os.ReadFile(filepath.Join(root, "nodes", "1B", "1B0000.md"))
+	data, err := os.ReadFile(filepath.Join(root, "nodes", "1B0", "1B0000.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +207,7 @@ func TestWrite(t *testing.T) {
 	}
 
 	// A second review gets the next id, and the file keeps the first review as it was.
-	before, err := os.ReadFile(filepath.Join(root, "reviews", "1B", "1B0000.yaml"))
+	before, err := os.ReadFile(filepath.Join(root, "reviews", "1B0", "1B0000.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	after, err := os.ReadFile(filepath.Join(root, "reviews", "1B", "1B0000.yaml"))
+	after, err := os.ReadFile(filepath.Join(root, "reviews", "1B0", "1B0000.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +226,7 @@ func TestWrite(t *testing.T) {
 	if err != nil || len(reviews) != 2 || reviews["r-1B0000-02"].Class != battery.Junk {
 		t.Errorf("the tree has the reviews %+v, %v", reviews, err)
 	}
-	data, _ = os.ReadFile(filepath.Join(root, "nodes", "1B", "1B0000.md"))
+	data, _ = os.ReadFile(filepath.Join(root, "nodes", "1B0", "1B0000.md"))
 	if !strings.Contains(string(data), "fidelity_reviews: [r-1B0000-01, r-1B0000-02]") {
 		t.Errorf("the node file does not have the two ids:\n%s", data)
 	}

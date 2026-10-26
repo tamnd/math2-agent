@@ -151,7 +151,7 @@ func TestOpenEdits(t *testing.T) {
 		want  []string
 	}{
 		{"edit", func(root string) (Change, error) {
-			data, err := os.ReadFile(filepath.Join(root, "nodes", "G5", "G5S1M9.md"))
+			data, err := os.ReadFile(filepath.Join(root, "nodes", "G5S", "G5S1M9.md"))
 			if err != nil {
 				return Change{}, err
 			}
@@ -182,7 +182,7 @@ func TestOpenEdits(t *testing.T) {
 			if pr.Title != tt.title || strings.Contains(pr.Body, "note of the author") {
 				t.Errorf("the title is %q and the body is\n%s", pr.Title, pr.Body)
 			}
-			text := string(pr.Files["nodes/"+c.Tag[:2]+"/"+c.Tag+".md"])
+			text := string(pr.Files["nodes/"+c.Tag[:3]+"/"+c.Tag+".md"])
 			for _, w := range tt.want {
 				if !strings.Contains(text, w) {
 					t.Errorf("the node file has no %q:\n%s", w, text)
@@ -277,7 +277,7 @@ func TestOpenErrors(t *testing.T) {
 
 func TestChangeErrors(t *testing.T) {
 	root := tree(t)
-	group, err := os.ReadFile(filepath.Join(root, "nodes", "G5", "G5S1M9.md"))
+	group, err := os.ReadFile(filepath.Join(root, "nodes", "G5S", "G5S1M9.md"))
 	if err != nil {
 		t.Fatal(err)
 	}

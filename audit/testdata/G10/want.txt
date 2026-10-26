@@ -1,1 +1,1 @@
-nodes/8A/8A0S0A.md:6:1: G10: the implies edge to 3C53TD has the via G5S1M9, which is a concept. The via must be a proof or a computation
+nodes/8A0/8A0S0A.md:6:1: G10: the implies edge to 3C53TD has the via G5S1M9, which is a concept. The via must be a proof or a computation

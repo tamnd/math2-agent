@@ -18,7 +18,7 @@ func reviewTree(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
-		"nodes/1B/1B0000.md":      "---\ntag: 1B0000\nkind: statement\nname: Zero add\nformal:\n  - {system: lean4, library: mathlib, decl: Nat.zero_add, match: exact}\n---\n\n## Statement\n\nFor each natural number n, 0 + n = n.\n",
+		"nodes/1B0/1B0000.md":     "---\ntag: 1B0000\nkind: statement\nname: Zero add\nformal:\n  - {system: lean4, library: mathlib, decl: Nat.zero_add, match: exact}\n---\n\n## Statement\n\nFor each natural number n, 0 + n = n.\n",
 		"registers/reviewers.reg": "github:reviewer 2026-01-01 03 -\n",
 		"registers/bindings.reg":  "1B0000 lean4 - Nat.zero_add bind abc github:author\n",
 	}

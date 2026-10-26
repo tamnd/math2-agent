@@ -15,7 +15,7 @@ func nodes(src ...string) []*node.Node {
 	for _, s := range src {
 		first, _, _ := strings.Cut(s, "\n")
 		id := strings.TrimPrefix(first, "tag: ")
-		n, err := node.Parse("nodes/"+id[:2]+"/"+id+".md", []byte("---\n"+s+"\n---\n\nText.\n"))
+		n, err := node.Parse("nodes/"+id[:3]+"/"+id+".md", []byte("---\n"+s+"\n---\n\nText.\n"))
 		if err != nil {
 			log.Fatal(err)
 		}

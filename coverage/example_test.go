@@ -45,7 +45,7 @@ func ExampleCompute_skeleton() {
 		fmt.Println(err)
 		return
 	}
-	n, err := node.Parse("nodes/G5/G5S1M9.md", []byte("---\ntag: G5S1M9\nkind: concept\nname: group\nmsc: [20-XX]\nsources:\n  - {book: 'isbn:9780471433347', locator: Section 1.1}\n---\n\n## Summary\n\nText.\n"))
+	n, err := node.Parse("nodes/G5S/G5S1M9.md", []byte("---\ntag: G5S1M9\nkind: concept\nname: group\nmsc: [20-XX]\nsources:\n  - {book: 'isbn:9780471433347', locator: Section 1.1}\n---\n\n## Summary\n\nText.\n"))
 	if err != nil {
 		fmt.Println(err)
 		return

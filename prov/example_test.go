@@ -9,8 +9,8 @@ import (
 )
 
 func ExampleChanges() {
-	before, _ := node.Parse("nodes/7K/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\nname: Lagrange\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n"))
-	after, _ := node.Parse("nodes/7K/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\nname: Lagrange's theorem\nmsc: [20D60]\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n"))
+	before, _ := node.Parse("nodes/7K3/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\nname: Lagrange\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n"))
+	after, _ := node.Parse("nodes/7K3/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\nname: Lagrange's theorem\nmsc: [20D60]\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n"))
 	who := prov.Line{Human: "github:writer", At: "2026-09-01T10:00:00Z"}
 	for _, l := range prov.Changes(before, after, who) {
 		fmt.Println(l.Op, l.Field)
@@ -45,7 +45,7 @@ func ExampleLine_Validate() {
 }
 
 func ExampleHide() {
-	n, _ := node.Parse("nodes/7K/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n\n## Explanations\n\n### L1 agent\n\nA small group fits into a big group a whole number of times.\n"))
+	n, _ := node.Parse("nodes/7K3/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n\n## Explanations\n\n### L1 agent\n\nA small group fits into a big group a whole number of times.\n"))
 	hidden := func(field string) bool { return prov.Under(field, "body.explanations") }
 	fmt.Print(prov.Hide(n, hidden, "This text is in quarantine."))
 	// Output:
@@ -61,7 +61,7 @@ func ExampleHide() {
 }
 
 func ExampleDisclose() {
-	n, _ := node.Parse("nodes/7K/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\nname: Lagrange's theorem\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n"))
+	n, _ := node.Parse("nodes/7K3/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\nname: Lagrange's theorem\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n"))
 	log := []prov.Line{
 		{Field: prov.Whole, Op: prov.Add, Human: "github:writer", At: "2026-09-01T10:00:00Z"},
 		{Field: "body.explanations.L1", Op: prov.Add, Agent: "m2-agent/explain@1.2.0", Model: "claude-sonnet-5-5", Prompt: "explain/7", Run: "r-2026-09-02-1", At: "2026-09-02T10:00:00Z"},
@@ -73,7 +73,7 @@ func ExampleDisclose() {
 }
 
 func ExampleFormalization() {
-	n, _ := node.Parse("nodes/7K/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\nname: Lagrange's theorem\nformal:\n  - system: lean4\n    library: mathlib\n    decl: Subgroup.card_subgroup_dvd_card\n    match: exact\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n"))
+	n, _ := node.Parse("nodes/7K3/7K3QX2.md", []byte("---\ntag: 7K3QX2\nkind: statement\nname: Lagrange's theorem\nformal:\n  - system: lean4\n    library: mathlib\n    decl: Subgroup.card_subgroup_dvd_card\n    match: exact\n---\n\n## Statement\n\nThe order of a subgroup divides the order of the group.\n"))
 	log := []prov.Line{{Field: "formal[0]", Op: prov.Add, Human: "github:writer", At: "2026-09-01T10:00:00Z"}}
 	data, _ := prov.Formalization(prov.Facts{Node: n, Log: log})
 	head, _, _ := strings.Cut(string(data), "repository:")

@@ -38,7 +38,7 @@ func fixture(t *testing.T) *coverage.Report {
 		"R00001": "kind: statement\nname: A retired copy\nmsc: [11A41]\nretired: {date: 2027-03-20, reason: duplicate, successor: [S00001]}\n",
 		"G00001": "kind: concept\nname: Finite group\nmsc: [20D99]\nsources:\n  - {book: 'isbn:9780471433347', locator: Section 1.1}\n",
 	} {
-		n, err := node.Parse("nodes/"+tag[:2]+"/"+tag+".md", []byte("---\ntag: "+tag+"\n"+front+"---\n\n## Statement\n\nText.\n"))
+		n, err := node.Parse("nodes/"+tag[:3]+"/"+tag+".md", []byte("---\ntag: "+tag+"\n"+front+"---\n\n## Statement\n\nText.\n"))
 		if err != nil {
 			t.Fatal(err)
 		}

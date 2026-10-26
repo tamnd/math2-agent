@@ -175,7 +175,7 @@ func suite(t *testing.T) []outcome {
 	for i, it := range items {
 		tag := fmt.Sprintf("B%05d", i+1)
 		src := "---\ntag: " + tag + "\nkind: theorem\nname: " + it.id + "\nformal:\n  - {system: lean4, decl: Suite." + it.id + ", match: exact}\n---\n\n## Statement\n\n" + it.statement + "\n"
-		if nodes[i], err = node.Parse("nodes/"+tag[:2]+"/"+tag+".md", []byte(src)); err != nil {
+		if nodes[i], err = node.Parse("nodes/"+tag[:3]+"/"+tag+".md", []byte(src)); err != nil {
 			t.Fatal(err)
 		}
 		byTag[tag] = it

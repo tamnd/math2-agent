@@ -52,7 +52,7 @@ func TestCheckProjects(t *testing.T) {
 }
 
 func TestCheckBrokenFile(t *testing.T) {
-	path := filepath.Join("..", "testdata", "nodes", "broken", "nodes", "3N", "3N63EV.md")
+	path := filepath.Join("..", "testdata", "nodes", "broken", "nodes", "3N6", "3N63EV.md")
 	code, stdout, _ := run("check", "-root", validRoot, "-q", path)
 	if code != ExitFailure {
 		t.Fatalf("exit code is %d, want %d", code, ExitFailure)

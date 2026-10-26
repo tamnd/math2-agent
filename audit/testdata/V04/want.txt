@@ -1,1 +1,1 @@
-reviews/3C/3C53TD.yaml:2:5: V04: the review r-3C53TD-01 of 3C53TD is from 2024-01-01, which is more than 24 months before the HEAD commit, and nodes/3C/3C53TD.md changed after the review. Ask for a new review
+reviews/3C5/3C53TD.yaml:2:5: V04: the review r-3C53TD-01 of 3C53TD is from 2024-01-01, which is more than 24 months before the HEAD commit, and nodes/3C5/3C53TD.md changed after the review. Ask for a new review

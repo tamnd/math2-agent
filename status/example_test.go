@@ -23,7 +23,7 @@ sources:
 
 Each finite group has a finite number of subgroups.
 `
-	n, err := node.Parse("nodes/1A/1A0000.md", []byte(src))
+	n, err := node.Parse("nodes/1A0/1A0000.md", []byte(src))
 	if err != nil {
 		panic(err)
 	}

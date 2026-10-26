@@ -1,1 +1,1 @@
-nodes/3C/3C53TD.md:8:5: F07: the statement-only binding Subgroup.card_subgroup_dvd_card (match: partial) is at E5 in build/status.json. A statement without a proof never gives E4 or E5. Run m2 build
+nodes/3C5/3C53TD.md:8:5: F07: the statement-only binding Subgroup.card_subgroup_dvd_card (match: partial) is at E5 in build/status.json. A statement without a proof never gives E4 or E5. Run m2 build

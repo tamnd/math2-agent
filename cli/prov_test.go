@@ -15,7 +15,7 @@ const provNode = "---\ntag: G5S1M9\nkind: definition\nname: Group\n---\n\n## Sta
 func provTree(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
-	path := filepath.Join(root, "nodes", "G5", "G5S1M9.md")
+	path := filepath.Join(root, "nodes", "G5S", "G5S1M9.md")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func provTree(t *testing.T) string {
 
 func TestProvRecordShowConfirm(t *testing.T) {
 	root := provTree(t)
-	path := filepath.Join(root, "nodes", "G5", "G5S1M9.md")
+	path := filepath.Join(root, "nodes", "G5S", "G5S1M9.md")
 	text := strings.Replace(provNode, "name: Group", "name: Group\nmsc: [20A05]", 1) + "\n## Explanations\n\n### L1 agent\n\nA group is a way to combine things.\n"
 	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
 		t.Fatal(err)
@@ -118,7 +118,7 @@ func TestProvDisclose(t *testing.T) {
 		t.Errorf("disclose -yaml of a node with no binding: exit code %d, stderr %q", code, stderr)
 	}
 
-	path := filepath.Join(root, "nodes", "G5", "G5S1M9.md")
+	path := filepath.Join(root, "nodes", "G5S", "G5S1M9.md")
 	text := strings.Replace(provNode, "name: Group", "name: Group\nformal:\n  - system: lean4\n    library: mathlib\n    decl: Group\n    match: exact", 1)
 	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
 		t.Fatal(err)

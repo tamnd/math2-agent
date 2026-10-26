@@ -146,7 +146,7 @@ func both(a, b *llm.Response) *llm.Response {
 }
 
 func files() map[string]string {
-	return map[string]string{"nodes/P7/P7RM3S.md": target, "nodes/4N/4N9QX2.md": fermat, compute.ImagesFile: images}
+	return map[string]string{"nodes/P7R/P7RM3S.md": target, "nodes/4N9/4N9QX2.md": fermat, compute.ImagesFile: images}
 }
 
 func TestRun(t *testing.T) {
@@ -166,7 +166,7 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"project:fermat", "- " + image + ": Python 3", `<data source="nodes/P7/P7RM3S.md"`, "Check each claim with lookup"} {
+	for _, want := range []string{"project:fermat", "- " + image + ": Python 3", `<data source="nodes/P7R/P7RM3S.md"`, "Check each claim with lookup"} {
 		if !strings.Contains(brief, want) {
 			t.Errorf("the brief has no %q:\n%s", want, brief)
 		}
@@ -252,7 +252,7 @@ func TestGoal(t *testing.T) {
 		{"code with no node", map[string]string{"compute/~0000aaaa/main.py": code, "compute/" + id + "/main.py": code, nodeFile: good, "nodes/~/~9c0d1e2f.md": conjecture}, "adds no computation node ~0000aaaa"},
 		{"a wrong hash", map[string]string{"compute/" + id + "/main.py": code, nodeFile: computation("output:\n  hash: " + compute.Hash([]byte("other")) + "\n"), "nodes/~/~9c0d1e2f.md": conjecture}, "does not verify: the output hash is"},
 		{"a broken node", map[string]string{"nodes/~/~9c0d1e2f.md": strings.Replace(conjecture, "## Statement", "## Proof", 1)}, "m2 check finds problems"},
-		{"a change of a node", map[string]string{"nodes/4N/4N9QX2.md": fermat + "\nMore.\n"}, "changes no node that exists"},
+		{"a change of a node", map[string]string{"nodes/4N9/4N9QX2.md": fermat + "\nMore.\n"}, "changes no node that exists"},
 		{"a novel conjecture", map[string]string{"compute/" + id + "/main.py": code, nodeFile: good, "nodes/~/~9c0d1e2f.md": strings.Replace(conjecture, "A pattern", "A novel pattern", 1)}, `says "novel"`},
 		{"a conjecture", map[string]string{"compute/" + id + "/main.py": code, nodeFile: good, "nodes/~/~9c0d1e2f.md": conjecture}, ""},
 	} {

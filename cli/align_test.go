@@ -12,8 +12,8 @@ func alignTree(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
-		"nodes/G5/G5S1M9.md":           "---\ntag: G5S1M9\nkind: definition\nname: Group\n---\n\n## Statement\n\nA set with an operation.\n",
-		"nodes/H7/H7AAAA.md":           "---\ntag: H7AAAA\nkind: definition\nname: Ring\n---\n\n## Statement\n\nA set with two operations.\n",
+		"nodes/G5S/G5S1M9.md":          "---\ntag: G5S1M9\nkind: definition\nname: Group\n---\n\n## Statement\n\nA set with an operation.\n",
+		"nodes/H7A/H7AAAA.md":          "---\ntag: H7AAAA\nkind: definition\nname: Ring\n---\n\n## Statement\n\nA set with two operations.\n",
 		"build/records/wikidata.jsonl": `{"id":"Q2","title":"group","class":"open"}` + "\n" + `{"id":"Q9","title":"field","class":"open"}` + "\n",
 	}
 	for p, data := range files {
@@ -63,7 +63,7 @@ func TestAlign(t *testing.T) {
 	if code != ExitOK || !strings.Contains(stdout, "accepted "+id) {
 		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
 	}
-	if b, _ := os.ReadFile(filepath.Join(root, "nodes/G5/G5S1M9.md")); !strings.Contains(string(b), "same_as:\n  wikidata: Q2\n") {
+	if b, _ := os.ReadFile(filepath.Join(root, "nodes/G5S/G5S1M9.md")); !strings.Contains(string(b), "same_as:\n  wikidata: Q2\n") {
 		t.Errorf("the node is:\n%s", b)
 	}
 	if b, _ := os.ReadFile(filepath.Join(root, "registers/crosswalk.reg")); !strings.Contains(string(b), "G5S1M9 same_as wikidata Q2 accepted github:curator 2026-10-26 blake3:") {

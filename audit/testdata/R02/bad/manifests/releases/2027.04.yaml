@@ -1,5 +1,5 @@
 release: "2027.04"
-commit: 9e43339bcf705097893948bcad0cdb398bc0bb7a
+commit: c2f993154808fe81b397b43a09671196e2abcf55
 toolchain: {m2: v0.2.0, lean: "leanprover/lean4:v4.35.0", mathlib: 0123456789abcdef0123456789abcdef01234567}
 artefacts:
   graph: {hash: "blake3:8d3ecfbe953683f5eb9799f6670232c2b6b12a486fb5eb1e0014a521ecf70744", size: 9000}

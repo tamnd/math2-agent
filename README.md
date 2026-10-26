@@ -62,6 +62,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 fmt` | Make front matter canonical and change aliases to tags. | written |
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
 | `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. `m2 mint -seed` gives tags that start with `0` to the nodes of the M1 seed. | written |
+| `m2 migrate shard3` | Move each file of `nodes/`, `prov/` and `reviews/` to the shard of the first three characters of its tag (corpus spec K3.5). A second run moves nothing. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
 | `m2 site check` | Test the wiki against the size, MathML, no-JavaScript, figure and offline targets. | written |
 | `m2 site serve` | Preview the wiki with gzip, as GitHub Pages serves it. | written |

@@ -108,7 +108,7 @@ func (f *fakeLean) Extract(_ context.Context, decls []string, checks bool) ([]le
 	return out, nil
 }
 
-const nodePath = "nodes/7K/7K3QX2.md"
+const nodePath = "nodes/7K3/7K3QX2.md"
 
 func node(kind, formal string) string {
 	return "---\ntag: 7K3QX2\nkind: " + kind + "\nname: Reflexivity\n" + formal + "---\n\n## Statement\n\nEach natural number is equal to itself.\n"
@@ -202,7 +202,7 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"a statement node", `@[m2 "7K3QX2"]`, `<data source="nodes/7K/7K3QX2.md" licence="CC-BY-SA-4.0">`} {
+	for _, want := range []string{"a statement node", `@[m2 "7K3QX2"]`, `<data source="nodes/7K3/7K3QX2.md" licence="CC-BY-SA-4.0">`} {
 		if !strings.Contains(brief, want) {
 			t.Errorf("the brief has no %q:\n%s", want, brief)
 		}

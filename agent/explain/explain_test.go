@@ -51,8 +51,8 @@ func tree(t *testing.T, files map[string]string) *workspace.Workspace {
 }
 
 const (
-	nodePath  = "nodes/3C/3C53TD.md"
-	groupPath = "nodes/G5/G5S1M9.md"
+	nodePath  = "nodes/3C5/3C53TD.md"
+	groupPath = "nodes/G5S/G5S1M9.md"
 	target    = "---\ntag: 3C53TD\nkind: statement\nrole: theorem\nname: Lagrange's theorem\nuses: [G5S1M9]\n---\n\n## Statement\n\nLet $G$ be a finite [[group|G5S1M9]] and let $H$ be a subgroup of $G$. Then the order of $H$ divides the order of $G$.\n"
 	group     = "---\ntag: G5S1M9\nkind: definition\nname: Group\n---\n\n## Definition\n\nA group is a set with an associative operation, an identity and inverses.\n"
 	other     = "---\ntag: 7K3QX2\nkind: definition\nname: Ring\n---\n\n## Definition\n\nA ring is a set with two operations.\n"
@@ -140,7 +140,7 @@ func TestGround(t *testing.T) {
 	}
 	req := judge.Requests()[0]
 	text := req.Messages[0].Content[0].Text
-	if req.Model != "claude-haiku-5-5" || req.System != "Label." || len(req.Tools) != 1 || !strings.Contains(text, "2. Every group is finite.") || !strings.Contains(text, `<data source="nodes/G5/G5S1M9.md" licence="CC-BY-SA-4.0">`) {
+	if req.Model != "claude-haiku-5-5" || req.System != "Label." || len(req.Tools) != 1 || !strings.Contains(text, "2. Every group is finite.") || !strings.Contains(text, `<data source="nodes/G5S/G5S1M9.md" licence="CC-BY-SA-4.0">`) {
 		t.Errorf("the request is %+v\n%s", req, text)
 	}
 	if got, err = explain.Ground(context.Background(), judge, "claude-haiku-5-5", "Label.", e, nil); err != nil || got[0].Label != explain.Unsupported || got[1].Label != explain.Unsupported {
@@ -155,7 +155,7 @@ func write(path, text string) *llm.Response {
 // run runs an explain job on a new tree with the scripted model and judge.
 func run(t *testing.T, files map[string]string, goal string, model, judge []*llm.Response) (*agent.Record, string) {
 	t.Helper()
-	all := map[string]string{nodePath: target, groupPath: group, "nodes/7K/7K3QX2.md": other, "topics/curricula/seed.yaml": curricula}
+	all := map[string]string{nodePath: target, groupPath: group, "nodes/7K3/7K3QX2.md": other, "topics/curricula/seed.yaml": curricula}
 	for k, v := range files {
 		all[k] = v
 	}
@@ -191,7 +191,7 @@ func TestRun(t *testing.T) {
 		write(nodePath, explained("L1", "A [[group|G5S1M9]] has inverses. Every group is finite.")),
 		write(nodePath, good),
 	}, []*llm.Response{labels(explain.Supported, explain.Unsupported), labels(explain.Supported, explain.Supported)})
-	for _, want := range []string{"An L1 explanation may link only to the target", "these nodes of the curricula: G5S1M9.", `"### L2 agent"`, `<data source="nodes/3C/3C53TD.md"`} {
+	for _, want := range []string{"An L1 explanation may link only to the target", "these nodes of the curricula: G5S1M9.", `"### L2 agent"`, `<data source="nodes/3C5/3C53TD.md"`} {
 		if !strings.Contains(brief, want) {
 			t.Errorf("the brief has no %q:\n%s", want, brief)
 		}

@@ -117,7 +117,7 @@ func TestReadAliases(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, format.AliasRegister), []byte(reg), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	a := parse(t, "nodes/7K/7K3QX2.md", "---\ntag: 7K3QX2\naliases: [compact-space, Not-An-Alias]\n---\n")
+	a := parse(t, "nodes/7K3/7K3QX2.md", "---\ntag: 7K3QX2\naliases: [compact-space, Not-An-Alias]\n---\n")
 	b := parse(t, "nodes/~/~3fa94c01.md", "---\ntag: ~3fa94c01\naliases: [compact]\n---\n")
 	got, err := format.ReadAliases(root, []*node.Node{a, b})
 	if err != nil {
@@ -127,12 +127,12 @@ func TestReadAliases(t *testing.T) {
 		t.Errorf("got %v", got)
 	}
 
-	c := parse(t, "nodes/1H/1H8D2C.md", "---\ntag: 1H8D2C\naliases: [compact-space]\n---\n")
+	c := parse(t, "nodes/1H8/1H8D2C.md", "---\ntag: 1H8D2C\naliases: [compact-space]\n---\n")
 	_, err = format.ReadAliases(root, []*node.Node{c})
-	if err == nil || !strings.Contains(err.Error(), "the alias compact-space names 7K3QX2 in registers/aliases.reg and 1H8D2C in nodes/1H/1H8D2C.md") {
+	if err == nil || !strings.Contains(err.Error(), "the alias compact-space names 7K3QX2 in registers/aliases.reg and 1H8D2C in nodes/1H8/1H8D2C.md") {
 		t.Errorf("the error is %v", err)
 	}
-	d := parse(t, "nodes/9T/9TX3RB.md", "---\ntag: 9TX3RB\naliases: [compact]\n---\n")
+	d := parse(t, "nodes/9TX/9TX3RB.md", "---\ntag: 9TX3RB\naliases: [compact]\n---\n")
 	if _, err := format.ReadAliases(root, []*node.Node{b, d}); err == nil {
 		t.Error("two nodes have the alias compact, and ReadAliases gave no error")
 	}
@@ -161,7 +161,7 @@ func TestSource(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		got, err := f.Source("nodes/X7/X7J0XA.md", []byte(c.in))
+		got, err := f.Source("nodes/X7J/X7J0XA.md", []byte(c.in))
 		if err != nil {
 			t.Fatalf("%s: %v", c.name, err)
 		}
@@ -172,10 +172,10 @@ func TestSource(t *testing.T) {
 
 	var none format.Formatter
 	in := "---\ntag: X7J0XA\nuses: [group]\n---\n"
-	if got, _ := none.Source("nodes/X7/X7J0XA.md", []byte(in)); string(got) != in {
+	if got, _ := none.Source("nodes/X7J/X7J0XA.md", []byte(in)); string(got) != in {
 		t.Errorf("a Formatter with no aliases changed an alias:\n%s", got)
 	}
-	if _, err := f.Source("nodes/X7/X7J0XA.md", []byte("no front matter\n")); err == nil || !strings.Contains(err.Error(), "nodes/X7/X7J0XA.md:1:1:") {
+	if _, err := f.Source("nodes/X7J/X7J0XA.md", []byte("no front matter\n")); err == nil || !strings.Contains(err.Error(), "nodes/X7J/X7J0XA.md:1:1:") {
 		t.Errorf("the error is %v", err)
 	}
 }

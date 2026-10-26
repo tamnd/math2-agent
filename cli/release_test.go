@@ -113,11 +113,11 @@ func TestReleaseCut(t *testing.T) {
 		t.Errorf("the failed cut made the tags %q", tags)
 	}
 
-	if err := os.WriteFile(filepath.Join(root, "nodes", "3C", "3C53TD.md"), []byte("changed\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "nodes", "3C5", "3C53TD.md"), []byte("changed\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	gitT(t, root, "commit", "-q", "-am", "Change a node")
-	if code, _, stderr := run("release", "cut", "-root", root, "2027.03"); code != ExitFailure || !strings.Contains(stderr, "nodes/3C/3C53TD.md changed after the commit") {
+	if code, _, stderr := run("release", "cut", "-root", root, "2027.03"); code != ExitFailure || !strings.Contains(stderr, "nodes/3C5/3C53TD.md changed after the commit") {
 		t.Errorf("a cut after a change of a node: exit code %d, stderr %q", code, stderr)
 	}
 }

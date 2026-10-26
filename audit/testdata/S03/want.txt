@@ -1,1 +1,1 @@
-nodes/G5/G5S1M9.md:5:1: S03: the field "status" states a status, but the build computes the status of each node
+nodes/G5S/G5S1M9.md:5:1: S03: the field "status" states a status, but the build computes the status of each node

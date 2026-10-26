@@ -121,12 +121,12 @@ func TestNewIndex(t *testing.T) {
 func tree(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
-	write(t, root, "nodes/3C/3C53TD.md", nodeFile("3C53TD", "name: Theorem of the two sets\nuses: [G5S1M9]\n", "A statement on two sets."))
-	write(t, root, "nodes/G5/G5S1M9.md", nodeFile("G5S1M9", "name: Group\nsame_as:\n  nlab: group\n", "A set with an operation."))
-	write(t, root, "nodes/H7/H7AAAA.md", nodeFile("H7AAAA", "name: Lemma of the cycle\n", "A statement on a cycle."))
-	write(t, root, "nodes/J8/J8AAAA.md", nodeFile("J8AAAA", "name: Ring\nsame_as:\n  wikidata: null\n", "A set with two operations."))
-	write(t, root, "nodes/K9/K9AAAA.md", nodeFile("K9AAAA", "name: Ring of two sets\naliases: [Theorem of the two sets]\n", "A statement on two sets."))
-	write(t, root, "nodes/M1/M1AAAA.md", nodeFile("M1AAAA", "name: Old group\nretired:\n  date: \"2026-01-01\"\n  reason: duplicate\n", "A set."))
+	write(t, root, "nodes/3C5/3C53TD.md", nodeFile("3C53TD", "name: Theorem of the two sets\nuses: [G5S1M9]\n", "A statement on two sets."))
+	write(t, root, "nodes/G5S/G5S1M9.md", nodeFile("G5S1M9", "name: Group\nsame_as:\n  nlab: group\n", "A set with an operation."))
+	write(t, root, "nodes/H7A/H7AAAA.md", nodeFile("H7AAAA", "name: Lemma of the cycle\n", "A statement on a cycle."))
+	write(t, root, "nodes/J8A/J8AAAA.md", nodeFile("J8AAAA", "name: Ring\nsame_as:\n  wikidata: null\n", "A set with two operations."))
+	write(t, root, "nodes/K9A/K9AAAA.md", nodeFile("K9AAAA", "name: Ring of two sets\naliases: [Theorem of the two sets]\n", "A statement on two sets."))
+	write(t, root, "nodes/M1A/M1AAAA.md", nodeFile("M1AAAA", "name: Old group\nretired:\n  date: \"2026-01-01\"\n  reason: duplicate\n", "A set."))
 	records(t, root, "wikidata",
 		ingest.Record{ID: "Q1", Title: "theorem of the two sets"},
 		ingest.Record{ID: "Q2", Title: "group of the test", Meta: map[string]string{"nlab": "group", "oeis": "A000001"}},
@@ -263,14 +263,14 @@ func TestCurate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b, err := os.ReadFile(filepath.Join(root, "nodes/G5/G5S1M9.md"))
+	b, err := os.ReadFile(filepath.Join(root, "nodes/G5S/G5S1M9.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(b), "same_as:\n  wikidata: Q2\n  nlab: group\n") {
 		t.Errorf("the node file is\n%s", b)
 	}
-	b, err = os.ReadFile(filepath.Join(root, "nodes/H7/H7AAAA.md"))
+	b, err = os.ReadFile(filepath.Join(root, "nodes/H7A/H7AAAA.md"))
 	if err != nil {
 		t.Fatal(err)
 	}

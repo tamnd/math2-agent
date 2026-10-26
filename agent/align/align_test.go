@@ -53,7 +53,7 @@ func tree(t *testing.T, files map[string]string) *workspace.Workspace {
 }
 
 const (
-	lagrangePath = "nodes/3C/3C53TD.md"
+	lagrangePath = "nodes/3C5/3C53TD.md"
 	lagrange     = "---\ntag: 3C53TD\nkind: statement\nrole: theorem\nname: Lagrange's theorem\nmsc: [20D60]\nuses: [G5S1M9]\nformal:\n  - system: lean4\n    library: math2\n    decl: Math2.Algebra.lagrange\n    match: exact\n---\n\n## Statement\n\nLet $G$ be a finite [[group|G5S1M9]] and let $H$ be a subgroup of $G$. Then the order of $H$ divides the order of $G$.\n"
 	group        = "---\ntag: G5S1M9\nkind: concept\nname: Group\nmsc: [20A05]\n---\n\n## Summary\n\nA group is a set with an associative operation, an identity and inverses.\n"
 	catalogue    = "sources:\n  - id: wikidata\n    name: Wikidata\n    licence: CC0-1.0\n    class: open\n  - id: arxiv\n    name: arXiv\n    licence: CC0-1.0\n    class: record\n  - id: mathlib\n    name: Mathlib\n    licence: Apache-2.0\n    class: open\n"
@@ -80,9 +80,9 @@ func file(t *testing.T, recs ...ingest.Record) string {
 
 func base(t *testing.T) map[string]string {
 	return map[string]string{
-		lagrangePath:         lagrange,
-		"nodes/G5/G5S1M9.md": group,
-		ingest.CatalogueFile: catalogue,
+		lagrangePath:          lagrange,
+		"nodes/G5S/G5S1M9.md": group,
+		ingest.CatalogueFile:  catalogue,
 		"build/records/wikidata.jsonl": file(t,
 			ingest.Record{ID: "Q1", Kind: "item", Title: "Lagrange's theorem", URL: "https://www.wikidata.org/wiki/Q1", Text: theorem},
 			ingest.Record{ID: "Q2", Kind: "item", Title: "coset theorem", URL: "https://www.wikidata.org/wiki/Q2", Text: cosets},
@@ -209,7 +209,7 @@ func TestBrief(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Job j-2026-10-26-1: align the target 3C53TD, a statement node. The goal of the job: link the node to Wikidata.", "propose_edge", "type hash", `<data source="nodes/3C/3C53TD.md"`} {
+	for _, want := range []string{"Job j-2026-10-26-1: align the target 3C53TD, a statement node. The goal of the job: link the node to Wikidata.", "propose_edge", "type hash", `<data source="nodes/3C5/3C53TD.md"`} {
 		if !strings.Contains(brief, want) {
 			t.Errorf("the brief has no %q:\n%s", want, brief)
 		}

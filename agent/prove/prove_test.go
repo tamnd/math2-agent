@@ -119,7 +119,7 @@ func (f *fakeLean) Extract(_ context.Context, decls []string, _ bool) ([]lean.Re
 	return out, nil
 }
 
-const nodePath = "nodes/7K/7K3QX2.md"
+const nodePath = "nodes/7K3/7K3QX2.md"
 
 func node(decl, body string) string {
 	return "---\ntag: 7K3QX2\nkind: statement\nname: Reflexivity\nformal:\n  - system: lean4\n    library: math2\n    decl: " + decl + "\n    match: exact\n---\n\n## Statement\n\n" + body + "\n"
@@ -266,7 +266,7 @@ func TestRunProof(t *testing.T) {
 	if env.extracts != 3+2 {
 		t.Errorf("the run extracted %d times", env.extracts)
 	}
-	for _, want := range []string{"the definition Math2.T.s : Prop in lean/Math2/T.lean", `@[m2 "7K3QX2"]`, "does not permit native_decide", `<data source="nodes/7K/7K3QX2.md" licence="CC-BY-SA-4.0">`, `<data source="lean/Math2/T.lean" licence="Apache-2.0">`} {
+	for _, want := range []string{"the definition Math2.T.s : Prop in lean/Math2/T.lean", `@[m2 "7K3QX2"]`, "does not permit native_decide", `<data source="nodes/7K3/7K3QX2.md" licence="CC-BY-SA-4.0">`, `<data source="lean/Math2/T.lean" licence="Apache-2.0">`} {
 		if !strings.Contains(brief, want) {
 			t.Errorf("the brief has no %q:\n%s", want, brief)
 		}

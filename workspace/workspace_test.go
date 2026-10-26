@@ -40,8 +40,8 @@ func TestChanges(t *testing.T) {
 	ctx := context.Background()
 	dir := repo(t, map[string]string{
 		".gitignore":          "build/\n",
-		"nodes/3C/3C53TD.md":  "old\n",
-		"nodes/AA/AA0001.md":  "keep\n",
+		"nodes/3C5/3C53TD.md": "old\n",
+		"nodes/AA0/AA0001.md": "keep\n",
 		"lean/Math2/Old.lean": "gone\n",
 	})
 	w, err := workspace.Open(ctx, dir)
@@ -50,11 +50,11 @@ func TestChanges(t *testing.T) {
 	}
 	defer func() { _ = w.Close() }()
 	for p, text := range map[string]string{
-		"nodes/3C/3C53TD.md":   "new\n",
-		"nodes/AA/AA0001.md":   "keep\n",
-		"lean/Math2/New.lean":  "theorem t : True := trivial\n",
-		"build/out.olean":      "ignored",
-		"nodes/3C/../3C/x.txt": "x",
+		"nodes/3C5/3C53TD.md":    "new\n",
+		"nodes/AA0/AA0001.md":    "keep\n",
+		"lean/Math2/New.lean":    "theorem t : True := trivial\n",
+		"build/out.olean":        "ignored",
+		"nodes/3C5/../3C5/x.txt": "x",
 	} {
 		if err := w.Write(p, []byte(text)); err != nil {
 			t.Fatal(err)
@@ -74,11 +74,11 @@ func TestChanges(t *testing.T) {
 			t.Errorf("%s: old %q, new %q", c.Path, c.Old, c.New)
 		}
 	}
-	want := "lean/Math2/New.lean >theorem t : True := trivial\nlean/Math2/Old.lean gone>\nnodes/3C/3C53TD.md old>new\nnodes/3C/x.txt >x"
+	want := "lean/Math2/New.lean >theorem t : True := trivial\nlean/Math2/Old.lean gone>\nnodes/3C5/3C53TD.md old>new\nnodes/3C5/x.txt >x"
 	if s := strings.Join(lines, "\n"); s != want {
 		t.Errorf("changes\n%s\nwant\n%s", s, want)
 	}
-	if data, err := w.Read("nodes/3C/3C53TD.md"); err != nil || string(data) != "new\n" {
+	if data, err := w.Read("nodes/3C5/3C53TD.md"); err != nil || string(data) != "new\n" {
 		t.Errorf("read %q, %v", data, err)
 	}
 }

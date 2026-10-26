@@ -1,1 +1,1 @@
-nodes/G5/G5S1M9.md:4:1: S01: the front matter is not valid YAML: did not find expected ',' or ']'
+nodes/G5S/G5S1M9.md:4:1: S01: the front matter is not valid YAML: did not find expected ',' or ']'

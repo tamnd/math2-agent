@@ -1,1 +1,1 @@
-nodes/4K/4K0S1A.md:11:1: B04: the Statement section has 2274 characters. Make it shorter than 2000 characters, or split it into two nodes
+nodes/4K0/4K0S1A.md:11:1: B04: the Statement section has 2274 characters. Make it shorter than 2000 characters, or split it into two nodes

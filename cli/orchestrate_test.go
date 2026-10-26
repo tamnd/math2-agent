@@ -112,7 +112,7 @@ func TestOrchestrateShadow(t *testing.T) {
 	}
 	proved := "module\n\ndef Math2.T.s : Prop := ∀ n : Nat, n = n\n\n@[m2 \"7K3QX2\"]\ntheorem Math2.T.t : Math2.T.s := fun _ => rfl\n"
 	newModel = func() (llm.Model, error) {
-		return llmtest.New(write("lean/Math2/T.lean", proved), write("nodes/7K/7K3QX2.md", agentNode("Math2.T.t")), write("lean/Math2/T.lean", proved), write("nodes/7K/7K3QX2.md", agentNode("Math2.T.t"))), nil
+		return llmtest.New(write("lean/Math2/T.lean", proved), write("nodes/7K3/7K3QX2.md", agentNode("Math2.T.t")), write("lean/Math2/T.lean", proved), write("nodes/7K3/7K3QX2.md", agentNode("Math2.T.t"))), nil
 	}
 
 	// The candidate is the prove role of prompts/ at the version 1.0.0.

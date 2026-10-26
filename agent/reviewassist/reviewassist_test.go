@@ -21,7 +21,7 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const lagrangePath = "nodes/3C/3C53TD.md"
+const lagrangePath = "nodes/3C5/3C53TD.md"
 
 const lagrange = `---
 tag: 3C53TD
