@@ -40,6 +40,23 @@ func runCorpus(args []string, stdout, stderr io.Writer) int {
 	return ExitUsage
 }
 
+// writeMentions changes the records of the last import of the source src to mentions, and writes them to records/mentions/<source>/. It returns the number of mentions.
+func writeMentions(root string, src *ingest.Source) (int, error) {
+	m, err := ingest.ReadManifest(filepath.Join(root, ingest.ManifestPath(src.ID)))
+	if err != nil {
+		return 0, fmt.Errorf("the import manifest of %s: %w", src.ID, err)
+	}
+	recs, _, err := ingest.ReadRecords(root, src.ID)
+	if err != nil {
+		return 0, err
+	}
+	ms := inventory.FromRecords(src, m.Snapshot, m.Adapter, recs)
+	if err := inventory.WriteMentions(root, src.ID, ms); err != nil {
+		return 0, err
+	}
+	return len(ms), nil
+}
+
 // runCorpusImport changes the records of the last import of each source to mentions, and groups the mentions into rows.
 func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 corpus import", flag.ContinueOnError)
@@ -80,22 +97,12 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "m2 corpus import: manifests/sources.yaml has no source %s\n", id)
 			return ExitFailure
 		}
-		m, err := ingest.ReadManifest(filepath.Join(*root, ingest.ManifestPath(id)))
-		if err != nil {
-			fmt.Fprintf(stderr, "m2 corpus import: the import manifest of %s: %v\n", id, err)
-			return ExitFailure
-		}
-		recs, _, err := ingest.ReadRecords(*root, id)
+		n, err := writeMentions(*root, src)
 		if err != nil {
 			fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
 			return ExitFailure
 		}
-		ms := inventory.FromRecords(src, m.Snapshot, m.Adapter, recs)
-		if err := inventory.WriteMentions(*root, id, ms); err != nil {
-			fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
-			return ExitFailure
-		}
-		fmt.Fprintf(stdout, "%s: %d mentions\n", id, len(ms))
+		fmt.Fprintf(stdout, "%s: %d mentions\n", id, n)
 	}
 	ms, err := inventory.ReadMentions(*root)
 	if err != nil {

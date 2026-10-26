@@ -10,9 +10,10 @@ import (
 	"strings"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/inventory"
 )
 
-const ingestUsage = "m2 ingest [-root DIR] [-snapshot HASH] [-url URL] [-date YYYY-MM-DD] [-cache DIR] <source>"
+const ingestUsage = "m2 ingest [-root DIR] [-snapshot HASH] [-url URL] [-date YYYY-MM-DD] [-cache DIR] [-mentions] <source>"
 
 func runIngest(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 ingest", flag.ContinueOnError)
@@ -23,6 +24,7 @@ func runIngest(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.URL, "url", "", "download the new snapshot from this URL, and not from the bulk channel of the adapter")
 	fs.StringVar(&opt.Date, "date", "", "the date of a new snapshot. Empty means today in UTC.")
 	fs.StringVar(&opt.Cache, "cache", "", "the directory of the downloaded snapshots. Empty means m2 in the user cache directory.")
+	mentions := fs.Bool("mentions", false, "also write the mentions of the source to records/mentions/<source>/")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -61,6 +63,20 @@ func runIngest(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "%s: %d records from %s of %s\n", m.Source, m.Records, state, sn.Date)
 	fmt.Fprintf(stdout, "  snapshot %s\n  url      %s\n  records  %s\n  classes  %s\n", sn.Hash, sn.URL, m.Hash, strings.Join(classes, ", "))
+	if !*mentions {
+		return ExitOK
+	}
+	cat, err := ingest.ReadCatalogue(opt.Root)
+	if err != nil {
+		fmt.Fprintf(stderr, "m2 ingest: %v\n", err)
+		return ExitFailure
+	}
+	n, err := writeMentions(opt.Root, cat.Source(m.Source))
+	if err != nil {
+		fmt.Fprintf(stderr, "m2 ingest: %v\n", err)
+		return ExitFailure
+	}
+	fmt.Fprintf(stdout, "  mentions %d in %s/%s/\n", n, inventory.MentionsDir, m.Source)
 	return ExitOK
 }
 

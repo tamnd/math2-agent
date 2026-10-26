@@ -3,6 +3,8 @@ package cli
 import (
 	"bufio"
 	"io"
+	"io/fs"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/inventory"
 )
 
 // words is an adapter for the tests: each line of a snapshot is an id and a title.
@@ -41,13 +44,18 @@ func TestIngest(t *testing.T) {
 	defer srv.Close()
 	root, cache := t.TempDir(), t.TempDir()
 
-	code, stdout, stderr := run("ingest", "-root", root, "-cache", cache, "-url", srv.URL+"/words.txt", "-date", "2026-10-25", "words")
+	code, stdout, stderr := run("ingest", "-root", root, "-cache", cache, "-url", srv.URL+"/words.txt", "-date", "2026-10-25", "-mentions", "words")
 	if code != ExitOK {
 		t.Fatalf("exit code %d, stderr %q", code, stderr)
 	}
-	if !strings.Contains(stdout, "words: 2 records from a new snapshot of 2026-10-25") || !strings.Contains(stdout, "classes  open 2") {
+	if !strings.Contains(stdout, "words: 2 records from a new snapshot of 2026-10-25") || !strings.Contains(stdout, "classes  open 2") || !strings.Contains(stdout, "mentions 2 in records/mentions/words/") {
 		t.Errorf("stdout is:\n%s", stdout)
 	}
+	mentions, err := inventory.ReadMentions(root)
+	if err != nil || len(mentions) != 2 || mentions[0].NativeID != "w1" || mentions[0].By != "words/1" {
+		t.Fatalf("the mentions are %+v, %v", mentions, err)
+	}
+	firstMentions := mentionFiles(t, root)
 	cat, err := ingest.ReadCatalogue(root)
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +69,7 @@ func TestIngest(t *testing.T) {
 
 	// The source can come first, and the pinned snapshot comes from the cache.
 	srv.Close()
-	code, stdout, stderr = run("ingest", "words", "-root", root, "-cache", cache, "-snapshot", hash)
+	code, stdout, stderr = run("ingest", "words", "-root", root, "-cache", cache, "-snapshot", hash, "-mentions")
 	if code != ExitOK {
 		t.Fatalf("exit code %d, stderr %q", code, stderr)
 	}
@@ -70,6 +78,9 @@ func TestIngest(t *testing.T) {
 	}
 	if again, _ := os.ReadFile(records); string(again) != string(first) {
 		t.Errorf("two imports of the same snapshot give\n%s\nand\n%s", first, again)
+	}
+	if again := mentionFiles(t, root); !maps.Equal(again, firstMentions) {
+		t.Errorf("two imports of the same snapshot give the mentions\n%v\nand\n%v", firstMentions, again)
 	}
 
 	// m2 ingest makes the entry of a new source, and L08 fails until a person completes the source document and approves it.
@@ -91,6 +102,24 @@ func TestIngest(t *testing.T) {
 	if code, _, stderr := run("audit", "-root", root, "-plane", "licence", "-q"); code != ExitOK {
 		t.Errorf("the licence rules fail on the import: %s", stderr)
 	}
+}
+
+// mentionFiles returns the files of records/mentions/ under root and their contents.
+func mentionFiles(t *testing.T, root string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	err := filepath.WalkDir(filepath.Join(root, inventory.MentionsDir), func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		data, err := os.ReadFile(path) // #nosec G304 -- a file of the test tree.
+		out[path] = string(data)
+		return err
+	})
+	if err != nil || len(out) == 0 {
+		t.Fatalf("records/mentions/ has %d files: %v", len(out), err)
+	}
+	return out
 }
 
 func TestIngestErrors(t *testing.T) {
