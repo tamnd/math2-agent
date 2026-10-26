@@ -39,6 +39,7 @@ import (
 	"github.com/tamnd/math2-agent/llm/claude"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/novelty"
+	"github.com/tamnd/math2-agent/project"
 	"github.com/tamnd/math2-agent/prompts"
 	"github.com/tamnd/math2-agent/sandbox"
 	"github.com/tamnd/math2-agent/search"
@@ -255,6 +256,19 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 	r := rs.roles[job.Role]
 	if r == nil {
 		return nil, nil, nil, fmt.Errorf("the role %s is not written yet", job.Role)
+	}
+	if id, ok := strings.CutPrefix(job.OnBehalfOf, "project:"); ok {
+		ps, err := project.Read(rs.root)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		p := project.Find(ps, job.OnBehalfOf)
+		if p == nil {
+			return nil, nil, nil, fmt.Errorf("the job runs on behalf of %s, and the tree has no %s/%s.yaml", job.OnBehalfOf, project.Dir, id)
+		}
+		if err := p.Allows(job); err != nil {
+			return nil, nil, nil, err
+		}
 	}
 	if err := os.MkdirAll(filepath.Dir(dir), 0o750); err != nil {
 		return nil, nil, nil, err

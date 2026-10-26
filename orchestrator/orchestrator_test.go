@@ -277,6 +277,22 @@ func TestReadConfig(t *testing.T) {
 			t.Errorf("ReadConfig accepts %q", text)
 		}
 	}
+
+	c.Cap("project:ug-core", 80)
+	c.Cap("project:fermat", 40)
+	c.Cap("schedule:nightly", 0)
+	if c.OnBehalfOf["project:ug-core"] != 50 || c.OnBehalfOf["project:fermat"] != 40 || c.OnBehalfOf["schedule:nightly"] != 0 || len(c.OnBehalfOf) != 3 {
+		t.Errorf("the caps are %v", c.OnBehalfOf)
+	}
+	c.Cap("project:ug-core", 20)
+	if c.OnBehalfOf["project:ug-core"] != 20 {
+		t.Errorf("a lower cap gives %v", c.OnBehalfOf["project:ug-core"])
+	}
+	empty := &orchestrator.Config{}
+	empty.Cap("project:fermat", 5)
+	if empty.OnBehalfOf["project:fermat"] != 5 {
+		t.Errorf("Cap on a configuration with no caps gives %v", empty.OnBehalfOf)
+	}
 }
 
 func TestShadow(t *testing.T) {

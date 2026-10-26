@@ -88,6 +88,8 @@ A **project** is a campaign (11.4) with people attached. It has:
 - **members**: people and agent roles, with permissions;
 - a **log**: every PR, review, agent run and discussion thread that touched the project.
 
+A project is the file `projects/<id>.yaml` in the content tree, with a name, a goal in words, the topic node of the goal, the target evidence level, a monthly budget in US dollars, the agent roles that work for it and the members with the role owner or member. The blueprint is the blueprint of the topic page. A job works for the project when it runs on behalf of `project:<id>`. The package `project` of m2 reads the files, `m2 agent run` refuses a job of a role or a person that the project does not have, and `m2 orchestrate` caps the monthly spend of the project at its budget. The project page of the site shows the run log from the run records. The pull requests, the reviews and the threads are not in the log yet.
+
 ### Tasks and claims
 
 Any frontier item can be a task. A person claims a task for a time window (default 14 days, renewable). Everyone can see the claim, so two people do not do the same work. Agents examine claims before they take a job. A claim by a person stops agent work on that target, unless the person invites agent work ("let agents try the cheap attempts first"). This follows the norm that large formalisation projects agreed on in 2024 to 2026: claim visibly, release promptly.

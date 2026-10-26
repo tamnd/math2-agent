@@ -535,6 +535,26 @@ A major bump of a role version needs a shadow week (spec 12.8). Put the files of
 
 `m2 agent dataset` writes the dataset of the runs of a quarter (spec 17.4) as JSON Lines, to the standard output or to `-o FILE`. The quarter is the last full quarter, or `-quarter 2026-Q4`. Each line is one run that started in the quarter, merged or not: the job, the role at its version, the model of the rung and the models that answered, the outcome and its reason, the number of turns, the budget, the spend, and the verdict of the novelty check of each output. A run is merged when a provenance line on the branch names it. The dataset has no transcripts, no system prompt and no brief. A job on behalf of a person gives only `person`, and the person who requested the job is not in the dataset. The goal and the reason lose their email addresses, API keys, tokens and home directories. The dataset is not published yet, because its licence and its DOI need a decision of the maintainers.
 
+## Projects
+
+A project is a campaign with people attached (spec 13.6). It is the file `projects/<id>.yaml` in the math2 tree:
+
+```yaml
+name: The Fermat numbers
+goal: File a counterexample for each known factor of a Fermat number.
+topic: T0PC1X        # the topic node of the goal
+level: E4            # the evidence level that the members of the topic must reach, or no level
+budget: 40           # the most US dollars that the agent runs of the project can spend in a month
+roles: [explore]     # the agent roles that work for the project
+members:
+  - {id: github:octocat, role: owner}
+  - {id: orcid:0000-0002-1825-0097, role: member}
+```
+
+The id of the project is the name of the file, and a job works for the project when it runs on behalf of `project:<id>`. `m2 agent run` refuses such a job when the tree has no file for the project, when the role is not in `roles`, or when the person who requested the job is not a member. `m2 orchestrate` adds the budget of each project to the caps of `on_behalf_of`, and a lower cap in `orchestrator.yaml` stays. Each project needs an owner, and the members review the file as they review a node.
+
+The wiki has a page for each project at `projects/<id>/`, with a JSON copy at `api/projects/<id>.json`. The page shows the goal, the blueprint of the topic, the tasks, the members, the spend of each month and the run log. The tasks are the statements with no proof and the open conjectures and problems of the blueprint, and with `-build`, the members of the topic below the level of the goal. Give `m2 site build -store DIR` to show the spend and the runs from the run records in DIR. A shadow run is not a run of its project. The log does not show the pull requests, the reviews and the discussions yet.
+
 ## The Mathlib bump
 
 `m2 bump` moves the tree to the newest release tag of Mathlib (spec 07.9). It never picks a release candidate. The command needs a git working tree with no changes, and it does these steps:
@@ -786,6 +806,7 @@ lean/     M2Extract, its Lake package and the Go package that drives it
 mcp/      the MCP server: a read-only tool for each method of the API (spec 11.2 and 11.7)
 node/     read node files, write the canonical form and compute the content hash
 propose/  the writes of spec 11.1: the change of each write method, the audit gate, the cap and the pull request on GitHub
+project/  the projects of the tree: the goal, the budget, the roles and the members (spec 13.6)
 prov/     the provenance logs, the agent runs, the credit of a person and the quarantine of a model (spec 04.8 and 06.5)
 release/  the release manifest, the levels and the notes of spec 06.2, and the rebuild checks R01 and R02
 replay/   the replay of a declaration in the comparator and the independent kernels
