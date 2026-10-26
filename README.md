@@ -705,6 +705,12 @@ go test ./bench/agents/curate -live -rung 0 -v -report curate.md
 go test ./bench/agents/reviewassist -v
 ```
 
+`bench/agents/align` is the suite of the align role, and it needs no Lean. Its tree has nodes with a Math2 binding, records of Wikidata, arXiv and Mathlib that we wrote, the type hashes of the Math2 bindings, and an edge that a person rejected. Each item is a target and its reference change: an edge to a record with the verdict of the judge, or a Mathlib binding with the type hash of the Math2 binding. Without flags, a scripted model makes the reference change, and the goal must hold. Then the goal or the tool must refuse each wrong attempt: no change, same_as to Mathlib, same_as to a paper, aligned to a record that is not a paper, an edge that a person rejected, a Mathlib binding of another type, and edges whose verdict is not the same. With `-live`, the role runs once on each target, and the report gives the precision and the recall of its changes and the share of the right verdicts of the judge.
+
+```sh
+go test ./bench/agents/align -v
+```
+
 ## Rules that the toolchain keeps
 
 1. The files in tamnd/math2 are the truth. Each database, index and site comes from these files, and you can make it again from them.
