@@ -49,7 +49,14 @@
     return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
 
-  function score(entry, words) {
+  // tagForm gives the tag that q names when q is a tag with lowercase letters, hyphens or the letters I, L and O, as tag.Normalize in Go reads it. It gives "" for other text.
+  function tagForm(q) {
+    var t = q.toUpperCase().replace(/-/g, "").replace(/[IL]/g, "1").replace(/O/g, "0");
+    return /^([0-9A-HJKMNP-TV-Z]{6}|[0-9A-HJKMNP-TV-Z]{10})$/.test(t) ? t : "";
+  }
+
+  function score(entry, words, tq) {
+    if (tq && entry.t === tq) return 1000;
     var name = fold(entry.n);
     var aliases = fold((entry.a || []).join(" "));
     var rest = fold(entry.t + " " + entry.k + " " + (entry.m || []).join(" "));
@@ -76,7 +83,8 @@
     if (!q) { status.textContent = "Type to search the nodes and the spec documents."; return; }
     if (!index) { status.textContent = "Loading the index."; return; }
     var words = fold(q).split(/\s+/);
-    var hits = index.map(function (e) { return { e: e, s: score(e, words) }; })
+    var tq = tagForm(q);
+    var hits = index.map(function (e) { return { e: e, s: score(e, words, tq) }; })
       .filter(function (h) { return h.s > 0; })
       .sort(function (a, b) { return b.s - a.s || a.e.n.localeCompare(b.e.n); })
       .slice(0, 50);

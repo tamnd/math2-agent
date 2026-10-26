@@ -317,7 +317,7 @@ func (s *Store) evidence(tag string) status.Level {
 	return status.None
 }
 
-// Resolve returns the tags of the nodes that ref names (query Q1). ref is a tag, a provisional id, an alias or an m2:// URI. The URI can name a node, an alias of a kind, a Lean declaration or an external id: m2://7K3QX2, m2://concept/group, m2://lean/Subgroup.card_subgroup_dvd_card or m2://ext/wikidata/Q83478. Only a Lean declaration or an external id can name more than one node. The tags are in byte order.
+// Resolve returns the tags of the nodes that ref names (query Q1). ref is a tag, a provisional id, an alias or an m2:// URI. The URI can name a node, an alias of a kind, a Lean declaration or an external id: m2://7K3QX2, m2://concept/group, m2://lean/Subgroup.card_subgroup_dvd_card or m2://ext/wikidata/Q83478. Only a Lean declaration or an external id can name more than one node. When ref is not a tag, has no space and no alias has its value, Resolve reads it with tag.Normalize, thus 3c53-td names the node 3C53TD. The tags are in byte order.
 func (s *Store) Resolve(ref string) ([]string, error) {
 	switch {
 	case strings.HasPrefix(ref, uri.Scheme):
@@ -355,7 +355,24 @@ func (s *Store) Resolve(ref string) ([]string, error) {
 	case tag.IsTag(ref) || tag.IsProvisional(ref):
 		return s.node(ref)
 	case tag.IsAlias(ref):
-		return s.alias(ref)
+		tags, err := s.alias(ref)
+		if err != nil {
+			if t, nerr := tag.Normalize(ref); nerr == nil {
+				return s.node(t)
+			}
+		}
+		return tags, err
+	}
+	if strings.Contains(ref, " ") {
+		// A name with spaces, such as "Not An Alias", can have the form of a tag when Normalize drops the spaces.
+		return nil, fmt.Errorf("%q is not a tag, an alias or an m2:// URI", ref)
+	}
+	t, err := tag.Normalize(ref)
+	if errors.Is(err, tag.ErrCheck) {
+		return nil, fmt.Errorf("the check character of %s is not correct. Look for a typing error in the tag", ref)
+	}
+	if err == nil {
+		return s.node(t)
 	}
 	return nil, fmt.Errorf("%q is not a tag, an alias or an m2:// URI", ref)
 }

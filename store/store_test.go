@@ -85,6 +85,12 @@ func TestResolve(t *testing.T) {
 		{"7K3QX2", "error: no node has the tag 7K3QX2"},
 		{"ring", "error: no node has the alias ring"},
 		{"Not An Alias", "error: \"Not An Alias\" is not a tag"},
+		{"3c53td", "3C53TD"},
+		{"3C53-TD", "3C53TD"},
+		{"g5sim9", "G5S1M9"},
+		{"d2sbo1", "D2SB01"},
+		{"7k3q-x2ab-ce", "error: no node has the tag 7K3QX2ABCE"},
+		{"7K3QX2ABCF", "error: the check character of 7K3QX2ABCF is not correct"},
 	}
 	for _, tt := range tests {
 		tags, err := s.Resolve(tt.ref)
