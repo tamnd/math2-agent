@@ -82,4 +82,12 @@ func TestServe(t *testing.T) {
 	if code, _, _ := run("serve", "x"); code != ExitUsage {
 		t.Errorf("m2 serve x exits with code %d", code)
 	}
+	for _, args := range [][]string{{"-repo", "math2"}, {"-repo", "a/b/c"}, {"-propose", "-stdio"}} {
+		if code, _, _ := run(append([]string{"serve"}, args...)...); code != ExitUsage {
+			t.Errorf("m2 serve %v exits with code %d", args, code)
+		}
+	}
+	if code, _, stderr := run("serve", "-propose", "-root", valid); code != ExitFailure || !strings.Contains(stderr, "not the top of a git clone") {
+		t.Errorf("m2 serve -propose on a tree that is not a git clone exits with code %d: %s", code, stderr)
+	}
 }

@@ -8,18 +8,20 @@ import (
 	"strings"
 
 	"github.com/tamnd/math2-agent/graph"
+	"github.com/tamnd/math2-agent/propose"
 	"github.com/tamnd/math2-agent/search"
 	"github.com/tamnd/math2-agent/status"
 	"github.com/tamnd/math2-agent/store"
 )
 
-// Method is one read method of the API.
+// Method is one method of the API: a read method of Methods, or a write method of Writes.
 type Method struct {
 	Name    string  `json:"name"`
 	Summary string  `json:"summary"`
 	Params  []Param `json:"params"`
 
-	run func(s *Service, a args) (result any, tags []string, err error)
+	run    func(s *Service, a args) (result any, tags []string, err error)
+	change func(s *Service, root string, a args) (propose.Change, error) // the change of a write method, from the tree at root
 }
 
 // Param is a parameter of a method.
