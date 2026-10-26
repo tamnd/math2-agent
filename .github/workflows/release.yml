@@ -3,12 +3,19 @@ name: release
 on:
   push:
     tags: ["v*"]
+  # A person can build the binaries of a tag again, for example when the release of the tag has no binaries.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "the tag to build, for example v0.2.7"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -26,6 +33,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
       # Do not use the Go build cache in a release. A cache that a pull request wrote must not go into a release binary.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -36,7 +44,7 @@ jobs:
         run: go test -race ./...
       - name: build
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ inputs.tag || github.ref_name }}
         run: |
           mkdir -p dist
           for target in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64; do
@@ -57,7 +65,7 @@ jobs:
       # The site report tests the wiki of the fixtures against the targets of spec 13.7. A miss gives a warning and a report that says FAIL, not a failed release, because a slow runner can miss the paint target by chance.
       - name: site report
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ inputs.tag || github.ref_name }}
         run: |
           go build -trimpath -ldflags "-X main.Version=${VERSION}" -o "$RUNNER_TEMP/m2" ./cmd/m2
           npm ci --ignore-scripts --prefix .github/lighthouse
@@ -80,5 +88,11 @@ jobs:
       - name: release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+          TAG: ${{ inputs.tag || github.ref_name }}
+        # A release that a person made before the run keeps its notes and gets the binaries.
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+          fi
