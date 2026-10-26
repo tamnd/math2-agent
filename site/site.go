@@ -128,19 +128,20 @@ type specDoc struct {
 }
 
 type builder struct {
-	opt     Options
-	base    string // the URL path of the site, for example /math2
-	nodes   map[string]*nodeView
-	order   []*nodeView
-	specs   []*specDoc
-	katex   *katex.Renderer
-	graph   *graph.Graph
-	status  map[string]status.Status           // nil when the site has no build
-	runs    map[string]map[string]*compute.Run // the runs of the computations in the build, by tag and architecture
-	tmpl    *template.Template
-	pages   []string // the paths of the HTML pages, for the sitemap
-	nodeMD  *markdown
-	plainMD *markdown
+	opt       Options
+	base      string // the URL path of the site, for example /math2
+	nodes     map[string]*nodeView
+	order     []*nodeView
+	specs     []*specDoc
+	katex     *katex.Renderer
+	graph     *graph.Graph
+	status    map[string]status.Status           // nil when the site has no build
+	runs      map[string]map[string]*compute.Run // the runs of the computations in the build, by tag and architecture
+	tmpl      *template.Template
+	reviewers []*reviewerView
+	pages     []string // the paths of the HTML pages, for the sitemap
+	nodeMD    *markdown
+	plainMD   *markdown
 }
 
 // Build writes the site to opt.Out.
@@ -164,7 +165,7 @@ func Build(opt Options) error {
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeAgents}
+	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeAgents}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
@@ -228,6 +229,9 @@ func (b *builder) load() error {
 		return err
 	}
 	if err := b.loadRuns(); err != nil {
+		return err
+	}
+	if err := b.loadReviews(); err != nil {
 		return err
 	}
 	b.explore()

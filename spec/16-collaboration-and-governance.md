@@ -50,7 +50,7 @@ Work on math2 must count as scholarly output. If it does not, the people who can
 
 - **Every release is citable** with a DOI (06.2). Every node at a release is citable as `m2://TAG@RELEASE`.
 - **Contributor statements.** `m2 prov credit <person> --from --to` produces a CRediT-taxonomy statement. It lists, with links, the nodes that the person wrote, formalised, reviewed or curated. Its format is for direct use in a CV or a grant report.
-- **Reviews are signed and public.** A fidelity review is a small, real and checkable piece of mathematical work. It carries the reviewer's name.
+- **Reviews are signed and public.** A fidelity review is a small, real and checkable piece of mathematical work. It carries the reviewer's name. Each reviewer has a page on the wiki with a stable link, `reviewers/SLUG/`, that lists their reviews, and `m2 review export` gives the same list as text or JSON.
 - **Projects publish.** A project that reaches its goal (13.6) can publish a release note as a paper. The author list comes from provenance, and the project's members edit it. A standard paragraph discloses the AI contributions, and provenance also generates this paragraph (16.5).
 
 ## 16.5 AI contribution: disclosure and norms

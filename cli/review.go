@@ -9,7 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/tamnd/math2-agent/build"
 	"github.com/tamnd/math2-agent/lean"
@@ -18,9 +20,12 @@ import (
 	"github.com/tamnd/math2-agent/status"
 )
 
-const reviewUsage = "m2 review [-root DIR] [-out DIR] [-decl D] [-json] [-reviewer ID -verdict V [-convention C]... [-class M-X] [-notes TEXT] [-date D] [-dry-run] [-commit]] <tag|alias|uri>"
+const reviewUsage = "m2 review [-root DIR] [-out DIR] [-decl D] [-json] [-reviewer ID -verdict V [-convention C]... [-class M-X] [-notes TEXT] [-date D] [-dry-run] [-commit]] <tag|alias|uri>\n       m2 review export [-root DIR] [-url URL] [-json] [reviewer]"
 
 func runReview(args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "export" {
+		return runReviewExport(args[1:], stdout, stderr)
+	}
 	flags := flag.NewFlagSet("m2 review", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	root := flags.String("root", ".", "the math2 working tree")
@@ -128,6 +133,69 @@ func runReview(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "The review %s is in %s and %s, in a signed commit.\n", r.ID, paths[0], paths[1])
 	default:
 		fmt.Fprintf(stdout, "The review %s is in %s and %s. Commit the two files with git commit -S.\n", r.ID, paths[0], paths[1])
+	}
+	return ExitOK
+}
+
+// runReviewExport writes the reviews of a reviewer, or of each reviewer, for the credit of spec 16.4.
+func runReviewExport(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("m2 review export", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	root := flags.String("root", ".", "the math2 working tree")
+	site := flags.String("url", "https://tamnd.github.io/math2", "the URL of the site, for the stable link of each export. Empty means no link.")
+	asJSON := flags.Bool("json", false, "write the exports as JSON")
+	if err := parseInterleaved(flags, args); err != nil {
+		return ExitUsage
+	}
+	if flags.NArg() > 1 {
+		fmt.Fprintln(stderr, "m2 review export: give one reviewer, or none for each reviewer")
+		return ExitUsage
+	}
+	fail := func(err error) int {
+		fmt.Fprintf(stderr, "m2 review export: %v\n", err)
+		return ExitFailure
+	}
+	reviews, err := status.LoadReviews(*root)
+	if err != nil {
+		return fail(err)
+	}
+	reviewers, err := status.LoadReviewers(*root)
+	if err != nil {
+		return fail(err)
+	}
+	nodes, err := node.Load(*root)
+	if err != nil {
+		return fail(err)
+	}
+	names := map[string]string{}
+	for _, n := range nodes {
+		names[n.ID] = n.Name()
+	}
+	exports := review.Exports(reviews, reviewers, names)
+	if who := flags.Arg(0); who != "" {
+		i := slices.IndexFunc(exports, func(e review.Export) bool { return e.Reviewer == who })
+		if i < 0 {
+			return fail(fmt.Errorf("the tree has no review by %s", who))
+		}
+		exports = exports[i : i+1]
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, "m2 review export", exports)
+	}
+	for i, e := range exports {
+		if i > 0 {
+			fmt.Fprintln(stdout)
+		}
+		link := ""
+		if *site != "" {
+			link = strings.TrimSuffix(*site, "/") + "/reviewers/" + review.Slug(e.Reviewer) + "/"
+		}
+		if err := e.WriteText(stdout, link); err != nil {
+			return fail(err)
+		}
+	}
+	if len(exports) == 0 {
+		fmt.Fprintln(stdout, "The tree has no reviews.")
 	}
 	return ExitOK
 }

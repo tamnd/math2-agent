@@ -119,3 +119,36 @@ func TestReviewErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestReviewExport(t *testing.T) {
+	root := reviewTree(t)
+	if code, stdout, _ := run("review", "export", "-root", root); code != ExitOK || stdout != "The tree has no reviews.\n" {
+		t.Errorf("a tree with no reviews: exit code %d, %s", code, stdout)
+	}
+	if code, _, stderr := run("review", "-root", root, "-reviewer", "github:reviewer", "-verdict", "faithful", "-date", "2026-11-01", "1B0000"); code != ExitOK {
+		t.Fatalf("m2 review: %s", stderr)
+	}
+	code, stdout, stderr := run("review", "export", "-root", root, "github:reviewer")
+	want := "github:reviewer: 1 fidelity review of Lean formalizations for math2, on 2026-11-01.\nhttps://tamnd.github.io/math2/reviewers/github-reviewer/\n\n2026-11-01  r-1B0000-01  Zero add (m2://1B0000), Nat.zero_add: faithful\n"
+	if code != ExitOK || stdout != want {
+		t.Errorf("exit code %d, %s%s", code, stdout, stderr)
+	}
+	code, stdout, _ = run("review", "export", "-root", root, "-json")
+	var exports []struct {
+		Reviewer string `json:"reviewer"`
+		First    string `json:"first"`
+		Reviews  []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"reviews"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &exports); code != ExitOK || err != nil || len(exports) != 1 || exports[0].First != "2026-01-01" || exports[0].Reviews[0].Name != "Zero add" {
+		t.Errorf("-json: exit code %d, %v, %s", code, err, stdout)
+	}
+	if code, _, stderr := run("review", "export", "-root", root, "github:other"); code != ExitFailure || !strings.Contains(stderr, "no review by github:other") {
+		t.Errorf("a reviewer with no review: exit code %d, %s", code, stderr)
+	}
+	if code, _, _ := run("review", "export", "a", "b"); code != ExitUsage {
+		t.Errorf("two reviewers: exit code %d", code)
+	}
+}

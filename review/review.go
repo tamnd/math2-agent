@@ -3,6 +3,8 @@
 // A packet holds what a reviewer reads for each Lean binding of a node: the informal statement and the Lean statement, with and without notation, each constant of the statement with its type and the nodes that bind it, the report of the F1 battery and the reviews that the binding has. [Make] builds a packet from the files of a build. [Packet.WriteText] shows it, with the two statements side by side.
 //
 // [Write] adds a review to the tree. It gives the review the next id of the node, writes it to reviews/XX/TAG.yaml and adds the id to the binding. Write checks the review before it changes a file. The tool never signs a review: the reviewer signs the commit with their own key.
+//
+// [Exports] gives the reviews of each reviewer, for the credit of spec 16.4. [Export.WriteText] writes them as text for a CV, and [Slug] gives the last segment of the stable link of a reviewer on the site.
 package review
 
 import (

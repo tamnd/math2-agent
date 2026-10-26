@@ -17,6 +17,7 @@
 <tr><td><code>api/node/&lt;TAG&gt;.json</code></td><td>One node: the front matter as it is in the file, the body as Markdown, the outgoing links and the backlinks. The key <code>prov</code> links the provenance log, and it lists the fields that an agent wrote and that no person checked yet, and the fields in quarantine. The view, the Markdown copy and the page leave out the text in quarantine.</td></tr>
 <tr><td><code>node/&lt;TAG&gt;.md</code></td><td>The node file, byte for byte.</td></tr>
 <tr><td><a href="{{.Search}}"><code>api/search.json</code></a></td><td>The search index of this site.</td></tr>
+<tr><td><a href="{{url "api/reviewers.json"}}"><code>api/reviewers.json</code></a></td><td>The reviewers and the number of reviews of each one. The reviews of one reviewer are at <code>api/reviewers/&lt;SLUG&gt;.json</code>, where the slug is the id with a hyphen for the colon, for example <code>github-octocat</code>.</td></tr>
 <tr><td><a href="{{.Spec}}"><code>api/spec.json</code></a></td><td>The spec documents. Each one is also at <code>spec/&lt;slug&gt;.md</code>.</td></tr>
 <tr><td><a href="{{.Schema}}"><code>schema/node.v1.json</code></a></td><td>The JSON Schema 2020-12 for the front matter.</td></tr>
 <tr><td><a href="{{.Macros}}"><code>macros/m2.katex.json</code></a></td><td>The TeX macros of the node bodies, for KaTeX or MathJax.</td></tr>
@@ -34,7 +35,7 @@
 <li>An agent that proposes a change opens a pull request on <a href="{{repo}}">{{repo}}</a>. The checks are the gate. Read <a href="{{url "contribute/"}}">Contribute</a>.</li>
 </ul>
 
-<h2>Coming next</h2>
-<p>To run graph queries now, clone the content repository, run <code>m2 build</code> and then <code>m2 graph</code>. It gives the nodes and the edges near a node, the closure of a node with its trust profile, the nodes that need a node, the shortest learning path between two nodes and the frontier of open work. Each query takes <code>-json</code>. A query API and an MCP server arrive in M3 with <code>m2 serve</code>. Until then, this static interface is the stable one.</p>
+<h2>The API</h2>
+<p>To run graph queries and search, clone the content repository, run <code>m2 build</code> and then <code>m2 serve</code>. It serves the read API over HTTP with JSON, over gRPC and as an MCP server. <code>m2 serve -propose</code> also serves the write methods, and each write opens a pull request under the GitHub identity of the caller. Read the README of <a href="{{agentRepo}}">{{agentRepo}}</a>. This static interface stays the stable one for a program that does not run a server.</p>
 </article>
 {{end}}
