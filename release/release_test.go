@@ -45,7 +45,7 @@ func repo(t *testing.T, src string) (dir, commit string) {
 
 func git(t *testing.T, dir string, args ...string) string {
 	t.Helper()
-	out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+	out, err := exec.Command("git", append([]string{"-C", dir, "-c", "user.name=m2", "-c", "user.email=m2@example.com", "-c", "commit.gpgsign=false"}, args...)...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 	}

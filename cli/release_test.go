@@ -52,7 +52,7 @@ func releaseTree(t *testing.T) string {
 
 func gitT(t *testing.T, root string, args ...string) string {
 	t.Helper()
-	out, err := exec.Command("git", append([]string{"-C", root, "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}, args...)...).CombinedOutput()
+	out, err := exec.Command("git", append([]string{"-C", root, "-c", "user.name=m2", "-c", "user.email=m2@example.com", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}, args...)...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 	}
