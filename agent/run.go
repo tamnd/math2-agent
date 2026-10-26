@@ -19,6 +19,7 @@ import (
 	"github.com/zeebo/blake3"
 
 	"github.com/tamnd/math2-agent/llm"
+	"github.com/tamnd/math2-agent/models"
 	"github.com/tamnd/math2-agent/novelty"
 	"github.com/tamnd/math2-agent/prov"
 )
@@ -46,6 +47,7 @@ type Runner struct {
 	Tools  []Tool               // the tools of the role. The model sees only the tools in the profile of the role.
 	Goal   Goal                 // the goal predicate. It runs after each turn. Nil means that no goal can hold, which is for tests.
 	Prices map[string]llm.Price // the prices of the models. Nil means llm.Prices.
+	Models *models.Register     // the model register. The runner refuses a model with no entry (corpus K7.7). Nil means models.Default().
 	Now    func() time.Time     // the clock. Nil means time.Now.
 	Meter  *Meter               // the model that the goal calls, or nil
 }
@@ -126,6 +128,13 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 	g := role.Ladder[rung]
 	if len(job.Constraints.Models) > 0 && !slices.Contains(job.Constraints.Models, g.Model) {
 		return nil, fmt.Errorf("agent: the job does not allow the model %s of rung %d", g.Model, rung)
+	}
+	reg := rn.Models
+	if reg == nil {
+		reg = models.Default()
+	}
+	if err := reg.Check(g.Model); err != nil {
+		return nil, fmt.Errorf("agent: rung %d of %s: %w", rung, role.Name, err)
 	}
 	now := rn.Now
 	if now == nil {

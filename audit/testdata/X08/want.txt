@@ -1,0 +1,2 @@
+prov/3C5/3C53TD.jsonl:2:1: X08: the agent m2-agent/prove@1.0.0 wrote body.statement of 3C53TD, and the line names no model
+prov/3C5/3C53TD.jsonl:3:1: X08: the agent m2-agent/prove@1.0.0 wrote body.proof of 3C53TD with the model gpt-0, which has no entry in the model register models/models.yaml (corpus K7.7)

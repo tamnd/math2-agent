@@ -1,0 +1,46 @@
+# The model register of corpus K7.7. Each model that the orchestrator can call has an entry. The orchestrator refuses a model with no entry, and rule X08 refuses a field from such a model.
+#
+# A terms document has the URL, the date that it takes effect, the date that a person read it and who read it, and the clauses on outputs. A model names the documents that apply to it.
+version: models.v1
+
+terms:
+  - id: anthropic-commercial
+    name: Commercial Terms of Service of Anthropic
+    url: https://www.anthropic.com/legal/commercial-terms
+    effective: 2025-06-17
+    read: 2026-10-26
+    by: Claude Code, for tamnd
+    outputs:
+      - duty: owns
+        says: The customer owns its outputs.
+      - duty: no_competing
+        section: D.4
+        says: The customer must not use the services to build a competing product or service, and this includes the training of competing AI models.
+  - id: anthropic-aup
+    name: Usage Policy of Anthropic
+    url: https://www.anthropic.com/legal/aup
+    effective: 2026-11-12
+    read: 2026-10-26
+    by: Claude Code, for tamnd
+    outputs:
+      - duty: no_training
+        from: 2026-11-12
+        says: A user must not use outputs to train an AI model, for example by model scraping or model distillation, without the prior authorization of Anthropic.
+
+models:
+  - id: claude-haiku-5-5
+    family: claude
+    provider: anthropic
+    terms: [anthropic-commercial, anthropic-aup]
+  - id: claude-sonnet-5-5
+    family: claude
+    provider: anthropic
+    terms: [anthropic-commercial, anthropic-aup]
+  - id: claude-opus-5-5
+    family: claude
+    provider: anthropic
+    terms: [anthropic-commercial, anthropic-aup]
+  - id: claude-fable-5-1
+    family: claude
+    provider: anthropic
+    terms: [anthropic-commercial, anthropic-aup]

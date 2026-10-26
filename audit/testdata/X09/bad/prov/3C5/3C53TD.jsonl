@@ -1,0 +1,3 @@
+{"field":"*","op":"add","agent":null,"human":"github:writer","at":"2026-09-01T10:00:00Z"}
+{"field":"body.statement","op":"change","agent":"m2-agent/prove@1.0.0","model":"claude-opus-5-5","run":"r-2026-09-01-1","human":null,"at":"2026-09-01T10:00:00Z"}
+{"field":"body.proof","op":"add","agent":"m2-agent/prove@1.0.0","model":"claude-opus-5-5","run":"r-2026-09-01-1","human":null,"at":"2026-09-01T10:00:00Z"}

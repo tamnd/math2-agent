@@ -13,6 +13,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/models"
 	"github.com/tamnd/math2-agent/schema"
 )
 
@@ -112,6 +113,14 @@ var setup = map[string]func(t *testing.T){
 		t.Setenv("GIT_AUTHOR_DATE", "2026-10-01T12:00:00Z")
 		t.Setenv("GIT_COMMITTER_DATE", "2026-10-01T12:00:00Z")
 	},
+	// The register has only models of one family, thus X09 adds a judge of another family.
+	"X09": func(t *testing.T) {
+		saved := modelRegister
+		t.Cleanup(func() { modelRegister = saved })
+		reg := *models.Default()
+		reg.Models = append(slices.Clone(reg.Models), models.Model{ID: "judge-a", Family: "testfamily", Provider: "test"})
+		modelRegister = func() *models.Register { return &reg }
+	},
 	// S09 needs an open migration window. The test migration renames the field msc_codes to msc.
 	"S09": func(t *testing.T) {
 		saved := schema.Migrations
@@ -190,8 +199,8 @@ func TestFixtures(t *testing.T) {
 
 func TestCatalogue(t *testing.T) {
 	rules := Rules()
-	if len(rules) != 93 {
-		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K5.14, K9.9, K10.7 and K13.9 have 93", len(rules))
+	if len(rules) != 95 {
+		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K5.14, K7.10, K9.9, K10.7 and K13.9 have 95", len(rules))
 	}
 	planes := map[byte]string{'T': Nodes, 'S': Nodes, 'B': Nodes, 'G': Graph, 'F': Formal, 'V': Formal, 'C': Compute, 'A': Align, 'L': Licence, 'P': Prov, 'R': Release, 'X': Agents, 'I': Inventory, 'N': Notation}
 	id := regexp.MustCompile(`^[A-Z][0-9]{2}$`)

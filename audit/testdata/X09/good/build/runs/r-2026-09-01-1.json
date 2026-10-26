@@ -1,0 +1,41 @@
+{
+  "id": "r-2026-09-01-1",
+  "agent": "m2-agent/prove@1.0.0",
+  "prompt": "prove/3",
+  "models": [
+    "claude-opus-5-5",
+    "judge-a"
+  ],
+  "on_behalf_of": "orcid:0000-0002-1825-0097",
+  "started": "2026-09-01T09:00:00Z",
+  "outcome": "success",
+  "sanity": [
+    {
+      "node": "3C53TD",
+      "field": "body.statement",
+      "check": "judges",
+      "result": "pass",
+      "model": "judge-a"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "judges",
+      "result": "fail",
+      "model": "judge-a"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "judges",
+      "result": "n/a"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "small_cases",
+      "result": "pass",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

@@ -88,6 +88,8 @@ var catalogue = []entry{
 	{Rule{"X05", Agents, true, "an agent-written statement or proof has the results of the sanity checks in its run record"}, x05},
 	{Rule{"X06", Agents, false, "a stratum of the sample audit has an error rate near its threshold or above it"}, x06},
 	{Rule{"X07", Agents, false, "an agent-written body names a theorem that resolves to no node and has no source"}, x07},
+	{Rule{"X08", Agents, true, "each field that an agent wrote names a model that has an entry in the model register"}, x08},
+	{Rule{"X09", Agents, true, "each judge verdict in a check of K9.3 is from a model of a family other than the family of the writer"}, x09},
 	{Rule{"I01", Inventory, true, "each inventory value in a node points to a row whose outcome is node or member with the tag of that node"}, i01},
 	{Rule{"I02", Inventory, true, "each row with the outcome node or member points to a live node, or to a retired node with a successor"}, i02},
 	{Rule{"I03", Inventory, true, "no row has only mentions from models"}, i03},
