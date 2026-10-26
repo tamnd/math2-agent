@@ -129,6 +129,7 @@ math2-agent/
   align/                         dedup and crosswalk (05.3, 05.4)
   autoform/                      statement autoformalization and fidelity pipeline (document 10)
   search/                        lexical, formula, embedding, type-directed search (document 14)
+  novelty/                       the novelty check: the searches, the judge and the verdict (17.5)
   audit/                         one file per rule, with fixtures (document 15)
   prov/                          provenance writing, PROV export, quarantine (06.5)
   release/                       release manifest, notes, archive (06.2)
