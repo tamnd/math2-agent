@@ -209,6 +209,7 @@ func runSiteBuild(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.Build, "build", "", "the output directory of m2 build for the tree. The pages then show the status that the build computed. Leave it empty for no status.")
 	fs.StringVar(&opt.Store, "store", "", "the directory of the agent run records. The project pages then show the runs and the spend of each project. Leave it empty for no runs.")
 	fs.StringVar(&opt.Commit, "commit", "", "the content commit")
+	fs.BoolVar(&opt.Cloudflare, "cloudflare", false, "build for Cloudflare Pages: a worker serves the short links node/TAG/, in place of one page for each node")
 	date := fs.String("date", "", "the build date: now, or empty for no date. SOURCE_DATE_EPOCH also sets it.")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage

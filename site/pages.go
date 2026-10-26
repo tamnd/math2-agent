@@ -107,8 +107,10 @@ func (b *builder) writeNodes() error {
 		if err := b.writePage("wiki/"+v.Slug, "node", v, p); err != nil {
 			return err
 		}
-		if err := b.write("node/"+v.Tag+"/index.html", b.shortLink(v)); err != nil {
-			return err
+		if !b.opt.Cloudflare {
+			if err := b.write("node/"+v.Tag+"/index.html", b.shortLink(v)); err != nil {
+				return err
+			}
 		}
 		src, err := os.ReadFile(filepath.Join(b.opt.Content, filepath.FromSlash(v.Path))) // #nosec G304 -- the path comes from node.Load.
 		if err != nil {
@@ -123,6 +125,9 @@ func (b *builder) writeNodes() error {
 		if err := b.writeJSON("api/node/"+v.Tag+".json", b.nodeJSON(v)); err != nil {
 			return err
 		}
+	}
+	if b.opt.Cloudflare {
+		return b.writeWorker()
 	}
 	return nil
 }

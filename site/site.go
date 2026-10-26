@@ -52,6 +52,7 @@ type Options struct {
 	Date       time.Time   // the build date. A zero date leaves it out, so that two builds give the same bytes.
 	Milestones []Milestone // the plan
 	Current    string      // the current milestone, for example M0
+	Cloudflare bool        // build for Cloudflare Pages: a worker sends node/TAG/ to the page of the node, so the site has no page for each short link
 }
 
 // kinds are the 11 node kinds with a short description, in schema order.
