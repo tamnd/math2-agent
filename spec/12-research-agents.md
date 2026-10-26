@@ -52,6 +52,7 @@ open PR (agent/<role>/<run-id>) with run summary | or record failure with reason
 These decisions are intentional:
 
 - **Tools, not bash.** The agent sees typed tools: `get`, `search`, `premises`, `lean_*`, `compute`, `propose_*`. It does not get a shell. In 2026, agents used a shell to find and exploit kernel and harness bugs (document 01). The tool surface is the MCP surface of document 11. Thus an external MCP client with the same permissions can do all that a math2 agent can do.
+  The package `agent/tools` has the first of these tools. `tools.API` makes a tool from each read method, with the names and the parameters of the MCP server. `read_file` and `write_file` work in the work tree of the run, and a write that the role may not make fails and leaves the file as it was. `lean_check` elaborates a Lean file of the tree, or a scratch file, and its time counts in the Lean session seconds of the budget.
 - **One target, one closure.** The context comes from the graph neighbourhood of the target, not from a general search over everything. Thus runs are reproducible and cheap to cache.
 - **The verifier's verdict is the only verdict.** When an agent claims success, it must produce a diff that passes the audit. The system records the agent's own assessment and never uses it.
 - **Failures with reasons are outputs.** "Statement false at n=7, witness attached" closes a prove job and attaches a counterexample job. "Needs a lemma that is not in Mathlib: X" creates a node for X.
