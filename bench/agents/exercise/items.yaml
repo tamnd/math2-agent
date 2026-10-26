@@ -1,0 +1,68 @@
+# The public items of the suite of the exercise role (corpus K7.3, K8.7). Each item is a target node and reference exercises for it, with the answer that a solver must reach. The nodes and the exercises are in our own words. The held-out items are in a private repository, and -items reads them from a file of the same form.
+items:
+  - tag: 3C53TD
+    kind: statement
+    text: |
+      ---
+      tag: 3C53TD
+      kind: statement
+      role: theorem
+      name: Lagrange's theorem
+      ---
+
+      ## Statement
+
+      Let $G$ be a finite group and let $H$ be a subgroup of $G$. Then the order of $H$ divides the order of $G$.
+    exercises:
+      - name: A large subgroup of a group of order 12
+        task: A group $G$ has order 12, and $H$ is a subgroup of $G$ whose order is greater than 6. What is the order of $H$?
+        hint: List the divisors of 12.
+        answer: "12"
+        check: exact
+        group: B
+        difficulty: 2
+        solution: |
+          1. The order of $H$ divides 12, by Lagrange's theorem.
+          2. The only divisor of 12 that is greater than 6 is 12. Thus the order of $H$ is 12.
+      - name: Subgroups of a group of prime order
+        task: Let $p$ be a prime and let $G$ be a group of order $p$. Show that the only subgroups of $G$ are the trivial subgroup and $G$.
+        check: none
+        group: C
+        difficulty: 3
+        solution: |
+          1. Let $H$ be a subgroup of $G$. By Lagrange's theorem, the order of $H$ divides $p$.
+          2. The only divisors of $p$ are 1 and $p$, because $p$ is a prime.
+          3. If the order of $H$ is 1, then $H$ is the trivial subgroup. If it is $p$, then $H$ is $G$.
+  - tag: 9N4TQ2
+    kind: statement
+    text: |
+      ---
+      tag: 9N4TQ2
+      kind: statement
+      role: theorem
+      name: Sum of the first natural numbers
+      ---
+
+      ## Statement
+
+      For each natural number $n$, the sum $1 + 2 + \cdots + n$ is $n(n+1)/2$.
+    exercises:
+      - name: The sum of the numbers from 1 to 100
+        task: What is the sum $1 + 2 + \cdots + 100$?
+        hint: Take $n = 100$ in the formula.
+        answer: "5050"
+        check: exact
+        group: A
+        difficulty: 1
+        solution: |
+          1. The sum is $n(n+1)/2$ with $n = 100$, by the formula.
+          2. Thus the sum is $100 \cdot 101 / 2 = 5050$.
+      - name: The mean of the numbers from 1 to 9
+        task: What is the mean of the numbers $1, 2, \ldots, 9$? Give a decimal number.
+        answer: "5.0"
+        check: numeric
+        group: B
+        difficulty: 2
+        solution: |
+          1. The sum of the numbers is $9 \cdot 10 / 2 = 45$, by the formula.
+          2. The mean is the sum divided by 9, thus it is 5.

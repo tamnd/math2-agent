@@ -246,6 +246,33 @@ func TestAgentRunWrite(t *testing.T) {
 	}
 }
 
+func TestAgentRunExercise(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
+	root, out := agentTree(t)
+	u := llm.Usage{Input: 1000, Output: 200}
+	text := "---\ntag: ~1a2b3c4d\nkind: example\nname: The order of a natural number with itself\nuses: [7K3QX2]\n---\n\n## Example\n\nIs $5 \\le 5$ true? Answer yes or no.\n\n## Remarks\n\nRole: exercise. About: 7K3QX2. Difficulty: 1. Group: A. Check: exact.\n\n### Answer\n\nyes\n\n### Solution\n\n1. Each natural number $n$ satisfies $n \\le n$, by [[reflexivity|7K3QX2]]. Thus $5 \\le 5$ is true.\n"
+	oldModel, oldLean := newModel, newLean
+	newModel = func() (llm.Model, error) {
+		return llmtest.New(llmtest.Call("write_file", map[string]string{"path": "nodes/~/~1a2b3c4d.md", "text": text}, u)), nil
+	}
+	newLean = func(context.Context, string, *tools.Box) (tools.Lean, error) {
+		return nil, errors.New("exercise needs no Lean")
+	}
+	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
+
+	work := filepath.Join(t.TempDir(), "w")
+	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", t.TempDir(), "-work", work, "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "exercise")
+	if code != ExitOK {
+		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/exercise@0.1.0, 1 turns") {
+		t.Errorf("the output is\n%s", stdout)
+	}
+	if b, err := os.ReadFile(filepath.Join(work, "queues", "exercises.jsonl")); err != nil || !strings.Contains(string(b), `"reason":"math2 has no solver of another family yet"`) {
+		t.Errorf("the queue is %s, %v", b, err)
+	}
+}
+
 func TestAgentRunCurate(t *testing.T) {
 	t.Setenv("M2_LEAN_IMAGE", "")
 	root, out := agentTree(t)
