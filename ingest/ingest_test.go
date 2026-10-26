@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -121,6 +122,33 @@ func TestGate(t *testing.T) {
 	r = ingest.Gate(arxiv, ingest.Record{ID: "2610.01235", Licence: "LicenseRef-arXiv", Text: passage})
 	if r.Text != "" || r.Licence != "" {
 		t.Errorf("the gate gives %+v for an item with the licence of the source", r)
+	}
+	arxiv.PerItemLicence = true
+	r = ingest.Gate(arxiv, ingest.Record{ID: "2610.01235", Licence: "LicenseRef-arXiv", Text: passage})
+	if r.Text != "" || r.Licence != "LicenseRef-arXiv" {
+		t.Errorf("the gate gives %+v for an item of a source with a licence for each item", r)
+	}
+}
+
+func TestChoices(t *testing.T) {
+	for licence, want := range map[string][]string{
+		"CC-BY-SA-4.0":                       nil,
+		"CC-BY-SA-4.0 OR CC-BY-NC-SA-4.0":    {"CC-BY-SA-4.0", "CC-BY-NC-SA-4.0"},
+		"(GFDL-1.3-only OR CC-BY-SA-3.0-US)": {"GFDL-1.3-only", "CC-BY-SA-3.0-US"},
+	} {
+		if got := ingest.Choices(licence); !slices.Equal(got, want) {
+			t.Errorf("Choices(%q) = %q, want %q", licence, got, want)
+		}
+	}
+	s := ingest.Source{ID: "lebl", Name: "Basic Analysis", Licence: "CC-BY-SA-4.0 OR CC-BY-NC-SA-4.0", Election: "CC-BY-SA-4.0", Class: ingest.Open, LicenceRead: &ingest.LicenceRead{On: "2026-10-20"}}
+	if s.Elected() != "CC-BY-SA-4.0" {
+		t.Errorf("the elected licence is %s", s.Elected())
+	}
+	if s.ReadOn(&ingest.Snapshot{}) != "2026-10-20" || s.ReadOn(&ingest.Snapshot{LicenceRead: "2026-09-01"}) != "2026-09-01" {
+		t.Error("ReadOn does not give the date of the reading of the snapshot")
+	}
+	if p := s.Problems(); p != nil {
+		t.Errorf("an entry with an election has the problems %v", p)
 	}
 }
 

@@ -72,6 +72,22 @@ func TestIngest(t *testing.T) {
 		t.Errorf("two imports of the same snapshot give\n%s\nand\n%s", first, again)
 	}
 
+	// m2 ingest makes the entry of a new source, and L08 fails until a person completes the source document and approves it.
+	if code, _, _ := run("audit", "-root", root, "-rule", "L08", "-q"); code == ExitOK {
+		t.Error("L08 passes on a source document that no person approved")
+	}
+	if cat, err = ingest.ReadCatalogue(root); err != nil {
+		t.Fatal(err)
+	}
+	s := cat.Source("words")
+	s.LicenceRead = &ingest.LicenceRead{At: "https://example.org/LICENSE", On: "2026-10-25", By: "a-reader"}
+	s.Authored, s.Channel, s.ApprovedBy = "human", "bulk", "a-maintainer"
+	if s.Attribution == "" {
+		s.Attribution = "The words of the test"
+	}
+	if err := cat.Write(root); err != nil {
+		t.Fatal(err)
+	}
 	if code, _, stderr := run("audit", "-root", root, "-plane", "licence", "-q"); code != ExitOK {
 		t.Errorf("the licence rules fail on the import: %s", stderr)
 	}

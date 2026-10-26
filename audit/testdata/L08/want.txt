@@ -1,0 +1,9 @@
+manifests/sources.yaml:20:1: L08: stacks: the source document has no licence_read
+manifests/sources.yaml:20:1: L08: stacks: authored is "robot", which is not one of [human ai mixed]
+manifests/sources.yaml:20:1: L08: stacks: the source document has no approved_by
+manifests/sources.yaml:32:1: L08: nlab: the source document has no channel
+manifests/sources.yaml:32:1: L08: nlab: kind is "blog", which is not one of [reference wiki textbook paper-index extraction curriculum exercises database]
+manifests/sources.yaml:32:1: L08: nlab: the source document has no snapshot
+manifests/sources.yaml:32:1: L08: nlab: the source document has no attribution
+records/mentions/stacks/AAA.jsonl:1:1: L08: the mention m2://rec/stacks/01H8#1 names the source stacks, whose source document is not complete
+records/mentions/zbmath/AAA.jsonl:1:1: L08: the mention m2://rec/zbmath/0001.00001#1 names the source "zbmath", which has no entry in manifests/sources.yaml

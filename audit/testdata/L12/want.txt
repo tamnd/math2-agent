@@ -1,0 +1,1 @@
+manifests/sources.yaml:20:1: L12: stacks: the licence was last read on 2025-09-30, more than 12 months ago. Read it again at https://example.org/stacks/LICENSE

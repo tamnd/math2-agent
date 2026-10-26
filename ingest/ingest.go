@@ -71,6 +71,7 @@ var classes = map[string]Class{
 	"GFDL-1.2-or-later":  GFDL,
 	"GFDL-1.3-only":      GFDL,
 	"GFDL-1.3-or-later":  GFDL,
+	PublicDomainLicence:  Open, // only when the work is in the public domain in the United States and in the EU (rule L10)
 	"LicenseRef-arXiv":   RecordOnly,
 	"LicenseRef-unknown": RecordOnly,
 }

@@ -97,6 +97,8 @@ var setup = map[string]func(t *testing.T){
 	// A02 and A04 compare a date with the date of the HEAD commit, thus the commits of the fixtures have a fixed date.
 	"A02": fixedDate,
 	"A04": fixedDate,
+	// L12 compares the date of a reading with the date of the HEAD commit.
+	"L12": fixedDate,
 	// X03 counts the runs of the week that ends a week before the date of the HEAD commit.
 	"X03": fixedDate,
 	// The manifests of R05 name the commit of step 1.
@@ -188,8 +190,8 @@ func TestFixtures(t *testing.T) {
 
 func TestCatalogue(t *testing.T) {
 	rules := Rules()
-	if len(rules) != 87 {
-		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K9.9 and K10.7 have 87", len(rules))
+	if len(rules) != 93 {
+		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K5.14, K9.9, K10.7 and K13.9 have 93", len(rules))
 	}
 	planes := map[byte]string{'T': Nodes, 'S': Nodes, 'B': Nodes, 'G': Graph, 'F': Formal, 'V': Formal, 'C': Compute, 'A': Align, 'L': Licence, 'P': Prov, 'R': Release, 'X': Agents, 'I': Inventory, 'N': Notation}
 	id := regexp.MustCompile(`^[A-Z][0-9]{2}$`)

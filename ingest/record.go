@@ -32,13 +32,14 @@ type Record struct {
 	Meta         map[string]string `json:"meta,omitempty"`         // other fields of the item
 }
 
-// Gate applies the licence gate of spec 09.3 to r, an item of the source src. The class of r is the class of its own licence when it has one, and the class of src when it has none. Gate sets the fingerprints of the text, and it drops the text when the class does not let math2 store it.
+// Gate applies the licence gate of spec 09.3 to r, an item of the source src. The class of r is the class of its own licence when it has one, and the class of src when it has none. A record of a source with a licence for each item keeps its licence. Gate sets the fingerprints of the text, and it drops the text when the class does not let math2 store it.
 func Gate(src *Source, r Record) Record {
 	r.Class = src.Class
-	if r.Licence != "" && r.Licence != src.Licence {
+	switch {
+	case r.Licence != "" && r.Licence != src.Licence:
 		r.Class = ClassOf(r.Licence)
-	} else {
-		r.Licence = ""
+	case !src.PerItemLicence:
+		r.Licence = "" // the licence of the source. A source with a licence for each item keeps it (rule L06)
 	}
 	r.Fingerprints = Fingerprints(r.Text)
 	if !r.Class.StoresText() {
