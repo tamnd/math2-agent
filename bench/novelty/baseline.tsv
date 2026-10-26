@@ -1,0 +1,3 @@
+# metric	m2
+# The recall of known of the novelty check with the oracle judge. go test ./bench/novelty -update writes this file.
+recall	0.818

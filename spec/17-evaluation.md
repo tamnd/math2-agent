@@ -103,6 +103,8 @@ The check is in the `novelty` package. `novelty.Check` runs each search on the c
 
 math2 evaluates the check like everything else. Its suite contains results that are known to be in the literature. Each result is phrased as it would come out of an agent. The suite includes the 2025 to 2026 rediscoveries (document 01). Measured: recall of `known`. Sometimes the novelty check misses a rediscovery and a person finds it later. That rediscovery then goes into the suite.
 
+The suite is in `bench/novelty`. Its first items are classical results in the words of an agent output, with the node of the test tree or the paper of the suite that makes each one known, and some results that the searches do not have. With an oracle judge, the recall of `known` measures the searches: the match must be in the three best matches of a search. With the judge of explore, it also measures the judge, and the items with no match measure how often the judge calls a result known by mistake. The rediscoveries of 2025 to 2026 are not in the suite yet, because each item needs a source that a person checked.
+
 ## 17.6 External benchmarks
 
 math2 does not optimise for public benchmarks. But it runs them, for two reasons. They put the agents of math2 on a common scale with the agents of everyone else. And the fresh benchmarks are useful held-out sets. Each release reports the results with their costs. These results never replace the suites above.

@@ -1,0 +1,103 @@
+# The items of the recall suite of the novelty check (spec 17.5). Each item is a known result in the words of an agent output, with the matches that make it known: graph:TAG for a node of testdata/nodes/valid, or zbmath:ID for a record of records.yaml. An item with no matches is not in the searches of the suite, and the check must not call it known. The items are in our own words.
+items:
+  - id: lagrange
+    name: Subgroup sizes divide the group size
+    statement: For each finite group $G$ and each subgroup $H$ of $G$, the number of elements of $H$ divides the number of elements of $G$. The computation checks it for each group of order at most 30.
+    known: [graph:Q529ES]
+  - id: wilson
+    name: A factorial test for primes
+    statement: For each prime $p$, the number $(p-1)! + 1$ is a multiple of $p$. The computation checks the primes below 1000.
+    known: [graph:QXQ1Z0]
+  - id: infinite-primes
+    name: The primes never end
+    statement: For each natural number $n$ there is a prime number larger than $n$.
+    known: [graph:200AK3]
+  - id: a4
+    name: A group of order 12 with no subgroup of order 6
+    statement: The alternating group on four letters has 12 elements, but no subgroup of it has 6 elements. A search of all subsets of size 6 finds none that is closed.
+    known: [graph:2J2QXT, graph:586J26]
+  - id: petersen
+    name: No Hamiltonian cycle in the Petersen graph
+    statement: The Petersen graph has no cycle that passes through each of its ten vertices once.
+    known: [graph:42NXAX]
+  - id: handshake
+    name: Degrees sum to twice the edges
+    statement: In each finite graph, the sum of the degrees of the vertices is twice the number of edges. Thus the number of vertices of odd degree is even.
+    known: [graph:V21CR0]
+  - id: fermat-little
+    name: A power congruence for primes
+    statement: For each prime $p$ and each integer $a$, the number $a^p - a$ is divisible by $p$.
+    known: [graph:X5X1EQ]
+  - id: cauchy
+    name: Elements of prime order
+    statement: When a prime $p$ divides the order of a finite group $G$, some element of $G$ has order $p$.
+    known: [graph:CM1BRG]
+  - id: euclid-lemma
+    name: A prime that divides a product
+    statement: If a prime $p$ divides $ab$ for integers $a$ and $b$, then $p$ divides $a$ or $p$ divides $b$.
+    known: [graph:3ZW5SS]
+  - id: unique-factorization
+    name: Factorizations into primes are unique
+    statement: Each integer above 1 is a product of primes, and two such products for the same integer have the same primes with the same multiplicities.
+    known: [graph:261PJE]
+  - id: fermat-5
+    name: The fifth Fermat number is composite
+    statement: The computation shows that $2^{32} + 1$ has the factor $641$, thus $F_5$ is not a prime.
+    known: [zbmath:bench-01]
+  - id: prime-reciprocals
+    name: The reciprocals of the primes have an infinite sum
+    statement: The partial sums of $1/p$ over the primes $p$ grow without bound.
+    known: [zbmath:bench-02]
+  - id: sqrt-2
+    name: No fraction squares to two
+    statement: There is no fraction $a/b$ of integers with $(a/b)^2 = 2$.
+    known: [zbmath:bench-03]
+  - id: two-squares
+    name: Primes one more than a multiple of four
+    statement: Each prime $p$ with $p \equiv 1 \pmod 4$ is $x^2 + y^2$ for some integers $x$ and $y$. The computation checks the primes below $10^5$.
+    known: [zbmath:bench-04]
+  - id: bertrand
+    name: A prime below twice each number
+    statement: For each integer $n > 1$ there is a prime $p$ with $n < p < 2n$.
+    known: [zbmath:bench-05]
+  - id: four-squares
+    name: Four squares suffice
+    statement: Each natural number is $a^2 + b^2 + c^2 + d^2$ for some integers $a, b, c, d$.
+    known: [zbmath:bench-06]
+  - id: catalan
+    name: Eight and nine
+    statement: The numbers 8 and 9 are the only two consecutive positive integers that are both perfect powers.
+    known: [zbmath:bench-07]
+  - id: ramsey-3-3
+    name: A one-coloured triangle in each two colouring of K6
+    statement: In each colouring of the edges of the complete graph on six vertices with two colours there is a triangle whose edges have one colour.
+    known: [zbmath:bench-08]
+  - id: harmonic
+    name: Harmonic sums are never whole
+    statement: For each $n \ge 2$, the sum $1 + 1/2 + \dots + 1/n$ is not an integer.
+    known: [zbmath:bench-09]
+  - id: euler-polynomial
+    name: A polynomial that gives forty primes
+    statement: The values of $n^2 + n + 41$ for $n = 0, \dots, 39$ are all prime, and the value at $n = 40$ is not.
+    terms: ["41", "43", "47", "53", "61", "71"]
+    known: [zbmath:bench-10]
+  - id: mersenne
+    name: Mersenne primes have prime exponents
+    statement: If $2^n - 1$ is prime, then $n$ is prime.
+    known: [zbmath:bench-11]
+  - id: tree-edges
+    name: Edges of a tree
+    statement: A tree on $n$ vertices has $n - 1$ edges.
+    known: [zbmath:bench-12]
+  - id: partitions-mod-5
+    name: A congruence of the partition numbers
+    statement: The number of partitions of $5n + 4$ is a multiple of 5 for each $n \ge 0$.
+  - id: odd-sums
+    name: Sums of odd numbers
+    statement: The sum of the first $n$ odd numbers is $n^2$.
+  - id: e-irrational
+    name: The number e is irrational
+    statement: There are no integers $a$ and $b$ with $b \ne 0$ and $e = a/b$.
+  - id: sqrt-3
+    name: The square root of three is irrational
+    statement: There are no integers $a$ and $b$ with $b \ne 0$ and $a^2 = 3 b^2$.

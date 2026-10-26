@@ -668,6 +668,15 @@ go test ./bench/search -v -report search.md
 
 The fused search does not beat the best channel alone yet. On the concept and paper queries it is equal to the best channel, within one query. On the formula and formal queries the fusion moves an exact match down by one or two ranks, because the lexical and embedding channels add other nodes. The concept misses are paraphrases with no word in common with the node, such as "the derivative equals the slope of the secant line" for the mean value theorem. The hash embedder cannot find these. A learned embedder, behind the same interface, is the next step. The test does not run LeanSearch, Moogle, Loogle or the other tools of spec 14.7, because it would send each query to the service of the tool.
 
+`bench/novelty` measures the recall of the novelty check (spec 17.5). Each item of `bench/novelty/items.yaml` is a known result in the words of an agent output, with the matches that make it known: a node of `testdata/nodes/valid`, or a paper of `records.yaml`. Some items have no match, and the check must not call them known. We wrote the items and the papers ourselves, and the ids of the papers are not ids of zbMATH Open. The searches are the graph and the record plane. Without flags, an oracle judge gives `same` to a match of the item, thus the recall is the share of the known items whose match is in the three best matches of a search. `baseline.tsv` keeps it, and the test fails when the recall is more than 0.02 below it. With `-live`, the judge of explore judges, which needs `ANTHROPIC_API_KEY` and spends money:
+
+```sh
+go test ./bench/novelty -v -report novelty.md
+go test ./bench/novelty -live -rung 0 -v -report novelty.md
+```
+
+On the suite, the check finds 18 of the 22 known items, a recall of 0.818. The misses are results whose words are far from the node or the paper, for example Fermat's little theorem as "$a^p - a$ is divisible by $p$". The searches of the web are not in the suite, because a run sends each query to the service.
+
 `bench/fidelity` measures the F1 battery as a classifier (spec 17.3.1). Each line of `bench/fidelity/items.tsv` is an informal statement and a label: `faithful`, or the class of the fault of its formal statement. The formal statements are in `bench/fidelity/lean/Suite.lean`, and they use only the Lean core library, thus the suite does not need Mathlib. We wrote the items, and no person checked the labels yet. The test runs the battery on each item, as `m2 build` does. A check that fails catches the item, and a check that flags with a class flags it. The report is a confusion matrix, with the recall of each class and the false-alarm rate on the faithful items. `baseline.tsv` has the number of items that the battery catches in each class, and the test fails when a class catches fewer, or when the battery fails a faithful item. Each release has the report as `fidelity-report.md`.
 
 ```sh
@@ -753,7 +762,7 @@ align/    the aligner: candidates, scores, the curation queues and the register 
 api/      the API of spec 11.2: the read methods, the write methods, the HTTP handler and the rate limit
 audit/    the audit rules of spec 15, with a fixture pair for each rule
 battery/  the F1 battery: the ten machine checks of the fidelity of a Lean binding (spec 10.4)
-bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, bench/extract measures the extraction of results from papers, bench/search measures the quality of search, and bench/fidelity measures the F1 battery
+bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, bench/extract measures the extraction of results from papers, bench/search measures the quality of search, bench/novelty measures the recall of the novelty check, and bench/fidelity measures the F1 battery
 bump/     the Mathlib bump: the pins, the breaks of a bump, the renames and the bump report (spec 07.9)
 build/    the steps of m2 build, their cache and the build manifest
 check/    the fast rules of m2 check: schema, body and links

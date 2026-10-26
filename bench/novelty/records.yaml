@@ -1,0 +1,50 @@
+# The papers of the record plane of the suite (spec 17.5). Each record is a short text in our own words about a classical result. The source is zbmath, because the aligner reads it as a source of papers, but the ids are ids of the suite and not ids of zbMATH Open.
+records:
+  - id: bench-01
+    title: A factor of the fifth Fermat number
+    text: The number $2^{32} + 1$ is the product of $641$ and $6700417$. Thus the Fermat number $F_5$ is not prime.
+  - id: bench-02
+    title: The sum of the reciprocals of the primes diverges
+    text: The series $\sum_p 1/p$ over all primes $p$ has no finite sum.
+  - id: bench-03
+    title: The square root of two is irrational
+    text: There are no integers $a$ and $b$ with $b \ne 0$ and $a^2 = 2 b^2$. Thus $\sqrt{2}$ is not a rational number.
+  - id: bench-04
+    title: Primes that are sums of two squares
+    text: An odd prime $p$ is $x^2 + y^2$ for integers $x$ and $y$ if and only if $p \equiv 1 \pmod 4$.
+  - id: bench-05
+    title: A prime between n and 2n
+    text: For each integer $n \ge 2$ there is a prime $p$ with $n < p < 2n$.
+  - id: bench-06
+    title: Sums of four squares
+    text: Each natural number is the sum of the squares of four integers.
+  - id: bench-07
+    title: Consecutive perfect powers
+    text: The only solution of $x^a - y^b = 1$ in integers $x, y > 0$ and $a, b > 1$ is $3^2 - 2^3 = 1$.
+  - id: bench-08
+    title: Monochromatic triangles in two colourings of K6
+    text: When each edge of the complete graph $K_6$ is red or blue, there is a triangle whose three edges have the same colour. The graph $K_5$ has a colouring with no such triangle, thus the Ramsey number $R(3,3)$ is $6$.
+  - id: bench-09
+    title: The harmonic numbers are not integers
+    text: For each $n \ge 2$ the number $H_n = 1 + 1/2 + \dots + 1/n$ is not an integer.
+  - id: bench-10
+    title: A quadratic polynomial with many prime values
+    text: The polynomial $n^2 + n + 41$ is prime for $n = 0, 1, \dots, 39$. For $n = 40$ its value is $41^2$.
+  - id: bench-11
+    title: The exponent of a Mersenne prime
+    text: When $2^n - 1$ is a prime number, $n$ is a prime number.
+  - id: bench-12
+    title: The number of edges of a tree
+    text: A tree with $n$ vertices has exactly $n - 1$ edges.
+  - id: bench-13
+    title: The Fermat numbers are pairwise coprime
+    text: For $m \ne n$, the numbers $2^{2^m} + 1$ and $2^{2^n} + 1$ have no common factor other than $1$.
+  - id: bench-14
+    title: The sum of the reciprocals of the squares
+    text: The series $\sum_{n \ge 1} 1/n^2$ has the sum $\pi^2/6$.
+  - id: bench-15
+    title: Primes of the form 4k + 3 are not sums of two squares
+    text: A square is $0$ or $1$ modulo $4$, thus a sum of two squares is never $3$ modulo $4$.
+  - id: bench-16
+    title: Sums of three triangular numbers
+    text: Each natural number is the sum of three triangular numbers $k(k+1)/2$.
