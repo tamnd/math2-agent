@@ -66,7 +66,7 @@ var commands = []command{
 	{name: "serve", usage: serveUsage, summary: "Serve the read API over HTTP with JSON, and the MCP server over HTTP or stdio.", run: runServe},
 	{name: "compute", usage: "m2 compute run|verify [-root DIR] [-out DIR] [-runtime R] [-json] <tag>...|-all", summary: "Run a computation in the sandbox, or verify its output and its certificate.", run: runCompute},
 	{name: "prov", usage: provUsage, summary: "Show, record, credit, quarantine and confirm provenance.", run: runProv},
-	{name: "review", usage: "m2 review <tag>", summary: "Review a formal statement against its informal statement.", milestone: "M4"},
+	{name: "review", usage: reviewUsage, summary: "Show the review packet of a node, and write a fidelity review.", run: runReview},
 	{name: "autoform", usage: "m2 autoform <tag>", summary: "Make a formal statement for a node.", milestone: "M4"},
 	{name: "agent", usage: "m2 agent run <role> [-target T] [-budget B]", summary: "Do one agent run.", milestone: "M5"},
 	{name: "orchestrate", usage: "m2 orchestrate", summary: "Run the job scheduler.", milestone: "M5"},

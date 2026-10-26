@@ -28,6 +28,9 @@ func init() {
 	}
 }
 
+// Structural reports whether the constant c is a constant of logic or of notation, or an instance. The constant audit does not need a node for such a constant.
+func Structural(c string) bool { return structural[c] || instanceLike(c) }
+
 // instanceLike reports whether the constant c is an instance or another constant that the elaborator adds: the last component of the name starts with "inst", or the name has an auxiliary component.
 func instanceLike(c string) bool {
 	last := c[strings.LastIndex(c, ".")+1:]
@@ -84,7 +87,7 @@ func (r *runner) constants(n *node.Node, rec lean.Record) (Result, string, strin
 	closure := r.closure(n.ID)
 	var outside, unbound []string
 	for _, c := range rec.UsesConstantsInStatement {
-		if structural[c] || instanceLike(c) {
+		if Structural(c) {
 			continue
 		}
 		tags := r.bound[c]
