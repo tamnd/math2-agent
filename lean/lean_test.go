@@ -227,7 +227,7 @@ func TestLibrary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total != len(all) || total != 14 {
+	if total != len(all) || total != 18 {
 		t.Fatalf("Library gives %d records and a total of %d", len(all), total)
 	}
 	by := map[string]lean.Decl{}
