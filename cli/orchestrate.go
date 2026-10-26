@@ -111,6 +111,32 @@ func runOrchestrate(args []string, stdout, stderr io.Writer) int {
 		return rec, err
 	}
 	o := orchestrator.New(config, roles, dispatch, attempts, nil)
+	for _, name := range slices.Sorted(maps.Keys(config.Shadow)) {
+		dir := config.Shadow[name]
+		if !filepath.IsAbs(dir) {
+			dir = filepath.Join(*root, dir)
+		}
+		if rs.roles[name] == nil {
+			return fail(fmt.Errorf("the shadow week of %s: the role is not written yet", name))
+		}
+		cand, err := agent.LoadRole(os.DirFS(dir), name)
+		if err != nil {
+			return fail(fmt.Errorf("the shadow week of %s: %w", name, err))
+		}
+		if cand.Version == rs.roles[name].Version {
+			return fail(fmt.Errorf("the shadow week of %s: the candidate in %s has the version %s of the role", name, dir, cand.Version))
+		}
+		srs := *rs
+		srs.roles, srs.shadow = map[string]*agent.Role{name: cand}, true
+		o.Shadow(name, func(ctx context.Context, job *agent.Job, rung int) (*agent.Record, error) {
+			rec, ws, _, err := srs.run(ctx, job, rung, filepath.Join(*work, fmt.Sprintf("%s-%d-shadow", job.ID, rung)))
+			if ws != nil {
+				_ = ws.Close()
+				removeWorkTree(ctx, *root, ws.Dir)
+			}
+			return rec, err
+		})
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -205,7 +231,14 @@ func writeOrchestration(w io.Writer, rep *orchestrator.Report, asJSON bool) {
 		return
 	}
 	for _, a := range rep.Runs {
-		fmt.Fprintf(w, "run %s of job %s on %s: %s, $%.4f of $%.2f, %s\n", a.Run, a.Job, a.Rung.Model, a.Outcome, a.USD, a.Budget, a.Reason)
+		kind := "run"
+		if a.Shadow {
+			kind = "shadow run"
+		}
+		fmt.Fprintf(w, "%s %s of job %s on %s: %s, $%.4f of $%.2f, %s\n", kind, a.Run, a.Job, a.Rung.Model, a.Outcome, a.USD, a.Budget, a.Reason)
+	}
+	for _, s := range rep.Shadows {
+		fmt.Fprintln(w, s)
 	}
 	for _, d := range rep.Done {
 		fmt.Fprintf(w, "job %s ends: %s, %s\n", d.Job.ID, d.Outcome, d.Reason)

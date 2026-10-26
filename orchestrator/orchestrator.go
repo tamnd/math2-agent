@@ -10,6 +10,8 @@
 //
 // Each job names the person, the project or the schedule on whose behalf it runs (rule P03), and Add refuses a job that does not.
 //
+// A major bump of a role version needs a shadow week (spec 12.8). Shadow gives the orchestrator the candidate version of a role. After each run of a job of the role, the candidate runs the same job on the same rung, and the system uses only the output of the current version. The weekly agent report compares the two.
+//
 // The orchestrator knows the past attempts from the run records in the artefact store. ReadAttempts reads them. Thus a new orchestrator after a restart counts the same spend and the same failures.
 package orchestrator
 
@@ -43,6 +45,7 @@ type Config struct {
 	OnBehalfOf map[string]float64 `yaml:"on_behalf_of,omitempty"` // the monthly cap of a project or a schedule in US dollars. An id that is not in the map has only the budget of the role as its cap.
 	Retry      agent.Duration     `yaml:"retry,omitempty"`        // the time in which the orchestrator does not try a target, goal and rung again after a failed attempt. Zero means DefaultRetry.
 	Workers    int                `yaml:"workers,omitempty"`      // the most runs at the same time. Zero means 1.
+	Shadow     map[string]string  `yaml:"shadow,omitempty"`       // the directory of the candidate version of a role in a shadow week, by role. The files of the role are in <dir>/<role>/, as in prompts/.
 }
 
 // ReadConfig reads the configuration from the YAML file at the path.
@@ -63,7 +66,7 @@ func ReadConfig(path string) (*Config, error) {
 	return &c, nil
 }
 
-// Validate reports the first problem of the configuration: a role that is not in spec 12.1, an id that is not a project or a schedule, or a budget, a retry time or a number of workers that is negative.
+// Validate reports the first problem of the configuration: a role that is not in spec 12.1, an id that is not a project or a schedule, a shadow week of a role with no budget or with no directory, or a budget, a retry time or a number of workers that is negative.
 func (c *Config) Validate() error {
 	for _, r := range slices.Sorted(maps.Keys(c.Roles)) {
 		if !slices.Contains(agent.Roles(), r) {
@@ -79,6 +82,14 @@ func (c *Config) Validate() error {
 		}
 		if c.OnBehalfOf[id] < 0 || math.IsNaN(c.OnBehalfOf[id]) {
 			return fmt.Errorf("orchestrator: the cap of %s is negative", id)
+		}
+	}
+	for _, r := range slices.Sorted(maps.Keys(c.Shadow)) {
+		if _, ok := c.Roles[r]; !ok {
+			return fmt.Errorf("orchestrator: the shadow week of %s needs a budget of the role", r)
+		}
+		if c.Shadow[r] == "" {
+			return fmt.Errorf("orchestrator: the shadow week of %s names no directory", r)
 		}
 	}
 	if c.Retry < 0 || c.Workers < 0 {
@@ -99,8 +110,9 @@ type Attempt struct {
 	Started    time.Time  `json:"started"`
 	Outcome    string     `json:"outcome"`
 	Reason     string     `json:"reason"`
-	USD        float64    `json:"usd"`    // the spend of the run
-	Budget     float64    `json:"budget"` // the budget in dollars that the run had
+	USD        float64    `json:"usd"`              // the spend of the run
+	Budget     float64    `json:"budget"`           // the budget in dollars that the run had
+	Shadow     bool       `json:"shadow,omitempty"` // the run is a shadow run of a candidate role version
 }
 
 // AttemptOf returns the attempt of the record of a run.
@@ -108,6 +120,7 @@ func AttemptOf(r *agent.Record) Attempt {
 	return Attempt{
 		Run: r.ID, Job: r.Job.ID, Role: r.Job.Role, Target: r.Job.Target, Goal: r.Job.Goal, OnBehalfOf: r.Job.OnBehalfOf,
 		Rung: r.Rung, Started: r.Started, Outcome: r.Outcome, Reason: r.Reason, USD: r.Spend.USD, Budget: r.Job.Budget.USD,
+		Shadow: r.Shadow,
 	}
 }
 
@@ -142,9 +155,10 @@ type Waiting struct {
 
 // Report is what one Drain did.
 type Report struct {
-	Runs    []Attempt `json:"runs"`    // the runs that Drain started, in the order of their end
-	Done    []Done    `json:"done"`    // the jobs that ended
-	Waiting []Waiting `json:"waiting"` // the jobs that are in the queues at the end
+	Runs    []Attempt `json:"runs"`          // the runs that Drain started, in the order of their end
+	Done    []Done    `json:"done"`          // the jobs that ended
+	Waiting []Waiting `json:"waiting"`       // the jobs that are in the queues at the end
+	Shadows []string  `json:"shadow_errors"` // the shadow runs that did not run or that the model service stopped, with the reason
 }
 
 // Over returns the runs that spent more than their budget. It is empty when the budgets hold.
@@ -172,6 +186,14 @@ type plan struct {
 	usd  float64
 }
 
+// shadowRun is a shadow run that waits or runs.
+type shadowRun struct {
+	job      agent.Job
+	rung     int
+	usd      float64
+	dispatch Dispatch
+}
+
 // Orchestrator is the scheduler of agent jobs. Make one with New.
 type Orchestrator struct {
 	config   *Config
@@ -185,6 +207,10 @@ type Orchestrator struct {
 	reserved map[string]float64  // the money that each running job holds, by job id
 	seq      int
 	turn     int // the role whose turn it is, as an index in the sorted roles
+
+	shadows map[string]Dispatch // the dispatch of the candidate version of each role in a shadow week
+	pending []*shadowRun        // the shadow runs that wait, in order
+	held    map[string]float64  // the money that the running shadow runs of each role hold
 }
 
 // New returns an orchestrator with the configuration, the roles that it can run, the dispatch function and the past attempts. A nil now means time.Now.
@@ -192,6 +218,7 @@ func New(config *Config, roles []*agent.Role, dispatch Dispatch, attempts []Atte
 	o := &Orchestrator{
 		config: config, roles: map[string]*agent.Role{}, dispatch: dispatch, now: now,
 		attempts: slices.Clone(attempts), queues: map[string][]*entry{}, reserved: map[string]float64{},
+		shadows: map[string]Dispatch{}, held: map[string]float64{},
 	}
 	if now == nil {
 		o.now = time.Now
@@ -200,6 +227,13 @@ func New(config *Config, roles []*agent.Role, dispatch Dispatch, attempts []Atte
 		o.roles[r.Name] = r
 	}
 	return o
+}
+
+// Shadow runs the candidate version of the role in a shadow week (spec 12.8). After each run of a job of the role, the orchestrator runs the job again with dispatch, on the same rung and with the same budget, when the money of the role in the month allows it. The record that dispatch returns is of the candidate version, with Shadow set, and the system uses none of its output. The spend of a shadow run counts in the budget of the role, and not in the budget of the job or in the cap of its project. A shadow run does not move the ladder and does not end a job.
+func (o *Orchestrator) Shadow(role string, dispatch Dispatch) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.shadows[role] = dispatch
 }
 
 // Add puts the job in the queue of its role and returns the id of the job that does the work. That is the id of the job, or the id of a job with the same role, target and goal that is in the queue or that runs. Add refuses a job that is not valid, for example a job that names no person, project or schedule (rule P03), and a job of a role that the orchestrator cannot run.
@@ -227,18 +261,27 @@ func (o *Orchestrator) Add(job *agent.Job) (string, error) {
 
 // Drain starts runs until no job in the queues can start, waits for each run, and reports what it did. A job that waits stays in its queue. When the context ends, Drain starts no new run.
 func (o *Orchestrator) Drain(ctx context.Context) *Report {
-	rep := &Report{Runs: []Attempt{}, Done: []Done{}, Waiting: []Waiting{}}
+	rep := &Report{Runs: []Attempt{}, Done: []Done{}, Waiting: []Waiting{}, Shadows: []string{}}
 	type result struct {
-		p   plan
-		job agent.Job
-		rec *agent.Record
-		err error
+		p      plan
+		job    agent.Job
+		shadow *shadowRun
+		rec    *agent.Record
+		err    error
 	}
 	results := make(chan result)
 	workers := max(o.config.Workers, 1)
 	running := 0
 	for {
 		for running < workers && ctx.Err() == nil {
+			if s := o.nextShadow(rep); s != nil {
+				running++
+				go func() {
+					rec, err := s.dispatch(ctx, &s.job, s.rung)
+					results <- result{shadow: s, rec: rec, err: err}
+				}()
+				continue
+			}
 			p, ok := o.next(rep)
 			if !ok {
 				break
@@ -248,7 +291,7 @@ func (o *Orchestrator) Drain(ctx context.Context) *Report {
 			running++
 			go func() {
 				rec, err := o.dispatch(ctx, &job, p.rung)
-				results <- result{p, job, rec, err}
+				results <- result{p: p, job: job, rec: rec, err: err}
 			}()
 		}
 		if running == 0 {
@@ -256,7 +299,11 @@ func (o *Orchestrator) Drain(ctx context.Context) *Report {
 		}
 		r := <-results
 		running--
-		o.finish(rep, r.p, r.job, r.rec, r.err)
+		if r.shadow != nil {
+			o.finishShadow(rep, r.shadow, r.rec, r.err)
+		} else {
+			o.finish(rep, r.p, r.job, r.rec, r.err)
+		}
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -311,6 +358,25 @@ func (o *Orchestrator) next(rep *Report) (plan, bool) {
 	return plan{}, false
 }
 
+// nextShadow takes the next shadow run that the money of its role allows and holds its money. It reports each shadow run that cannot run.
+func (o *Orchestrator) nextShadow(rep *Report) *shadowRun {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	for len(o.pending) > 0 {
+		s := o.pending[0]
+		o.pending = o.pending[1:]
+		usd := min(s.usd, o.config.Roles[s.job.Role]-o.spentRole(s.job.Role))
+		if usd < minRun {
+			rep.Shadows = append(rep.Shadows, fmt.Sprintf("the shadow run of the job %s on rung %d: the money of %s for the month is used up", s.job.ID, s.rung, s.job.Role))
+			continue
+		}
+		s.usd, s.job.Budget.USD = usd, usd
+		o.held[s.job.Role] += usd
+		return s
+	}
+	return nil
+}
+
 // order returns the jobs of the queue of the role that do not run, in the order in which they can start: the project or the schedule that spent the least in the month first, then the highest priority, then the order of Add.
 func (o *Orchestrator) order(role string) []*entry {
 	var out []*entry
@@ -349,7 +415,7 @@ func (o *Orchestrator) plan(e *entry) (p plan, why, end string) {
 	}
 	var mine []Attempt
 	for _, a := range o.attempts {
-		if a.Job == job.ID {
+		if a.Job == job.ID && !a.Shadow {
 			mine = append(mine, a)
 		}
 	}
@@ -392,7 +458,7 @@ func (o *Orchestrator) rung(job *agent.Job, role *agent.Role, mine []Attempt) (i
 	start := allowed[0]
 	for _, i := range allowed {
 		if slices.ContainsFunc(o.attempts, func(a Attempt) bool {
-			return a.Role == job.Role && a.Outcome == agent.Success && a.Rung == role.Ladder[i]
+			return a.Role == job.Role && !a.Shadow && a.Outcome == agent.Success && a.Rung == role.Ladder[i]
 		}) {
 			start = i
 			break
@@ -406,7 +472,7 @@ func (o *Orchestrator) rung(job *agent.Job, role *agent.Role, mine []Attempt) (i
 			continue
 		}
 		recent := slices.IndexFunc(o.attempts, func(a Attempt) bool {
-			return a.Role == job.Role && a.Target == job.Target && a.Goal == job.Goal && a.Rung == role.Ladder[i] && a.Outcome != agent.Success && now.Sub(a.Started) < retry
+			return a.Role == job.Role && !a.Shadow && a.Target == job.Target && a.Goal == job.Goal && a.Rung == role.Ladder[i] && a.Outcome != agent.Success && now.Sub(a.Started) < retry
 		})
 		if recent >= 0 {
 			if wait == "" {
@@ -420,14 +486,14 @@ func (o *Orchestrator) rung(job *agent.Job, role *agent.Role, mine []Attempt) (i
 	return -1, wait
 }
 
-// spentRole returns the spend of the role in the month of now, with the money that its running jobs hold.
+// spentRole returns the spend of the role in the month of now, with the shadow runs and with the money that its running jobs and shadow runs hold.
 func (o *Orchestrator) spentRole(role string) float64 {
-	return o.spent(func(a *Attempt) bool { return a.Role == role }, func(e *entry) bool { return e.job.Role == role })
+	return o.held[role] + o.spent(func(a *Attempt) bool { return a.Role == role }, func(e *entry) bool { return e.job.Role == role })
 }
 
-// spentBy returns the spend of the project or the schedule in the month of now, with the money that its running jobs hold.
+// spentBy returns the spend of the project or the schedule in the month of now, with the money that its running jobs hold. The shadow runs do not count.
 func (o *Orchestrator) spentBy(id string) float64 {
-	return o.spent(func(a *Attempt) bool { return a.OnBehalfOf == id }, func(e *entry) bool { return e.job.OnBehalfOf == id })
+	return o.spent(func(a *Attempt) bool { return a.OnBehalfOf == id && !a.Shadow }, func(e *entry) bool { return e.job.OnBehalfOf == id })
 }
 
 func (o *Orchestrator) spent(attempt func(*Attempt) bool, job func(*entry) bool) float64 {
@@ -461,6 +527,9 @@ func (o *Orchestrator) finish(rep *Report, p plan, job agent.Job, rec *agent.Rec
 		a.Budget = p.usd
 		o.attempts = append(o.attempts, a)
 		rep.Runs = append(rep.Runs, a)
+		if d := o.shadows[job.Role]; d != nil {
+			o.pending = append(o.pending, &shadowRun{job: job, rung: p.rung, usd: p.usd, dispatch: d})
+		}
 	}
 	done := func(outcome, reason string) {
 		o.remove(p.e)
@@ -473,6 +542,22 @@ func (o *Orchestrator) finish(rep *Report, p plan, job agent.Job, rec *agent.Rec
 		done(agent.Success, rec.Reason)
 	case strings.HasPrefix(rec.Reason, "stuck: "):
 		done(agent.Failure, rec.Reason)
+	}
+}
+
+// finishShadow records the end of a shadow run.
+func (o *Orchestrator) finishShadow(rep *Report, s *shadowRun, rec *agent.Record, err error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.held[s.job.Role] -= s.usd
+	if rec != nil {
+		a := AttemptOf(rec)
+		a.Budget, a.Shadow = s.usd, true
+		o.attempts = append(o.attempts, a)
+		rep.Runs = append(rep.Runs, a)
+	}
+	if err != nil {
+		rep.Shadows = append(rep.Shadows, fmt.Sprintf("the shadow run of the job %s on rung %d: %v", s.job.ID, s.rung, err))
 	}
 }
 

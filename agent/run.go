@@ -84,6 +84,7 @@ type Record struct {
 	Claim    string            `json:"claim,omitempty"` // the last text of the model: its own assessment, which the run records and never uses
 	Budget   Budget            `json:"budget"`          // the budget of the run: the budget of the job, with the budget of the role for each limit that the job does not give
 	Spend    Spend             `json:"spend"`
+	Shadow   bool              `json:"shadow,omitempty"` // the run is a shadow run of a candidate role version (spec 12.8). The system uses none of its output.
 }
 
 // Models returns the models that answered in the run, in the order of their first answer.
@@ -368,7 +369,7 @@ func ReadRecords(store string) ([]*Record, error) {
 	return out, nil
 }
 
-// WriteRecord writes the full record to store/records/<id>.json and its summary to store/runs/<id>.json, and returns the summary. A run with no model turn gives no summary, because a summary names its models.
+// WriteRecord writes the full record to store/records/<id>.json and its summary to store/runs/<id>.json, and returns the summary. A run with no model turn gives no summary, because a summary names its models. A shadow run gives no summary and returns nil, because no provenance line names it and the audit and the disclosures must not count it.
 func WriteRecord(store string, r *Record) (*prov.Run, error) {
 	if !prov.IsRun(r.ID) {
 		return nil, fmt.Errorf("agent: the run id %q is not in its form", r.ID)
@@ -384,6 +385,9 @@ func WriteRecord(store string, r *Record) (*prov.Run, error) {
 	}
 	if err := os.WriteFile(filepath.Join(dir, r.ID+".json"), data, 0o600); err != nil {
 		return nil, err
+	}
+	if r.Shadow {
+		return nil, nil
 	}
 	sum := blake3.Sum256(data)
 	s := r.Summary("blake3:" + hex.EncodeToString(sum[:]))
