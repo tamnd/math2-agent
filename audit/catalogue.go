@@ -69,8 +69,8 @@ var catalogue = []entry{
 	{Rule{"R03", Release, true, "the release notes give the cause of each count change"}, r03},
 	{Rule{"R04", Release, true, "the last quarterly restore drill passed"}, r04},
 	{Rule{"R05", Release, true, "the release pins one Lean toolchain and one Mathlib commit, and the bump branch passed"}, r05},
-	{Rule{"X01", Agents, true, "an agent pull request changes only the fields that its role can change"}, nil},
-	{Rule{"X02", Agents, true, "an agent pull request stays in its run budget, and the run record shows the cost"}, nil},
-	{Rule{"X03", Agents, false, "the acceptance rate of a role and a model is below the threshold over 7 days"}, nil},
-	{Rule{"X04", Agents, true, "no agent wrote a status field or a review"}, nil},
+	{Rule{"X01", Agents, true, "an agent pull request changes only the fields that its role can change"}, x01},
+	{Rule{"X02", Agents, true, "an agent pull request stays in its run budget, and the run record shows the cost"}, x02},
+	{Rule{"X03", Agents, false, "the acceptance rate of a role and a model is below the threshold over 7 days"}, x03},
+	{Rule{"X04", Agents, true, "no agent wrote a status field or a review"}, x04},
 }

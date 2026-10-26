@@ -97,6 +97,8 @@ var setup = map[string]func(t *testing.T){
 	// A02 and A04 compare a date with the date of the HEAD commit, thus the commits of the fixtures have a fixed date.
 	"A02": fixedDate,
 	"A04": fixedDate,
+	// X03 counts the runs of the week that ends a week before the date of the HEAD commit.
+	"X03": fixedDate,
 	// The manifests of R05 name the commit of step 1.
 	"R05": fixedDate,
 	// The manifest of R01 names the commit of step 1, thus the commits of the fixtures have a fixed date.

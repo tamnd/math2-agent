@@ -117,27 +117,43 @@ func (a *auditor) mergeRange() (from, to string, err error) {
 
 // changedNodes returns the node files in scope that differ between the revisions from and to.
 func (a *auditor) changedNodes(from, to string) ([]string, error) {
+	all, err := a.changedFiles(from, to, "nodes")
+	if err != nil {
+		return nil, err
+	}
+	var paths []string
+	for _, p := range all {
+		if strings.HasSuffix(p, ".md") && strings.Count(p, "/") == 2 && a.inScope(p) {
+			paths = append(paths, p)
+		}
+	}
+	return paths, nil
+}
+
+// changedFiles returns the files below the directories that differ between the revisions from and to, sorted. No directory means the whole tree.
+func (a *auditor) changedFiles(from, to string, dirs ...string) ([]string, error) {
+	spec := append([]string{"--"}, dirs...)
 	var out string
 	var err error
 	switch {
 	case from == "":
-		out, err = git(a.root, "ls-tree", "-r", "-z", "--name-only", to, "--", "nodes")
+		out, err = git(a.root, append([]string{"ls-tree", "-r", "-z", "--name-only", to}, spec...)...)
 	case to == "":
-		out, err = git(a.root, "diff", "--name-only", "--no-renames", "-z", from, "--", "nodes")
+		out, err = git(a.root, append([]string{"diff", "--name-only", "--no-renames", "-z", from}, spec...)...)
 		if err == nil {
 			var untracked string
-			untracked, err = git(a.root, "ls-files", "--others", "--exclude-standard", "-z", "--", "nodes")
+			untracked, err = git(a.root, append([]string{"ls-files", "--others", "--exclude-standard", "-z"}, spec...)...)
 			out += untracked
 		}
 	default:
-		out, err = git(a.root, "diff", "--name-only", "--no-renames", "-z", from, to, "--", "nodes")
+		out, err = git(a.root, append([]string{"diff", "--name-only", "--no-renames", "-z", from, to}, spec...)...)
 	}
 	if err != nil {
 		return nil, err
 	}
 	var paths []string
 	for p := range strings.SplitSeq(out, "\x00") {
-		if strings.HasSuffix(p, ".md") && strings.Count(p, "/") == 2 && a.inScope(p) {
+		if p != "" {
 			paths = append(paths, p)
 		}
 	}

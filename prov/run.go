@@ -28,6 +28,7 @@ type Run struct {
 	Targets    []string          `json:"targets,omitempty"`    // the nodes that the job of the run named, so that a run with no output still counts as an attempt
 	Seconds    float64           `json:"seconds,omitempty"`    // the wall time of the run, or 0 when the summary does not record it
 	SpendUSD   float64           `json:"spend_usd,omitempty"`  // the spend of the run in US dollars, or 0 when the summary does not record it
+	BudgetUSD  float64           `json:"budget_usd,omitempty"` // the budget of the run in US dollars, or 0 when the summary does not record it
 	Transcript string            `json:"transcript,omitempty"` // the hash of the full record in the artefact store, blake3:HEX
 }
 
