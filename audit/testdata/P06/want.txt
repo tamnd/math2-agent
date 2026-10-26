@@ -1,0 +1,2 @@
+nodes/3C5/3C53TD.md:10:5: P06: nobody confirmed the locator of the source zbmath 9999.00001 in 214 days, since 2026-03-01. Confirm the locator in the source, or remove the source
+nodes/3C5/3C53TD.md:16:5: P06: the flag locator_unconfirmed of the source zbmath 9999.00003 is "soon", and it must be the date when the source got the flag, YYYY-MM-DD

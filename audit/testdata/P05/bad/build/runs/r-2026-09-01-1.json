@@ -1,0 +1,35 @@
+{
+  "id": "r-2026-09-01-1",
+  "agent": "m2-agent/prove@1.0.0",
+  "prompt": "prove/3",
+  "models": [
+    "claude-opus-5-5"
+  ],
+  "on_behalf_of": "orcid:0000-0002-1825-0097",
+  "started": "2026-09-01T09:00:00Z",
+  "outcome": "success",
+  "sources": [
+    {
+      "node": "3C53TD",
+      "system": "zbmath",
+      "id": "9999.00001",
+      "title": "A synthetic paper for the tests of m2",
+      "authors": [
+        "Bea Other"
+      ],
+      "year": "1910",
+      "locator": "Theorem 1"
+    },
+    {
+      "node": "3C53TD",
+      "system": "zbmath",
+      "id": "9999.00002",
+      "title": "A synthetic paper for the tests of m2"
+    },
+    {
+      "node": "3C53TD",
+      "system": "mr",
+      "id": "0000001"
+    }
+  ]
+}

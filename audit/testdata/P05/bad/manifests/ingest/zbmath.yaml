@@ -1,0 +1,8 @@
+# The import manifest of zbmath. m2 ingest writes this file. Run m2 ingest zbmath -snapshot blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc to make the same records again.
+source: zbmath
+adapter: zbmath/1
+snapshot: blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+records: 1
+hash: blake3:2a1a71a0c81a14cea2b67321648d03f22312f088f8e0c5e1524091d17d2a6758
+classes:
+  record: 1

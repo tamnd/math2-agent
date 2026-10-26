@@ -409,8 +409,9 @@ Each source has an access class: `open`, `share-alike-nc`, `verbatim`, `gfdl` or
 | L02 | No node body copies text from a source that is not `open`. |
 | L03 | Each share-alike source has an attribution line, and a node that uses its text names the item in `sources` or `same_as`. |
 | L04 | A node body that is similar to an item that it cites. A person checks it. |
+| L05 | Each body that an agent wrote has a copy check result in the summary of its run, and no match of the result is with a source that is not `open`. L05 is soft until the calibration of corpus K9.4. |
 
-L02 to L04 need the records in `build/records/`. When they do not exist, the rules skip. Each source has an adapter in the package `ingest/<source>`. An adapter whose bulk channel has more than one file also implements `ingest.Fetcher`. To add a source, write the adapter, register it with `ingest.Register`, import its package in `cmd/m2`, and ask a maintainer to approve the class in `manifests/sources.yaml`.
+L02 to L04 need the records in `build/records/`. When they do not exist, the rules skip. L05 needs the run summaries in `build/runs/`. The package `copycheck` is the copy check of corpus K9.4. It compares a body with a reference corpus, not only with the sources of the node: stage 1 finds the exact runs of 50 normalized characters or more, and stage 2 finds the near copies of each paragraph with MinHash on word 5-grams. The check masks each formula and each standard phrase of a list that a curator keeps. Each source has an adapter in the package `ingest/<source>`. An adapter whose bulk channel has more than one file also implements `ingest.Fetcher`. To add a source, write the adapter, register it with `ingest.Register`, import its package in `cmd/m2`, and ask a maintainer to approve the class in `manifests/sources.yaml`.
 
 ## Alignment
 
@@ -478,8 +479,10 @@ The summary of each agent run is in `build/runs/<id>.json`, with the agent, the 
 | P02 | Each line of an agent names a run that exists, with the same agent and a model of the run. |
 | P03 | Each run worked on behalf of a person, a schedule or the project. |
 | P04 | An explanation that the node marks as written by a person was not written last by an agent. |
+| P05 | Each source that an agent added resolves to a record in `build/records/`, and the title, the authors and the year of the record match what the run claimed. A source that resolves to no record is fabricated. |
+| P06 | A source has the flag `locator_unconfirmed` for more than 180 days, to the date of the HEAD commit. |
 
-P02 and P03 need the run summaries in `build/runs/`. When they do not exist, the rules skip.
+P02, P03 and P05 need the run summaries in `build/runs/`, and P05 also needs the records. When they do not exist, the rules skip. The package `sources` is the source confirmation of corpus K9.5. The flag `locator_unconfirmed` of a source gives the date when the source got it, and only a person removes it.
 
 ## Agent runs
 
@@ -543,7 +546,7 @@ m2 agent run -target 4N9QX2 -goal "test the claim for small n" -on-behalf-of pro
 
 The run writes a program in `compute/<id>/` and a computation node for it in `nodes/~/`, and it runs the program with the tool `run_computation`. The images are the images of `compute/images.yaml` for the architecture of the machine. The runs go to the directory next to the work tree, with the suffix `.compute`, and their CPU seconds count in the budget of the run. Then the run files a conjecture or a counterexample in `nodes/~/` that cites the computation. The goal holds when each new computation verifies: it runs again, its output hash is the hash in the node, and the checker of its certificate accepts it. A counterexample refutes its target through the computation, and a conjecture links to it. An output that calls itself new, for example with the words "a new result" or "for the first time", fails the goal. The tool `lookup` runs the novelty check of spec 17.5 on a claim before the run files it. The goal runs the check again on each output, and the run record keeps the result in `novelty`. The searches are the graph, from the search index of the last build, and the record plane. `-web` also searches zbMATH Open, arXiv, MathOverflow and the OEIS, with the User-Agent `m2/<version> (+https://github.com/tamnd/math2-agent)`. The verdict is never "new". A person reads the matches.
 
-The full run record goes to `records/<id>.json` and its summary to `runs/<id>.json` in `-store`, which is `build/` by default. Thus the rules P02 and P03 read the summary. The summary has the spend and the budget of the run, for rule X02. The rules X01 to X04 check each agent pull request: its changes are in the field permissions of the role (X01), its runs stayed in their budgets (X02), and no agent wrote a status field or a review (X04). X03 reports a role and a model whose runs are seldom accepted. The command prints the outcome, the spend and the changed files, and it leaves the work tree for a person to see. The exit code is 0 when the goal holds, and 1 when it does not. The command does not open a pull request yet.
+The full run record goes to `records/<id>.json` and its summary to `runs/<id>.json` in `-store`, which is `build/` by default. Thus the rules P02 and P03 read the summary. The summary has the spend and the budget of the run, for rule X02. The rules X01 to X04 check each agent pull request: its changes are in the field permissions of the role (X01), its runs stayed in their budgets (X02), and no agent wrote a status field or a review (X04). X03 reports a role and a model whose runs are seldom accepted. The summary also has the results of the gates of corpus K9.2 that the run ran before the pull request: the copy check of each body (`copy`, rule L05), the sources that the run proposed with their title, authors and year (`sources`, rule P05), and the sanity checks of each statement and proof (`sanity`). X05 checks that each statement and proof that an agent wrote has a result of each sanity check of corpus K9.3: pass, fail or n/a. X07 reports a theorem that a body of an agent names, such as "the theorem of X and Y", when no node has the name and no source of the node names it. X06 reports a stratum of the sample audit whose error rate is near its threshold or above it. The package `sample` draws the sample audits of corpus K9.7 into `registers/audits.reg` and gives the error rates, with the upper end of the 95% interval: 3/n with no errors, and the Wilson interval with errors. The command prints the outcome, the spend and the changed files, and it leaves the work tree for a person to see. The exit code is 0 when the goal holds, and 1 when it does not. The command does not open a pull request yet.
 
 `m2 orchestrate` runs the jobs in a queue (spec 11.4 and 11.5). A job is a YAML file in `queue/` of the store, in the form of `-job`. The budgets are in `orchestrator.yaml` in the tree:
 
@@ -825,6 +828,7 @@ bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, b
 bump/     the Mathlib bump: the pins, the breaks of a bump, the renames and the bump report (spec 07.9)
 build/    the steps of m2 build, their cache and the build manifest
 check/    the fast rules of m2 check: schema, body and links
+copycheck/ the copy check of corpus K9.4: the exact runs, the near copies and the standard phrases
 crosswalk/ the syntax of the ids of each external system of same_as (spec 05.3)
 cli/      the command table
 format/   the canonical form of m2 fmt and the change from aliases to tags
@@ -843,8 +847,10 @@ prov/     the provenance logs, the agent runs, the credit of a person and the qu
 release/  the release manifest, the levels and the notes of spec 06.2, and the rebuild checks R01 and R02
 replay/   the replay of a declaration in the comparator and the independent kernels
 review/   the review packets of spec 10.6, the writing of fidelity reviews and the export of the reviews of each reviewer (spec 16.4)
+sample/   the sample audits of corpus K9.7: the draw, the register and the error rates of each stratum
 schema/   check front matter against the node schema
 search/   the search index: the identifier resolver, the four channels, the fusion and the premise selection (spec 14)
+sources/  the source confirmation of corpus K9.5: the lookup of a claimed source in a catalogue and the comparison with its record
 site/     build the wiki
 store/    the serving store: the graph and the status of each node in SQLite, and the queries of spec 05.6
 status/   the evidence level, the fidelity level and the flags of each node (spec 04.7), and the reviews

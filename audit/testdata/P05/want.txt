@@ -1,0 +1,3 @@
+nodes/3C5/3C53TD.md:8:5: P05: the run r-2026-09-01-1 added the source zbmath 9999.00001, and the record does not match the claim of the run: the record has no author "Bea Other"; the year is 1901 in the record
+nodes/3C5/3C53TD.md:10:5: P05: the run r-2026-09-01-1 added the source zbmath 9999.00002, and the record plane has no record of it. The source is fabricated: remove it
+nodes/3C5/3C53TD.md:11:5: P05: the run r-2026-09-01-1 added the source zbmath 9999.00003, and the record of the run has no claim for it. The run must confirm each source that it adds (corpus K9.5)

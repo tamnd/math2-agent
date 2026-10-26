@@ -1,0 +1,2 @@
+nodes/3C5/3C53TD.md:9:1: L05: the copy check of the run r-2026-09-01-1 found that body.statement copies book book:isbn:9780000000002 (class record) at the bytes 0 to 37. Write the text again
+nodes/5ZQ/5ZQ1PM.md:13:1: L05: body.proof of 5ZQ1PM is from the run r-2026-09-01-1, and the record of the run has no copy check result for 5ZQ1PM. Run the copy check of corpus K9.4 before the pull request opens

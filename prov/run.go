@@ -30,6 +30,69 @@ type Run struct {
 	SpendUSD   float64           `json:"spend_usd,omitempty"`  // the spend of the run in US dollars, or 0 when the summary does not record it
 	BudgetUSD  float64           `json:"budget_usd,omitempty"` // the budget of the run in US dollars, or 0 when the summary does not record it
 	Transcript string            `json:"transcript,omitempty"` // the hash of the full record in the artefact store, blake3:HEX
+
+	// The results of the gates of corpus K9.2 that the run ran on its output, before the pull request opened.
+	Copy    []CopyCheck   `json:"copy,omitempty"`    // the copy check of each body that the run wrote (corpus K9.4, rule L05)
+	Sanity  []Sanity      `json:"sanity,omitempty"`  // the sanity checks of each statement and proof that the run wrote (corpus K9.3, rule X05)
+	Sources []SourceClaim `json:"sources,omitempty"` // each source that the run proposed, with what the run claims about it (corpus K9.5, rule P05)
+}
+
+// CopyCheck is the result of the copy check of the bodies of one node (corpus K9.4).
+type CopyCheck struct {
+	Node    string      `json:"node"`              // the tag or the provisional id of the node
+	Version string      `json:"version"`           // the version of the copy check and of its reference corpus
+	Matches []CopyMatch `json:"matches,omitempty"` // the matches. A flag that is not a match is not here
+}
+
+// Blocks reports whether a match of the check blocks the merge.
+func (c CopyCheck) Blocks() bool {
+	return slices.ContainsFunc(c.Matches, func(m CopyMatch) bool { return m.Blocks() })
+}
+
+// CopyMatch is one match of the copy check: a part of a body that copies a reference text.
+type CopyMatch struct {
+	Field   string `json:"field"`             // the body field, for example body.proof
+	Start   int    `json:"start"`             // the first byte of the copy in the field
+	End     int    `json:"end"`               // the byte after the copy
+	Stage   int    `json:"stage"`             // 1 for an exact run, 2 for a near copy
+	Source  string `json:"source"`            // the reference text, for example wikipedia
+	URI     string `json:"uri,omitempty"`     // the page or the item in the source
+	Licence string `json:"licence,omitempty"` // the SPDX identifier of the licence of the source
+	Class   string `json:"class"`             // the access class of the source (spec 09.3)
+}
+
+// Blocks reports whether the match blocks the merge. Only a match with an open source is allowed, and then the node needs the attribution of rule L03.
+func (m CopyMatch) Blocks() bool { return m.Class != "open" }
+
+// SanityChecks are the sanity checks of corpus K9.3.
+var SanityChecks = []string{"small_cases", "round_trip", "judges", "hypotheses", "prove_or_disprove", "names", "dependencies"}
+
+// The results of a sanity check.
+const (
+	SanityPass = "pass" // the check found no problem. It is not evidence
+	SanityFail = "fail" // the check found a problem, for example a counterexample candidate
+	SanityNA   = "n/a"  // the check does not apply, for example no small cases to enumerate
+)
+
+// Sanity is the result of one sanity check on one field of a node (corpus K9.3). It is triage, never evidence.
+type Sanity struct {
+	Node   string `json:"node"`
+	Field  string `json:"field"`           // body.statement or body.proof
+	Check  string `json:"check"`           // one of SanityChecks
+	Result string `json:"result"`          // SanityPass, SanityFail or SanityNA
+	Model  string `json:"model,omitempty"` // the model of a judge
+	Note   string `json:"note,omitempty"`  // what the check found
+}
+
+// SourceClaim is a source that a run proposed for a node: an identifier, and what the run says about its record.
+type SourceClaim struct {
+	Node    string   `json:"node"`
+	System  string   `json:"system"` // the key of the source in the node file, for example doi or zbmath
+	ID      string   `json:"id"`
+	Title   string   `json:"title,omitempty"`
+	Authors []string `json:"authors,omitempty"`
+	Year    string   `json:"year,omitempty"`
+	Locator string   `json:"locator,omitempty"`
 }
 
 // Validate reports the first problem of the run record: an id or an agent that is not in its form, no prompt version, no model, no one on whose behalf it acted, a start time that is not RFC 3339 or an outcome that is not known.
