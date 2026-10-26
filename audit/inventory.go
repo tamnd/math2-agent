@@ -218,6 +218,41 @@ func i05(a *auditor) outcome {
 	return o
 }
 
+// i06 reports each MSC code at two digits whose estimated recall is below 90% (rule I06, corpus spec K4.7). Only an area that two independent sources cover has an estimate.
+func i06(a *auditor) outcome {
+	t := a.inventory()
+	o, stop := t.skip()
+	if stop {
+		return o
+	}
+	rows := make([]inventory.Row, len(t.rows))
+	for i := range t.rows {
+		rows[i] = t.rows[i].Row
+	}
+	ms := make([]inventory.Mention, 0, len(t.ms))
+	for _, m := range t.ms {
+		ms = append(ms, *m)
+	}
+	for _, ar := range inventory.Estimate(rows, ms) {
+		if ar.Recall == nil {
+			continue
+		}
+		o.checked++
+		if *ar.Recall >= inventory.RecallFloor {
+			continue
+		}
+		for _, c := range ar.Captures {
+			if c.Default {
+				o.add(inventory.RowsDir, 0, 0, "the area %s has %d rows and an estimated recall of %.0f%% (%.0f%% to %.0f%%): %s and %s have %d and %d rows of it, %d in both, so the area has about %.0f items", ar.MSC, ar.Rows, 100**ar.Recall, 100**ar.Low, 100**ar.High, c.A, c.B, c.InA, c.InB, c.InBoth, c.Total)
+			}
+		}
+	}
+	if o.checked == 0 {
+		o.reason = "no MSC code at two digits has two independent sources"
+	}
+	return o
+}
+
 func outcomeValue(r *inventory.Row) string {
 	if r.Outcome == nil {
 		return "open"

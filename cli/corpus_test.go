@@ -64,6 +64,13 @@ func TestCorpusImport(t *testing.T) {
 	if err != nil || json.Unmarshal(data, &report) != nil || report.Gold != 1 || len(report.Scores) != 4 || report.Scores[3].TrueNeg != 1 {
 		t.Fatalf("the report is %s, %v", data, err)
 	}
+	// The words have no MSC codes, so no area has an estimate.
+	if code, stdout, stderr := run("corpus", "recall", "-root", root, "-json", "-write"); code != ExitOK || !strings.Contains(stdout, `"areas": null`) {
+		t.Fatalf("m2 corpus recall gave %d, %q, %q", code, stdout, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(root, "reports", "inventory", "recall.json")); err != nil {
+		t.Fatal(err)
+	}
 	code, stdout, stderr = run("corpus", "status", "-root", root, "-json")
 	if code != ExitOK {
 		t.Fatalf("exit code %d, stderr %q", code, stderr)
