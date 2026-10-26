@@ -1,0 +1,6 @@
+{"id":"103A5C1YC1","mentions":["m2://rec/wikidata/Q101#1"],"kind":"statement","msc":["11A41"],"layer":"textbook","spread":1}
+{"id":"103A5C1YC2","mentions":["m2://rec/wikidata/Q102#1"],"kind":"statement","msc":["11A41"],"layer":"textbook","spread":1}
+{"id":"103A5C1YC3","mentions":["m2://rec/wikidata/Q103#1","m2://rec/zbmath/3#1"],"kind":"statement","msc":["11A41"],"layer":"textbook","spread":1}
+{"id":"103A5C1YC4","mentions":["m2://rec/wikidata/Q104#1","m2://rec/zbmath/4#1"],"kind":"statement","msc":["11A41"],"layer":"textbook","spread":1}
+{"id":"103A5C1YC5","mentions":["m2://rec/zbmath/5#1"],"kind":"statement","msc":["11A41"],"layer":"textbook","spread":1}
+{"id":"103A5C1YC6","mentions":["m2://rec/zbmath/6#1"],"kind":"statement","msc":["11A41"],"layer":"textbook","spread":1}

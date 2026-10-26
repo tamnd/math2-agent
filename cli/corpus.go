@@ -21,7 +21,7 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus cluster [-root DIR] [-commit C]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus cluster [-root DIR] [-commit C]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -35,6 +35,8 @@ func runCorpus(args []string, stdout, stderr io.Writer) int {
 		return runCorpusCluster(args[1:], stdout, stderr)
 	case "gold":
 		return runCorpusGold(args[1:], stdout, stderr)
+	case "recall":
+		return runCorpusRecall(args[1:], stdout, stderr)
 	case "status":
 		return runCorpusStatus(args[1:], stdout, stderr)
 	case "queue", "plan":
@@ -228,12 +230,7 @@ func runCorpusGold(args []string, stdout, stderr io.Writer) int {
 	}
 	data = append(data, '\n')
 	if *write {
-		path := filepath.Join(*root, filepath.FromSlash(goldReport))
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- the reports are public.
-			fmt.Fprintf(stderr, "%s: %v\n", name, err)
-			return ExitFailure
-		}
-		if err := os.WriteFile(path, data, 0o644); err != nil { // #nosec G306 -- the reports are public text in a git tree.
+		if err := writeReport(filepath.Join(*root, filepath.FromSlash(goldReport)), data); err != nil {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
 		}
@@ -254,6 +251,72 @@ func runCorpusGold(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintln(tw, "pass\tlayer\tpairs\tprecision\trecall\tfalse merges\tfalse splits\tmissing")
 	for _, s := range scores {
 		fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%d\t%d\t%d\n", s.Pass, s.Layer, s.Pairs, pct(s.Precision), pct(s.Recall), s.FalsePos, s.FalseNeg, s.Missing)
+	}
+	if err := tw.Flush(); err != nil {
+		return ExitFailure
+	}
+	return ExitOK
+}
+
+// recallReport is the file that m2 corpus recall -write writes, relative to the root of the tree.
+const recallReport = "reports/inventory/recall.json"
+
+// runCorpusRecall prints the estimated recall of the inventory for each MSC code at two digits (corpus K4.7).
+func runCorpusRecall(args []string, stdout, stderr io.Writer) int {
+	const name = "m2 corpus recall"
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	root := fs.String("root", ".", "the math2 working tree")
+	asJSON := fs.Bool("json", false, "print JSON")
+	write := fs.Bool("write", false, "also write the estimates to "+recallReport)
+	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "usage: "+corpusUsage)
+		return ExitUsage
+	}
+	ms, err := inventory.ReadMentions(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	rows, err := inventory.ReadRows(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	areas := inventory.Estimate(rows, ms)
+	data, err := json.MarshalIndent(struct {
+		Floor float64          `json:"floor"`
+		Areas []inventory.Area `json:"areas"`
+	}{inventory.RecallFloor, areas}, "", "  ")
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	data = append(data, '\n')
+	if *write {
+		if err := writeReport(filepath.Join(*root, filepath.FromSlash(recallReport)), data); err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+	}
+	if *asJSON {
+		if _, err := stdout.Write(data); err != nil {
+			return ExitFailure
+		}
+		return ExitOK
+	}
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "msc\trows\tsources\trecall\tinterval\tpair\tin both\testimate")
+	for _, a := range areas {
+		if a.Recall == nil {
+			fmt.Fprintf(tw, "%s\t%d\t%d\t-\t-\t-\t-\t-\n", a.MSC, a.Rows, a.Sources)
+			continue
+		}
+		c := a.Captures[slices.IndexFunc(a.Captures, func(c inventory.Capture) bool { return c.Default })]
+		fmt.Fprintf(tw, "%s\t%d\t%d\t%.0f%%\t%.0f%% to %.0f%%\t%s, %s\t%d\t%.0f\n", a.MSC, a.Rows, a.Sources, 100**a.Recall, 100**a.Low, 100**a.High, c.A, c.B, c.InBoth, c.Total)
 	}
 	if err := tw.Flush(); err != nil {
 		return ExitFailure

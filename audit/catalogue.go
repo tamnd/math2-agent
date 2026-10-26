@@ -93,7 +93,7 @@ var catalogue = []entry{
 	{Rule{"I03", Inventory, true, "no row has only mentions from models"}, i03},
 	{Rule{"I04", Inventory, true, "each outcome that a rule gave names a rule in schema/outcomes.v1.yaml"}, i04},
 	{Rule{"I05", Inventory, false, "a deferred row whose date has passed"}, i05},
-	{Rule{"I06", Inventory, false, "an MSC code at two digits whose estimated recall is below 90%"}, nil},
+	{Rule{"I06", Inventory, false, "an MSC code at two digits whose estimated recall is below 90%"}, i06},
 	{Rule{"N01", Notation, true, "each macro in a body has an entry in the notation register whose scope includes a topic of the node, or the global scope, or the node defines it"}, n01},
 	{Rule{"N02", Notation, true, "two entries with the same glyph in scopes with a topic in common are the same macro, or each lists the other in conflicts"}, n02},
 	{Rule{"N03", Notation, false, "a curriculum puts a member before one of its prerequisites"}, n03},
