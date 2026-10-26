@@ -33,10 +33,10 @@ func TestCompute(t *testing.T) {
 	src := "print(42)\n"
 	root := t.TempDir()
 	for p, data := range map[string]string{
-		"manifests/images.yaml":  "images:\n  - name: m2-python\n    amd64: " + digest + "\n    arm64: " + digest + "\n",
-		"compute/T1TEST/main.py": src,
-		"nodes/T1T/T1TEST.md":    "---\ntag: T1TEST\nkind: computation\nname: A test\nclaim: x\nengine:\n  image: m2-python@" + digest + "\n  entry: main.py\noutput:\n  hash: " + compute.Hash([]byte(src)) + "\n---\n\n## Description\n\nA test.\n",
-		"nodes/T2T/T2TEST.md":    "---\ntag: T2TEST\nkind: statement\nname: Not a computation\n---\n",
+		"manifests/images.yaml":      "images:\n  - name: m2-python\n    amd64: " + digest + "\n    arm64: " + digest + "\n",
+		"compute/T1T/T1TEST/main.py": src,
+		"nodes/T1T/T1TEST.md":        "---\ntag: T1TEST\nkind: computation\nname: A test\nclaim: x\nengine:\n  image: m2-python@" + digest + "\n  entry: main.py\noutput:\n  hash: " + compute.Hash([]byte(src)) + "\n---\n\n## Description\n\nA test.\n",
+		"nodes/T2T/T2TEST.md":        "---\ntag: T2TEST\nkind: statement\nname: Not a computation\n---\n",
 	} {
 		if err := os.MkdirAll(filepath.Dir(filepath.Join(root, p)), 0o750); err != nil {
 			t.Fatal(err)

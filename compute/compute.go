@@ -1,6 +1,6 @@
 // Package compute runs the computations of math2 (spec 08).
 //
-// A computation is a node of kind computation. Its front matter is the [Record]: the image by digest, the entry point next to the node in compute/TAG/, the inputs, the seed, the budgets, the hash of the output and, for a computation that can reach E4, a certificate. [Runner.Run] runs a record in a [sandbox.Sandbox] and writes what it saw to build/compute/TAG/ARCH/run.json. [Runner.Verify] also compares the output with the hash of the record, and runs the fixed checker of the certificate kind on the certificate.
+// A computation is a node of kind computation. Its front matter is the [Record]: the image by digest, the entry point in the code directory of the node, compute/SHARD/TAG/, the inputs, the seed, the budgets, the hash of the output and, for a computation that can reach E4, a certificate. [Runner.Run] runs a record in a [sandbox.Sandbox] and writes what it saw to build/compute/TAG/ARCH/run.json. [Runner.Verify] also compares the output with the hash of the record, and runs the fixed checker of the certificate kind on the certificate.
 //
 // The images are in manifests/images.yaml ([Images]). A record names an image by the digest of one architecture, and the runner runs the digest of the same image for the architecture of the machine. Thus two runs on two architectures run the same image, and rule C02 compares their outputs.
 package compute
@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/tag"
 )
 
 // Record is the record of one computation (spec 08.2).
@@ -24,7 +25,7 @@ type Record struct {
 	Claim       string         // what the computation shows
 	Role        string         // "experiment" for an experiment (spec 08.4), or ""
 	Image       string         // the image as name@sha256:HEX
-	Entry       string         // the entry point, as a path in compute/TAG/
+	Entry       string         // the entry point, as a path in Dir()
 	Inputs      map[string]any // the inputs, or nil
 	Seed        *int64         // the seed, or nil for a deterministic computation
 	Resources   Resources      // the budgets
@@ -53,8 +54,8 @@ type Certificate struct {
 	CheckerEntry string // the checker program, as a path in compute/TAG/
 }
 
-// Dir returns the directory of the code of the computation, compute/TAG.
-func (r *Record) Dir() string { return "compute/" + r.Tag }
+// Dir returns the directory of the code of the computation, tag.CodeDir of its tag.
+func (r *Record) Dir() string { return tag.CodeDir(r.Tag) }
 
 // EntryPath returns the path of the entry point from the tree root.
 func (r *Record) EntryPath() string { return r.Dir() + "/" + r.Entry }

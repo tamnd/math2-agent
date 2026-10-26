@@ -382,13 +382,13 @@ func TestAgentRunExplore(t *testing.T) {
 		}
 	}
 	code := "print(641)\n"
-	computation := "---\ntag: ~1a2b3c4d\nkind: computation\nname: A factor of the fifth Fermat number\nclaim: 641 divides $2^{32} + 1$.\nengine:\n  image: " + image + "\n  entry: compute/~1a2b3c4d/main.py\n  resources: {cpu: 1, mem: 1G, wall: 1m}\noutput:\n  hash: " + compute.Hash([]byte(code)) + "\n  summary: \"641\"\n---\n\n## Description\n\nThe program prints the first prime that divides $2^{32} + 1$.\n"
+	computation := "---\ntag: ~1a2b3c4d\nkind: computation\nname: A factor of the fifth Fermat number\nclaim: 641 divides $2^{32} + 1$.\nengine:\n  image: " + image + "\n  entry: compute/~/~1a2b3c4d/main.py\n  resources: {cpu: 1, mem: 1G, wall: 1m}\noutput:\n  hash: " + compute.Hash([]byte(code)) + "\n  summary: \"641\"\n---\n\n## Description\n\nThe program prints the first prime that divides $2^{32} + 1$.\n"
 	counterexample := "---\ntag: ~5e6f7a8b\nkind: counterexample\nname: The fifth Fermat number is not prime\nrefutes:\n  - {target: 4N9QX2, via: ~1a2b3c4d}\n---\n\n## Counterexample\n\nThe number $2^{32} + 1$ is $641 \\cdot 6700417$, thus it is not prime.\n"
 	u := llm.Usage{Input: 1000, Output: 200}
 	write := func(path, text string) llm.Block {
 		return llmtest.Call("write_file", map[string]string{"path": path, "text": text}, u).Content[0]
 	}
-	resp := llmtest.Call("write_file", map[string]string{"path": "compute/~1a2b3c4d/main.py", "text": code}, u)
+	resp := llmtest.Call("write_file", map[string]string{"path": "compute/~/~1a2b3c4d/main.py", "text": code}, u)
 	resp.Content = append(resp.Content, write("nodes/~/~1a2b3c4d.md", computation), write("nodes/~/~5e6f7a8b.md", counterexample))
 	oldModel, oldLean, oldSandbox := newModel, newLean, newSandbox
 	newModel = func() (llm.Model, error) { return judgeless{llmtest.New(resp)}, nil }

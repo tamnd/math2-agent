@@ -37,6 +37,7 @@ import (
 	"github.com/tamnd/math2-agent/prompts"
 	"github.com/tamnd/math2-agent/sandbox"
 	"github.com/tamnd/math2-agent/search"
+	"github.com/tamnd/math2-agent/tag"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
@@ -86,7 +87,7 @@ func readItems(t *testing.T) []item {
 func (it item) comp() string { return fmt.Sprintf("~c%07x", it.n) }
 func (it item) out() string  { return fmt.Sprintf("~e%07x", it.n) }
 
-func (it item) codePath() string { return "compute/" + it.comp() + "/main.py" }
+func (it item) codePath() string { return tag.CodeDir(it.comp()) + "/main.py" }
 
 // computation is the computation node of the item with the image and the output hash.
 func (it item) computation(image, hash string) string {

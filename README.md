@@ -64,7 +64,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 fmt` | Make front matter canonical and change aliases to tags. | written |
 | `m2 check` | Check schema, body and links on the working tree. This does not use Lean. | written |
 | `m2 mint` | Change the provisional ids to tags before merge, and add the tags to `registers/tags.reg`. `m2 mint -seed` gives tags that start with `0` to the nodes of the M1 seed. | written |
-| `m2 migrate shard3` | Move each file of `nodes/`, `prov/` and `reviews/` to the shard of the first three characters of its tag (corpus spec K3.5). A second run moves nothing. | written |
+| `m2 migrate shard3` | Move each file of `nodes/`, `prov/` and `reviews/`, and the code of each computation in `compute/`, to the shard of the first three characters of its tag (corpus spec K3.5). A second run moves nothing. | written |
 | `m2 site build` | Build the wiki: a static site for people and agents. | written |
 | `m2 site check` | Test the wiki against the size, MathML, no-JavaScript, figure and offline targets. | written |
 | `m2 site serve` | Preview the wiki with gzip, as GitHub Pages serves it. | written |
@@ -151,7 +151,7 @@ The steps are `lean`, `extract`, `replay`, `battery`, `status`, `graph`, `store`
 
 ## Computations
 
-A computation is a node of kind `computation` (spec 08.2). Its code is in `compute/TAG/` of the content tree. Its record names the image by digest, the entry point, the inputs, the seed, the budgets, the hash of the output and, for a computation that can reach E4, a certificate.
+A computation is a node of kind `computation` (spec 08.2). Its code is in `compute/SHARD/TAG/` of the content tree, with the shard of the node file, for example `compute/AAY/AAYEQE/`. The code of a new computation is in `compute/~/~ID/` until the merge gives it a tag. Its record names the image by digest, the entry point, the inputs, the seed, the budgets, the hash of the output and, for a computation that can reach E4, a certificate.
 
 ```sh
 m2 compute run 3MZ8QD       # run it in the sandbox
@@ -159,7 +159,7 @@ m2 compute verify 3MZ8QD    # run it, and check the output and the certificate
 m2 compute verify -all      # each computation of the tree
 ```
 
-The `compute` package reads the record and the image manifest `manifests/images.yaml`. A record names an image by the digest of one architecture, and the runner runs the digest of the same image for its own architecture. The program reads `compute/TAG/` at `/work`, gets the inputs as JSON in `M2_INPUTS` and the seed in `M2_SEED`, and writes a certificate to `/out/certificate`. The output hash is the BLAKE3 hash of the standard output.
+The `compute` package reads the record and the image manifest `manifests/images.yaml`. A record names an image by the digest of one architecture, and the runner runs the digest of the same image for its own architecture. The program reads `compute/SHARD/TAG/` at `/work`, gets the inputs as JSON in `M2_INPUTS` and the seed in `M2_SEED`, and writes a certificate to `/out/certificate`. The output hash is the BLAKE3 hash of the standard output.
 
 The run writes `run.json`, `stdout` and `stderr` to `build/compute/TAG/ARCH/`. A verified run exits with the code 0 in time, and its output has the hash of the record. When the record has a certificate, the certificate has the hash of the record, and the fixed checker of its kind (spec 08.8) accepts it. `compute.Checkers` is the table of the fixed checkers. A change to it needs the review of a person.
 
@@ -167,7 +167,7 @@ The rules C01 to C05 of `m2 audit` check the computations:
 
 | Rule | It checks |
 |---|---|
-| C01 | the image of each record is in the manifest, the entry point exists in `compute/TAG/`, and the record is valid |
+| C01 | the image of each record is in the manifest, the entry point exists in `compute/SHARD/TAG/`, and the record is valid |
 | C02 | each E4 candidate has a run on amd64 and a run on arm64, the two runs give the same output and the same certificate, and these are the hashes of the record |
 | C03 | the image and the checker image of each record are the current digests of the manifest. This rule is soft, because an old digest stays valid, and the next release runs the computation again |
 | C04 | the certificate kind is known, the checker image is the fixed checker of the kind, and the checker program exists |

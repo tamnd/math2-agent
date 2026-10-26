@@ -114,7 +114,7 @@ const (
 var u = llm.Usage{Input: 1000, Output: 200}
 
 func computation(extra string) string {
-	return "---\ntag: " + id + "\nkind: computation\nname: A factor of the fifth Fermat number\nclaim: 641 divides $2^{32} + 1$.\nengine:\n  image: " + image + "\n  entry: compute/" + id + "/main.py\n  resources: {cpu: 1, mem: 1G, wall: 1m}\n" + extra + "---\n\n## Description\n\nThe program divides $2^{32} + 1$ by the primes up to 1000, and prints the first one that divides it.\n"
+	return "---\ntag: " + id + "\nkind: computation\nname: A factor of the fifth Fermat number\nclaim: 641 divides $2^{32} + 1$.\nengine:\n  image: " + image + "\n  entry: compute/~/" + id + "/main.py\n  resources: {cpu: 1, mem: 1G, wall: 1m}\n" + extra + "---\n\n## Description\n\nThe program divides $2^{32} + 1$ by the primes up to 1000, and prints the first one that divides it.\n"
 }
 
 func counterexample(text string) string {
@@ -179,7 +179,7 @@ func TestRun(t *testing.T) {
 	good := computation("output:\n  hash: " + compute.Hash([]byte(code)) + "\n  summary: \"641\"\n" + cert)
 	text := "The number $2^{2^5} + 1 = 2^{32} + 1$ is $641 \\cdot 6700417$, thus it is not prime."
 	rn := agent.Runner{Role: role, Model: llmtest.New(
-		both(write("compute/"+id+"/main.py", code), write("compute/"+id+"/check.py", checker)),
+		both(write("compute/~/"+id+"/main.py", code), write("compute/~/"+id+"/check.py", checker)),
 		write(nodeFile, computation("")),
 		llmtest.Call("run_computation", map[string]string{"computation": id}, u),
 		llmtest.Call("lookup", map[string]string{"name": "A factor of a Fermat number", "statement": "641 divides $2^{2^5} + 1$."}, u),
@@ -249,12 +249,12 @@ func TestGoal(t *testing.T) {
 	}{
 		{"a conjecture with no computation", map[string]string{"nodes/~/~9c0d1e2f.md": strings.Replace(conjecture, " The [[computation|"+id+"]] checks it for $n = 5$.", "", 1)}, "links to no computation. Falsify before filing"},
 		{"a counterexample with no via", map[string]string{"nodes/~/~5e6f7a8b.md": strings.Replace(counterexample("A text."), "refutes:\n  - {target: 4N9QX2, via: "+id+"}\n", "", 1)}, "refutes no statement through a computation"},
-		{"code with no node", map[string]string{"compute/~0000aaaa/main.py": code, "compute/" + id + "/main.py": code, nodeFile: good, "nodes/~/~9c0d1e2f.md": conjecture}, "adds no computation node ~0000aaaa"},
-		{"a wrong hash", map[string]string{"compute/" + id + "/main.py": code, nodeFile: computation("output:\n  hash: " + compute.Hash([]byte("other")) + "\n"), "nodes/~/~9c0d1e2f.md": conjecture}, "does not verify: the output hash is"},
+		{"code with no node", map[string]string{"compute/~/~0000aaaa/main.py": code, "compute/~/" + id + "/main.py": code, nodeFile: good, "nodes/~/~9c0d1e2f.md": conjecture}, "adds no computation node ~0000aaaa"},
+		{"a wrong hash", map[string]string{"compute/~/" + id + "/main.py": code, nodeFile: computation("output:\n  hash: " + compute.Hash([]byte("other")) + "\n"), "nodes/~/~9c0d1e2f.md": conjecture}, "does not verify: the output hash is"},
 		{"a broken node", map[string]string{"nodes/~/~9c0d1e2f.md": strings.Replace(conjecture, "## Statement", "## Proof", 1)}, "m2 check finds problems"},
 		{"a change of a node", map[string]string{"nodes/4N9/4N9QX2.md": fermat + "\nMore.\n"}, "changes no node that exists"},
-		{"a novel conjecture", map[string]string{"compute/" + id + "/main.py": code, nodeFile: good, "nodes/~/~9c0d1e2f.md": strings.Replace(conjecture, "A pattern", "A novel pattern", 1)}, `says "novel"`},
-		{"a conjecture", map[string]string{"compute/" + id + "/main.py": code, nodeFile: good, "nodes/~/~9c0d1e2f.md": conjecture}, ""},
+		{"a novel conjecture", map[string]string{"compute/~/" + id + "/main.py": code, nodeFile: good, "nodes/~/~9c0d1e2f.md": strings.Replace(conjecture, "A pattern", "A novel pattern", 1)}, `says "novel"`},
+		{"a conjecture", map[string]string{"compute/~/" + id + "/main.py": code, nodeFile: good, "nodes/~/~9c0d1e2f.md": conjecture}, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			nv := &explore.Novelty{}
@@ -277,7 +277,7 @@ func TestGoal(t *testing.T) {
 func TestGoalSearchFails(t *testing.T) {
 	good := computation("output:\n  hash: " + compute.Hash([]byte(code)) + "\n")
 	nv := &explore.Novelty{Searchers: []novelty.Searcher{&search{err: errors.New("the service is down")}}}
-	_, _, err := check(t, map[string]string{"compute/" + id + "/main.py": code, nodeFile: good, "nodes/~/~5e6f7a8b.md": counterexample("The number $2^{32} + 1$ is not prime.")}, nv)
+	_, _, err := check(t, map[string]string{"compute/~/" + id + "/main.py": code, nodeFile: good, "nodes/~/~5e6f7a8b.md": counterexample("The number $2^{32} + 1$ is not prime.")}, nv)
 	if err == nil || !strings.Contains(err.Error(), "the novelty check of ~5e6f7a8b") {
 		t.Errorf("a failed search gives %v", err)
 	}

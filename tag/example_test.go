@@ -100,3 +100,19 @@ func ExampleMoveShards() {
 	fmt.Println(moves, err)
 	// Output: [{nodes/7K/7K3QX2.md nodes/7K3/7K3QX2.md}] <nil>
 }
+
+func ExampleCodeDir() {
+	fmt.Println(tag.CodeDir("AAYEQE"))
+	fmt.Println(tag.CodeDir("~1a2b3c4d"))
+	// Output:
+	// compute/AAY/AAYEQE
+	// compute/~/~1a2b3c4d
+}
+
+func ExampleCodeID() {
+	fmt.Println(tag.CodeID("compute/AAY/AAYEQE/main.g"))
+	fmt.Println(tag.CodeID("compute/AAYEQE/main.g"))
+	// Output:
+	// AAYEQE true
+	//  false
+}

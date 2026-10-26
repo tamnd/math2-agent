@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -20,6 +21,9 @@ type Minted struct {
 	Kind        string
 }
 
+// codeInText finds paths to the code of a computation with a provisional id in a file.
+var codeInText = regexp.MustCompile(`compute/~/~[0-9a-f]{8}`)
+
 // textExts are the file types that can refer to a node. The code of a computation in compute/ is in one of the languages of the images of spec 08.1.
 var textExts = map[string]bool{
 	".md": true, ".yaml": true, ".yml": true, ".lean": true, ".txt": true,
@@ -32,7 +36,7 @@ func ContentDirs() []string { return []string{"nodes", "topics", "reviews", "com
 // skipDirs are the directories in a content directory that Rewrite does not read.
 var skipDirs = map[string]bool{".git": true, ".lake": true, "node_modules": true}
 
-// Rewrite changes each provisional id in the math2 working tree at root to a new tag. It mints one tag for each file in nodes/~/. It changes the id in the file name, in the front matter, in each [[text|~id]] link and in each other text file in nodes/, topics/, reviews/, compute/ and lean/ that refers to it. It does not change other files, for example the README. It moves the provenance log of each node from prov/~/ to the shard of its tag, and the code of a computation from compute/~ID/ to compute/TAG/. Then it adds the new tags to registers/tags.reg with the given commit.
+// Rewrite changes each provisional id in the math2 working tree at root to a new tag. It mints one tag for each file in nodes/~/. It changes the id in the file name, in the front matter, in each [[text|~id]] link and in each other text file in nodes/, topics/, reviews/, compute/ and lean/ that refers to it. It does not change other files, for example the README. It moves the provenance log of each node from prov/~/ to the shard of its tag, and the code of a computation from compute/~/~ID/ to CodeDir of its tag. Then it adds the new tags to registers/tags.reg with the given commit.
 //
 // Rewrite changes nothing if a file refers to a provisional id that has no file in nodes/~/ (rule T03).
 func Rewrite(root string, r io.Reader, commit string) ([]Minted, error) {
@@ -100,7 +104,14 @@ func rewrite(root string, r io.Reader, commit string, mint func(io.Reader, func(
 		if err != nil {
 			return err
 		}
-		out := ProvisionalInText.ReplaceAllFunc(data, func(id []byte) []byte {
+		// A path to the code of a computation changes its shard too: compute/~/~ID becomes CodeDir of the tag.
+		out := codeInText.ReplaceAllFunc(data, func(p []byte) []byte {
+			if m, ok := byID[string(p[len("compute/~/"):])]; ok {
+				return []byte(CodeDir(m.Tag))
+			}
+			return p
+		})
+		out = ProvisionalInText.ReplaceAllFunc(out, func(id []byte) []byte {
 			m, ok := byID[string(id)]
 			if !ok {
 				rel, _ := filepath.Rel(root, path)
@@ -215,15 +226,18 @@ func readKind(path string) (string, error) {
 	return meta.Kind, nil
 }
 
-// moveCompute moves the code of a computation, compute/~ID/, to compute/TAG/ (spec 08.2). A node with no code has nothing to move.
+// moveCompute moves the code of a computation from CodeDir of its provisional id to CodeDir of its tag (spec 08.2). A node with no code has nothing to move.
 func moveCompute(root string, m Minted) error {
-	from := filepath.Join(root, "compute", m.Provisional)
+	from := filepath.Join(root, filepath.FromSlash(CodeDir(m.Provisional)))
 	if _, err := os.Stat(from); errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
-	to := filepath.Join(root, "compute", m.Tag)
+	to := filepath.Join(root, filepath.FromSlash(CodeDir(m.Tag)))
 	if _, err := os.Stat(to); err == nil {
 		return fmt.Errorf("%s exists already", to)
+	}
+	if err := os.MkdirAll(filepath.Dir(to), 0o750); err != nil {
+		return err
 	}
 	return os.Rename(from, to)
 }

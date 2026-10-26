@@ -30,7 +30,7 @@ func TestRunPanel(t *testing.T) {
 	for _, want := range []string{
 		`<h2 id="run-h">Run this</h2>`,
 		`<pre><code>m2 compute verify ZNAZT5</code></pre>`,
-		`<a href="https://github.com/o/math2/blob/main/compute/ZNAZT5/goldbach.py"><code>goldbach.py</code></a>`,
+		`<a href="https://github.com/o/math2/blob/main/compute/ZNA/ZNAZT5/goldbach.py"><code>goldbach.py</code></a>`,
 		`<code>{&#34;limit&#34;:10000}</code>`,
 		`none yet. The first run records it.`,
 		`<td>arm64</td><td><code>` + out + `</code></td><td>no</td><td>no: the record has no output hash</td><td>2.2</td>`,

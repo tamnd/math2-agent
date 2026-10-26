@@ -39,7 +39,7 @@ func TestPermit(t *testing.T) {
 	explained := target + "\n## Explanations\n\n### L2 agent\n\nThe order of a [[subgroup|G5S1M9]] is a whole number that divides the order of the group.\n"
 	human := target + "\n## Explanations\n\n### L2 human\n\nThe cosets of a subgroup have the same size.\n"
 	conjecture := "---\ntag: ~1a2b3c4d\nkind: conjecture\nname: A pattern\n---\n\n## Statement\n\nA pattern.\n"
-	computation := "---\ntag: ~1a2b3c4d\nkind: computation\nname: A search\nclaim: x\nengine: {image: m2-python@sha256:00, entry: compute/~1a2b3c4d/main.py}\n---\n\n## Description\n\nA search.\n"
+	computation := "---\ntag: ~1a2b3c4d\nkind: computation\nname: A search\nclaim: x\nengine: {image: m2-python@sha256:00, entry: compute/~/~1a2b3c4d/main.py}\n---\n\n## Description\n\nA search.\n"
 	concept := "---\ntag: ~1a2b3c4d\nkind: concept\nname: Coset\n---\n\n## Summary\n\nA coset of a subgroup.\n"
 	queue := `{"id":"aaaaaaaaaaaa","node":"3C53TD","edge":"duplicate","system":"math2","target":"G5S1M9","source":"oeis","score":0.9,"centrality":3,"proposed":"2026-10-01","by":"m2/0.2.0 align","records":"-"}` + "\n"
 	same := func(a, b, by string) string {
@@ -166,9 +166,11 @@ func TestPermit(t *testing.T) {
 		{"explore adds a conjecture", "explore", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(conjecture)}, ""},
 		{"explore adds a computation", "explore", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(computation)}, ""},
 		{"explore adds a counterexample", "explore", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(strings.Replace(conjecture, "kind: conjecture", "kind: counterexample", 1))}, ""},
-		{"explore adds code", "explore", workspace.Change{Path: "compute/~1a2b3c4d/main.py", New: []byte("print(1)\n")}, ""},
-		{"explore changes code", "explore", workspace.Change{Path: "compute/AAYEQE/main.g", Old: []byte("a"), New: []byte("b")}, "does not change code that exists"},
-		{"explore adds code outside a computation", "explore", workspace.Change{Path: "compute/main.py", New: []byte("a")}, "is in compute/ID/"},
+		{"explore adds code", "explore", workspace.Change{Path: "compute/~/~1a2b3c4d/main.py", New: []byte("print(1)\n")}, ""},
+		{"explore changes code", "explore", workspace.Change{Path: "compute/AAY/AAYEQE/main.g", Old: []byte("a"), New: []byte("b")}, "does not change code that exists"},
+		{"explore adds code outside a computation", "explore", workspace.Change{Path: "compute/main.py", New: []byte("a")}, "is in compute/SHARD/ID/"},
+		{"explore adds code in the wrong shard", "explore", workspace.Change{Path: "compute/AA/AAYEQE/main.g", New: []byte("a")}, "is in compute/SHARD/ID/"},
+		{"explore adds code with no shard", "explore", workspace.Change{Path: "compute/~1a2b3c4d/main.py", New: []byte("a")}, "is in compute/SHARD/ID/"},
 		{"explore adds a statement", "explore", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(lemma)}, "of the kind statement"},
 		{"explore binds a conjecture", "explore", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(strings.Replace(conjecture, "---\n\n", "formal:\n  - {system: lean4, library: math2, decl: Math2.c, match: exact}\n---\n\n", 1))}, "no field formal"},
 		{"explore explains", "explore", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(conjecture + "\n## Explanations\n\n### L2 agent\n\nA text.\n")}, "writes no explanations"},
