@@ -63,15 +63,46 @@
 {{define "invletter"}}
 <header class="page-head">
   <h1>Inventory: {{if eq .Letter.Letter "#"}}other names{{else}}{{.Letter.Letter}}{{end}}</h1>
-  <p class="lead">The rows of the <a href="{{url "inventory/"}}">inventory</a> whose names start with {{if eq .Letter.Letter "#"}}a character that is not a letter of A to Z{{else}}{{.Letter.Letter}}{{end}}. Each row links to the pages of the item in its sources.</p>
+  <p class="lead">The rows of the <a href="{{url "inventory/"}}">inventory</a> whose names start with {{if eq .Letter.Letter "#"}}a character that is not a letter of A to Z{{else}}{{.Letter.Letter}}{{end}}. The name of a row with a node links to the page of the node. The other names and each id link to the card of the row, with its mentions in the sources.</p>
 </header>
 {{template "invletters" .Letters}}
 <input class="filter" type="search" placeholder="Filter this list" aria-label="Filter this list">
 <table class="list">
   <thead><tr><th>Name</th><th>Id</th><th>Kind</th><th>Outcome</th><th>Sources</th></tr></thead>
   <tbody>
-  {{range .Letter.Rows}}<tr id="{{.ID}}"><td>{{.Name}}</td><td><span class="tag">{{.ID}}</span></td><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td><td>{{.Outcome}}{{with .Reason}} <span class="muted">({{.}})</span>{{end}}</td><td>{{range $i, $l := .Links}}{{if $i}}, {{end}}{{if $l.URL}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{else}}{{$l.Text}}{{end}}{{end}}</td></tr>
+  {{range .Letter.Rows}}<tr id="{{.ID}}"><td>{{if .Node}}<a href="{{.Node.URL}}">{{.Name}}</a>{{else}}<a href="{{.Card}}">{{.Name}}</a>{{end}}</td><td><a class="tag" href="{{.Card}}">{{.ID}}</a></td><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td><td>{{.Outcome}}{{with .Reason}} <span class="muted">({{.}})</span>{{end}}</td><td>{{range $i, $l := .Links}}{{if $i}}, {{end}}{{if $l.URL}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{else}}{{$l.Text}}{{end}}{{end}}</td></tr>
   {{end}}
   </tbody>
 </table>
+{{end}}
+
+{{define "invcards"}}
+<header class="page-head">
+  <h1>Inventory rows {{.Prefix}}</h1>
+  <p class="lead">The cards of the rows of the <a href="{{url "inventory/"}}">inventory</a> whose ids start with <span class="tag">{{.Prefix}}</span>. A card gives the mentions of the item in the sources, and the node of the item when math2 has one.</p>
+</header>
+{{range .Rows}}
+<section class="card inv-card" id="{{.ID}}">
+  <h2>{{.Name}} <span class="tag">{{.ID}}</span></h2>
+  <table class="plain">
+    <tr><th scope="row">Kind</th><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td></tr>
+    <tr><th scope="row">Layer</th><td>{{.Layer}}</td></tr>
+    {{with .MSC}}<tr><th scope="row">MSC</th><td>{{range $i, $c := .}}{{if $i}}, {{end}}{{$c}}{{end}}</td></tr>{{end}}
+    <tr><th scope="row">Sources</th><td class="num">{{.Spread}}</td></tr>
+    <tr><th scope="row">Outcome</th><td>{{.Outcome}}{{with .Reason}} <span class="muted">({{.}})</span>{{end}}</td></tr>
+    <tr><th scope="row">Node</th><td>{{with .Node}}<a href="{{.URL}}">{{.Text}}</a> <span class="tag">{{.Tag}}</span>{{else}}None yet. <a href="{{url "contribute/"}}">Write the node</a>.{{end}}</td></tr>
+  </table>
+  {{with .Mentions}}
+  <h3>Mentions</h3>
+  <ul>
+  {{range .}}<li>{{.Source}}: {{if .Link.URL}}<a href="{{.Link.URL}}">{{.Link.Text}}</a>{{else}}{{.Link.Text}}{{end}}{{with .Name}}, {{.}}{{end}}{{with .Kind}} <span class="muted">({{.}})</span>{{end}}{{with .Same}}. Also {{range $i, $l := .}}{{if $i}}, {{end}}{{if $l.URL}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{else}}{{$l.Text}}{{end}}{{end}}{{end}}</li>
+  {{end}}
+  </ul>
+  {{end}}
+  {{with .History}}
+  <h3>History</h3>
+  <ul>{{range .}}<li>{{.At}}: {{.Op}}{{with .By}} by {{.}}{{end}}</li>{{end}}</ul>
+  {{end}}
+</section>
+{{end}}
 {{end}}
