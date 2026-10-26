@@ -153,6 +153,7 @@ type builder struct {
 
 	invSummary *inventory.Summary
 	invLetters []*invLetter
+	invCards   []*invCards
 }
 
 // Build writes the site to opt.Out.

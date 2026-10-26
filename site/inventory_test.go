@@ -25,6 +25,7 @@ func TestInventory(t *testing.T) {
 	if err := inventory.WriteRows(root, rows); err != nil {
 		t.Fatal(err)
 	}
+	writeFile(t, root, "nodes/1H8/1H8D2C.md", "---\ntag: 1H8D2C\nkind: statement\nrole: theorem\nname: Pythagorean theorem\nmsc: [51M04]\nsources:\n  - url: https://en.wikipedia.org/wiki/Pythagorean_theorem\n    locator: lead section\nsame_as:\n  wikidata: Q11518\n---\n\n## Statement\n\nIn a right triangle, $a^2 + b^2 = c^2$.\n")
 	out := buildSite(t, root, "")
 	index := readFile(t, out, "inventory/index.html")
 	for _, want := range []string{"Open rows", `href="/math2/inventory/p/"`, `href="/math2/inventory/other/"`, "out_of_scope"} {
@@ -37,6 +38,18 @@ func TestInventory(t *testing.T) {
 		if !strings.Contains(p, want) {
 			t.Errorf("inventory/p/index.html has no %q", want)
 		}
+	}
+	if !strings.Contains(p, `<a href="/math2/wiki/pythagorean-theorem/">Pythagorean theorem</a>`) || !strings.Contains(p, `<a class="tag" href="/math2/inventory/row/7K/#7K3QX2M9R2">`) {
+		t.Error("the row of the Pythagorean theorem does not link to its node and its card")
+	}
+	card := readFile(t, out, "inventory/row/7K/index.html")
+	for _, want := range []string{`<section class="card inv-card" id="7K3QX2M9R2">`, `<a href="https://www.wikidata.org/wiki/Q11518">`, `<a href="/math2/wiki/pythagorean-theorem/">Pythagorean theorem</a>`} {
+		if !strings.Contains(card, want) {
+			t.Errorf("inventory/row/7K/index.html has no %q", want)
+		}
+	}
+	if card := readFile(t, out, "inventory/row/3C/index.html"); !strings.Contains(card, "None yet.") {
+		t.Error("the card of a row with no node does not say so")
 	}
 	if other := readFile(t, out, "inventory/other/index.html"); !strings.Contains(other, "a test") {
 		t.Error("inventory/other/index.html does not give the reason of the outcome")
