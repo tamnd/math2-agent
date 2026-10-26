@@ -39,7 +39,7 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|explain|formalize|prove|review-assist"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|explain|formalize|prove|review-assist"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
@@ -89,13 +89,14 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	out := flags.String("out", "", "the output directory of m2 build. Empty means build/ in the tree.")
 	store := flags.String("store", "", "the directory of the run records. Empty means the output directory, where the rules P02 and P03 read the summaries.")
 	work := flags.String("work", "", "the directory of the new work tree of the run. Empty means a new directory in the temporary directory.")
-	jobFile := flags.String("job", "", "a job file in YAML (spec 11.4). The flags -target, -goal, -on-behalf-of, -budget and -native-decide change its fields.")
+	jobFile := flags.String("job", "", "a job file in YAML (spec 11.4). The flags -target, -goal, -on-behalf-of, -budget, -native-decide and -type-change change its fields.")
 	target := flags.String("target", "", "the tag or the provisional id of the target node")
 	goal := flags.String("goal", "", "the goal of the job. Empty means the goal of the role.")
 	behalf := flags.String("on-behalf-of", os.Getenv("M2_ON_BEHALF_OF"), "the person, the project or the schedule on whose behalf the run works, for example github:octocat. The default is $M2_ON_BEHALF_OF.")
 	usd := flags.Float64("budget", 0, "the budget of the run in dollars. Zero means the budget of the job, or of the role.")
 	rung := flags.Int("rung", 0, "the rung of the escalation ladder of the role, from 0")
 	native := flags.Bool("native-decide", false, "permit a proof that uses native_decide. Rule F04 records each use.")
+	typeChange := flags.Bool("type-change", false, "permit a bump rebind to a declaration with another type hash")
 	asJSON := flags.Bool("json", false, "write the summary of the run as JSON")
 	box := sandboxFlags(flags)
 	if err := flags.Parse(args[1:]); err != nil {
@@ -146,6 +147,8 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 			job.Budget.USD = *usd
 		case "native-decide":
 			job.Constraints.NativeDecide = *native
+		case "type-change":
+			job.Constraints.TypeChange = *typeChange
 		}
 	})
 	if job.OnBehalfOf == "" {

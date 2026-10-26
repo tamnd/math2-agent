@@ -123,7 +123,7 @@ func broken(r lean.Record) string {
 	return ""
 }
 
-// Goal returns the goal predicate of a bump run on the work tree: the changes are inside the field permission set of bump, the run rebinds at least one binding of the target, each old declaration did not resolve or was deprecated, the new declaration has the kind of an old declaration that resolves, and each Lean binding of the target resolves and is not deprecated. A build that fails is a goal that does not hold, with the reason.
+// Goal returns the goal predicate of a bump run on the work tree: the changes are inside the field permission set of bump, the run rebinds at least one binding of the target, each old declaration did not resolve or was deprecated, the new declaration has the kind and the type hash of an old declaration that resolves, and each Lean binding of the target resolves and is not deprecated. A rebind to another type hash needs the constraint type_change of the job. A build that fails is a goal that does not hold, with the reason.
 func Goal(ws *workspace.Workspace, env tools.Lean, job *agent.Job) agent.Goal {
 	return agent.OnChanges(ws, func(ctx context.Context, changes []workspace.Change) (bool, string, error) {
 		if err := agent.Permit(job.Role, job.Target, changes); err != nil {
@@ -159,6 +159,8 @@ func Goal(ws *workspace.Workspace, env tools.Lean, job *agent.Job) agent.Goal {
 				problems = append(problems, fmt.Sprintf("%s resolves and is not deprecated, thus bump does not change formal[%d]. Bind %s again", rb.Old, rb.Index, rb.Old))
 			} else if o.Error == "" && cur.Error == "" && cur.Kind != o.Kind {
 				problems = append(problems, fmt.Sprintf("%s is a %s and %s is a %s. Bind a declaration of the same kind", rb.Old, o.Kind, rb.New, cur.Kind))
+			} else if o.Error == "" && cur.Error == "" && o.TypeHash != "" && cur.TypeHash != o.TypeHash && !job.Constraints.TypeChange {
+				problems = append(problems, fmt.Sprintf("%s has the type hash %s and %s has the type hash %s. A rebind keeps the statement, thus bind a declaration of the same type, or the job must permit type_change", rb.Old, o.TypeHash, rb.New, cur.TypeHash))
 			}
 		}
 		for _, d := range leanDecls(n) {

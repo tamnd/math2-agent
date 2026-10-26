@@ -68,8 +68,9 @@ func (f fakeLean) Extract(_ context.Context, decls []string, _ bool) ([]lean.Rec
 }
 
 var mathlib = fakeLean{
-	"Subgroup.card_subgroup_dvd_card": {Decl: "Subgroup.card_subgroup_dvd_card", Kind: "theorem", Deprecated: &lean.Deprecation{NewName: "Subgroup.card_dvd_card", Since: "2026-09-01"}},
-	"Subgroup.card_dvd_card":          {Decl: "Subgroup.card_dvd_card", Kind: "theorem"},
+	"Subgroup.card_subgroup_dvd_card": {Decl: "Subgroup.card_subgroup_dvd_card", Kind: "theorem", TypeHash: "lagrange", Deprecated: &lean.Deprecation{NewName: "Subgroup.card_dvd_card", Since: "2026-09-01"}},
+	"Subgroup.card_dvd_card":          {Decl: "Subgroup.card_dvd_card", Kind: "theorem", TypeHash: "lagrange"},
+	"Subgroup.index_dvd_card":         {Decl: "Subgroup.index_dvd_card", Kind: "theorem", TypeHash: "index"},
 	"Subgroup.index_def":              {Decl: "Subgroup.index_def", Kind: "def"},
 	"Math2.Algebra.lagrange":          {Decl: "Math2.Algebra.lagrange", Kind: "theorem"},
 }
@@ -157,12 +158,17 @@ func TestBrief(t *testing.T) {
 // run does one bump run on the target with the scripted model.
 func run(t *testing.T, decl string, model ...*llm.Response) *agent.Record {
 	t.Helper()
+	return runJob(t, job(), decl, model...)
+}
+
+// runJob does one bump run of the job with the scripted model.
+func runJob(t *testing.T, j *agent.Job, decl string, model ...*llm.Response) *agent.Record {
+	t.Helper()
 	ws := tree(t, map[string]string{lagrangePath: lagrange(decl)})
 	role, err := agent.LoadRole(prompts.FS, "bump")
 	if err != nil {
 		t.Fatal(err)
 	}
-	j := job()
 	brief, err := bump.Brief(context.Background(), ws, mathlib, j)
 	if err != nil {
 		t.Fatal(err)
@@ -221,4 +227,23 @@ func TestRunLost(t *testing.T) {
 	if got := rec.Turns[2].Why; !strings.Contains(got, "Math2.Algebra.lagrange resolves and is not deprecated, thus bump does not change formal[1]") {
 		t.Errorf("a rebind of a binding that resolves gives %q", got)
 	}
+}
+
+func TestRunTypeChange(t *testing.T) {
+	rec := run(t, "Subgroup.card_subgroup_dvd_card", rebind("Subgroup.card_subgroup_dvd_card", "Subgroup.index_dvd_card"), stuck())
+	if rec.Outcome != agent.Failure {
+		t.Fatalf("a rebind to another type gives %s, %q", rec.Outcome, rec.Reason)
+	}
+	if got := rec.Turns[0].Why; !strings.Contains(got, "Subgroup.card_subgroup_dvd_card has the type hash lagrange and Subgroup.index_dvd_card has the type hash index") || !strings.Contains(got, "type_change") {
+		t.Errorf("a rebind to another type gives %q", got)
+	}
+	j := job()
+	j.Constraints.TypeChange = true
+	if rec := runJob(t, j, "Subgroup.card_subgroup_dvd_card", rebind("Subgroup.card_subgroup_dvd_card", "Subgroup.index_dvd_card")); rec.Outcome != agent.Success {
+		t.Errorf("with type_change the run gives %s, %q", rec.Outcome, rec.Reason)
+	}
+}
+
+func stuck() *llm.Response {
+	return llmtest.Call("report_stuck", map[string]string{"reason": "No declaration of Mathlib states the theorem."}, u)
 }

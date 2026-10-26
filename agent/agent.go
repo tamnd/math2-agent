@@ -175,6 +175,7 @@ func (r *Role) Prompt() string { return r.Name + "/" + r.Version }
 type Constraints struct {
 	Models       []string `yaml:"models,omitempty" json:"models,omitempty"`               // the models that the run can use. Empty means each model of the ladder.
 	NativeDecide bool     `yaml:"native_decide,omitempty" json:"native_decide,omitempty"` // the job permits a proof that uses native_decide (spec 12.4). Rule F04 records each use.
+	TypeChange   bool     `yaml:"type_change,omitempty" json:"type_change,omitempty"`     // the job permits a bump rebind to a declaration with another type hash (spec 17.3.4).
 }
 
 // Job is a unit of work with a goal, a target and a budget (spec 11.4).
