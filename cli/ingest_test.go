@@ -135,7 +135,7 @@ func TestIngestErrors(t *testing.T) {
 			t.Errorf("%s: exit code %d, stderr %q", name, code, stderr)
 		}
 	}
-	if _, _, stderr := run("ingest", "-root", t.TempDir(), "other"); !strings.Contains(stderr, "The sources with an adapter: words") {
+	if _, _, stderr := run("ingest", "-root", t.TempDir(), "other"); !strings.Contains(stderr, "The sources with an adapter: ") || !strings.Contains(stderr, "words") {
 		t.Errorf("stderr is %q", stderr)
 	}
 }

@@ -358,6 +358,44 @@ func TestAgentRunBump(t *testing.T) {
 	}
 }
 
+// mathlibLean has one declaration of Mathlib, with a short type that we wrote for the test.
+type mathlibLean struct{ agentLean }
+
+func (mathlibLean) Extract(_ context.Context, decls []string, _ bool) ([]lean.Record, error) {
+	var out []lean.Record
+	for _, d := range decls {
+		r := lean.Record{Decl: d, Error: "unknown declaration"}
+		if d == "Nat.le_refl" {
+			r = lean.Record{Decl: d, Kind: "theorem", Module: "Init.Prelude", StatementPP: "∀ (n : ℕ), n ≤ n"}
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
+func TestAgentRunInformalize(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
+	root, out := agentTree(t)
+	u := llm.Usage{Input: 1000, Output: 200}
+	text := "---\ntag: ~1a2b3c4d\nkind: statement\nrole: theorem\nname: Reflexivity of the order of the natural numbers\nformal:\n  - system: lean4\n    library: mathlib\n    decl: Nat.le_refl\n    match: exact\n---\n\n## Statement\n\nEach natural number $n$ satisfies $n \\le n$. Here 0 is a natural number.\n"
+	oldModel, oldLean := newModel, newLean
+	newModel = func() (llm.Model, error) {
+		return llmtest.New(llmtest.Call("write_file", map[string]string{"path": "nodes/~/~1a2b3c4d.md", "text": text}, u)), nil
+	}
+	newLean = func(_ context.Context, tree string, _ *tools.Box) (tools.Lean, error) {
+		return mathlibLean{agentLean{tree}}, nil
+	}
+	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
+
+	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", t.TempDir(), "-work", filepath.Join(t.TempDir(), "w"), "-target", "mathlib:Nat.le_refl", "-on-behalf-of", "github:octocat", "-no-sandbox", "informalize")
+	if code != ExitOK {
+		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/informalize@0.1.0, 1 turns") || !strings.Contains(stdout, "nodes/~/~1a2b3c4d.md") {
+		t.Errorf("the output is\n%s", stdout)
+	}
+}
+
 func TestAgentRunReviewAssist(t *testing.T) {
 	root, _ := agentTree(t)
 	// The build of the node needs no Lean, thus it reads a copy of the node with no lean/ directory.

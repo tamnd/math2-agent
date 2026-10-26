@@ -21,11 +21,11 @@ import (
 // The Lean directories that no role writes: the attribute and the adapters, the certificate checkers, and the named hypotheses, which are the only place where an axiom can be (spec 20).
 var leanFixed = []string{"lean/Math2/Meta/", "lean/Math2/Cert/", "lean/Math2/Hypotheses/"}
 
-// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of the eight roles of spec 12.1 and of enumerate and write (corpus K7.3).
+// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of the eight roles of spec 12.1 and of enumerate, write and informalize (corpus K7.3).
 //
-// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. Explore can add computation, conjecture and counterexample nodes with no formal field, no crosswalk edges, no fields of a retirement and no explanations, and add the files of the code of a computation in compute/SHARD/ID/. Explore writes no Lean and changes no file that exists. Enumerate can add mentions by enumerate to the shard files of records/mentions/model-FAMILY/, and keeps each line that is there. Enumerate writes no node and no Lean. Write can change the sections of the target other than Explanations, change its notation, and add nodes to its uses. It can add example nodes that are an instance, a non-example or an illustration of the target, and proof nodes that prove the target, with no formal field and no explanations. Write writes no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
+// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. Explore can add computation, conjecture and counterexample nodes with no formal field, no crosswalk edges, no fields of a retirement and no explanations, and add the files of the code of a computation in compute/SHARD/ID/. Explore writes no Lean and changes no file that exists. Enumerate can add mentions by enumerate to the shard files of records/mentions/model-FAMILY/, and keeps each line that is there. Enumerate writes no node and no Lean. Write can change the sections of the target other than Explanations, change its notation, and add nodes to its uses. It can add example nodes that are an instance, a non-example or an illustration of the target, and proof nodes that prove the target, with no formal field and no explanations. Write writes no Lean. The target of informalize is a declaration of Mathlib, in the form mathlib:DECL. Informalize can add statement and definition nodes with one exact Lean binding to the declaration, with no fidelity reviews, and concept nodes with no formal field, all with no crosswalk edges, no fields of a retirement and no explanations. It can change the sections other than Explanations, the name, the aliases, the notation and the uses (add only) of a node that binds the declaration. Informalize writes no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
 func Permit(role, target string, changes []workspace.Change) error {
-	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist", "explore", "enumerate", "write"}, role) {
+	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist", "explore", "enumerate", "write", "informalize"}, role) {
 		return fmt.Errorf("agent: the field permission set of %s is not written yet", role)
 	}
 	var errs []error
@@ -52,7 +52,7 @@ func permit(role, target string, c workspace.Change) error {
 		return nil
 	case role == "enumerate":
 		return permitMentions(p, c)
-	case slices.Contains([]string{"explain", "curate", "align", "bump", "explore", "write"}, role) && strings.HasPrefix(p, "lean/"):
+	case slices.Contains([]string{"explain", "curate", "align", "bump", "explore", "write", "informalize"}, role) && strings.HasPrefix(p, "lean/"):
 		return fmt.Errorf("%s writes no Lean", role)
 	case role == "explore" && strings.HasPrefix(p, "compute/"):
 		return permitCode(p, c)
@@ -116,6 +116,8 @@ func permitNode(role, target string, c workspace.Change) error {
 		return permitExplore(c, n)
 	case "write":
 		return permitWrite(target, c, n)
+	case "informalize":
+		return permitInformalize(target, c, n)
 	}
 	formal := entries(n.Meta["formal"])
 	if c.Old == nil {
@@ -277,6 +279,70 @@ func permitWrite(target string, c workspace.Change, n *node.Node) error {
 // explanation reports whether the field is the Explanations section or one explanation in it.
 func explanation(field string) bool {
 	return field == "body.explanations" || strings.HasPrefix(field, "body.explanations.")
+}
+
+// informalized are the kinds of the nodes that informalize adds.
+var informalized = []string{"statement", "definition", "concept"}
+
+// permitInformalize allows a new statement or definition node whose only binding is an exact Lean binding to the declaration of the target, with no fidelity reviews, no other field of uncurated and no explanation, and a new concept node with no field of uncurated and no explanation, which the definition can define. It also allows a change of a node that binds the declaration in the sections other than Explanations, the name, the aliases, the notation and the uses, which can only grow.
+func permitInformalize(target string, c workspace.Change, n *node.Node) error {
+	lib, decl, _ := strings.Cut(target, ":")
+	if lib != "mathlib" || decl == "" {
+		return fmt.Errorf("the target %s of informalize is not in the form mathlib:DECL", target)
+	}
+	if c.Old == nil {
+		if k := n.Kind(); !slices.Contains(informalized, k) {
+			return fmt.Errorf("informalize adds statement, definition and concept nodes, and this node is of the kind %s", k)
+		}
+		if slices.ContainsFunc(slices.Collect(maps.Keys(prov.Fields(n))), explanation) {
+			return errors.New("informalize writes no explanations, and the new node has the section Explanations")
+		}
+		if n.Kind() == "concept" {
+			for _, k := range uncurated {
+				if n.Meta[k] != nil {
+					return fmt.Errorf("a new concept of informalize has no field %s", k)
+				}
+			}
+			return nil
+		}
+		formal := entries(n.Meta["formal"])
+		if len(formal) != 1 || !reflect.DeepEqual(formal[0], map[string]any{"system": "lean4", "library": "mathlib", "decl": decl, "match": "exact"}) {
+			return fmt.Errorf("a new node of informalize has one binding, {system: lean4, library: mathlib, decl: %s, match: exact}, with no adapter and no fidelity reviews", decl)
+		}
+		for _, k := range uncurated {
+			if k != "formal" && n.Meta[k] != nil {
+				return fmt.Errorf("a new node of informalize has no field %s", k)
+			}
+		}
+		return nil
+	}
+	o, err := node.Parse(c.Path, c.Old)
+	if err != nil {
+		return err
+	}
+	if !slices.ContainsFunc(entries(o.Meta["formal"]), func(f map[string]any) bool {
+		return f["system"] == "lean4" && f["library"] == "mathlib" && f["decl"] == decl
+	}) {
+		return fmt.Errorf("informalize changes only a node that binds %s, and %s does not bind it", decl, o.ID)
+	}
+	before, after := prov.Fields(o), prov.Fields(n)
+	for _, f := range slices.Sorted(maps.Keys(union(before, after))) {
+		switch {
+		case before[f] == after[f]:
+		case explanation(f):
+			return fmt.Errorf("informalize writes no explanations, and the change changes the field %s", f)
+		case f == "uses":
+			for _, u := range o.List("uses") {
+				if !slices.Contains(n.List("uses"), u) {
+					return fmt.Errorf("informalize adds to uses, and the change removes %s", u)
+				}
+			}
+		case strings.HasPrefix(f, "body.") || f == "name" || f == "aliases" || f == "notation":
+		default:
+			return fmt.Errorf("informalize changes only the sections, the name, the aliases, the notation and the uses of the node, and the change changes the field %s", f)
+		}
+	}
+	return nil
 }
 
 // curated are the fields of a node that curate can change.

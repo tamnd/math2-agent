@@ -28,6 +28,7 @@ import (
 	"github.com/tamnd/math2-agent/agent/explain"
 	"github.com/tamnd/math2-agent/agent/explore"
 	"github.com/tamnd/math2-agent/agent/formalize"
+	"github.com/tamnd/math2-agent/agent/informalize"
 	"github.com/tamnd/math2-agent/agent/prove"
 	"github.com/tamnd/math2-agent/agent/reviewassist"
 	"github.com/tamnd/math2-agent/agent/tools"
@@ -51,7 +52,7 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|enumerate|explain|explore|formalize|prove|review-assist|write"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|enumerate|explain|explore|formalize|informalize|prove|review-assist|write"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
@@ -62,13 +63,14 @@ var goals = map[string]string{
 	"explain":       "the node has an L2 explanation marked agent, with each claim grounded in a cited node",
 	"explore":       "a conjecture or a counterexample about the node, checked by a computation that verifies, with its novelty check",
 	"formalize":     "the node has a Lean binding that passes the checks of the run",
+	"informalize":   "the declaration has a node that states it in words, in the house style, with an exact binding to it",
 	"prove":         "the statement of the node has a Lean proof",
 	"write":         "the node has each section, example and proof that its card asks for at the next writing level, in the house style",
 	"review-assist": "the node has a review packet in reports/review with the packet of the last build and the concerns of the critic",
 }
 
-// leanRoles are the roles whose goal builds the Lean library. The other roles need no Lean and no sandbox.
-var leanRoles = []string{"bump", "formalize", "prove"}
+// leanRoles are the roles whose brief or goal builds the Lean library. The other roles need no Lean and no sandbox.
+var leanRoles = []string{"bump", "formalize", "informalize", "prove"}
 
 // newModel makes the client of the model service. The tests replace it with a scripted model.
 var newModel = func() (llm.Model, error) {
@@ -398,6 +400,19 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		}
 		// The tree has no reference corpus yet, thus the copy check runs in CI and not in the loop.
 		check = write.Goal(ws, job, cards, nil)
+	case "informalize":
+		// The target can be any declaration of Mathlib, and the Math2 library imports only a part of it. The docstring comes from the records in build/records of the tree.
+		if l, ok := env.(*tools.Lake); ok {
+			l.Modules = []string{"Mathlib", "Math2"}
+		}
+		d, err := informalize.Load(ctx, ws, env, &curate.Records{Root: rs.root}, job.Target)
+		if err != nil {
+			return nil, ws, nil, err
+		}
+		if brief, err = informalize.Brief(ws, job, d); err != nil {
+			return nil, ws, nil, err
+		}
+		check = informalize.Goal(ws, job, d)
 	case "prove":
 		pin, err := prove.NewPin(ctx, ws, env, job)
 		if err != nil {
