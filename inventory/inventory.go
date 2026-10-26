@@ -51,6 +51,7 @@ type Mention struct {
 	Text     string              `json:"text,omitempty"`      // the statement, only when the class of the source lets math2 store it
 	MSC      []string            `json:"msc,omitempty"`       // the MSC2020 codes
 	Same     map[string][]string `json:"same,omitempty"`      // the identifiers of the item in other systems, by the system names of the crosswalk
+	Types    []string            `json:"types,omitempty"`     // the classes of the item in the source, for example the Wikidata items of its property P31
 	Class    string              `json:"class"`               // the licence class (spec 9.3)
 	By       string              `json:"by"`                  // the importer and its version, or the run
 }

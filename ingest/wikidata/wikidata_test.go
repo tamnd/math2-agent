@@ -13,7 +13,7 @@ import (
 	"github.com/tamnd/math2-agent/ingest/wikidata"
 )
 
-// sparql answers each query with testdata/<property>.json, and with no bindings when there is no such file.
+// sparql answers each query with testdata/<property>.json, and each query of the classes with testdata/P31-<property>.json. It answers with no bindings when there is no such file.
 func sparql(t *testing.T) *httptest.Server {
 	prop := regexp.MustCompile(`wdt:(P[0-9]+)`)
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +26,11 @@ func sparql(t *testing.T) *httptest.Server {
 			http.Error(w, "no property", http.StatusBadRequest)
 			return
 		}
-		data, err := os.ReadFile("testdata/" + m[1] + ".json")
+		name := m[1]
+		if strings.Contains(r.URL.Query().Get("query"), "wdt:P31 ") {
+			name = "P31-" + name
+		}
+		data, err := os.ReadFile("testdata/" + name + ".json")
 		if os.IsNotExist(err) {
 			data = []byte(`{"head":{"vars":["item","label","value"]},"results":{"bindings":[]}}`)
 		} else if err != nil {
@@ -46,8 +50,8 @@ func TestPull(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m := res.Manifest; m.Records != 4 || m.Classes[ingest.Open] != 4 || m.Adapter != "wikidata/1" {
-		t.Errorf("the manifest is %+v, want 4 open records from wikidata/1", m)
+	if m := res.Manifest; m.Records != 4 || m.Classes[ingest.Open] != 4 || m.Adapter != "wikidata/2" {
+		t.Errorf("the manifest is %+v, want 4 open records from wikidata/2", m)
 	}
 	recs, _, err := ingest.ReadRecords(root, "wikidata")
 	if err != nil {
@@ -62,10 +66,11 @@ func TestPull(t *testing.T) {
 	}
 	p := byID["Q11518"]
 	want := map[string]string{
-		"nlab":      "Pythagorean theorem",
-		"mathworld": "PythagoreanTheorem",
-		"proofwiki": "Pythagoras's_Theorem|Pythagorean_Theorem",
-		"eom":       "Pythagoras_theorem|Pythagorean_theorem",
+		"nlab":        "Pythagorean theorem",
+		"mathworld":   "PythagoreanTheorem",
+		"proofwiki":   "Pythagoras's_Theorem|Pythagorean_Theorem",
+		"eom":         "Pythagoras_theorem|Pythagorean_theorem",
+		"instance_of": "Q65943",
 	}
 	if p.Title != "Pythagorean theorem" || len(p.Meta) != len(want) {
 		t.Errorf("Q11518 is %+v", p)
@@ -97,7 +102,7 @@ func TestRead(t *testing.T) {
 	for _, bad := range []string{
 		"",
 		`{"p":"P4215","item":"L1","value":"x"}`,
-		`{"p":"P31","item":"Q1","value":"Q5"}`,
+		`{"p":"P31","item":"Q1","value":"Q42"}`,
 		`{"p":"P4215","item":"Q1","value":""}`,
 		`{"p":"P4215",`,
 	} {
@@ -112,7 +117,7 @@ func TestSource(t *testing.T) {
 	if p := s.Problems(); len(p) > 0 {
 		t.Errorf("the catalogue entry has problems: %v", p)
 	}
-	if a, ok := ingest.Lookup("wikidata"); !ok || a.Version() != "wikidata/1" {
+	if a, ok := ingest.Lookup("wikidata"); !ok || a.Version() != "wikidata/2" {
 		t.Error("the adapter is not registered")
 	}
 }
