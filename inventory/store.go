@@ -96,6 +96,21 @@ func WalkRows(root string, fn func(file string, line int, r Row) error) error {
 	})
 }
 
+// WalkMentions calls fn for each mention of records/mentions/ in the tree at root, in the order of the files and their lines. It gives fn the file of the mention, relative to root and with forward slashes, and the line of the mention in the file.
+func WalkMentions(root string, fn func(file string, line int, m Mention) error) error {
+	return readLines(filepath.Join(root, MentionsDir), func(path string, n int, line []byte) error {
+		var m Mention
+		if err := json.Unmarshal(line, &m); err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		return fn(filepath.ToSlash(rel), n, m)
+	})
+}
+
 // ReadRegister reads the row identifiers of registers/inventory/ in the tree at root.
 func ReadRegister(root string) (map[string]bool, error) {
 	out := map[string]bool{}

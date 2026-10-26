@@ -1,0 +1,19 @@
+# The external sources of math2 and each snapshot that math2 used (spec 09.2). m2 ingest writes this file. A maintainer approves the class of each new source.
+sources:
+  - id: oeis
+    name: A test encyclopedia
+    home: https://example.org/oeis
+    licence: CC-BY-SA-4.0
+    class: open
+    licence_read:
+      at: https://example.org/oeis/LICENSE
+      on: "2026-01-15"
+      by: a-reader
+    authored: human
+    channel: git
+    attribution: A test encyclopedia, https://example.org/oeis, CC-BY-SA-4.0
+    approved_by: a-maintainer
+    snapshots:
+      - url: https://example.org/oeis.tar.gz
+        hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        date: "2026-10-01"

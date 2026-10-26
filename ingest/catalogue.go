@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -22,23 +23,99 @@ const (
 	RecordsDir    = "build/records"
 )
 
-// Source is one entry of the catalogue.
+// Source is one entry of the catalogue: the source document of corpus K5.2. A person approves each entry and each change to its licence fields. The fields name and home are the title and the url of K5.2.
 type Source struct {
-	ID          string     `yaml:"id"`                    // the name of the source in sources: and same_as, for example oeis
-	Name        string     `yaml:"name"`                  // the full name, for example The On-Line Encyclopedia of Integer Sequences
-	Home        string     `yaml:"home,omitempty"`        // the home page of the source
-	Licence     string     `yaml:"licence"`               // the SPDX identifier of the licence of what math2 takes
-	Class       Class      `yaml:"class"`                 // the access class. A maintainer approves it.
-	Attribution string     `yaml:"attribution,omitempty"` // the attribution line that a share-alike licence asks for
-	Snapshots   []Snapshot `yaml:"snapshots,omitempty"`   // the snapshots that math2 used, oldest first
+	ID             string        `yaml:"id"`                         // the name of the source in sources: and same_as, for example oeis
+	Name           string        `yaml:"name"`                       // the full name, for example The On-Line Encyclopedia of Integer Sequences
+	Authors        []string      `yaml:"authors,omitempty"`          // the authors of a book or a paper
+	Kind           string        `yaml:"kind,omitempty"`             // one of Kinds
+	Home           string        `yaml:"home,omitempty"`             // the home page of the source
+	Licence        string        `yaml:"licence"`                    // the SPDX expression of the licence, as the source states it
+	Election       string        `yaml:"election,omitempty"`         // for a choice of licences, the SPDX identifier of the option that math2 takes (K5.2.2)
+	Class          Class         `yaml:"class"`                      // the access class. A maintainer approves it.
+	LicenceRead    *LicenceRead  `yaml:"licence_read,omitempty"`     // where, when and by whom the licence was read (K5.2.1)
+	PerItemLicence bool          `yaml:"per_item_licence,omitempty"` // each item has its own licence (K13.4)
+	PublicDomain   *PublicDomain `yaml:"public_domain,omitempty"`    // the public-domain answers for a work in the public domain (K5.2.3)
+	Authored       string        `yaml:"authored,omitempty"`         // one of Authorships
+	Edition        string        `yaml:"edition,omitempty"`          // the pinned edition, where editions differ in licence
+	Channel        string        `yaml:"channel,omitempty"`          // one of Channels
+	Terms          *Terms        `yaml:"terms,omitempty"`            // the terms of use of the source
+	Attribution    string        `yaml:"attribution,omitempty"`      // the attribution line that the licence asks for
+	Adapter        string        `yaml:"adapter,omitempty"`          // the importer that reads the source
+	ApprovedBy     string        `yaml:"approved_by,omitempty"`      // the maintainer who approved the entry
+	Snapshots      []Snapshot    `yaml:"snapshots,omitempty"`        // the snapshots that math2 used, oldest first
+}
+
+// LicenceRead records one reading of the licence at the source itself, never at an aggregator (K5.2.1).
+type LicenceRead struct {
+	At string `yaml:"at"` // the URL of the page or the file with the licence
+	On string `yaml:"on"` // the date of the reading, YYYY-MM-DD
+	By string `yaml:"by"` // the person who read it
+}
+
+// PublicDomain records why a work is in the public domain in the United States and in the EU (K5.2.3).
+type PublicDomain struct {
+	US    bool   `yaml:"us"`
+	EU    bool   `yaml:"eu"`
+	Basis string `yaml:"basis"` // for example the date of publication and the year of the death of the author
+}
+
+// Terms summarises the terms of use of a source.
+type Terms struct {
+	Robots string `yaml:"robots,omitempty"` // a summary of robots.txt, or n/a
+	Rate   string `yaml:"rate,omitempty"`   // the limit that the importer keeps
+	AI     string `yaml:"ai,omitempty"`     // the clause on AI or machine learning, or "none stated"
+}
+
+// The values of the fields kind, authored and channel of a source document (corpus K5.2).
+var (
+	Kinds       = []string{"reference", "wiki", "textbook", "paper-index", "extraction", "curriculum", "exercises", "database"}
+	Authorships = []string{"human", "ai", "mixed"}
+	Channels    = []string{"dump", "git", "api", "bulk", "page", "catalogue"}
+)
+
+// PublicDomainLicence is the licence of a work in the public domain. SPDX has no identifier for it.
+const PublicDomainLicence = "LicenseRef-public-domain"
+
+// Choices returns the options of a licence that offers a choice, as in "CC-BY-SA-4.0 OR CC-BY-NC-SA-4.0". It returns nil for a licence with no choice.
+func Choices(licence string) []string {
+	parts := strings.Split(licence, " OR ")
+	if len(parts) < 2 {
+		return nil
+	}
+	for i := range parts {
+		parts[i] = strings.Trim(strings.TrimSpace(parts[i]), "()")
+	}
+	return parts
+}
+
+// Elected returns the licence that math2 takes from the source: the election for a choice of licences, else the licence.
+func (s *Source) Elected() string {
+	if s.Election != "" {
+		return s.Election
+	}
+	return s.Licence
 }
 
 // Snapshot is one pinned download of a source.
 type Snapshot struct {
-	URL    string `yaml:"url"`
-	Hash   string `yaml:"hash"`             // blake3: and 64 lowercase hex characters, of the downloaded bytes
-	Date   string `yaml:"date"`             // the date of the download, YYYY-MM-DD
-	Commit string `yaml:"commit,omitempty"` // the commit, when the source is a git repository
+	URL         string `yaml:"url"`
+	Hash        string `yaml:"hash"`                   // blake3: and 64 lowercase hex characters, of the downloaded bytes
+	Date        string `yaml:"date"`                   // the date of the download, YYYY-MM-DD
+	Commit      string `yaml:"commit,omitempty"`       // the commit, when the source is a git repository
+	Licence     string `yaml:"licence,omitempty"`      // the licence of the snapshot, when it is not the licence of the source (K5.2.1)
+	LicenceRead string `yaml:"licence_read,omitempty"` // the date on which the licence of the snapshot was read, when it is not the date of licence_read of the source
+}
+
+// ReadOn returns the date on which the licence of the snapshot was read, or "" when the source records no reading.
+func (s *Source) ReadOn(sn *Snapshot) string {
+	if sn.LicenceRead != "" {
+		return sn.LicenceRead
+	}
+	if s.LicenceRead != nil {
+		return s.LicenceRead.On
+	}
+	return ""
 }
 
 // Catalogue is the file manifests/sources.yaml. It records each source and each snapshot that math2 used.
@@ -104,8 +181,10 @@ func (s *Source) Problems() []string {
 		out = append(out, "the source names no licence")
 	case !s.Class.Valid():
 		out = append(out, fmt.Sprintf("the class %q is not an access class", s.Class))
-	case s.Class != ClassOf(s.Licence) && s.Class != RecordOnly:
-		out = append(out, fmt.Sprintf("the licence %s gives the class %s, and the source has the class %s", s.Licence, ClassOf(s.Licence), s.Class))
+	case Choices(s.Licence) != nil && s.Election == "":
+		// L09 reports it.
+	case s.Class != ClassOf(s.Elected()) && s.Class != RecordOnly:
+		out = append(out, fmt.Sprintf("the licence %s gives the class %s, and the source has the class %s", s.Elected(), ClassOf(s.Elected()), s.Class))
 	}
 	seen := map[string]bool{}
 	for i, sn := range s.Snapshots {

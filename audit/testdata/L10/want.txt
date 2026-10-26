@@ -1,0 +1,3 @@
+manifests/sources.yaml:3:1: L10: hardy: the source is open as public domain, and it has no public_domain
+manifests/sources.yaml:20:1: L10: littlewood: the source is open as public domain, and it is not in the public domain in both the United States and the EU. Its class is record
+manifests/sources.yaml:41:1: L10: ramanujan: public_domain gives no basis

@@ -1,0 +1,61 @@
+# The external sources of math2 and each snapshot that math2 used (spec 09.2). m2 ingest writes this file. A maintainer approves the class of each new source.
+sources:
+  - id: hardy
+    name: A test book
+    home: https://example.org/hardy
+    licence: LicenseRef-public-domain
+    class: open
+    licence_read:
+      at: https://example.org/hardy/LICENSE
+      on: "2026-09-30"
+      by: a-reader
+    authored: human
+    channel: git
+    attribution: A test book, https://example.org/hardy, LicenseRef-public-domain
+    approved_by: a-maintainer
+    snapshots:
+      - url: https://example.org/hardy.tar.gz
+        hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        date: "2026-10-01"
+  - id: littlewood
+    name: A test book
+    home: https://example.org/littlewood
+    licence: LicenseRef-public-domain
+    public_domain:
+      us: true
+      eu: false
+      basis: published in 1925, and the author died in 1977
+    class: open
+    licence_read:
+      at: https://example.org/littlewood/LICENSE
+      on: "2026-09-30"
+      by: a-reader
+    authored: human
+    channel: git
+    attribution: A test book, https://example.org/littlewood, LicenseRef-public-domain
+    approved_by: a-maintainer
+    snapshots:
+      - url: https://example.org/littlewood.tar.gz
+        hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        date: "2026-10-01"
+  - id: ramanujan
+    name: A test book
+    home: https://example.org/ramanujan
+    licence: LicenseRef-public-domain
+    public_domain:
+      us: true
+      eu: true
+      basis: ""
+    class: open
+    licence_read:
+      at: https://example.org/ramanujan/LICENSE
+      on: "2026-09-30"
+      by: a-reader
+    authored: human
+    channel: git
+    attribution: A test book, https://example.org/ramanujan, LicenseRef-public-domain
+    approved_by: a-maintainer
+    snapshots:
+      - url: https://example.org/ramanujan.tar.gz
+        hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        date: "2026-10-01"

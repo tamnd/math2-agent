@@ -1,0 +1,1 @@
+records/mentions/arxiv/AAA.jsonl:2:1: L06: the mention m2://rec/arxiv/2601.00002#1 has no licence, and each item of arxiv has its own licence
