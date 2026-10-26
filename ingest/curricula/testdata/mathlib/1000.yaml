@@ -1,0 +1,37 @@
+# An excerpt of docs/1000.yaml of leanprover-community/mathlib4 at the commit 2b2e96747ca44b376def99bf9571ef72cc6a7f2d, for the tests of the package curricula.
+# Mathlib is under the Apache License 2.0. Copyright the Mathlib Community.
+
+Q11518:
+  title: Pythagorean theorem
+  decl: EuclideanGeometry.dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two
+  authors: Joseph Myers
+
+Q12524:
+  title: Schwenk's theorem
+
+Q26708:
+  title: Binomial theorem
+  decl: add_pow
+  authors: Chris Hughes
+
+Q132427:
+  title: Rademacher's theorem
+  decl: LipschitzOnWith.ae_differentiableWithinAt
+  authors: Sébastien Gouëzel
+  date: 2023
+
+Q132469:
+  title: Fermat's Last Theorem
+  statement: FermatLastTheorem
+  comment: "Formalisation of the proof is on-going in https://imperialcollegelondon.github.io/FLT/."
+
+Q180345X:
+  title: Integral root theorem
+  decl: isInteger_of_is_root_of_monic
+
+Q180345:
+  title: Rational root theorem
+  decls:
+   - num_dvd_of_is_root
+   - den_dvd_of_is_root
+

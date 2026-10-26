@@ -1,0 +1,46 @@
+# An excerpt of docs/100.yaml of leanprover-community/mathlib4 at the commit 2b2e96747ca44b376def99bf9571ef72cc6a7f2d, for the tests of the package curricula.
+# Mathlib is under the Apache License 2.0. Copyright the Mathlib Community.
+
+
+1:
+  title  : The Irrationality of the Square Root of 2
+  decl   : irrational_sqrt_two
+  authors: mathlib
+2:
+  title  : Fundamental Theorem of Algebra
+  decl   : Complex.exists_root
+  authors: Chris Hughes
+3:
+  title  : The Denumerability of the Rational Numbers
+  decl   : Rat.instDenumerable
+  authors: Chris Hughes
+4:
+  title  : Pythagorean Theorem
+  decl   : EuclideanGeometry.dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two
+  authors: Joseph Myers
+5:
+  title   : Prime Number Theorem
+  authors : Alex Kontorovich, Terry Tao, and the Prime Number Theorem + Project
+  links   :
+    Prime Number Theorem : https://github.com/AlexKontorovich/PrimeNumberTheoremAnd/blob/a5040887e6bb24f7c201db8568e7755c138b3878/PrimeNumberTheoremAnd/Wiener.lean#L2196-L2211
+    With Error Terms     : https://github.com/AlexKontorovich/PrimeNumberTheoremAnd/blob/a5040887e6bb24f7c201db8568e7755c138b3878/PrimeNumberTheoremAnd/MediumPNT.lean#L5504-L6162
+    website              : https://github.com/AlexKontorovich/PrimeNumberTheoremAnd
+6:
+  title  : Gödel’s Incompleteness Theorem
+  authors: Shogo Saito
+  links  :
+    First incompleteness theorem: https://github.com/FormalizedFormalLogic/Foundation/blob/7c74089c2442ee211abfa1e2dd5a75091800f57b/Foundation/FirstOrder/Incompleteness/First.lean#L24-L53
+    Second incompleteness theorem: https://github.com/FormalizedFormalLogic/Foundation/blob/7c74089c2442ee211abfa1e2dd5a75091800f57b/Foundation/FirstOrder/Incompleteness/Second.lean#L15-L18
+    website: https://formalizedformallogic.github.io/Catalogue/
+7:
+  title  : Law of Quadratic Reciprocity
+  decls  :
+    - legendreSym.quadratic_reciprocity
+    - jacobiSym.quadratic_reciprocity
+  authors: Chris Hughes (first) and Michael Stoll (second)
+8:
+  title  : The Impossibility of Trisecting the Angle and Doubling the Cube
+  authors: Weiyi Wang
+  links  :
+    angle trisection: https://github.com/wwylele/Compass/blob/738da583822a43ffa8e6356b9f5629678cf700d7/Compass/Wiedijk8.lean#L91-L97
+    doubling the cube: https://github.com/wwylele/Compass/blob/738da583822a43ffa8e6356b9f5629678cf700d7/Compass/Wiedijk8.lean#L289-L291

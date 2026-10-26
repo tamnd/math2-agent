@@ -1,0 +1,40 @@
+# An excerpt of docs/undergrad.yaml of leanprover-community/mathlib4 at the commit 2b2e96747ca44b376def99bf9571ef72cc6a7f2d, for the tests of the package curricula.
+# Mathlib is under the Apache License 2.0. Copyright the Mathlib Community.
+
+# 1.
+Linear algebra:
+  Fundamentals:
+    vector space: 'Module'
+    product of vector spaces: 'Prod.instModule'
+    vector subspace: 'Subspace'
+    quotient space: 'Submodule.hasQuotient'
+    sum of subspaces: 'Submodule.completeLattice'
+    direct sum: 'DirectSum.IsInternal'
+    complementary subspaces: 'Submodule.exists_isCompl'
+    linear independence: 'LinearIndependent'
+    generating sets: 'Submodule.span'
+    bases: 'Module.Basis'
+    existence of bases: 'Module.Basis.ofVectorSpace'
+    linear map: 'LinearMap'
+    range of a linear map: 'LinearMap.range'
+    kernel of a linear map: 'LinearMap.ker'
+    algebra of endomorphisms of a vector space: 'Module.End.instAlgebra'
+    general linear group: 'LinearMap.GeneralLinearGroup'
+
+Single Variable Real Analysis:
+  Convexity:
+    convex functions of a real variable: 'ConvexOn'
+    continuity and differentiability of convex functions:
+      continuity: 'ConvexOn.continuousOn'
+      differentiability: 'https://en.wikipedia.org/wiki/Convex_function#Functions_of_one_variable'
+    characterizations of convexity: 'convexOn_of_deriv2_nonneg'
+    convexity inequalities: 'Mathlib/Analysis/MeanInequalities.html'
+
+
+Single Variable Complex Analysis:
+  Complex-valued series:
+    radius of convergence: 'FormalMultilinearSeries.radius'
+#    properties of sums of complex-valued series on their disks of convergence: (this is a heading?)
+    continuity: 'HasFPowerSeriesOnBall.continuousOn'
+    differentiability with respect to the complex variable: 'HasFPowerSeriesOnBall.differentiableOn'
+    antiderivative: ''

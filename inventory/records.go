@@ -36,10 +36,10 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 			v := r.Meta[k]
 			switch {
 			case k == "msc":
-				m.MSC = append(m.MSC, split(v)...)
+				m.MSC = append(m.MSC, strings.FieldsFunc(v, func(r rune) bool { return r == '|' || r == ' ' })...)
 			case k == "instance_of":
 				m.Types = split(v)
-			case crosswalk.Known(k) || src.ID == "wikidata":
+			case crosswalk.Known(k) || k == "mathlib" || src.ID == "wikidata":
 				if m.Same == nil {
 					m.Same = map[string][]string{}
 				}
@@ -85,8 +85,10 @@ func kindOf(source string, r *ingest.Record) string {
 		return "object"
 	case "erdosproblems":
 		return "problem"
-	case "formalconjectures":
+	case "formal_conjectures":
 		return "conjecture"
+	case "mathlib_100", "mathlib_1000", "thousand_plus":
+		return "statement"
 	}
 	return Unknown
 }

@@ -1,0 +1,1 @@
+The files in _thm/ are copies of entries of 1000-plus/1000-plus.github.io at the commit 8e04b97dd24adc6e931be78a884da7e935bc8780, for the tests of the package curricula. The project is under the Unlicense.

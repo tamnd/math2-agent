@@ -61,6 +61,7 @@ var classes = map[string]Class{
 	"MIT":                Open,
 	"BSD-2-Clause":       Open,
 	"BSD-3-Clause":       Open,
+	"Unlicense":          Open,
 	"CC-BY-NC-3.0":       ShareAlikeNC,
 	"CC-BY-NC-4.0":       ShareAlikeNC,
 	"CC-BY-NC-SA-3.0":    ShareAlikeNC,
