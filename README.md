@@ -666,6 +666,13 @@ go test ./bench/agents -v
 go test ./bench/agents -live -rung 0 -v -report agents.md
 ```
 
+`bench/agents/explain` and `bench/agents/curate` are the suites of the explain and the curate roles. They need no Lean, thus they also run with `-short`. Each item of `items.yaml` is in our own words. An explain item is a target node, a level and a reference explanation, and a curate item is a record of the source `bench` and its reference node. Without flags, a scripted model writes the reference, the scripted check or judge passes it, and the goal must hold. Then the model writes wrong attempts, and the goal must refuse each of them with the right reason. For explain, these are an explanation with no citation, one that cites a node outside the curricula of its level, one at the wrong level, and the wrong explanations of the items with the labels of the check. For curate, these are a node that copies the record, a node with no source at the locator of the record, a node of the wrong kind, and the wrong nodes of the items with the verdict of the judge. With `-live`, the test runs the role on each item, and then it grades the check or the judge alone on the reference and the wrong attempts of each item. This needs `ANTHROPIC_API_KEY` and spends money.
+
+```sh
+go test ./bench/agents/explain ./bench/agents/curate -v
+go test ./bench/agents/curate -live -rung 0 -v -report curate.md
+```
+
 ## Rules that the toolchain keeps
 
 1. The files in tamnd/math2 are the truth. Each database, index and site comes from these files, and you can make it again from them.

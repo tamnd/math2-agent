@@ -1,0 +1,19 @@
+# The public items of the suite of the explain role (spec 17.3.4 and 17.3.5). Each item is a target node, a level and a reference explanation. A wrong explanation has the label that the grounding check must give each of its sentences. The explanations are in our own words.
+items:
+  - target: 3C53TD
+    level: L1
+    text: Take a finite [[group|G5S1M9]] $G$ and a subgroup $H$ of $G$. The theorem says that the number of elements of $H$ divides the number of elements of $G$. Thus a group with 6 elements has no subgroup with 4 elements.
+    wrong:
+      - name: an opinion
+        text: Take a finite [[group|G5S1M9]] $G$ and a subgroup $H$ of $G$. The theorem says that the number of elements of $H$ divides the number of elements of $G$. It is the most important theorem about groups.
+        labels: [supported, supported, unsupported]
+      - name: a false converse
+        text: Take a finite [[group|G5S1M9]] $G$ and a subgroup $H$ of $G$. The theorem says that the number of elements of $H$ divides the number of elements of $G$. Thus each divisor of the number of elements of $G$ is the number of elements of a subgroup.
+        labels: [supported, supported, contradicted]
+  - target: Q4E7NW
+    level: L2
+    text: A [[prime number|P1RM3S]] is a natural number greater than one whose only positive divisors are one and the number itself. The theorem says that the list of the primes never ends. Thus for each number $N$, some prime is larger than $N$.
+    wrong:
+      - name: a false example
+        text: A [[prime number|P1RM3S]] is a natural number greater than one whose only positive divisors are one and the number itself. The theorem says that the list of the primes never ends. Thus each odd number is a prime.
+        labels: [supported, supported, contradicted]

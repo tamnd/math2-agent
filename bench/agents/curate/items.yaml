@@ -1,0 +1,48 @@
+# The public items of the suite of the curate role (spec 17.3.4). Each item is a record of the source bench and the reference node of the record. A wrong attempt is a node that the judge must not find the same as the record, with the verdict that it must give. The records and the nodes are in our own words.
+items:
+  - id: lemma-2
+    kind: statement
+    text: Lemma 2. Suppose that p is a prime and that p divides a product ab of two integers. Then p divides at least one of the two factors a and b.
+    name: Euclid's lemma
+    msc: 11A41
+    uses: [P1RM3S, D1V1S0]
+    body: Let $p$ be a [[prime number|P1RM3S]] and let $a$ and $b$ be integers. If $p$ [[divides|D1V1S0]] $ab$, then $p \mid a$ or $p \mid b$.
+    wrong:
+      - name: positive factors
+        body: Let $p$ be a [[prime number|P1RM3S]] and let $a$ and $b$ be positive integers. If $p$ [[divides|D1V1S0]] $ab$, then $p \mid a$ or $p \mid b$.
+        verdict: specializes
+  - id: proposition-4
+    kind: statement
+    text: Proposition 4. Let G be a group with identity e. For each element x of G there is one and only one element y of G such that xy and yx are both equal to e.
+    name: Uniqueness of inverses
+    msc: 20A05
+    uses: [G5S1M9]
+    body: Let $G$ be a [[group|G5S1M9]] with identity $e$. Each element $g$ of $G$ has exactly one inverse, that is, exactly one $h$ in $G$ with $gh = hg = e$.
+    wrong:
+      - name: finite groups
+        body: Let $G$ be a finite [[group|G5S1M9]] with identity $e$. Each element $g$ of $G$ has exactly one inverse, that is, exactly one $h$ in $G$ with $gh = hg = e$.
+        verdict: specializes
+      - name: inverse of the identity
+        body: Let $G$ be a [[group|G5S1M9]] with identity $e$. Then $e$ is its own inverse.
+        verdict: related
+  - id: definition-3
+    kind: definition
+    text: Definition 3. We say that an integer n is even if there exists an integer k such that n equals two times k. An integer that is not even is called odd.
+    name: Even integer
+    msc: 11A05
+    body: An integer $n$ is even when $2$ [[divides|D1V1S0]] $n$, that is, when $n = 2k$ for some integer $k$. An integer that is not even is odd.
+    wrong:
+      - name: multiples of four
+        body: An integer $n$ is even when $4$ [[divides|D1V1S0]] $n$, that is, when $n = 4k$ for some integer $k$. An integer that is not even is odd.
+        verdict: different
+  - id: theorem-5
+    kind: statement
+    text: Theorem 5. The set of all prime numbers is not finite. In other words, whatever natural number N we choose, some prime is larger than N.
+    name: Infinitude of the primes
+    msc: 11A41
+    uses: [P1RM3S]
+    body: There are infinitely many [[prime numbers|P1RM3S]]. Thus for each natural number $N$ there is a prime $p$ with $p > N$.
+    wrong:
+      - name: a bound
+        body: There are at least one hundred [[prime numbers|P1RM3S]].
+        verdict: specializes

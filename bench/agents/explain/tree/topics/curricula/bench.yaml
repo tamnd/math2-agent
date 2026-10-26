@@ -1,0 +1,15 @@
+curriculum: bench
+courses:
+  - course: algebra
+    year: 1
+    items:
+      - {name: group, kind: definition, node: G5S1M9}
+  - course: numbers
+    year: 1
+    items:
+      - {name: prime number, kind: definition, node: P1RM3S}
+      - {name: divisibility, kind: definition, node: D1V1S0}
+  - course: rings
+    year: 3
+    items:
+      - {name: ring, kind: definition, node: 7K3QX2}
