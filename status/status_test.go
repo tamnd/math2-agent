@@ -20,7 +20,7 @@ func parse(t *testing.T, items ...string) []*node.Node {
 		head, rest, _ := strings.Cut(it, "\n")
 		id, kind, _ := strings.Cut(head, " ")
 		src := "---\ntag: " + id + "\nkind: " + kind + "\nname: " + id + "\n" + rest + "\n---\n\n## Statement\n\nS.\n"
-		n, err := node.Parse("nodes/"+id[:2]+"/"+id+".md", []byte(src))
+		n, err := node.Parse("nodes/"+id[:3]+"/"+id+".md", []byte(src))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -445,7 +445,7 @@ func TestLoadRegisters(t *testing.T) {
 func TestStaleStatement(t *testing.T) {
 	src := func(body string) []*node.Node {
 		f := "---\ntag: 1A0000\nkind: statement\nname: 1A0000\nformal:\n  - system: lean4\n    library: math2\n    decl: X.thm\n    match: exact\n    fidelity_reviews: [r-1A0000-01]\n---\n\n" + body
-		n, err := node.Parse("nodes/1A/1A0000.md", []byte(f))
+		n, err := node.Parse("nodes/1A0/1A0000.md", []byte(f))
 		if err != nil {
 			t.Fatal(err)
 		}

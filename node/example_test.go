@@ -9,7 +9,7 @@ import (
 
 func ExampleParse() {
 	data := []byte("---\ntag: 4F2M9A\nkind: topic\nname: Finite groups\nmsc: [20Dxx]\n---\n\n## Summary\n\nGroups with a finite number of elements.\n")
-	n, err := node.Parse("nodes/4F/4F2M9A.md", data)
+	n, err := node.Parse("nodes/4F2/4F2M9A.md", data)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -20,14 +20,14 @@ func ExampleParse() {
 
 func ExampleParse_error() {
 	data := []byte("---\ntag: 4F2M9A\nkind: topic\nname: Finite groups: a\n---\n")
-	_, err := node.Parse("nodes/4F/4F2M9A.md", data)
+	_, err := node.Parse("nodes/4F2/4F2M9A.md", data)
 	fmt.Println(err)
-	// Output: nodes/4F/4F2M9A.md:4:1: the front matter is not valid YAML: mapping values are not allowed in this context
+	// Output: nodes/4F2/4F2M9A.md:4:1: the front matter is not valid YAML: mapping values are not allowed in this context
 }
 
 func ExampleFormat() {
 	data := []byte("---\nname: Finite groups\nmsc:\n  - '20Dxx'\nkind: topic\ntag: 4F2M9A\n---\n## Summary\r\n\r\nGroups with a finite number of elements.\r\n")
-	n, err := node.Parse("nodes/4F/4F2M9A.md", data)
+	n, err := node.Parse("nodes/4F2/4F2M9A.md", data)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -47,8 +47,8 @@ func ExampleFormat() {
 }
 
 func ExampleHash() {
-	a, _ := node.Parse("nodes/4F/4F2M9A.md", []byte("---\ntag: 4F2M9A\nkind: topic\nname: Finite groups\n---\n"))
-	b, _ := node.Parse("nodes/4F/4F2M9A.md", []byte("---\nname: Finite groups # the key order and the comments do not change the hash\nkind: topic\ntag: 4F2M9A\n---\n"))
+	a, _ := node.Parse("nodes/4F2/4F2M9A.md", []byte("---\ntag: 4F2M9A\nkind: topic\nname: Finite groups\n---\n"))
+	b, _ := node.Parse("nodes/4F2/4F2M9A.md", []byte("---\nname: Finite groups # the key order and the comments do not change the hash\nkind: topic\ntag: 4F2M9A\n---\n"))
 	fmt.Println(node.Hash(a) == node.Hash(b))
 	// Output: true
 }

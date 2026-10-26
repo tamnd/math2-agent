@@ -12,7 +12,7 @@ import (
 
 func ExampleFile() {
 	fmt.Println(review.File("3C53TD"))
-	// Output: reviews/3C/3C53TD.yaml
+	// Output: reviews/3C5/3C53TD.yaml
 }
 
 func ExamplePerson() {
@@ -52,7 +52,7 @@ func ExampleSlug() {
 }
 
 func ExampleQueue() {
-	n, err := node.Parse("nodes/1B/1B0000.md", []byte("---\ntag: 1B0000\nkind: statement\nname: Zero add\nformal:\n  - {system: lean4, library: mathlib, decl: Nat.zero_add, match: exact}\n---\n\n## Statement\n\nFor each natural number n, 0 + n = n.\n"))
+	n, err := node.Parse("nodes/1B0/1B0000.md", []byte("---\ntag: 1B0000\nkind: statement\nname: Zero add\nformal:\n  - {system: lean4, library: mathlib, decl: Nat.zero_add, match: exact}\n---\n\n## Statement\n\nFor each natural number n, 0 + n = n.\n"))
 	if err != nil {
 		panic(err)
 	}

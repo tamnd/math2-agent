@@ -76,7 +76,7 @@ var mathlib = fakeLean{
 	"Math2.Algebra.lagrange":          {Decl: "Math2.Algebra.lagrange", Kind: "theorem"},
 }
 
-const lagrangePath = "nodes/3C/3C53TD.md"
+const lagrangePath = "nodes/3C5/3C53TD.md"
 
 func lagrange(decl string) string {
 	return "---\ntag: 3C53TD\nkind: statement\nrole: theorem\nname: Lagrange's theorem\nformal:\n  - system: lean4\n    library: mathlib\n    decl: " + decl + "\n    match: exact\n  - system: lean4\n    library: math2\n    decl: Math2.Algebra.lagrange\n    match: exact\n---\n\n## Statement\n\nThe order of a subgroup of a finite group divides the order of the group.\n"
@@ -116,7 +116,7 @@ func TestAutoMerge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	other := workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte("a"), New: []byte("b")}
+	other := workspace.Change{Path: "nodes/AA0/AA0001.md", Old: []byte("a"), New: []byte("b")}
 	for _, c := range []struct {
 		name    string
 		changes []workspace.Change

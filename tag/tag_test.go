@@ -173,7 +173,7 @@ func TestIDs(t *testing.T) {
 	if err != nil || !IsProvisional(p) {
 		t.Fatalf("Provisional() = %q, %v", p, err)
 	}
-	if Shard("7K3QX2") != "7K" || Shard(p) != "~" {
+	if Shard("7K3QX2") != "7K3" || Shard("7K3QX2M9R2") != "7K3" || Shard(p) != "~" {
 		t.Fatal("Shard gave the wrong directory")
 	}
 }
@@ -257,7 +257,7 @@ func TestRewriteThreeLinkedNodes(t *testing.T) {
 		next := ids[(i+1)%3]
 		write(t, root, "nodes/~/"+id+".md", node(id, "statement", next+" [[the next node|"+next+"]]"))
 	}
-	write(t, root, "nodes/7K/7K3QX2.md", node("7K3QX2", "concept", "~00000001 [[a new node|~00000001]]"))
+	write(t, root, "nodes/7K3/7K3QX2.md", node("7K3QX2", "concept", "~00000001 [[a new node|~00000001]]"))
 	write(t, root, "registers/tags.reg", "7K3QX2 aaaaaaa concept\n")
 	write(t, root, "compute/~00000003/main.g", "# The code of ~00000003.\n")
 	write(t, root, "prov/~/~00000002.jsonl", `{"field":"*","op":"add","agent":null,"human":"github:writer","at":"2026-09-01T10:00:00Z"}`+"\n")

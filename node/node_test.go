@@ -22,7 +22,7 @@ Let $G$ be a finite [[group|1A2B3C]].
 `
 
 func TestParse(t *testing.T) {
-	n, err := Parse("nodes/7K/7K3QX2.md", []byte(lagrange))
+	n, err := Parse("nodes/7K3/7K3QX2.md", []byte(lagrange))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,11 +42,11 @@ func TestParse(t *testing.T) {
 
 func TestParseErrors(t *testing.T) {
 	cases := map[string]string{
-		"nodes/7K/7K3QXI.md": lagrange,
-		"nodes/7K/7K3QX2.md": "## Statement\n",
-		"nodes/7K/7K3QX3.md": "---\ntag: 7K3QX3\n",
-		"nodes/7K/7K3QX4.md": "---\n- a\n- b\n---\n",
-		"nodes/7K/7K3QX5.md": "---\ntag: [\n---\n",
+		"nodes/7K3/7K3QXI.md": lagrange,
+		"nodes/7K3/7K3QX2.md": "## Statement\n",
+		"nodes/7K3/7K3QX3.md": "---\ntag: 7K3QX3\n",
+		"nodes/7K3/7K3QX4.md": "---\n- a\n- b\n---\n",
+		"nodes/7K3/7K3QX5.md": "---\ntag: [\n---\n",
 	}
 	for path, text := range cases {
 		if _, err := Parse(path, []byte(text)); err == nil {
@@ -60,7 +60,7 @@ func TestLoad(t *testing.T) {
 	if nodes, err := Load(root); err != nil || len(nodes) != 0 {
 		t.Fatalf("Load on a tree with no nodes = %v, %v", nodes, err)
 	}
-	dir := filepath.Join(root, "nodes", "7K")
+	dir := filepath.Join(root, "nodes", "7K3")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}

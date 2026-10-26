@@ -1,2 +1,2 @@
-nodes/3C/3C53TD.md:7:8: T04: the uses value "group" is not a tag. The alias group names G5S1M9, and m2 fmt changes it to the tag
-nodes/3C/3C53TD.md:15:21: T04: the link target "finite-group" is not a tag
+nodes/3C5/3C53TD.md:7:8: T04: the uses value "group" is not a tag. The alias group names G5S1M9, and m2 fmt changes it to the tag
+nodes/3C5/3C53TD.md:15:21: T04: the link target "finite-group" is not a tag

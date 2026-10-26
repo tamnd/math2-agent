@@ -19,7 +19,7 @@ import (
 // review is one fidelity review in a file below reviews/, with its position.
 type review struct {
 	status.Review
-	path      string // the path of the file, for example reviews/3C/3C53TD.yaml
+	path      string // the path of the file, for example reviews/3C5/3C53TD.yaml
 	tag       string // the tag in the file name
 	line, col int    // the position of the review in the file
 }

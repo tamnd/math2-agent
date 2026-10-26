@@ -21,6 +21,7 @@ import (
 	"github.com/tamnd/math2-agent/search"
 	"github.com/tamnd/math2-agent/status"
 	"github.com/tamnd/math2-agent/store"
+	"github.com/tamnd/math2-agent/tag"
 )
 
 // Version is the version of the API. It is the first part of the path of each HTTP endpoint. A change that is not compatible gives a new version.
@@ -168,15 +169,14 @@ func (s *Service) tag(ref string) (string, error) {
 }
 
 // file reads the node file with the tag. It returns an error when the file is not the file that the build read.
-func (s *Service) file(tag string) (*node.Node, error) {
-	dir := tag[:min(2, len(tag))]
-	if strings.HasPrefix(tag, "~") {
-		dir = "~"
+func (s *Service) file(id string) (*node.Node, error) {
+	if !tag.IsProvisional(id) && len(id) < tag.ShardLen {
+		return nil, fmt.Errorf("the tag %s is too short", id)
 	}
-	path := filepath.Join("nodes", dir, tag+".md")
+	path := filepath.Join("nodes", tag.Shard(id), id+".md")
 	data, err := os.ReadFile(filepath.Join(s.root, path)) // #nosec G304 -- the tag comes from the store, thus the path stays in the tree.
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("the file of %s is not in the tree. Run m2 build again", tag)
+		return nil, fmt.Errorf("the file of %s is not in the tree. Run m2 build again", id)
 	}
 	if err != nil {
 		return nil, err
@@ -185,8 +185,8 @@ func (s *Service) file(tag string) (*node.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	if g, _ := s.store.Node(tag); node.Hash(n) != g.Hash {
-		return nil, fmt.Errorf("the file of %s changed after the build. Run m2 build again", tag)
+	if g, _ := s.store.Node(id); node.Hash(n) != g.Hash {
+		return nil, fmt.Errorf("the file of %s changed after the build. Run m2 build again", id)
 	}
 	return n, nil
 }

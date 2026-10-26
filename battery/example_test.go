@@ -12,7 +12,7 @@ import (
 
 func ExampleRun() {
 	src := "---\ntag: AB12CD\nkind: statement\nname: Natural subtraction\nformal:\n  - {system: lean4, decl: Sub.self, match: exact}\n---\n\n## Statement\n\nFor each natural number n, n - n = 0.\n"
-	n, err := node.Parse("nodes/AB/AB12CD.md", []byte(src))
+	n, err := node.Parse("nodes/AB1/AB12CD.md", []byte(src))
 	if err != nil {
 		fmt.Println(err)
 		return

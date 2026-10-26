@@ -138,7 +138,7 @@ func TestPull(t *testing.T) {
 // node writes a node with a statement that cites the pigeonhole lemma.
 func node(t *testing.T, root, statement string) {
 	body := "---\ntag: 4M0C1B\nkind: statement\nrole: lemma\nname: The pigeonhole principle\nsources:\n  - stacks: T006\n---\n\n## Statement\n\n" + statement + "\n"
-	dir := filepath.Join(root, "nodes", "4M")
+	dir := filepath.Join(root, "nodes", "4M0")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}

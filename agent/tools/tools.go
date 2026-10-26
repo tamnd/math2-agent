@@ -230,11 +230,11 @@ func Messages(file string, e *lean.Elaboration) string {
 	return b.String()
 }
 
-// NodePath returns the path of the file of the node with the id in a tree of math2: nodes/XX/TAG.md for a tag, where XX is the first two characters of the tag, and nodes/~/ID.md for a provisional id. It returns "" for an id that is neither.
+// NodePath returns the path of the file of the node with the id in a tree of math2: nodes/XXX/TAG.md for a tag, where XXX is the first three characters of the tag, and nodes/~/ID.md for a provisional id. It returns "" for an id that is neither.
 func NodePath(id string) string {
 	switch {
 	case tag.IsTag(id):
-		return "nodes/" + id[:2] + "/" + id + ".md"
+		return "nodes/" + tag.Shard(id) + "/" + id + ".md"
 	case tag.IsProvisional(id):
 		return "nodes/~/" + id + ".md"
 	}

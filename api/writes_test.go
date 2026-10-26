@@ -116,7 +116,7 @@ func TestWrite(t *testing.T) {
 	if res["number"] != 7.0 || res["user"] != "github:ada" || out["method"] != "propose_alignment" || len(out["about"].([]any)) != 1 {
 		t.Errorf("the answer is %v", out)
 	}
-	if len(hs.opened) != 1 || !strings.Contains(string(hs.opened[0].Files["nodes/Q5/Q529ES.md"]), "close_to:") || !strings.Contains(hs.opened[0].Body, "> Found while I read") {
+	if len(hs.opened) != 1 || !strings.Contains(string(hs.opened[0].Files["nodes/Q52/Q529ES.md"]), "close_to:") || !strings.Contains(hs.opened[0].Body, "> Found while I read") {
 		t.Errorf("the pull request is %+v", hs.opened)
 	}
 }

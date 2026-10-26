@@ -11,7 +11,7 @@ import (
 func ExampleRebinds() {
 	old := "---\ntag: 3C53TD\nkind: statement\nrole: theorem\nname: Lagrange's theorem\nformal:\n  - system: lean4\n    library: mathlib\n    decl: Subgroup.card_subgroup_dvd_card\n    match: exact\n---\n\n## Statement\n\nThe order of a subgroup of a finite group divides the order of the group.\n"
 	cur := strings.Replace(old, "card_subgroup_dvd_card", "card_dvd_card", 1)
-	rbs, err := bump.Rebinds("3C53TD", []workspace.Change{{Path: "nodes/3C/3C53TD.md", Old: []byte(old), New: []byte(cur)}})
+	rbs, err := bump.Rebinds("3C53TD", []workspace.Change{{Path: "nodes/3C5/3C53TD.md", Old: []byte(old), New: []byte(cur)}})
 	if err != nil {
 		panic(err)
 	}

@@ -91,7 +91,7 @@ func parse(t *testing.T, fronts map[string]string) []*node.Node {
 	t.Helper()
 	var out []*node.Node
 	for tag, front := range fronts {
-		n, err := node.Parse("nodes/"+tag[:2]+"/"+tag+".md", []byte("---\ntag: "+tag+"\n"+front+"---\n\n## Statement\n\nText.\n"))
+		n, err := node.Parse("nodes/"+tag[:3]+"/"+tag+".md", []byte("---\ntag: "+tag+"\n"+front+"---\n\n## Statement\n\nText.\n"))
 		if err != nil {
 			t.Fatal(err)
 		}

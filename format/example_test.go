@@ -9,7 +9,7 @@ import (
 func ExampleFormatter_Source() {
 	data := []byte("---\nname: Subgroup\ntag: X7J0XA\nkind: concept\nuses:\n  - group\n---\n\n## Summary\n\nA subgroup is a subset of a [[group|group]] that is a group under the same operation.\n")
 	f := format.Formatter{Aliases: format.Aliases{"group": "DSG7KN"}}
-	out, err := f.Source("nodes/X7/X7J0XA.md", data)
+	out, err := f.Source("nodes/X7J/X7J0XA.md", data)
 	if err != nil {
 		fmt.Println(err)
 		return

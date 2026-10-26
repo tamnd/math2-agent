@@ -135,7 +135,7 @@ func count(n int, word string) string {
 
 // File is one node file to check.
 type File struct {
-	Path string // the path from the tree root, for example nodes/4F/4F2M9A.md
+	Path string // the path from the tree root, for example nodes/4F2/4F2M9A.md
 	Data []byte
 }
 

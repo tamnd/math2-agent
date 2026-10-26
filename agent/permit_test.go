@@ -30,7 +30,7 @@ The order of a subgroup of a finite group divides the order of the group.
 const root = "module\n\npublic import Math2.Cert.LRAT\npublic import Math2.Meta.Attr\n\n/-! The root module. -/\n"
 
 func TestPermit(t *testing.T) {
-	path := "nodes/3C/3C53TD.md"
+	path := "nodes/3C5/3C53TD.md"
 	bind := strings.Replace(target, "---\n\n", "  - system: lean4\n    library: math2\n    decl: Math2.Algebra.lagrange\n    match: exact\n---\n\n", 1)
 	rebind := strings.Replace(target, "decl: Subgroup.card_subgroup_dvd_card", "decl: Math2.Algebra.lagrange", 1)
 	reviewed := strings.Replace(bind, "match: exact\n", "match: exact\n    fidelity_reviews: [r-3C53TD-01]\n", 1)
@@ -86,7 +86,7 @@ func TestPermit(t *testing.T) {
 		{"prove changes the name", "prove", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "name: Lagrange's", "name: The", 1))}, "the field name"},
 		{"prove changes the body", "prove", workspace.Change{Path: path, Old: []byte(target), New: []byte(target + "\nMore.\n")}, "the body"},
 		{"prove changes a conjecture", "prove", workspace.Change{Path: "lean/Math2/Conjectures/Collatz.lean", Old: []byte("a"), New: []byte("b")}, "conjectures"},
-		{"another node", "prove", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(rebind, "3C53TD", "AA0001", 1))}, "not the target"},
+		{"another node", "prove", workspace.Change{Path: "nodes/AA0/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(rebind, "3C53TD", "AA0001", 1))}, "not the target"},
 		{"an axiom", "prove", workspace.Change{Path: "lean/Math2/Hypotheses/GRH.lean", New: []byte("axiom grh : True\n")}, "no role writes"},
 		{"the attribute", "formalize", workspace.Change{Path: "lean/Math2/Meta/Attr.lean", Old: []byte("a"), New: []byte("b")}, "no role writes"},
 		{"a delete", "prove", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", Old: []byte("a")}, "does not delete"},
@@ -109,7 +109,7 @@ func TestPermit(t *testing.T) {
 		{"explain adds an example", "explain", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(example)}, ""},
 		{"explain adds a lemma", "explain", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(lemma)}, "of the kind statement"},
 		{"explain binds an example", "explain", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(strings.Replace(example, "---\n\n", "formal: []\n---\n\n", 1))}, "no formal field"},
-		{"explain explains another node", "explain", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(explained, "3C53TD", "AA0001", 1))}, "not the target"},
+		{"explain explains another node", "explain", workspace.Change{Path: "nodes/AA0/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(explained, "3C53TD", "AA0001", 1))}, "not the target"},
 		{"explain writes Lean", "explain", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", New: []byte("module\n")}, "writes no Lean"},
 		{"explain imports", "explain", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(imported)}, "writes no Lean"},
 		{"curate adds a statement", "curate", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(lemma)}, ""},
@@ -120,7 +120,7 @@ func TestPermit(t *testing.T) {
 		{"curate explains a new node", "curate", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(lemma + "\n## Explanations\n\n### L2 agent\n\nMore.\n")}, "writes no explanations"},
 		{"curate renames", "curate", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "name: Lagrange's", "name: The", 1))}, ""},
 		{"curate changes the msc", "curate", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "msc: [20D60]", "msc: [20D60, 20E07]\nuses: [G5S1M9]\naliases: [lagrange]", 1))}, ""},
-		{"curate curates another node", "curate", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(target, "3C53TD\n", "AA0001\naliases: [lagrange]\n", 1))}, ""},
+		{"curate curates another node", "curate", workspace.Change{Path: "nodes/AA0/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(target, "3C53TD\n", "AA0001\naliases: [lagrange]\n", 1))}, ""},
 		{"curate changes the body", "curate", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "finite group divides", "group divides", 1))}, "does not change the body"},
 		{"curate changes a binding", "curate", workspace.Change{Path: path, Old: []byte(target), New: []byte(rebind)}, "the field formal"},
 		{"curate writes Lean", "curate", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", New: []byte("module\n")}, "writes no Lean"},
@@ -147,13 +147,13 @@ func TestPermit(t *testing.T) {
 		{"align reviews", "align", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(mathlib, "match: exact\n", "match: exact\n    fidelity_reviews: [r-3C53TD-01]\n", 1))}, "no fidelity reviews"},
 		{"align rebinds", "align", workspace.Change{Path: path, Old: []byte(target), New: []byte(rebind)}, "does not change the bindings"},
 		{"align writes same_as", "align", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "msc: [20D60]", "msc: [20D60]\nsame_as: {wikidata: Q1}", 1))}, "the field same_as"},
-		{"align binds another node", "align", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(mathlib, "3C53TD", "AA0001", 1))}, "not the target"},
+		{"align binds another node", "align", workspace.Change{Path: "nodes/AA0/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(mathlib, "3C53TD", "AA0001", 1))}, "not the target"},
 		{"align writes Lean", "align", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", New: []byte("module\n")}, "writes no Lean"},
 		{"bump rebinds", "bump", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "Subgroup.card_subgroup_dvd_card", "Subgroup.card_dvd_card", 1))}, ""},
 		{"bump changes the match", "bump", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "match: stronger", "match: exact", 1))}, "bump changes only formal[0].decl"},
 		{"bump binds", "bump", workspace.Change{Path: path, Old: []byte(target), New: []byte(bind)}, "does not add or remove bindings"},
 		{"bump changes the msc", "bump", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "msc: [20D60]", "msc: [20D60, 20E07]", 1))}, "the field msc"},
-		{"bump rebinds another node", "bump", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(rebind, "3C53TD", "AA0001", 1))}, "not the target"},
+		{"bump rebinds another node", "bump", workspace.Change{Path: "nodes/AA0/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(rebind, "3C53TD", "AA0001", 1))}, "not the target"},
 		{"bump adds a node", "bump", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(lemma)}, "bump does not add nodes"},
 		{"bump writes Lean", "bump", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", Old: []byte("a"), New: []byte("b")}, "writes no Lean"},
 		{"bump writes the register", "bump", workspace.Change{Path: "registers/bindings.reg", Old: []byte("# tag\n"), New: []byte("# tag\n3C53TD lean4 a b rename c -\n")}, "does not write this file"},

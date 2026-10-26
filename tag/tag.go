@@ -193,10 +193,13 @@ func Provisional(r io.Reader) (string, error) {
 	return "~" + hex.EncodeToString(buf[:]), nil
 }
 
-// Shard returns the directory below nodes/ for a tag or a provisional id.
+// ShardLen is the number of characters of a tag that name its shard (corpus spec K3.5).
+const ShardLen = 3
+
+// Shard returns the directory below nodes/, prov/ and reviews/ for a tag or a provisional id: the first three characters of a tag, for long and legacy tags, or ~ for a provisional id.
 func Shard(id string) string {
 	if IsProvisional(id) {
 		return "~"
 	}
-	return id[:2]
+	return id[:ShardLen]
 }

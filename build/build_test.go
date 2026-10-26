@@ -197,7 +197,7 @@ func TestReplayMath2(t *testing.T) {
 	if err := os.Symlink(project, filepath.Join(root, "lean")); err != nil {
 		t.Fatal(err)
 	}
-	file := filepath.Join(root, "nodes", "3C", "3C53TD.md")
+	file := filepath.Join(root, "nodes", "3C5", "3C53TD.md")
 	data, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)
@@ -239,10 +239,10 @@ func TestReplayMath2(t *testing.T) {
 	if err := reg.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(root, "reviews", "3C"), 0o750); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "reviews", "3C5"), 0o750); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "reviews", "3C", "3C53TD.yaml"), []byte(review), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "reviews", "3C5", "3C53TD.yaml"), []byte(review), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

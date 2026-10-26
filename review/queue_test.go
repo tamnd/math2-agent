@@ -19,7 +19,7 @@ func queueInput(t *testing.T) review.Input {
 	}
 	var nodes []*node.Node
 	for _, tag := range []string{"1A0000", "1B0000", "1C0000"} {
-		n, err := node.Parse("nodes/"+tag[:2]+"/"+tag+".md", []byte(texts[tag]))
+		n, err := node.Parse("nodes/"+tag[:3]+"/"+tag+".md", []byte(texts[tag]))
 		if err != nil {
 			t.Fatal(err)
 		}

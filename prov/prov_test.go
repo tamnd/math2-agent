@@ -99,7 +99,7 @@ func TestAppendRead(t *testing.T) {
 	if !reflect.DeepEqual(got, []Line{a, b}) {
 		t.Errorf("got %+v", got)
 	}
-	if _, err := os.Stat(filepath.Join(root, "prov", "7K", "7K3QX2.jsonl")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, "prov", "7K3", "7K3QX2.jsonl")); err != nil {
 		t.Error(err)
 	}
 	all, err := ReadAll(root)
@@ -129,7 +129,7 @@ func TestCovers(t *testing.T) {
 
 func parse(t *testing.T, text string) *node.Node {
 	t.Helper()
-	n, err := node.Parse("nodes/7K/7K3QX2.md", []byte(text))
+	n, err := node.Parse("nodes/7K3/7K3QX2.md", []byte(text))
 	if err != nil {
 		t.Fatal(err)
 	}

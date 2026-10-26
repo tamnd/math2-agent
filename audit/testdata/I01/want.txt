@@ -1,4 +1,4 @@
-nodes/3C/3C53TD.md:7:1: I01: the inventory row 103A5C1YC0 does not name the node 3C53TD
-nodes/3C/3C53TD.md:7:1: I01: the inventory row 105C7E3AE2 does not exist
-nodes/3C/3C53TD.md:7:1: I01: the inventory row 106D8F4BF3 has the outcome out_of_scope, and it must be node or member
-nodes/G5/G5S1M9.md:7:1: I01: the inventory row 107E9G5CG4 has the outcome open, and it must be node or member
+nodes/3C5/3C53TD.md:7:1: I01: the inventory row 103A5C1YC0 does not name the node 3C53TD
+nodes/3C5/3C53TD.md:7:1: I01: the inventory row 105C7E3AE2 does not exist
+nodes/3C5/3C53TD.md:7:1: I01: the inventory row 106D8F4BF3 has the outcome out_of_scope, and it must be node or member
+nodes/G5S/G5S1M9.md:7:1: I01: the inventory row 107E9G5CG4 has the outcome open, and it must be node or member

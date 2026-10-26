@@ -20,7 +20,7 @@ func parse(t testing.TB, items ...string) []*node.Node {
 		head, rest, _ := strings.Cut(it, "\n")
 		id, kind, _ := strings.Cut(head, " ")
 		src := "---\ntag: " + id + "\nkind: " + kind + "\nname: " + id + "\n" + rest + "\n---\n\n## Statement\n\nS.\n"
-		n, err := node.Parse("nodes/"+id[:2]+"/"+id+".md", []byte(src))
+		n, err := node.Parse("nodes/"+id[:3]+"/"+id+".md", []byte(src))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -1,1 +1,1 @@
-nodes/3C/3C53TD.md:8:5: F03: the E5 candidate Subgroup.card_subgroup_dvd_card uses sorry. Complete the proof, or set match: partial for a statement without a proof
+nodes/3C5/3C53TD.md:8:5: F03: the E5 candidate Subgroup.card_subgroup_dvd_card uses sorry. Complete the proof, or set match: partial for a statement without a proof

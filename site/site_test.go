@@ -120,8 +120,8 @@ func TestDocs(t *testing.T) {
 
 func TestNodes(t *testing.T) {
 	content := newContent(t)
-	writeFile(t, content, "nodes/7K/7K3QX2.md", statement)
-	writeFile(t, content, "nodes/1H/1H8D2C.md", concept)
+	writeFile(t, content, "nodes/7K3/7K3QX2.md", statement)
+	writeFile(t, content, "nodes/1H8/1H8D2C.md", concept)
 	out := buildSite(t, content, "")
 
 	page := readFile(t, out, "node/7K3QX2/index.html")

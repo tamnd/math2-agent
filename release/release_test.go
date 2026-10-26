@@ -131,7 +131,7 @@ func TestMake(t *testing.T) {
 		t.Errorf("Read gives %+v after Marshal of %+v", back, m)
 	}
 
-	if err := os.WriteFile(filepath.Join(dir, "nodes", "3C", "3C53TD.md"), []byte("changed"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "nodes", "3C5", "3C53TD.md"), []byte("changed"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := release.Make(dir, out, "2027.03"); err == nil {

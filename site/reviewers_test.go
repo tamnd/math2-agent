@@ -8,10 +8,10 @@ import (
 
 func TestReviewers(t *testing.T) {
 	content := newContent(t)
-	writeFile(t, content, "nodes/7K/7K3QX2.md", statement)
-	writeFile(t, content, "nodes/1H/1H8D2C.md", concept)
+	writeFile(t, content, "nodes/7K3/7K3QX2.md", statement)
+	writeFile(t, content, "nodes/1H8/1H8D2C.md", concept)
 	writeFile(t, content, "registers/reviewers.reg", "github:octocat 2026-10-01 20 -\n")
-	writeFile(t, content, "reviews/7K/7K3QX2.yaml", "reviews:\n  - id: r-7K3QX2-01\n    reviewer: github:octocat\n    date: \"2026-10-02\"\n    decl: Subgroup.card_subgroup_dvd_card\n    statement_hash: blake3:s\n    type_hash: blake3:t\n    verdict: faithful-with-conventions\n    conventions: [\"a finite group\"]\n  - id: r-7K3QX2-02\n    reviewer: orcid:0000-0002-1825-0097\n    date: \"2026-10-03\"\n    decl: Subgroup.card_subgroup_dvd_card\n    statement_hash: blake3:s\n    type_hash: blake3:t\n    verdict: faithful\n")
+	writeFile(t, content, "reviews/7K3/7K3QX2.yaml", "reviews:\n  - id: r-7K3QX2-01\n    reviewer: github:octocat\n    date: \"2026-10-02\"\n    decl: Subgroup.card_subgroup_dvd_card\n    statement_hash: blake3:s\n    type_hash: blake3:t\n    verdict: faithful-with-conventions\n    conventions: [\"a finite group\"]\n  - id: r-7K3QX2-02\n    reviewer: orcid:0000-0002-1825-0097\n    date: \"2026-10-03\"\n    decl: Subgroup.card_subgroup_dvd_card\n    statement_hash: blake3:s\n    type_hash: blake3:t\n    verdict: faithful\n")
 	out := buildSite(t, content, "")
 
 	list := readFile(t, out, "reviewers/index.html")
@@ -21,7 +21,7 @@ func TestReviewers(t *testing.T) {
 		}
 	}
 	p := readFile(t, out, "reviewers/github-octocat/index.html")
-	for _, want := range []string{`<a href="https://github.com/octocat">octocat</a>`, `href="/math2/node/7K3QX2/"`, "Lagrange&#39;s theorem", `href="https://github.com/o/math2/blob/main/reviews/7K/7K3QX2.yaml"`, "a finite group", "in the MSC areas 20"} {
+	for _, want := range []string{`<a href="https://github.com/octocat">octocat</a>`, `href="/math2/node/7K3QX2/"`, "Lagrange&#39;s theorem", `href="https://github.com/o/math2/blob/main/reviews/7K3/7K3QX2.yaml"`, "a finite group", "in the MSC areas 20"} {
 		if !strings.Contains(p, want) {
 			t.Errorf("the page of the reviewer has no %s:\n%s", want, p)
 		}

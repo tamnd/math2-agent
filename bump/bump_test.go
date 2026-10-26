@@ -153,7 +153,7 @@ func nodeFile(tag string, decls ...string) string {
 
 func parse(t *testing.T, tag string, decls ...string) *node.Node {
 	t.Helper()
-	n, err := node.Parse("nodes/"+tag[:2]+"/"+tag+".md", []byte(nodeFile(tag, decls...)))
+	n, err := node.Parse("nodes/"+tag[:3]+"/"+tag+".md", []byte(nodeFile(tag, decls...)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,8 +241,8 @@ func TestStale(t *testing.T) {
 
 func TestRebind(t *testing.T) {
 	root := t.TempDir()
-	write(t, root, "nodes/AA/AAAAAA.md", nodeFile("AAAAAA", "Old.alias", "Same.thing"))
-	write(t, root, "nodes/CC/CCCCCC.md", nodeFile("CCCCCC", "Old.changed"))
+	write(t, root, "nodes/AAA/AAAAAA.md", nodeFile("AAAAAA", "Old.alias", "Same.thing"))
+	write(t, root, "nodes/CCC/CCCCCC.md", nodeFile("CCCCCC", "Old.changed"))
 	write(t, root, bump.Register, "# tag system old new cause mathlib author\nAAAAAA lean4 - Old.alias bind c0 github:octocat\nZZZZZZ lean4 - Last.one bind c0 github:octocat\n")
 	bs := []bump.Break{
 		{Kind: bump.Deprecated, Tag: "AAAAAA", Old: "Old.alias", New: "New.alias"},
@@ -253,7 +253,7 @@ func TestRebind(t *testing.T) {
 	if err != nil || n != 1 {
 		t.Fatalf("Rebind changed %d files, %v", n, err)
 	}
-	if got := read(t, root, "nodes/AA/AAAAAA.md"); got != nodeFile("AAAAAA", "New.alias", "Same.thing") {
+	if got := read(t, root, "nodes/AAA/AAAAAA.md"); got != nodeFile("AAAAAA", "New.alias", "Same.thing") {
 		t.Errorf("the node file is\n%s", got)
 	}
 	want := "# tag system old new cause mathlib author\nAAAAAA lean4 - Old.alias bind c0 github:octocat\nAAAAAA lean4 Old.alias New.alias rename c1 -\nCCCCCC lean4 Old.changed Old.changed refactor c1 -\nZZZZZZ lean4 - Last.one bind c0 github:octocat\n"

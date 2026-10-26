@@ -1,2 +1,2 @@
-nodes/3C/3C53TD.md:8:13: A02: the same_as value Q505798 in wikidata is from m2-agent/align@0.2.0 on 2026-01-05, and no person confirmed it in 90 days. Run m2 align confirm, or remove the value
-nodes/3C/3C53TD.md:10:10: A02: the same_as value 7 in erdos is from m2-agent/align@0.2.0 on 2026-03-01, and no person confirmed it in 90 days. Run m2 align confirm, or remove the value
+nodes/3C5/3C53TD.md:8:13: A02: the same_as value Q505798 in wikidata is from m2-agent/align@0.2.0 on 2026-01-05, and no person confirmed it in 90 days. Run m2 align confirm, or remove the value
+nodes/3C5/3C53TD.md:10:10: A02: the same_as value 7 in erdos is from m2-agent/align@0.2.0 on 2026-03-01, and no person confirmed it in 90 days. Run m2 align confirm, or remove the value

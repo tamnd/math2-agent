@@ -21,7 +21,7 @@ var (
 
 func parse(t *testing.T, src string) *node.Node {
 	t.Helper()
-	n, err := node.Parse("nodes/T1/T1TEST.md", []byte(src))
+	n, err := node.Parse("nodes/T1T/T1TEST.md", []byte(src))
 	if err != nil {
 		t.Fatal(err)
 	}

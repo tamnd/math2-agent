@@ -40,8 +40,8 @@ const provLog = `{"field":"*","op":"add","agent":null,"human":"github:writer","a
 
 func TestProvenance(t *testing.T) {
 	content := newContent(t)
-	writeFile(t, content, "nodes/7K/7K3QX2.md", provStatement)
-	writeFile(t, content, "prov/7K/7K3QX2.jsonl", provLog)
+	writeFile(t, content, "nodes/7K3/7K3QX2.md", provStatement)
+	writeFile(t, content, "prov/7K3/7K3QX2.jsonl", provLog)
 	out := buildSite(t, content, "")
 
 	page := readFile(t, out, "node/7K3QX2/index.html")
@@ -49,7 +49,7 @@ func TestProvenance(t *testing.T) {
 		"This page does not show the explanation L2 and the field same_as.wikidata.",
 		"no person checked it yet:</b> the explanation L1.",
 		"A small group fits",
-		`<a href="https://github.com/o/math2/blob/main/prov/7K/7K3QX2.jsonl">provenance log</a>`,
+		`<a href="https://github.com/o/math2/blob/main/prov/7K3/7K3QX2.jsonl">provenance log</a>`,
 		`<a href="https://github.com/writer">writer</a>`,
 		`<code>m2-agent/explain@1.2.0</code> <span class="muted">agent run r-2026-09-02-1</span>`,
 		`<a href="https://orcid.org/0000-0002-1825-0097">ORCID 0000-0002-1825-0097</a>`,
@@ -94,7 +94,7 @@ func TestProvenance(t *testing.T) {
 
 func TestNoProvenance(t *testing.T) {
 	content := newContent(t)
-	writeFile(t, content, "nodes/7K/7K3QX2.md", provStatement)
+	writeFile(t, content, "nodes/7K3/7K3QX2.md", provStatement)
 	out := buildSite(t, content, "")
 	if page := readFile(t, out, "node/7K3QX2/index.html"); strings.Contains(page, "History") || !strings.Contains(page, "The cosets") {
 		t.Error("a node with no log has a history, or hides text")

@@ -3,6 +3,8 @@ package tag_test
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/tamnd/math2-agent/tag"
 )
@@ -15,7 +17,7 @@ func ExampleMint() {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(len(t), tag.IsTag(t), t[0] != '0', tag.Shard(t) == t[:2])
+	fmt.Println(len(t), tag.IsTag(t), t[0] != '0', tag.Shard(t) == t[:3])
 	// Output: 10 true true true
 }
 
@@ -75,4 +77,26 @@ func ExampleAlias_String() {
 	a := tag.Alias{Name: "compact-space", Tag: "7K3QX2", From: "2026-05-01", Until: tag.Current}
 	fmt.Println(a)
 	// Output: compact-space 7K3QX2 2026-05-01 -
+}
+
+func ExampleMoveShards() {
+	root, err := os.MkdirTemp("", "shard")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer os.RemoveAll(root)
+	// A node in the old shard of two characters.
+	dir := filepath.Join(root, "nodes", "7K")
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		fmt.Println(err)
+		return
+	}
+	if err := os.WriteFile(filepath.Join(dir, "7K3QX2.md"), []byte("---\n"), 0o600); err != nil {
+		fmt.Println(err)
+		return
+	}
+	moves, err := tag.MoveShards(root)
+	fmt.Println(moves, err)
+	// Output: [{nodes/7K/7K3QX2.md nodes/7K3/7K3QX2.md}] <nil>
 }

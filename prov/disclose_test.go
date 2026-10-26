@@ -46,7 +46,7 @@ A small group fits into a big group a whole number of times.
 // discloseFacts returns facts with a person, two agent runs that changed the node and one run that failed.
 func discloseFacts(t *testing.T) Facts {
 	t.Helper()
-	n, err := node.Parse("nodes/3C/3C53TD.md", []byte(discloseNode))
+	n, err := node.Parse("nodes/3C5/3C53TD.md", []byte(discloseNode))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestDiscloseLittle(t *testing.T) {
 	f := discloseFacts(t)
 	f.Log, f.Runs, f.Build, f.Commit = nil, nil, nil, ""
 	got := Disclose(f)
-	for _, want := range []string{"has no provenance log in prov/3C/3C53TD.jsonl", "There is no build", NoAgent} {
+	for _, want := range []string{"has no provenance log in prov/3C5/3C53TD.jsonl", "There is no build", NoAgent} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the disclosure has no %q:\n%s", want, got)
 		}
@@ -220,7 +220,7 @@ func TestFormalization(t *testing.T) {
 		"id: https://github.com/leanprover-community/mathlib4\n    revision: 56a005855ea17e0b0958f73ec801ae140b0a1679",
 		"id: m2://3C53TD",
 		"relationship: adapts",
-		"https://github.com/tamnd/math2/blob/293ecb3/nodes/3C/3C53TD.md",
+		"https://github.com/tamnd/math2/blob/293ecb3/nodes/3C5/3C53TD.md",
 		"id: isbn:9780471433347\n    type: book\n    location: Section 3.2",
 		"id: arXiv:2401.01234v2",
 		"id: palomar:lagrange-1",
@@ -264,7 +264,7 @@ func TestFormalizationLittle(t *testing.T) {
 		t.Errorf("the file gives values that it does not know:\n%s", data)
 	}
 
-	n, err := node.Parse("nodes/G5/G5S1M9.md", []byte("---\ntag: G5S1M9\nkind: definition\nname: Group\n---\n\n## Statement\n\nA set with an operation.\n"))
+	n, err := node.Parse("nodes/G5S/G5S1M9.md", []byte("---\ntag: G5S1M9\nkind: definition\nname: Group\n---\n\n## Statement\n\nA set with an operation.\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

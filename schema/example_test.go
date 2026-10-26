@@ -9,7 +9,7 @@ import (
 
 func ExampleSchema_Validate() {
 	data := []byte("---\ntag: 9TX3RB\nkind: proof\nname: Proof of Lagrange's theorem\nstatus: proved\n---\n\n## Proof\n\nCount the cosets.\n")
-	n, err := node.Parse("nodes/9T/9TX3RB.md", data)
+	n, err := node.Parse("nodes/9TX/9TX3RB.md", data)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -18,8 +18,8 @@ func ExampleSchema_Validate() {
 		fmt.Println(f)
 	}
 	// Output:
-	// nodes/9T/9TX3RB.md:2:1: S02: the field "proves" is missing, and a node of kind proof needs it
-	// nodes/9T/9TX3RB.md:5:1: S03: the field "status" states a status, but the build computes the status of each node
+	// nodes/9TX/9TX3RB.md:2:1: S02: the field "proves" is missing, and a node of kind proof needs it
+	// nodes/9TX/9TX3RB.md:5:1: S03: the field "status" states a status, but the build computes the status of each node
 }
 
 func ExampleSchema_Sections() {

@@ -18,9 +18,9 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
-// File returns the path of the review file of the node with the tag, from the tree root: reviews/, the first two characters of the tag, and the tag with .yaml.
-func File(tag string) string {
-	return "reviews/" + tag[:2] + "/" + tag + ".yaml"
+// File returns the path of the review file of the node with the tag t, from the tree root: reviews/, the shard of the tag, and the tag with .yaml.
+func File(t string) string {
+	return "reviews/" + tag.Shard(t) + "/" + t + ".yaml"
 }
 
 // Write adds the review r of the binding b of the packet p to the tree in root. It fills the review as Fill does, gives it the next id of the node, adds it at the end of the review file and adds the id to fidelity_reviews of the binding in the node file. Write returns the review and the paths of the two files, from the tree root. When a step fails, Write puts back the files as they were.

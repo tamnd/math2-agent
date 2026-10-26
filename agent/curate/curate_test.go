@@ -52,8 +52,8 @@ func tree(t *testing.T, files map[string]string) *workspace.Workspace {
 }
 
 const (
-	lagrangePath = "nodes/3C/3C53TD.md"
-	groupPath    = "nodes/G5/G5S1M9.md"
+	lagrangePath = "nodes/3C5/3C53TD.md"
+	groupPath    = "nodes/G5S/G5S1M9.md"
 	newPath      = "nodes/~/~1a2b3c4d.md"
 	ref          = "arxiv_results:2312.00752#3KH2"
 	locator      = "ax://paper/2312.00752#3KH2"
@@ -194,7 +194,7 @@ func TestBrief(t *testing.T) {
 		t.Error("the brief has the text of the record, which is untrusted")
 	}
 	brief, err = curate.Brief(ws, &agent.Job{ID: "j-2", Role: "curate", Target: "3C53TD", Goal: "fix the uses"}, rs)
-	if err != nil || !strings.Contains(brief, "a statement node") || !strings.Contains(brief, `<data source="nodes/3C/3C53TD.md"`) {
+	if err != nil || !strings.Contains(brief, "a statement node") || !strings.Contains(brief, `<data source="nodes/3C5/3C53TD.md"`) {
 		t.Errorf("the brief of a node is %q, %v", brief, err)
 	}
 	for target, want := range map[string]string{

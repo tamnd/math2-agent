@@ -1,3 +1,3 @@
-nodes/20/20D60X.md:1:1: T02: the tag 20D60X has a form that Mint excludes: a number or an MSC code
-nodes/G5/G5S1M9.md:1:1: T02: the tag G5S1M9 is also the tag of nodes/3C/G5S1M9.md
+nodes/20D/20D60X.md:1:1: T02: the tag 20D60X has a form that Mint excludes: a number or an MSC code
+nodes/G5S/G5S1M9.md:1:1: T02: the tag G5S1M9 is also the tag of nodes/3C/G5S1M9.md
 registers/tags.reg:2:1: T02: the tag 20D60X has a form that Mint excludes: a number or an MSC code

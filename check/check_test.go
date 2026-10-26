@@ -13,7 +13,7 @@ import (
 
 // topic returns a topic node file with the given body. The body starts on line 7, so the text under the first heading is on line 10.
 func topic(body string) check.File {
-	return check.File{Path: "nodes/3E/3EYFQZ.md", Data: []byte("---\ntag: 3EYFQZ\nkind: topic\nname: Elementary number theory\nmsc: [11Axx]\n---\n" + body)}
+	return check.File{Path: "nodes/3EY/3EYFQZ.md", Data: []byte("---\ntag: 3EYFQZ\nkind: topic\nname: Elementary number theory\nmsc: [11Axx]\n---\n" + body)}
 }
 
 func run(files ...check.File) *check.Report {

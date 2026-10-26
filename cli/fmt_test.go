@@ -29,8 +29,8 @@ func TestFmtAliasTree(t *testing.T) {
 	for _, dir := range []string{"nodes", "registers"} {
 		copyTree(t, filepath.Join(aliases, dir), filepath.Join(root, dir))
 	}
-	want := "nodes/A1/A1A5K1.md\nnodes/A2/A2A5K2.md\nnodes/A3/A3A5K3.md\n"
-	path := filepath.Join(root, "nodes", "A2", "A2A5K2.md")
+	want := "nodes/A1A/A1A5K1.md\nnodes/A2A/A2A5K2.md\nnodes/A3A/A3A5K3.md\n"
+	path := filepath.Join(root, "nodes", "A2A", "A2A5K2.md")
 	before, _ := os.ReadFile(path)
 
 	code, stdout, _ := run("fmt", "-check", "-root", root)
@@ -53,7 +53,7 @@ func TestFmtAliasTree(t *testing.T) {
 
 func TestFmtBadFile(t *testing.T) {
 	root := t.TempDir()
-	path := filepath.Join(root, "nodes", "7K", "7K3QX2.md")
+	path := filepath.Join(root, "nodes", "7K3", "7K3QX2.md")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestFmtBadFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, stdout, stderr := run("fmt", "-root", root, path)
-	if code != ExitFailure || stdout != "" || !strings.Contains(stderr, "nodes/7K/7K3QX2.md:1:1:") {
+	if code != ExitFailure || stdout != "" || !strings.Contains(stderr, "nodes/7K3/7K3QX2.md:1:1:") {
 		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
 	}
 	if code, _, _ := run("fmt", "-frobnicate"); code != ExitUsage {

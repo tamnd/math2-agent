@@ -33,7 +33,7 @@ var valid = map[string]string{
 
 func parse(t *testing.T, front string) *node.Node {
 	t.Helper()
-	n, err := node.Parse("nodes/7K/7K3QX2.md", []byte("---\ntag: 7K3QX2\n"+front+"---\n"))
+	n, err := node.Parse("nodes/7K3/7K3QX2.md", []byte("---\ntag: 7K3QX2\n"+front+"---\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestAllErrors(t *testing.T) {
 	rules := map[string]bool{}
 	for _, f := range got {
 		rules[f.Rule] = true
-		if !strings.HasPrefix(f.String(), "nodes/7K/7K3QX2.md:") {
+		if !strings.HasPrefix(f.String(), "nodes/7K3/7K3QX2.md:") {
 			t.Errorf("finding %q has no file", f)
 		}
 	}
