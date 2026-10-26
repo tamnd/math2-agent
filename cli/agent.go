@@ -24,6 +24,7 @@ import (
 	"github.com/tamnd/math2-agent/agent/align"
 	"github.com/tamnd/math2-agent/agent/bump"
 	"github.com/tamnd/math2-agent/agent/curate"
+	"github.com/tamnd/math2-agent/agent/enumerate"
 	"github.com/tamnd/math2-agent/agent/explain"
 	"github.com/tamnd/math2-agent/agent/explore"
 	"github.com/tamnd/math2-agent/agent/formalize"
@@ -34,9 +35,11 @@ import (
 	"github.com/tamnd/math2-agent/build"
 	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/compute"
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/claude"
+	"github.com/tamnd/math2-agent/models"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/novelty"
 	"github.com/tamnd/math2-agent/project"
@@ -46,13 +49,14 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|explain|explore|formalize|prove|review-assist"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|enumerate|explain|explore|formalize|prove|review-assist"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
 	"align":         "the node has a proposal of each crosswalk edge that the records give, or a Mathlib binding with the type hash of its Math2 binding",
 	"bump":          "each Lean binding of the node resolves in the pinned Mathlib and is not deprecated",
 	"curate":        "the record has a node in the words of math2 that states the same result, or the node has the right uses, about and msc",
+	"enumerate":     "the inventory has a mention of a model list for each item of the cell that the model knows, with its sources",
 	"explain":       "the node has an L2 explanation marked agent, with each claim grounded in a cited node",
 	"explore":       "a conjecture or a counterexample about the node, checked by a computation that verifies, with its novelty check",
 	"formalize":     "the node has a Lean binding that passes the checks of the run",
@@ -293,7 +297,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		extra []agent.Tool
 		nv    *explore.Novelty
 	)
-	if slices.Contains([]string{"align", "curate", "explain", "explore"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
+	if slices.Contains([]string{"align", "curate", "enumerate", "explain", "explore"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
 		return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
 	}
 	switch job.Role {
@@ -340,6 +344,27 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		meter = &agent.Meter{Model: rs.model}
 		check = curate.Goal(ws, job, records, meter, r.Ladder[rung].Model, r.Checks["judge"])
 		extra = []agent.Tool{curate.Read(records), curate.Propose(ws, "m2-agent/curate@"+r.Version)}
+	case "enumerate":
+		rows, err := inventory.ReadRows(rs.root)
+		if err != nil {
+			return nil, ws, nil, err
+		}
+		ms, err := inventory.ReadMentions(rs.root)
+		if err != nil {
+			return nil, ws, nil, err
+		}
+		cell, err := enumerate.NewCell(job.Target, rows, ms)
+		if err != nil {
+			return nil, ws, nil, err
+		}
+		model := r.Ladder[rung].Model
+		family := models.Default().Family(model)
+		if family == "" {
+			return nil, ws, nil, models.Default().Check(model)
+		}
+		brief = enumerate.Brief(job, cell)
+		check = enumerate.Goal(ws, job)
+		extra = []agent.Tool{enumerate.List(ws, cell, family, model, "agent:m2-agent/enumerate@"+r.Version)}
 	case "explore":
 		var runner *compute.Runner
 		var done func()

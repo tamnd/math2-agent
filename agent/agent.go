@@ -29,10 +29,10 @@ import (
 	"github.com/tamnd/math2-agent/prov"
 )
 
-// The roles of spec 12.1.
-var roles = []string{"formalize", "prove", "explore", "explain", "curate", "align", "bump", "review-assist"}
+// The eight roles of spec 12.1, and the four roles of corpus K7.3 that write the corpus.
+var roles = []string{"formalize", "prove", "explore", "explain", "curate", "align", "bump", "review-assist", "enumerate", "write", "informalize", "exercise"}
 
-// Roles returns the names of the eight roles of spec 12.1.
+// Roles returns the names of the eight roles of spec 12.1 and the four roles of corpus K7.3.
 func Roles() []string { return slices.Clone(roles) }
 
 // Rung is one step of the escalation ladder of a role: a model and an effort (spec 11.4).
@@ -86,7 +86,7 @@ var semverRe = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0
 // LoadRole reads the role with the name from fsys. The files are name/role.yaml, name/system.md, name/CHANGELOG.md and the files in name/style/, name/examples/ and name/checks/. The role in role.yaml must be the name, and the version must be semver.
 func LoadRole(fsys fs.FS, name string) (*Role, error) {
 	if !slices.Contains(roles, name) {
-		return nil, fmt.Errorf("agent: %q is not a role of spec 12.1", name)
+		return nil, fmt.Errorf("agent: %q is not a role of spec 12.1 or corpus K7.3", name)
 	}
 	r := &Role{Files: map[string]string{}, Checks: map[string]string{}}
 	read := func(p string) (string, error) {

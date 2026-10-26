@@ -56,6 +56,30 @@ func ReadMentions(root string) ([]Mention, error) {
 	return out, err
 }
 
+// ParseMentions reads the mentions of one shard file, one JSON object on each line. A field that Mention does not have is an error.
+func ParseMentions(data []byte) ([]Mention, error) {
+	var out []Mention
+	sc := bufio.NewScanner(bytes.NewReader(data))
+	sc.Buffer(nil, 64<<20)
+	for n := 1; sc.Scan(); n++ {
+		dec := json.NewDecoder(bytes.NewReader(sc.Bytes()))
+		dec.DisallowUnknownFields()
+		var m Mention
+		if err := dec.Decode(&m); err != nil {
+			return nil, fmt.Errorf("line %d: %w", n, err)
+		}
+		out = append(out, m)
+	}
+	return out, sc.Err()
+}
+
+// FormatMentions gives the text of one shard file: the mentions sorted by identifier, one JSON object on each line, as WriteMentions writes them.
+func FormatMentions(ms []Mention) ([]byte, error) {
+	ms = slices.Clone(ms)
+	sortMentions(ms)
+	return encodeLines(ms)
+}
+
 // WriteRows writes the rows to records/inventory/ in the tree at root. It replaces each file, and it removes the shards that have no row now.
 func WriteRows(root string, rows []Row) error {
 	shards := map[string][]Row{}

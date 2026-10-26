@@ -1,0 +1,81 @@
+# The public items of the suite of the enumerate role (corpus K7.4). Each item is a cell, the names that the inventory has for the cell, and reference items that a model of the cell must know. A reference item has a source that resolves. The statements are in our own words.
+cells:
+  - cell: 54D30/undergraduate
+    have: [Compact space]
+    items:
+      - kind: statement
+        name: Heine–Borel theorem
+        aliases: [Borel–Lebesgue theorem]
+        statement: A subset of $\mathbb{R}^n$ is compact if and only if it is closed and bounded.
+        uses: [compact space, closed set, bounded set]
+        sources:
+          - {system: wikipedia, id: Heine–Borel theorem}
+          - {system: isbn, id: 978-0-07-054235-8, locator: Theorem 2.41}
+      - kind: statement
+        name: Tube lemma
+        statement: When $X$ is a space and $Y$ is compact, each open set of $X \times Y$ that holds the slice $\{x\} \times Y$ holds a tube $U \times Y$ around it.
+        uses: [compact space, product topology]
+        sources:
+          - {system: wikipedia, id: Tube lemma}
+      - kind: statement
+        name: Tychonoff's theorem
+        statement: A product of compact topological spaces is compact in the product topology.
+        uses: [compact space, product topology]
+        sources:
+          - {system: wikipedia, id: Tychonoff's theorem}
+      - kind: statement
+        name: Lebesgue's number lemma
+        statement: For each open cover of a compact metric space there is a number $\delta > 0$ such that each set of diameter less than $\delta$ is in one set of the cover.
+        uses: [compact space, metric space, open cover]
+        sources:
+          - {system: wikipedia, id: Lebesgue's number lemma}
+  - cell: 11A41/school
+    have: [Prime number]
+    items:
+      - kind: statement
+        name: Euclid's theorem
+        aliases: [infinitude of primes]
+        statement: There are infinitely many prime numbers.
+        uses: [prime number]
+        sources:
+          - {system: wikipedia, id: Euclid's theorem}
+      - kind: concept
+        name: Sieve of Eratosthenes
+        statement: The sieve finds the primes up to a bound by crossing out the multiples of each prime in turn.
+        uses: [prime number]
+        sources:
+          - {system: wikipedia, id: Sieve of Eratosthenes}
+      - kind: statement
+        name: Bertrand's postulate
+        aliases: [Chebyshev's theorem]
+        statement: For each integer $n > 1$ there is a prime $p$ with $n < p < 2n$.
+        uses: [prime number]
+        sources:
+          - {system: wikipedia, id: Bertrand's postulate}
+      - kind: conjecture
+        name: Twin prime conjecture
+        statement: There are infinitely many primes $p$ such that $p + 2$ is also prime.
+        uses: [prime number]
+        sources:
+          - {system: wikipedia, id: Twin prime}
+  - cell: 20D20/undergraduate
+    have: [Sylow subgroup]
+    items:
+      - kind: statement
+        name: Sylow theorems
+        statement: A finite group has Sylow $p$-subgroups for each prime $p$, they are all conjugate, and their number divides the order of the group and is $1$ modulo $p$.
+        uses: [finite group, Sylow subgroup]
+        sources:
+          - {system: wikipedia, id: Sylow theorems}
+      - kind: statement
+        name: Cauchy's theorem
+        statement: When a prime $p$ divides the order of a finite group, the group has an element of order $p$.
+        uses: [finite group, order of an element]
+        sources:
+          - {system: wikipedia, id: Cauchy's theorem (group theory)}
+      - kind: statement
+        name: Frattini's argument
+        statement: When $H$ is a normal subgroup of a finite group $G$ and $P$ is a Sylow subgroup of $H$, then $G$ is the product of $H$ and the normalizer of $P$ in $G$.
+        uses: [normal subgroup, Sylow subgroup, normalizer]
+        sources:
+          - {system: wikipedia, id: Frattini's argument}

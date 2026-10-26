@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/tamnd/math2-agent/align"
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/prov"
 	"github.com/tamnd/math2-agent/tag"
@@ -20,11 +21,11 @@ import (
 // The Lean directories that no role writes: the attribute and the adapters, the certificate checkers, and the named hypotheses, which are the only place where an axiom can be (spec 20).
 var leanFixed = []string{"lean/Math2/Meta/", "lean/Math2/Cert/", "lean/Math2/Hypotheses/"}
 
-// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of the eight roles.
+// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of the eight roles of spec 12.1 and of enumerate (corpus K7.3).
 //
-// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. Explore can add computation, conjecture and counterexample nodes with no formal field, no crosswalk edges, no fields of a retirement and no explanations, and add the files of the code of a computation in compute/SHARD/ID/. Explore writes no Lean and changes no file that exists. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
+// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. Explore can add computation, conjecture and counterexample nodes with no formal field, no crosswalk edges, no fields of a retirement and no explanations, and add the files of the code of a computation in compute/SHARD/ID/. Explore writes no Lean and changes no file that exists. Enumerate can add mentions by enumerate to the shard files of records/mentions/model-FAMILY/, and keeps each line that is there. Enumerate writes no node and no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
 func Permit(role, target string, changes []workspace.Change) error {
-	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist", "explore"}, role) {
+	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist", "explore", "enumerate"}, role) {
 		return fmt.Errorf("agent: the field permission set of %s is not written yet", role)
 	}
 	var errs []error
@@ -49,6 +50,8 @@ func permit(role, target string, c workspace.Change) error {
 			return fmt.Errorf("review-assist writes only the review packet of the target, reports/review/%s.md", target)
 		}
 		return nil
+	case role == "enumerate":
+		return permitMentions(p, c)
 	case slices.Contains([]string{"explain", "curate", "align", "bump", "explore"}, role) && strings.HasPrefix(p, "lean/"):
 		return fmt.Errorf("%s writes no Lean", role)
 	case role == "explore" && strings.HasPrefix(p, "compute/"):
@@ -403,6 +406,55 @@ func permitAlign(target string, c workspace.Change, n *node.Node) error {
 		if f["fidelity_reviews"] != nil {
 			return errors.New("a new binding has no fidelity reviews")
 		}
+	}
+	return nil
+}
+
+// modelSource matches the source of a model list, such as model-claude (corpus K4.8).
+var modelSource = regexp.MustCompile(`^model-[a-z0-9]+(?:-[a-z0-9]+)*$`)
+
+// permitMentions allows a change of a shard file of a model list, records/mentions/model-FAMILY/SHARD.jsonl, that keeps each line and adds mentions by enumerate of that source and shard. The file stays sorted by identifier.
+func permitMentions(p string, c workspace.Change) error {
+	dir, file := path.Split(p)
+	source := path.Base(dir)
+	shard := strings.TrimSuffix(file, ".jsonl")
+	if path.Clean(dir) != path.Join(inventory.MentionsDir, source) || !modelSource.MatchString(source) || shard == file {
+		return fmt.Errorf("enumerate writes only the mentions of a model list, in %s/model-FAMILY/SHARD.jsonl", inventory.MentionsDir)
+	}
+	old := map[string]bool{}
+	for line := range strings.Lines(string(c.Old)) {
+		old[line] = true
+	}
+	ms, err := inventory.ParseMentions(c.New)
+	if err != nil {
+		return err
+	}
+	lines := slices.Collect(strings.Lines(string(c.New)))
+	if len(lines) != len(ms) {
+		return errors.New("each line of a mentions file is one mention")
+	}
+	var prev string
+	for i, m := range ms {
+		switch {
+		case i > 0 && m.ID <= prev:
+			return fmt.Errorf("the mentions are not sorted by identifier, or two have the id %s", m.ID)
+		case old[lines[i]]:
+			delete(old, lines[i])
+		case m.Source != source:
+			return fmt.Errorf("the mention %s is of the source %q, and the file is of %s", m.ID, m.Source, source)
+		case !strings.HasPrefix(m.ID, "m2://rec/"+source+"/"):
+			return fmt.Errorf("the id %s of a mention of %s does not start with m2://rec/%s/", m.ID, source, source)
+		case inventory.MentionShard(m.ID) != shard:
+			return fmt.Errorf("the mention %s is of the shard %s, not %s", m.ID, inventory.MentionShard(m.ID), shard)
+		case !strings.HasPrefix(m.By, "agent:m2-agent/enumerate@"):
+			return fmt.Errorf("the mention %s is by %q, and enumerate adds only its own mentions", m.ID, m.By)
+		case m.Kind == "" || m.Name == "":
+			return fmt.Errorf("the mention %s has no kind or no name", m.ID)
+		}
+		prev = m.ID
+	}
+	if len(old) > 0 {
+		return errors.New("enumerate adds mentions, and does not change or remove the lines that are there")
 	}
 	return nil
 }
