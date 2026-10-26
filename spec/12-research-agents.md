@@ -29,7 +29,7 @@ Each role has a bot account, a tool profile and a **field permission set**. Rule
 
 No role may write a status, a review, a register entry or a retirement (rules `S03`, `X04`, `V03`). An agent can give the reasons to retire a node, but only a curator can retire it.
 
-A run writes only in its own work tree, through the `workspace` package. Its tools read and write files by their paths in the tree, and they cannot reach a file outside it. `agent.Permit` checks the changes of the run against the set of its role before the run opens a pull request. The sets of formalize and prove are written. The sets of the other roles come with their roles. Rule `X01` uses the same check on the merge of each agent PR, thus a PR of a role with no written set fails.
+A run writes only in its own work tree, through the `workspace` package. Its tools read and write files by their paths in the tree, and they cannot reach a file outside it. `agent.Permit` checks the changes of the run against the set of its role before the run opens a pull request. The sets of formalize, prove and explain are written. The sets of the other roles come with their roles. Rule `X01` uses the same check on the merge of each agent PR, thus a PR of a role with no written set fails.
 
 ## 12.2 The common loop
 
@@ -135,6 +135,8 @@ Explain writes the explanations that make the graph readable. It writes the four
 - **Levelled.** The level is a contract about prerequisites. An L1 explanation may use only nodes in the curriculum topic for its level (`topics/curricula/`). The check is mechanical: each cited or linked node must be in the allowed set.
 - **Marked.** Explanations are `by: agent` until a person confirms them (rule `P04`). To confirm is to read and approve in `m2 review`. The system records the person who confirms.
 - **Not a proof.** An explanation can describe a proof. It is never a replacement for the proof node.
+
+The first version of explain is in `agent/explain`, with the role in `prompts/explain/`. It writes the explanations of one node, and it does not answer questions yet. The set of the role lets it change only the fields `body.explanations.L1` to `body.explanations.L4` of the target, and only when each heading of the old and the new text is marked agent. It can add a node of kind `example` with no formal binding. The goal finds the levels in the goal of the job, and each one must be written. A field whose provenance log has a line of a person is not changed. Each explanation must cite at least one node, and each cited node must be in the tree. L1 maps to the courses of year 1 in `topics/curricula/`, and L2 to the courses of years 1 and 2. A level with no nodes in the curricula is not checked. The grounding check is one call of the model of the rung with the cited nodes as data and a tool `label`. `agent.Meter` gives the call the money that is left to the run, and adds its spend to the run record. A sentence with no label is unsupported. The unsupported sentences go back to the model with the reasons, and a contradicted sentence fails the run.
 
 ## 12.7 Untrusted text and prompt injection
 

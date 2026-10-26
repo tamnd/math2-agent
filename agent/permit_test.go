@@ -35,6 +35,8 @@ func TestPermit(t *testing.T) {
 	reviewed := strings.Replace(bind, "match: exact\n", "match: exact\n    fidelity_reviews: [r-3C53TD-01]\n", 1)
 	lemma := "---\ntag: ~1a2b3c4d\nkind: statement\nrole: lemma\nname: A lemma\n---\n\n## Statement\n\nA lemma.\n"
 	example := strings.Replace(lemma, "kind: statement", "kind: example", 1)
+	explained := target + "\n## Explanations\n\n### L2 agent\n\nThe order of a [[subgroup|G5S1M9]] is a whole number that divides the order of the group.\n"
+	human := target + "\n## Explanations\n\n### L2 human\n\nThe cosets of a subgroup have the same size.\n"
 	imported := strings.Replace(root, "public import Math2.Meta.Attr\n", "public import Math2.Meta.Attr\npublic import Math2.Algebra.Lagrange\n", 1)
 	for _, tc := range []struct {
 		name, role string
@@ -68,6 +70,22 @@ func TestPermit(t *testing.T) {
 		{"a removed import", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(strings.Replace(root, "public import Math2.Cert.LRAT\n", "", 1))}, "does more than add imports"},
 		{"an import of Mathlib", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(root + "public import Mathlib\n")}, "does more than add imports"},
 		{"a removed last line", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(strings.TrimSuffix(root, "/-! The root module. -/\n"))}, "removes lines"},
+		{"explain explains", "explain", workspace.Change{Path: path, Old: []byte(target), New: []byte(explained)}, ""},
+		{"explain changes its explanation", "explain", workspace.Change{Path: path, Old: []byte(explained), New: []byte(strings.Replace(explained, "a whole number", "an integer", 1))}, ""},
+		{"explain removes its explanation", "explain", workspace.Change{Path: path, Old: []byte(explained), New: []byte(target)}, ""},
+		{"explain adds a second explanation", "explain", workspace.Change{Path: path, Old: []byte(human), New: []byte(human + "\n### L1 agent\n\nA group splits into cosets of the same size.\n")}, ""},
+		{"explain changes a human explanation", "explain", workspace.Change{Path: path, Old: []byte(human), New: []byte(strings.Replace(human, "same size", "equal size", 1))}, "not marked agent"},
+		{"explain marks itself human", "explain", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(explained, "L2 agent", "L2 human", 1))}, "is not marked"},
+		{"explain adds a human heading", "explain", workspace.Change{Path: path, Old: []byte(explained), New: []byte(explained + "\n### L2 human\n\nMore.\n")}, "is not marked"},
+		{"explain changes the statement", "explain", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(explained, "finite group divides", "group divides", 1))}, "the field body.statement"},
+		{"explain changes the front matter", "explain", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(explained, "msc: [20D60]", "msc: [20D99]", 1))}, "the field msc"},
+		{"explain writes text before the explanations", "explain", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(explained, "## Explanations\n", "## Explanations\n\nSome text.\n", 1))}, "the field body.explanations"},
+		{"explain adds an example", "explain", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(example)}, ""},
+		{"explain adds a lemma", "explain", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(lemma)}, "of the kind statement"},
+		{"explain binds an example", "explain", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(strings.Replace(example, "---\n\n", "formal: []\n---\n\n", 1))}, "no formal field"},
+		{"explain explains another node", "explain", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(explained, "3C53TD", "AA0001", 1))}, "not the target"},
+		{"explain writes Lean", "explain", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", New: []byte("module\n")}, "writes no Lean"},
+		{"explain imports", "explain", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(imported)}, "writes no Lean"},
 		{"an option", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(root + "set_option maxHeartbeats 0\n")}, "does more than add imports"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -80,7 +98,7 @@ func TestPermit(t *testing.T) {
 			}
 		})
 	}
-	if err := agent.Permit("explain", "3C53TD", nil); err == nil {
-		t.Error("explain has no permission set yet, and Permit gave no error")
+	if err := agent.Permit("curate", "3C53TD", nil); err == nil {
+		t.Error("curate has no permission set yet, and Permit gave no error")
 	}
 }

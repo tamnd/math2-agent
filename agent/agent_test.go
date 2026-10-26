@@ -279,3 +279,41 @@ func TestRunBudgetBound(t *testing.T) {
 		t.Errorf("the run spends $%.6f of $%.6f in %d turns, and stops with %q", rec.Spend.USD, j.Budget.USD, len(rec.Turns), rec.Reason)
 	}
 }
+
+func TestRunMeter(t *testing.T) {
+	model := llmtest.New(llmtest.Call("lean_check", code("a"), u), llmtest.Call("lean_check", code("done"), u))
+	rn, c := runner(t, model)
+	rn.Meter = &agent.Meter{Model: llmtest.New(llmtest.Say("supported", u), llmtest.Say("supported", u))}
+	rn.Goal = func(ctx context.Context) (bool, string, error) {
+		if _, err := rn.Meter.Complete(ctx, &llm.Request{Model: "claude-haiku-5-5", Messages: []llm.Message{{Role: llm.User, Content: []llm.Block{llm.TextBlock("Label it.")}}}, MaxTokens: 100}); err != nil {
+			return false, "", err
+		}
+		return c.done, "", nil
+	}
+	rec, err := rn.Run(context.Background(), job(), 0, "Prove 7K3QX2.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	one, _ := llm.Cost(llm.Prices, "claude-haiku-5-5", u)
+	if rec.Outcome != agent.Success || len(rec.Turns) != 2 || len(rec.Turns[0].Checks) != 1 || rec.Turns[0].USD != 2*one {
+		t.Fatalf("the run is %s with %d turns, and the first turn has %d checks and costs $%f", rec.Outcome, len(rec.Turns), len(rec.Turns[0].Checks), rec.Turns[0].USD)
+	}
+	if rec.Spend.USD != 4*one || rec.Spend.Tokens["claude-haiku-5-5"] != (llm.Usage{Input: 400, Output: 400}) {
+		t.Errorf("the spend is $%f with the tokens %v", rec.Spend.USD, rec.Spend.Tokens)
+	}
+
+	rn, c = runner(t, &greedy{})
+	rn.Meter = &agent.Meter{Model: &greedy{}}
+	rn.Goal = func(ctx context.Context) (bool, string, error) {
+		_, err := rn.Meter.Complete(ctx, &llm.Request{Model: "claude-haiku-5-5", Messages: []llm.Message{{Role: llm.User, Content: []llm.Block{llm.TextBlock("Label it.")}}}, MaxTokens: 1000})
+		return c.done, "", err
+	}
+	j := job()
+	j.Budget.USD = 0.004
+	if rec, err = rn.Run(context.Background(), j, 0, "Prove 7K3QX2."); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Spend.USD > j.Budget.USD || rec.Outcome != agent.Failure {
+		t.Errorf("the run spends $%.6f of $%.6f, and stops with %q", rec.Spend.USD, j.Budget.USD, rec.Reason)
+	}
+}

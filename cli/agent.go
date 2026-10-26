@@ -10,14 +10,17 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	"go.yaml.in/yaml/v3"
 
 	"github.com/tamnd/math2-agent/agent"
+	"github.com/tamnd/math2-agent/agent/explain"
 	"github.com/tamnd/math2-agent/agent/formalize"
 	"github.com/tamnd/math2-agent/agent/prove"
 	"github.com/tamnd/math2-agent/agent/tools"
@@ -30,13 +33,17 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] formalize|prove"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] explain|formalize|prove"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
+	"explain":   "the node has an L2 explanation marked agent, with each claim grounded in a cited node",
 	"formalize": "the node has a Lean binding that passes the checks of the run",
 	"prove":     "the statement of the node has a Lean proof",
 }
+
+// leanRoles are the roles whose goal builds the Lean library. The other roles need no Lean and no sandbox.
+var leanRoles = []string{"formalize", "prove"}
 
 // newModel makes the client of the model service. The tests replace it with a scripted model.
 var newModel = func() (llm.Model, error) {
@@ -85,12 +92,12 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 		return ExitUsage
 	}
 	if flags.NArg() != 1 {
-		fmt.Fprintln(stderr, "m2 agent run: give one role: formalize or prove")
+		fmt.Fprintf(stderr, "m2 agent run: give one role: %s\n", strings.Join(slices.Sorted(maps.Keys(goals)), ", "))
 		return ExitUsage
 	}
 	role := flags.Arg(0)
 	if _, ok := goals[role]; !ok {
-		fmt.Fprintf(stderr, "m2 agent run: the role %s is not written yet. The roles are formalize and prove.\n", role)
+		fmt.Fprintf(stderr, "m2 agent run: the role %s is not written yet. The roles are %s.\n", role, strings.Join(slices.Sorted(maps.Keys(goals)), ", "))
 		return ExitUsage
 	}
 	fail := func(err error) int {
@@ -140,9 +147,12 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	if err := job.Validate(); err != nil {
 		return fail(err)
 	}
-	b, err := box(*root)
-	if err != nil {
-		return fail(err)
+	var b *tools.Box
+	if slices.Contains(leanRoles, role) {
+		var err error
+		if b, err = box(*root); err != nil {
+			return fail(err)
+		}
 	}
 	r, err := agent.LoadRole(prompts.FS, role)
 	if err != nil {
@@ -227,18 +237,30 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err := linkPackages(rs.root, ws.Dir, rs.box != nil); err != nil {
-		return nil, ws, nil, err
-	}
-	env, err := newLean(ctx, ws.Dir, rs.box)
-	if err != nil {
-		return nil, ws, nil, err
+	var env tools.Lean
+	if slices.Contains(leanRoles, job.Role) {
+		if err := linkPackages(rs.root, ws.Dir, rs.box != nil); err != nil {
+			return nil, ws, nil, err
+		}
+		if env, err = newLean(ctx, ws.Dir, rs.box); err != nil {
+			return nil, ws, nil, err
+		}
 	}
 	var (
 		brief string
 		check agent.Goal
+		meter *agent.Meter
 	)
 	switch job.Role {
+	case "explain":
+		if rung < 0 || rung >= len(r.Ladder) {
+			return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
+		}
+		if brief, err = explain.Brief(ws, job); err != nil {
+			return nil, ws, nil, err
+		}
+		meter = &agent.Meter{Model: rs.model}
+		check = explain.Goal(ws, job, meter, r.Ladder[rung].Model, r.Checks["ground"])
 	case "prove":
 		pin, err := prove.NewPin(ctx, ws, env, job)
 		if err != nil {
@@ -258,7 +280,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 	if err != nil {
 		return nil, ws, nil, err
 	}
-	rn := agent.Runner{Role: r, Model: rs.model, Tools: ts, Goal: check}
+	rn := agent.Runner{Role: r, Model: rs.model, Tools: ts, Goal: check, Meter: meter}
 	rec, runErr := rn.Run(ctx, job, rung, brief)
 	if rec == nil {
 		return nil, ws, nil, runErr

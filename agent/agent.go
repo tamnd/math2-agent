@@ -77,17 +77,18 @@ type Role struct {
 	Stuck     int               `yaml:"stuck"`      // the number of turns with no progress after which the run stops
 	System    string            `yaml:"-"`          // the system prompt: system.md, then the files of style/ in order
 	Examples  []string          `yaml:"-"`          // the worked examples in examples/, in order
+	Checks    map[string]string `yaml:"-"`          // the prompts of the checks in checks/ that the goal runs with a model, by the file name without .md
 	Files     map[string]string `yaml:"-"`          // the hash of each file that LoadRole read, by its path in the role directory
 }
 
 var semverRe = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
 
-// LoadRole reads the role with the name from fsys. The files are name/role.yaml, name/system.md, name/CHANGELOG.md and the files in name/style/ and name/examples/. The role in role.yaml must be the name, and the version must be semver.
+// LoadRole reads the role with the name from fsys. The files are name/role.yaml, name/system.md, name/CHANGELOG.md and the files in name/style/, name/examples/ and name/checks/. The role in role.yaml must be the name, and the version must be semver.
 func LoadRole(fsys fs.FS, name string) (*Role, error) {
 	if !slices.Contains(roles, name) {
 		return nil, fmt.Errorf("agent: %q is not a role of spec 12.1", name)
 	}
-	r := &Role{Files: map[string]string{}}
+	r := &Role{Files: map[string]string{}, Checks: map[string]string{}}
 	read := func(p string) (string, error) {
 		data, err := fs.ReadFile(fsys, path.Join(name, p))
 		if err != nil {
@@ -111,7 +112,7 @@ func LoadRole(fsys fs.FS, name string) (*Role, error) {
 	if _, err := read("CHANGELOG.md"); err != nil {
 		return nil, err
 	}
-	for _, dir := range []string{"style", "examples"} {
+	for _, dir := range []string{"style", "examples", "checks"} {
 		entries, err := fs.ReadDir(fsys, path.Join(name, dir))
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
@@ -126,10 +127,13 @@ func LoadRole(fsys fs.FS, name string) (*Role, error) {
 			if err != nil {
 				return nil, err
 			}
-			if dir == "style" {
+			switch dir {
+			case "style":
 				r.System += "\n\n" + text
-			} else {
+			case "examples":
 				r.Examples = append(r.Examples, text)
+			default:
+				r.Checks[strings.TrimSuffix(e.Name(), ".md")] = text
 			}
 		}
 	}
