@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/queue"
 )
 
 func TestCorpusImport(t *testing.T) {
@@ -39,7 +40,26 @@ func TestCorpusImport(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &s); err != nil || s.Rows != 2 || s.Open != 2 || s.Sources["words"] != 2 {
 		t.Fatalf("the status is %+v, %v", s, err)
 	}
+	code, stdout, _ = run("corpus", "queue", "-root", root, "decide")
+	if code != ExitOK || !strings.Contains(stdout, "decide: 2 items, role curate") {
+		t.Fatalf("m2 corpus queue gave %d, %q", code, stdout)
+	}
+	code, stdout, _ = run("corpus", "plan", "-root", root, "-n", "1", "-json", "decide")
+	var p queue.Plan
+	if err := json.Unmarshal([]byte(stdout), &p); code != ExitOK || err != nil || p.Jobs != 1 || p.ReviewHigh != 1.0/60 {
+		t.Fatalf("m2 corpus plan gave %d, %+v, %v", code, p, err)
+	}
+	if code, _, _ := run("corpus", "queue", "-root", root, "prove"); code != ExitUsage {
+		t.Fatalf("an unknown queue gave %d", code)
+	}
 	if code, _, _ := run("corpus", "nothing"); code != ExitUsage {
 		t.Fatalf("an unknown subcommand gave %d", code)
+	}
+}
+
+func TestCorpusStatusEmpty(t *testing.T) {
+	code, stdout, stderr := run("corpus", "status", "-root", t.TempDir())
+	if code != ExitOK || !strings.Contains(stdout, "open      0") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
 	}
 }
