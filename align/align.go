@@ -154,7 +154,7 @@ func Propose(root, source string, opt Options) (*Result, error) {
 		cur, set := SameAsOf(n)[x.system]
 		var cands []Candidate
 		for _, c := range x.Match(it, opt.K) {
-			t := target(edge, c.Record)
+			t := Target(edge, c.Record)
 			if t == "" || have[t] || t == cur || decided[[3]string{n.ID, x.system, t}] {
 				continue
 			}
@@ -163,7 +163,7 @@ func Propose(root, source string, opt Options) (*Result, error) {
 		if edge == Aligned {
 			for _, c := range cands {
 				if c.Score >= opt.Threshold {
-					propose(n, Aligned, target(edge, c.Record), c)
+					propose(n, Aligned, Target(edge, c.Record), c)
 				}
 			}
 			continue
@@ -211,8 +211,8 @@ func Propose(root, source string, opt Options) (*Result, error) {
 // uriScheme matches the start of a URI, as the record of an aligned edge has in schema node.v1.
 var uriScheme = regexp.MustCompile(`^[a-z][a-z0-9+.-]*://`)
 
-// target returns the target of an edge to the record: the id, or for an aligned edge the URI of the record.
-func target(edge string, r ingest.Record) string {
+// Target returns the target of an edge to the record: the id, or for an aligned edge the URI of the record, which is its locator or its URL. A record with no URI has no aligned edge, and Target returns "".
+func Target(edge string, r ingest.Record) string {
 	if edge != Aligned {
 		return r.ID
 	}

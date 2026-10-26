@@ -46,8 +46,9 @@ var kinds = map[string]string{"statement": "statement", "definition": "concept"}
 // A Record is a record of the record plane and the source that it comes from.
 type Record struct {
 	ingest.Record
-	Ref    string         // the source and the id, for example arxiv_results:2312.00752#3KH2
-	Source *ingest.Source // the entry of the source in the catalogue
+	Ref     string         // the source and the id, for example arxiv_results:2312.00752#3KH2
+	Source  *ingest.Source // the entry of the source in the catalogue
+	Records string         // the hash of the records file of the source
 }
 
 // Licence returns the SPDX id of the licence of the record: its own licence, or the licence of its source.
@@ -58,7 +59,15 @@ type Records struct {
 	Root string
 
 	cat     *ingest.Catalogue
-	sources map[string]map[string]ingest.Record
+	sources map[string]*source
+}
+
+// source is the records of one source.
+type source struct {
+	entry *ingest.Source
+	byID  map[string]ingest.Record
+	ids   []string // in the order of the file
+	hash  string
 }
 
 // IsRecord reports whether the target of a job is a record, in the form source:id.
@@ -69,41 +78,67 @@ func IsRecord(target string) bool {
 
 // Get returns the record with the reference source:id.
 func (rs *Records) Get(ref string) (*Record, error) {
-	source, id, ok := strings.Cut(ref, ":")
-	if !ok || source == "" || id == "" {
+	name, id, ok := strings.Cut(ref, ":")
+	if !ok || name == "" || id == "" {
 		return nil, fmt.Errorf("curate: %q is not a record reference of the form source:id", ref)
 	}
+	src, err := rs.source(name)
+	if err != nil {
+		return nil, err
+	}
+	r, ok := src.byID[id]
+	if !ok {
+		return nil, fmt.Errorf("curate: the records of %s have no record %s", name, id)
+	}
+	return &Record{Record: r, Ref: ref, Source: src.entry, Records: src.hash}, nil
+}
+
+// Locate returns the first record of the source whose locator or URL is the URI, as the target of an aligned edge names its record.
+func (rs *Records) Locate(name, uri string) (*Record, error) {
+	src, err := rs.source(name)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range src.ids {
+		if r := src.byID[id]; r.Locator == uri || r.URL == uri {
+			return &Record{Record: r, Ref: name + ":" + id, Source: src.entry, Records: src.hash}, nil
+		}
+	}
+	return nil, fmt.Errorf("curate: the records of %s have no record with the locator or the URL %s", name, uri)
+}
+
+// source returns the records of the source with the name, and reads them the first time.
+func (rs *Records) source(name string) (*source, error) {
 	if rs.cat == nil {
 		cat, err := ingest.ReadCatalogue(rs.Root)
 		if err != nil {
 			return nil, fmt.Errorf("curate: %w", err)
 		}
-		rs.cat, rs.sources = cat, map[string]map[string]ingest.Record{}
+		rs.cat, rs.sources = cat, map[string]*source{}
 	}
-	src := rs.cat.Source(source)
-	if src == nil {
-		return nil, fmt.Errorf("curate: the catalogue has no source %s", source)
+	if src, ok := rs.sources[name]; ok {
+		return src, nil
 	}
-	byID, ok := rs.sources[source]
-	if !ok {
-		recs, _, err := ingest.ReadRecords(rs.Root, source)
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("curate: the tree has no records of %s. Run m2 ingest first", source)
+	entry := rs.cat.Source(name)
+	if entry == nil {
+		return nil, fmt.Errorf("curate: the catalogue has no source %s", name)
+	}
+	recs, hash, err := ingest.ReadRecords(rs.Root, name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("curate: the tree has no records of %s. Run m2 ingest first", name)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("curate: %w", err)
+	}
+	src := &source{entry: entry, byID: map[string]ingest.Record{}, hash: hash}
+	for _, r := range recs {
+		if _, ok := src.byID[r.ID]; !ok {
+			src.ids = append(src.ids, r.ID)
 		}
-		if err != nil {
-			return nil, fmt.Errorf("curate: %w", err)
-		}
-		byID = map[string]ingest.Record{}
-		for _, r := range recs {
-			byID[r.ID] = r
-		}
-		rs.sources[source] = byID
+		src.byID[r.ID] = r
 	}
-	r, ok := byID[id]
-	if !ok {
-		return nil, fmt.Errorf("curate: the records of %s have no record %s", source, id)
-	}
-	return &Record{Record: r, Ref: ref, Source: src}, nil
+	rs.sources[name] = src
+	return src, nil
 }
 
 // Text returns the record in a data block marked with its reference and its licence: the kind, the title, the locator, the meta and the text. Each of them comes from the source, thus all of them are in the block.

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"path"
 	"reflect"
 	"regexp"
 	"slices"
@@ -19,11 +20,11 @@ import (
 // The Lean directories that no role writes: the attribute and the adapters, the certificate checkers, and the named hypotheses, which are the only place where an axiom can be (spec 20).
 var leanFixed = []string{"lean/Math2/Meta/", "lean/Math2/Cert/", "lean/Math2/Hypotheses/"}
 
-// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of formalize, prove, explain and curate. The sets of the other roles come with their roles.
+// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of formalize, prove, explain, curate and align. The sets of the other roles come with their roles.
 //
-// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
+// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
 func Permit(role, target string, changes []workspace.Change) error {
-	if !slices.Contains([]string{"formalize", "prove", "explain", "curate"}, role) {
+	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align"}, role) {
 		return fmt.Errorf("agent: the field permission set of %s is not written yet", role)
 	}
 	var errs []error
@@ -43,10 +44,12 @@ func permit(role, target string, c workspace.Change) error {
 	switch {
 	case c.New == nil:
 		return errors.New("a role does not delete a file")
-	case (role == "explain" || role == "curate") && strings.HasPrefix(p, "lean/"):
+	case (role == "explain" || role == "curate" || role == "align") && strings.HasPrefix(p, "lean/"):
 		return fmt.Errorf("%s writes no Lean", role)
 	case role == "curate" && p == align.DedupQueue:
 		return permitQueue(c.Old, c.New)
+	case role == "align" && path.Dir(p) == align.QueueDir && path.Ext(p) == ".jsonl":
+		return permitAlignQueue(target, strings.TrimSuffix(path.Base(p), ".jsonl"), c.Old, c.New)
 	case p == "lean/Math2.lean":
 		return imports(c.Old, c.New)
 	case strings.HasPrefix(p, "lean/Math2/") && strings.HasSuffix(p, ".lean"):
@@ -97,6 +100,8 @@ func permitNode(role, target string, c workspace.Change) error {
 		return permitExplain(target, c, n)
 	case "curate":
 		return permitCurate(c, n)
+	case "align":
+		return permitAlign(target, c, n)
 	}
 	formal := entries(n.Meta["formal"])
 	if c.Old == nil {
@@ -268,6 +273,91 @@ func permitQueue(before, after []byte) error {
 			return fmt.Errorf("the proposal %s is not a duplicate proposal of %s and %s", id, p.Node, p.Target)
 		case !strings.HasPrefix(p.By, "m2-agent/curate@"):
 			return fmt.Errorf("the proposal %s is by %q, and curate adds only its own proposals", id, p.By)
+		}
+	}
+	return nil
+}
+
+// aligned are the edges that align proposes.
+var aligned = []string{align.SameAs, align.CloseTo, align.Aligned}
+
+// permitAlignQueue allows a change of the queue file of the system that keeps each proposal of another program, and adds, changes or removes only proposals of the align role from the target.
+func permitAlignQueue(target, system string, before, after []byte) error {
+	old, err := align.ParseQueue(before)
+	if err != nil {
+		return fmt.Errorf("the queue before the change: %w", err)
+	}
+	ps, err := align.ParseQueue(after)
+	if err != nil {
+		return err
+	}
+	mine := func(p align.Proposal) bool { return strings.HasPrefix(p.By, "m2-agent/align@") }
+	have := map[string]align.Proposal{}
+	for _, p := range ps {
+		have[p.ID] = p
+	}
+	for _, p := range old {
+		q, ok := have[p.ID]
+		if ok && reflect.DeepEqual(p, q) {
+			delete(have, p.ID)
+			continue
+		}
+		switch {
+		case !mine(p):
+			return fmt.Errorf("align changes only its own proposals, and the change changes or removes the proposal %s by %q", p.ID, p.By)
+		case p.Node != target:
+			return fmt.Errorf("the proposal %s is from %s, and align changes only the proposals from the target %s", p.ID, p.Node, target)
+		}
+	}
+	for _, id := range slices.Sorted(maps.Keys(have)) {
+		p := have[id]
+		want := align.NewProposal(p.Node, p.Edge, p.System, p.Target)
+		switch {
+		case !mine(p):
+			return fmt.Errorf("the proposal %s is by %q, and align adds only its own proposals", id, p.By)
+		case p.Node != target:
+			return fmt.Errorf("the proposal %s is from %s, and align proposes edges only from the target %s", id, p.Node, target)
+		case !slices.Contains(aligned, p.Edge):
+			return fmt.Errorf("the proposal %s has the edge %q, and align proposes only %s", id, p.Edge, strings.Join(aligned, ", "))
+		case p.System != system:
+			return fmt.Errorf("the proposal %s is to the system %q, and the queue file is of %s", id, p.System, system)
+		case p.Target == "" || p.ID != want.ID:
+			return fmt.Errorf("the proposal %s has the wrong id or no target", id)
+		}
+	}
+	return nil
+}
+
+// permitAlign allows a change of the target that only appends Mathlib bindings with no fidelity reviews to its formal field. The goal of align checks that the type hash of each one is the type hash of a Math2 binding of the node.
+func permitAlign(target string, c workspace.Change, n *node.Node) error {
+	if c.Old == nil {
+		return errors.New("align does not add nodes")
+	}
+	o, err := node.Parse(c.Path, c.Old)
+	if err != nil {
+		return err
+	}
+	if o.ID != target {
+		return fmt.Errorf("the node %s is not the target %s", o.ID, target)
+	}
+	if o.Body != n.Body {
+		return errors.New("align does not change the body")
+	}
+	for _, k := range slices.Sorted(maps.Keys(union(o.Meta, n.Meta))) {
+		if k != "formal" && !reflect.DeepEqual(o.Meta[k], n.Meta[k]) {
+			return fmt.Errorf("align writes its edges into the queue and does not change the field %s", k)
+		}
+	}
+	old, formal := entries(o.Meta["formal"]), entries(n.Meta["formal"])
+	if len(formal) < len(old) || !reflect.DeepEqual(old, formal[:len(old)]) {
+		return errors.New("align appends Mathlib bindings and does not change the bindings that are there")
+	}
+	for _, f := range formal[len(old):] {
+		if f["system"] != "lean4" || f["library"] != "mathlib" {
+			return errors.New("align appends only Lean bindings to the library mathlib")
+		}
+		if f["fidelity_reviews"] != nil {
+			return errors.New("a new binding has no fidelity reviews")
 		}
 	}
 	return nil

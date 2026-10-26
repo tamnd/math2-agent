@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -20,12 +21,14 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/tamnd/math2-agent/agent"
+	"github.com/tamnd/math2-agent/agent/align"
 	"github.com/tamnd/math2-agent/agent/curate"
 	"github.com/tamnd/math2-agent/agent/explain"
 	"github.com/tamnd/math2-agent/agent/formalize"
 	"github.com/tamnd/math2-agent/agent/prove"
 	"github.com/tamnd/math2-agent/agent/tools"
 	"github.com/tamnd/math2-agent/api"
+	"github.com/tamnd/math2-agent/build"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/claude"
@@ -34,10 +37,11 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] curate|explain|formalize|prove"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] align|curate|explain|formalize|prove"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
+	"align":     "the node has a proposal of each crosswalk edge that the records give, or a Mathlib binding with the type hash of its Math2 binding",
 	"curate":    "the record has a node in the words of math2 that states the same result, or the node has the right uses, about and msc",
 	"explain":   "the node has an L2 explanation marked agent, with each claim grounded in a cited node",
 	"formalize": "the node has a Lean binding that passes the checks of the run",
@@ -182,7 +186,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	if *work == "" {
 		*work = filepath.Join(os.TempDir(), "m2-agent", job.ID)
 	}
-	rs := &runSetup{root: *root, store: *store, svc: svc, model: model, roles: map[string]*agent.Role{role: r}, box: b}
+	rs := &runSetup{root: *root, out: *out, store: *store, svc: svc, model: model, roles: map[string]*agent.Role{role: r}, box: b}
 	rec, ws, changes, err := rs.run(context.Background(), job, *rung, *work)
 	if ws != nil {
 		defer func() { _ = ws.Close() }()
@@ -218,6 +222,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 // runSetup is what the runs of m2 agent run and m2 orchestrate share.
 type runSetup struct {
 	root   string // the math2 working tree
+	out    string // the output directory of m2 build. Empty means build/ in the tree.
 	store  string // the directory of the run records
 	svc    *api.Service
 	model  llm.Model
@@ -254,10 +259,23 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		meter *agent.Meter
 		extra []agent.Tool
 	)
-	if (job.Role == "explain" || job.Role == "curate") && (rung < 0 || rung >= len(r.Ladder)) {
+	if slices.Contains([]string{"align", "curate", "explain"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
 		return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
 	}
 	switch job.Role {
+	case "align":
+		records := &curate.Records{Root: rs.root}
+		if brief, err = align.Brief(ws, job); err != nil {
+			return nil, ws, nil, err
+		}
+		// A tree with no build has no status, and the goal refuses each Mathlib binding.
+		st, err := build.ReadStatus(cmp.Or(rs.out, filepath.Join(rs.root, "build")))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return nil, ws, nil, err
+		}
+		meter = &agent.Meter{Model: rs.model}
+		check = align.Goal(ws, job, records, st, meter, r.Ladder[rung].Model, r.Checks["judge"])
+		extra = []agent.Tool{curate.Read(records), align.Propose(ws, records, "m2-agent/align@"+r.Version)}
 	case "curate":
 		// The records are in build/records of the tree, which git does not track, thus they are not in the work tree.
 		records := &curate.Records{Root: rs.root}

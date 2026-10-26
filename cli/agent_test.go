@@ -248,3 +248,44 @@ func TestAgentRunCurate(t *testing.T) {
 		t.Errorf("the output is\n%s", stdout)
 	}
 }
+
+func TestAgentRunAlign(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
+	root, out := agentTree(t)
+	rec, err := json.Marshal(ingest.Record{ID: "Q7", Kind: "item", Title: "reflexivity", URL: "https://www.wikidata.org/wiki/Q7", Text: "The statement that each natural number is equal to itself."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, text := range map[string]string{
+		ingest.CatalogueFile:           "sources:\n  - id: wikidata\n    name: Wikidata\n    licence: CC0-1.0\n    class: open\n",
+		"build/records/wikidata.jsonl": string(rec) + "\n",
+	} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	u := llm.Usage{Input: 1000, Output: 200}
+	oldModel, oldLean := newModel, newLean
+	newModel = func() (llm.Model, error) {
+		return llmtest.New(
+			llmtest.Call("propose_edge", map[string]string{"edge": "same_as", "ref": "wikidata:Q7", "why": "the item is the statement."}, u),
+			llmtest.Call("judge", map[string]string{"verdict": "same", "why": "n is the number."}, u),
+		), nil
+	}
+	newLean = func(context.Context, string, *tools.Box) (tools.Lean, error) {
+		return nil, errors.New("align needs no Lean")
+	}
+	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
+
+	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", t.TempDir(), "-work", filepath.Join(t.TempDir(), "w"), "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "align")
+	if code != ExitOK {
+		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/align@0.1.0, 1 turns") || !strings.Contains(stdout, "queues/align/wikidata.jsonl") {
+		t.Errorf("the output is\n%s", stdout)
+	}
+}
