@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/tamnd/math2/blob/main/schema/node.v1.json",
   "title": "math2 node, schema v1",
-  "description": "The front matter of a node file in nodes/. Spec 04.5 gives the form. Each kind has its own fields. The x-m2-sections keyword gives the body sections of each kind, in order. The x-m2-edges keyword lists the 23 edge types. The x-m2-order keyword gives the order of the top-level keys in the canonical form. Nested keys use the order of their properties in this file.",
+  "description": "The front matter of a node file in nodes/. Spec 04.5 gives the form. Each kind has its own fields. The x-m2-sections keyword gives the body sections of each kind, in order. The x-m2-edges keyword lists the 25 edge types: the 23 of spec 05.2 and the two of corpus K8.9. The x-m2-order keyword gives the order of the top-level keys in the canonical form. Nested keys use the order of their properties in this file.",
   "type": "object",
   "required": [
     "tag",
@@ -55,6 +55,18 @@
       },
       "uniqueItems": true
     },
+    "audience": {
+      "description": "The lowest curriculum level at which the node is taught (corpus K8.3). The packer and the explanation levels use it.",
+      "enum": [
+        "school",
+        "ug1",
+        "ug2",
+        "ug3",
+        "ug4",
+        "grad",
+        "research"
+      ]
+    },
     "uses": {
       "description": "The nodes that this node depends on. This is the uses edge.",
       "type": "array",
@@ -103,6 +115,23 @@
         "$ref": "#/$defs/ref"
       },
       "uniqueItems": true
+    },
+    "inventory": {
+      "description": "The ids of the inventory rows that this node accounts for (corpus K8.3 and K04).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/row"
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "conventions": {
+      "description": "The conventions that change the meaning of this node, each with the option that the node uses (corpus K10.5). The register of conventions is notation/conventions.yaml.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/convention"
+      },
+      "minItems": 1
     }
   },
   "x-m2-order": [
@@ -113,11 +142,16 @@
     "aliases",
     "msc",
     "topics",
+    "audience",
     "about",
     "defines",
     "proves",
     "instance_of",
+    "not_instance_of",
+    "illustrates",
     "specializes",
+    "conventions",
+    "notation",
     "claim",
     "engine",
     "output",
@@ -138,6 +172,7 @@
     "same_as",
     "close_to",
     "aligned",
+    "inventory",
     "history",
     "retired"
   ],
@@ -176,6 +211,14 @@
               "$ref": "#/$defs/ref"
             },
             "uniqueItems": true
+          },
+          "notation": {
+            "description": "The symbols that this node introduces (corpus K8.3). Rule N07 checks that the notation register has each one.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/symbol"
+            },
+            "minItems": 1
           }
         },
         "x-m2-sections": {
@@ -184,6 +227,8 @@
           ],
           "allowed": [
             "Summary",
+            "Motivation",
+            "Notation",
             "Remarks",
             "Explanations"
           ]
@@ -219,6 +264,14 @@
             "items": {
               "$ref": "#/$defs/via_edge"
             }
+          },
+          "notation": {
+            "description": "The symbols that this node introduces (corpus K8.3). Rule N07 checks that the notation register has each one.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/symbol"
+            },
+            "minItems": 1
           }
         },
         "x-m2-sections": {
@@ -227,6 +280,7 @@
           ],
           "allowed": [
             "Definition",
+            "Notation",
             "Remarks",
             "Explanations"
           ]
@@ -504,6 +558,21 @@
             "items": {
               "$ref": "#/$defs/formal"
             }
+          },
+          "not_instance_of": {
+            "description": "The concepts and definitions that this example is not an instance of. This is the not_instance_of edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/not_instance_edge"
+            }
+          },
+          "illustrates": {
+            "description": "The statements that this example shows at work. This is the illustrates edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
           }
         },
         "x-m2-sections": {
@@ -627,7 +696,8 @@
           "required": [],
           "allowed": [
             "Proof",
-            "Idea"
+            "Idea",
+            "Variants"
           ]
         },
         "required": [
@@ -847,6 +917,20 @@
       "from": "example or object",
       "to": "concept",
       "field": "instance_of"
+    },
+    {
+      "name": "not_instance_of",
+      "group": "conceptual",
+      "from": "example",
+      "to": "concept or definition",
+      "field": "not_instance_of"
+    },
+    {
+      "name": "illustrates",
+      "group": "conceptual",
+      "from": "example",
+      "to": "statement",
+      "field": "illustrates"
     },
     {
       "name": "about",
@@ -1616,6 +1700,82 @@
             "$ref": "#/$defs/ref"
           },
           "uniqueItems": true
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "row": {
+      "description": "The id of an inventory row: 9 characters of Crockford base32 and a check character. Rule T09 checks the check character.",
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{10}$"
+    },
+    "convention": {
+      "description": "A convention and the option of it that the node uses, for example ring: unital.",
+      "type": "object",
+      "required": [
+        "convention",
+        "option"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "convention": {
+          "description": "The id of the convention in notation/conventions.yaml.",
+          "$ref": "#/$defs/slug"
+        },
+        "option": {
+          "description": "The option that this node uses.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "symbol": {
+      "description": "A symbol that the node introduces: its macro and its meaning (corpus K8.3 and K10.4).",
+      "type": "object",
+      "required": [
+        "macro",
+        "meaning"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "macro": {
+          "description": "The macro that a body uses for the symbol, for example \\\\totient.",
+          "type": "string",
+          "pattern": "^\\\\[A-Za-z]+$"
+        },
+        "meaning": {
+          "description": "What the symbol denotes, in one line.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
+    },
+    "not_instance_edge": {
+      "description": "A non-example: the target is a concept or a definition, and fails gives the numbers of the clauses of the definition that the example does not satisfy (corpus K8.4a).",
+      "type": "object",
+      "required": [
+        "target"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/ref"
+        },
+        "fails": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
         },
         "note": {
           "type": "string"

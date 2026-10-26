@@ -149,8 +149,8 @@ retired: {date: 2026-01-01, reason: merged, successor: [1Q0000]}`,
 			t.Errorf("edge type %s has no family", typ)
 		}
 	}
-	if len(Types()) != 23 {
-		t.Errorf("%d edge types, want 23", len(Types()))
+	if len(Types()) != 25 {
+		t.Errorf("%d edge types, want 25", len(Types()))
 	}
 }
 

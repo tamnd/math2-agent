@@ -1,6 +1,6 @@
 // Package graph derives the knowledge graph from node files (spec 05).
 //
-// The graph is never edited. Build reads the edges from the front matter of the nodes, for each of the 23 edge types of spec 05.2. The edges from the formal plane and from the record plane come in later milestones. The same nodes give the same graph and the same Hash, also on a second machine.
+// The graph is never edited. Build reads the edges from the front matter of the nodes, for each of the 25 edge types of spec 05.2 and corpus K8.9. The edges from the formal plane and from the record plane come in later milestones. The same nodes give the same graph and the same Hash, also on a second machine.
 //
 // A Graph answers the questions of the build. Closure gives the best alternative of the dependencies of a node, as an AND-OR graph: a statement needs one of its proofs, and a node needs all of its uses (spec 05.5). Cycles gives the dependency cycles that rule G03 does not allow. CSR gives the adjacency in compressed sparse row form, and WriteParquet writes the build format of spec 05.7.
 package graph
@@ -25,7 +25,7 @@ const (
 	Record     = "record"     // the edges that carry provenance and identity
 )
 
-// The 23 edge types of spec 05.2.
+// The 25 edge types: the 23 of spec 05.2, and not_instance_of and illustrates of corpus K8.9.
 const (
 	Proves      = "proves"
 	Uses        = "uses"
@@ -37,6 +37,8 @@ const (
 	Bounds      = "bounds"
 	Defines     = "defines"
 	InstanceOf  = "instance_of"
+	NotInstance = "not_instance_of"
+	Illustrates = "illustrates"
 	About       = "about"
 	Specializes = "specializes"
 	Method      = "method"
@@ -54,13 +56,13 @@ const (
 
 var families = map[string]string{
 	Proves: Logical, Uses: Logical, Implies: Logical, Equivalent: Logical, Refutes: Logical, Resolves: Logical, Generalizes: Logical, Bounds: Logical,
-	Defines: Conceptual, InstanceOf: Conceptual, About: Conceptual, Specializes: Conceptual, Method: Conceptual, AnalogousTo: Conceptual, PartOf: Conceptual,
+	Defines: Conceptual, InstanceOf: Conceptual, NotInstance: Conceptual, Illustrates: Conceptual, About: Conceptual, Specializes: Conceptual, Method: Conceptual, AnalogousTo: Conceptual, PartOf: Conceptual,
 	Formalizes: Record, Source: Record, Aligned: Record, SameAs: Record, CloseTo: Record, Cites: Record, ResolvedBy: Record, Successor: Record,
 }
 
-// Types returns the 23 edge types in the order of spec 05.2.
+// Types returns the 25 edge types in the order of the schema. The two edges of corpus K8.9 come after instance_of.
 func Types() []string {
-	return []string{Proves, Uses, Implies, Equivalent, Refutes, Resolves, Generalizes, Bounds, Defines, InstanceOf, About, Specializes, Method, AnalogousTo, PartOf, Formalizes, Source, Aligned, SameAs, CloseTo, Cites, ResolvedBy, Successor}
+	return []string{Proves, Uses, Implies, Equivalent, Refutes, Resolves, Generalizes, Bounds, Defines, InstanceOf, NotInstance, Illustrates, About, Specializes, Method, AnalogousTo, PartOf, Formalizes, Source, Aligned, SameAs, CloseTo, Cites, ResolvedBy, Successor}
 }
 
 // Family returns the family of the edge type t, or "" when t is not an edge type.

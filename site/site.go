@@ -74,6 +74,8 @@ var refFields = []struct{ Key, Label, Back string }{
 	{"proves", "Proves", "Proofs"},
 	{"defines", "Defines", "Definitions"},
 	{"instance_of", "Instance of", "Instances"},
+	{"not_instance_of", "Not an instance of", "Non-examples"},
+	{"illustrates", "Illustrates", "Examples"},
 	{"specializes", "Specializes", "Special cases"},
 	{"about", "About", "Results about this"},
 	{"topics", "Part of", "Nodes in this topic"},
