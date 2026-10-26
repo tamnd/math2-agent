@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"path/filepath"
 	"regexp"
 	"slices"
 
@@ -9,7 +10,7 @@ import (
 
 var commitRE = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
 
-// t05 checks that the registers agree with the node files (rule T05). Each record of registers/tags.reg has a tag, a commit and a kind, and the records are sorted with no tag two times. Each tagged node file has a record with its kind. Each record has a node file or a record in registers/retired.reg. Each retired node and each record of registers/retired.reg has a record in registers/tags.reg, and each retired node has a record in registers/retired.reg.
+// t05 checks that the registers agree with the node files (rule T05). Each record of registers/tags.reg has a tag, a commit and a kind, and the records are sorted with no tag two times. Each tagged node file has a record with its kind. Each record has a node file or a record in registers/retired.reg. Each retired node and each record of registers/retired.reg has a record in registers/tags.reg, and each retired node has a record in registers/retired.reg. Each alias names one node: the assignments of registers/aliases.reg that are in effect and the aliases fields of the nodes give no alias two tags.
 func t05(a *auditor) outcome {
 	var o outcome
 	const tags, retired = "registers/tags.reg", "registers/retired.reg"
@@ -91,5 +92,40 @@ func t05(a *auditor) outcome {
 			o.add(tags, r.line, 1, "the tag %s has no node file and no record in %s", t, retired)
 		}
 	}
+	t05Aliases(a, &o)
 	return o
+}
+
+// t05Aliases checks that each alias names one node. The first place that gives an alias owns it, and the register comes before the nodes, which are in tag order.
+func t05Aliases(a *auditor, o *outcome) {
+	const reg = "registers/aliases.reg"
+	aliases, err := tag.ReadAliases(filepath.Join(a.root, "registers", "aliases.reg"))
+	if err != nil {
+		o.add(reg, 0, 0, "%v", err)
+		return
+	}
+	owner := map[string]string{} // alias to tag
+	where := map[string]string{} // alias to the place that gives it
+	for _, al := range aliases {
+		if al.Until == tag.Current {
+			owner[al.Name], where[al.Name] = al.Tag, reg
+		}
+	}
+	for _, n := range a.nodes {
+		for _, alias := range n.List("aliases") {
+			if !tag.IsAlias(alias) {
+				continue
+			}
+			o.checked++
+			old, ok := owner[alias]
+			if !ok {
+				owner[alias], where[alias] = n.ID, n.Path
+				continue
+			}
+			if old != n.ID {
+				line, col := keyPos(n, "aliases")
+				o.add(n.Path, line, col, "the alias %s names %s in %s, and an alias names one node", alias, old, where[alias])
+			}
+		}
+	}
 }
