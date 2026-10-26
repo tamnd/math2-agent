@@ -43,6 +43,7 @@ func TestPermit(t *testing.T) {
 	human := target + "\n## Explanations\n\n### L2 human\n\nThe cosets of a subgroup have the same size.\n"
 	conjecture := "---\ntag: ~1a2b3c4d\nkind: conjecture\nname: A pattern\n---\n\n## Statement\n\nA pattern.\n"
 	computation := "---\ntag: ~1a2b3c4d\nkind: computation\nname: A search\nclaim: x\nengine: {image: m2-python@sha256:00, entry: compute/~/~1a2b3c4d/main.py}\n---\n\n## Description\n\nA search.\n"
+	proof := "---\ntag: ~1a2b3c4d\nkind: proof\nname: Proof of Lagrange's theorem\nproves: 3C53TD\n---\n\n## Proof\n\n1. The cosets of $H$ partition $G$.\n"
 	concept := "---\ntag: ~1a2b3c4d\nkind: concept\nname: Coset\n---\n\n## Summary\n\nA coset of a subgroup.\n"
 	queue := `{"id":"aaaaaaaaaaaa","node":"3C53TD","edge":"duplicate","system":"math2","target":"G5S1M9","source":"oeis","score":0.9,"centrality":3,"proposed":"2026-10-01","by":"m2/0.2.0 align","records":"-"}` + "\n"
 	same := func(a, b, by string) string {
@@ -211,6 +212,23 @@ func TestPermit(t *testing.T) {
 		{"enumerate adds a field", "enumerate", workspace.Change{Path: mentions, New: []byte(strings.Replace(first, `"by"`, `"score":1,"by"`, 1))}, "unknown field"},
 		{"enumerate adds a node", "enumerate", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(lemma)}, "only the mentions of a model list"},
 		{"enumerate writes Lean", "enumerate", workspace.Change{Path: "lean/Math2/A.lean", New: []byte("a")}, "only the mentions of a model list"},
+		{"write adds a section", "write", workspace.Change{Path: path, Old: []byte(target), New: []byte(target + "\n## Remarks\n\nThe converse is false.\n")}, ""},
+		{"write changes the statement", "write", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "finite group", "finite group $G$", 1))}, ""},
+		{"write adds a use", "write", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "msc: [20D60]", "msc: [20D60]\nuses: [G5S1M9]", 1))}, ""},
+		{"write removes a use", "write", workspace.Change{Path: path, Old: []byte(strings.Replace(target, "msc: [20D60]", "msc: [20D60]\nuses: [G5S1M9]", 1)), New: []byte(target)}, "removes G5S1M9"},
+		{"write changes the name", "write", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "name: Lagrange's", "name: The", 1))}, "the field name"},
+		{"write rebinds", "write", workspace.Change{Path: path, Old: []byte(target), New: []byte(rebind)}, "the field formal"},
+		{"write explains", "write", workspace.Change{Path: path, Old: []byte(target), New: []byte(explained)}, "writes no explanations"},
+		{"write adds an example", "write", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(strings.Replace(example, "---\n\n", "illustrates: [3C53TD]\n---\n\n", 1))}, ""},
+		{"write adds a non-example", "write", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(strings.Replace(example, "---\n\n", "not_instance_of:\n  - target: 3C53TD\n---\n\n", 1))}, ""},
+		{"write adds an example of another node", "write", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(strings.Replace(example, "---\n\n", "instance_of: [G5S1M9]\n---\n\n", 1))}, "illustration of the target 3C53TD"},
+		{"write adds a proof", "write", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(proof)}, ""},
+		{"write proves another node", "write", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(strings.Replace(proof, "proves: 3C53TD", "proves: G5S1M9", 1))}, "proves the target"},
+		{"write binds a proof", "write", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(strings.Replace(proof, "---\n\n", "formal: []\n---\n\n", 1))}, "no formal field"},
+		{"write explains a proof", "write", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(proof + "\n## Explanations\n\n### L2 agent\n\nA text.\n")}, "writes no explanations"},
+		{"write adds a lemma", "write", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(lemma)}, "of the kind statement"},
+		{"write writes another node", "write", workspace.Change{Path: "nodes/AA0/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(target, "3C53TD", "AA0001", 1) + "\nMore.\n")}, "not the target"},
+		{"write writes Lean", "write", workspace.Change{Path: "lean/Math2/A.lean", New: []byte("a")}, "writes no Lean"},
 		{"an option", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(root + "set_option maxHeartbeats 0\n")}, "does more than add imports"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

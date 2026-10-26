@@ -31,8 +31,10 @@ import (
 	"github.com/tamnd/math2-agent/agent/prove"
 	"github.com/tamnd/math2-agent/agent/reviewassist"
 	"github.com/tamnd/math2-agent/agent/tools"
+	"github.com/tamnd/math2-agent/agent/write"
 	"github.com/tamnd/math2-agent/api"
 	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/card"
 	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/inventory"
@@ -49,7 +51,7 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|enumerate|explain|explore|formalize|prove|review-assist"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|enumerate|explain|explore|formalize|prove|review-assist|write"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
@@ -61,6 +63,7 @@ var goals = map[string]string{
 	"explore":       "a conjecture or a counterexample about the node, checked by a computation that verifies, with its novelty check",
 	"formalize":     "the node has a Lean binding that passes the checks of the run",
 	"prove":         "the statement of the node has a Lean proof",
+	"write":         "the node has each section, example and proof that its card asks for at the next writing level, in the house style",
 	"review-assist": "the node has a review packet in reports/review with the packet of the last build and the concerns of the critic",
 }
 
@@ -385,6 +388,16 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		}
 		meter = &agent.Meter{Model: rs.model}
 		check = explain.Goal(ws, job, meter, r.Ladder[rung].Model, r.Checks["ground"])
+	case "write":
+		cards, err := card.Load(ws.Dir)
+		if err != nil {
+			return nil, ws, nil, err
+		}
+		if brief, err = write.Brief(ws, job, cards); err != nil {
+			return nil, ws, nil, err
+		}
+		// The tree has no reference corpus yet, thus the copy check runs in CI and not in the loop.
+		check = write.Goal(ws, job, cards, nil)
 	case "prove":
 		pin, err := prove.NewPin(ctx, ws, env, job)
 		if err != nil {

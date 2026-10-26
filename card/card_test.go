@@ -153,3 +153,28 @@ func TestLoad(t *testing.T) {
 		t.Errorf("got %v, %v", items, ok)
 	}
 }
+
+func TestCount(t *testing.T) {
+	concept := parse(t, "G5S1M9", "---\ntag: G5S1M9\nkind: concept\nname: Group\n"+src+"---\n\n## Summary\n\nA group.\n")
+	ex := parse(t, "2E5X1A", "---\ntag: 2E5X1A\nkind: example\nname: The integers\ninstance_of: [G5S1M9]\n"+src+"---\n\n## Example\n\n$\\mathbb{Z}$ under addition.\n")
+	env := Env{Graph: graph.Build([]*node.Node{concept, ex})}
+	for _, tc := range []struct {
+		it         Item
+		have, want int
+	}{
+		{Item{Section: "Summary", Level: "R"}, 1, 1},
+		{Item{Section: "Motivation", Level: "W3"}, 0, 1},
+		{Item{Edge: []string{graph.InstanceOf}, Dir: "in", Min: 2, Level: "W2"}, 1, 2},
+		{Item{Edge: []string{graph.Equivalent}, Dir: "in", When: Definitions, Level: "W2"}, 0, 0},
+	} {
+		if have, want := Count(concept, env, tc.it); have != tc.have || want != tc.want {
+			t.Errorf("Count(%s) = %d, %d, want %d, %d", tc.it, have, want, tc.have, tc.want)
+		}
+	}
+	if l, ok := (Item{Level: "W2"}).Needs(); !ok || l != W2 {
+		t.Errorf("the level W2 needs %s, %v", l, ok)
+	}
+	if _, ok := (Item{Level: "o"}).Needs(); ok {
+		t.Error("an optional item needs a level")
+	}
+}

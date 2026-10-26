@@ -238,6 +238,22 @@ type Env struct {
 	Confirmed func(tag string) bool // reports whether a person confirmed each agent-written section of the node (rule P04)
 }
 
+// Needs returns the writing level that needs the item, W1 to W3, and false for an optional item.
+func (it Item) Needs() (Level, bool) {
+	l, ok := levelNames[it.Level]
+	return l, ok
+}
+
+// Count gives the count of the item that the node n has, and the count that the item needs. An item whose condition does not hold needs 0.
+func Count(n *node.Node, env Env, it Item) (have, want int) {
+	a := assessor{n: n, env: env, sections: check.Sections(n)}
+	have, want = a.count(it)
+	if !a.holds(it.When) {
+		want = 0
+	}
+	return have, want
+}
+
 // Need is one entry of a work list.
 type Need struct {
 	What string `json:"what"`           // the item, for example "section Summary"
