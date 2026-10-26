@@ -6,3 +6,4 @@ coverage.out
 /lean/.lake/
 /replay/testdata/fixture/.lake/
 /.github/lighthouse/node_modules/
+/bench/fidelity/lean/.lake/

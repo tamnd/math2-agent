@@ -1,0 +1,58 @@
+# id	label	origin	checked_by	statement
+# The items of the fidelity suite (spec 17.3.1). The formal statement of each item is the theorem Suite.ID in lean/Suite.lean. The label is faithful, or the class of the fault of the formal statement (spec 10.5). The origin synthetic means that the item was written for this suite. A person who checks the label of an item puts their reviewer id in checked_by.
+f01	faithful	synthetic	-	Addition of natural numbers is commutative: a + b = b + a.
+f02	faithful	synthetic	-	For natural numbers a and b with a ≤ b, there is a natural number c with a + c = b.
+f03	faithful	synthetic	-	Each natural number leaves the remainder 0 or 1 when you divide it by 2.
+f04	faithful	synthetic	-	No natural number is the largest: for each n there is an m with n < m.
+f05	faithful	synthetic	-	For natural numbers a and b with b ≤ a, (a − b) + b = a.
+f06	faithful	synthetic	-	For natural numbers a and b with b nonzero, the quotient a / b times b is at most a.
+f07	faithful	synthetic	-	The length of the concatenation of two lists is the sum of their lengths.
+f08	faithful	synthetic	-	When you reverse a list two times, you get the list again.
+f09	faithful	synthetic	-	For integers a and b, the absolute value of a·b is the product of the absolute values.
+f10	faithful	synthetic	-	For each integer a, a − a = 0.
+f11	faithful	synthetic	-	Multiplication of natural numbers distributes over addition: a(b + c) = ab + ac.
+f12	faithful	synthetic	-	Each natural number n with n ≥ 1 is m + 1 for some natural number m.
+f13	faithful	synthetic	-	For integers a and b with a ≤ b, −b ≤ −a.
+f14	faithful	synthetic	-	When you apply a function to each element of a list, the length does not change.
+h01	M-hyp-missing	synthetic	-	For natural numbers a and b with b ≤ a, (a − b) + b = a.
+h02	M-hyp-missing	synthetic	-	For each natural number n with n ≥ 1, (n − 1) + 1 = n.
+h03	M-hyp-missing	synthetic	-	A list that is not empty has a first element.
+h04	M-hyp-missing	synthetic	-	For natural numbers a and b with a ≤ b and b ≤ a, a = b.
+h05	M-hyp-missing	synthetic	-	For natural numbers a and b with b nonzero, the remainder of a divided by b is less than b.
+h06	M-hyp-missing	synthetic	-	For each nonzero integer a, a / a = 1.
+e01	M-hyp-extra	synthetic	-	Addition of natural numbers is commutative: a + b = b + a.
+e02	M-hyp-extra	synthetic	-	When you reverse a list two times, you get the list again.
+e03	M-hyp-extra	synthetic	-	For each integer a, a − a = 0.
+e04	M-hyp-extra	synthetic	-	The length of the concatenation of two lists is the sum of their lengths.
+e05	M-hyp-extra	synthetic	-	Multiplication of natural numbers distributes over addition: a(b + c) = ab + ac.
+q01	M-quant	synthetic	-	No natural number is the largest: for each n there is an m with n < m.
+q02	M-quant	synthetic	-	For natural numbers a and b with a ≤ b, there is a natural number c with a + c = b.
+q03	M-quant	synthetic	-	Each natural number n has a successor: there is an m with m = n + 1.
+q04	M-quant	synthetic	-	Some natural number is at most each natural number.
+v01	M-vacuous	synthetic	-	Each positive natural number n satisfies 1 ≤ n.
+v02	M-vacuous	synthetic	-	For natural numbers a and b with a < b, a + 1 ≤ b.
+v03	M-vacuous	synthetic	-	When a natural number n is even, n + 1 is odd.
+v04	M-vacuous	synthetic	-	A list that is not empty has a positive length.
+v05	M-vacuous	synthetic	-	The square of a nonzero integer is positive.
+j01	M-junk	synthetic	-	For each natural number n ≥ 2, the fraction 1/n lies strictly between 0 and 1.
+j02	M-junk	synthetic	-	For natural numbers a and b with a < b, the difference a − b is a negative number.
+j03	M-junk	synthetic	-	For each natural number n ≥ 1, the fraction (n − 1)/n is less than 1.
+d01	M-def	synthetic	-	The larger of two natural numbers a and b is at least a.
+d02	M-def	synthetic	-	The last element of the list 1, 2, 3 is 3.
+d03	M-def	synthetic	-	Integer division rounds toward zero, thus −7 divided by 2 is −3.
+t01	M-type	synthetic	-	For integers a and b, (a − b) + b = a.
+t02	M-type	synthetic	-	For each integer a, a + (0 − a) = 0.
+t03	M-type	synthetic	-	The sum 1 + 2 + … + n is n(n + 1)/2.
+t04	M-type	synthetic	-	The square of each integer is at least 0.
+c01	M-conv	synthetic	-	Each natural number, where the natural numbers start at 1, is at least 1.
+c02	M-conv	synthetic	-	For natural numbers a and b, a ≤ a + b.
+c03	M-conv	synthetic	-	The n-th odd number, where n starts at 1, is 2n − 1, and it is odd.
+w01	M-weak	synthetic	-	Addition of natural numbers is commutative: a + b = b + a.
+w02	M-weak	synthetic	-	When you reverse a list two times, you get the list again.
+w03	M-weak	synthetic	-	Multiplication of natural numbers distributes over addition: a(b + c) = ab + ac.
+w04	M-weak	synthetic	-	For natural numbers a and b with a ≤ b, there is a natural number c with a + c = b.
+s01	M-strong	synthetic	-	For each natural number n ≥ 5, n² < 2ⁿ.
+s02	M-strong	synthetic	-	For each natural number n, n ≤ n².
+s03	M-strong	synthetic	-	Some natural number is greater than 5.
+s04	M-strong	synthetic	-	For natural numbers a and b with a ≤ b, a² ≤ b².
+s05	M-strong	synthetic	-	2 · 3 ≤ 6.

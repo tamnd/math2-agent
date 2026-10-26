@@ -546,6 +546,31 @@ go test ./bench/search -v -report search.md
 
 The fused search does not beat the best channel alone yet. On the concept and paper queries it is equal to the best channel, within one query. On the formula and formal queries the fusion moves an exact match down by one or two ranks, because the lexical and embedding channels add other nodes. The concept misses are paraphrases with no word in common with the node, such as "the derivative equals the slope of the secant line" for the mean value theorem. The hash embedder cannot find these. A learned embedder, behind the same interface, is the next step. The test does not run LeanSearch, Moogle, Loogle or the other tools of spec 14.7, because it would send each query to the service of the tool.
 
+`bench/fidelity` measures the F1 battery as a classifier (spec 17.3.1). Each line of `bench/fidelity/items.tsv` is an informal statement and a label: `faithful`, or the class of the fault of its formal statement. The formal statements are in `bench/fidelity/lean/Suite.lean`, and they use only the Lean core library, thus the suite does not need Mathlib. We wrote the items, and no person checked the labels yet. The test runs the battery on each item, as `m2 build` does. A check that fails catches the item, and a check that flags with a class flags it. The report is a confusion matrix, with the recall of each class and the false-alarm rate on the faithful items. `baseline.tsv` has the number of items that the battery catches in each class, and the test fails when a class catches fewer, or when the battery fails a faithful item. Each release has the report as `fidelity-report.md`.
+
+```sh
+go test ./bench/fidelity -v -report fidelity.md
+go test ./bench/fidelity -tree DIR -v -report fidelity.md
+```
+
+With `-tree`, the items are the reviews of a math2 tree, with the reports of its last build. On the suite, without the models of the checks 2 and 9:
+
+| Label | Items | Caught | Recall | Recall with flags |
+|---|---|---|---|---|
+| faithful | 14 | 0 | | |
+| M-hyp-missing | 6 | 1 | 0.17 | 0.67 |
+| M-hyp-extra | 5 | 0 | 0.00 | 1.00 |
+| M-quant | 4 | 0 | 0.00 | 0.00 |
+| M-vacuous | 5 | 5 | 1.00 | 1.00 |
+| M-junk | 3 | 0 | 0.00 | 1.00 |
+| M-def | 3 | 2 | 0.67 | 0.67 |
+| M-type | 4 | 0 | 0.00 | 0.75 |
+| M-conv | 3 | 2 | 0.67 | 1.00 |
+| M-weak | 4 | 0 | 0.00 | 1.00 |
+| M-strong | 5 | 1 | 0.20 | 0.20 |
+
+The machine checks catch the vacuous statements, and the false statements whose negation a tactic proves. They do not catch a wrong quantifier, and they catch no false statement that needs a counterexample, such as n² < 2ⁿ. The flags come from the constant audit, which names natural subtraction and division, and from check 5, which flags a statement that a tactic proves. Check 5 also flags 10 of the 14 faithful items, thus a flag tells a reviewer where to look, and it is not a verdict. The other faults need the back-translation and the critic. No class has 30 items yet, thus the target of a recall of 0.9 does not apply yet.
+
 ## Rules that the toolchain keeps
 
 1. The files in tamnd/math2 are the truth. Each database, index and site comes from these files, and you can make it again from them.
@@ -574,7 +599,7 @@ align/    the aligner: candidates, scores, the curation queues and the register 
 api/      the read API of spec 11.2, its HTTP handler and its rate limit
 audit/    the audit rules of spec 15, with a fixture pair for each rule
 battery/  the F1 battery: the ten machine checks of the fidelity of a Lean binding (spec 10.4)
-bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, bench/extract measures the extraction of results from papers, and bench/search measures the quality of search
+bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, bench/extract measures the extraction of results from papers, bench/search measures the quality of search, and bench/fidelity measures the F1 battery
 bump/     the Mathlib bump: the pins, the breaks of a bump, the renames and the bump report (spec 07.9)
 build/    the steps of m2 build, their cache and the build manifest
 check/    the fast rules of m2 check: schema, body and links

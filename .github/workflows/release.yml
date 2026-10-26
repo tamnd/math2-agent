@@ -15,7 +15,7 @@ jobs:
   build:
     name: build binaries
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write
       # The attestation step needs these two permissions. It signs a statement that says which commit and which run made each archive.
@@ -63,6 +63,17 @@ jobs:
           npm ci --ignore-scripts --prefix .github/lighthouse
           .github/lighthouse/report.sh "$RUNNER_TEMP/m2" "$RUNNER_TEMP/report/site-report.md" || echo "::warning::The site misses a target. See site-report.md."
           cp "$RUNNER_TEMP/report/site-report.md" dist/
+      # The fidelity report is the confusion matrix of the F1 battery on the suite of bench/fidelity (spec 17.3.1). The suite uses only the Lean core library.
+      - name: install Lean for the fidelity suite
+        uses: leanprover/lean-action@24581d74d674803a25a81b10b059c5c0cdd344c6 # v1.6.2
+        with:
+          lake-package-directory: bench/fidelity/lean
+          use-mathlib-cache: false
+          build: true
+          test: false
+          lint: false
+      - name: fidelity report
+        run: go test -count=1 ./bench/fidelity -report "$GITHUB_WORKSPACE/dist/fidelity-report.md" || echo "::warning::The fidelity suite fails. See the test output."
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*.tar.gz

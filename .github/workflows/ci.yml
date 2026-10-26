@@ -311,8 +311,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bubblewrap
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - name: test the fixtures, the seed, the Mathlib sample and the replay
-        run: M2_MATH2_LEAN="$GITHUB_WORKSPACE/math2/lean" go test -count=1 -v ./lean ./build ./replay ./ingest/mathlib
+      - name: test the fixtures, the seed, the Mathlib sample, the replay and the fidelity suite
+        run: M2_MATH2_LEAN="$GITHUB_WORKSPACE/math2/lean" go test -count=1 -v ./lean ./build ./replay ./ingest/mathlib ./bench/fidelity
 
   workflows:
     name: workflow lint

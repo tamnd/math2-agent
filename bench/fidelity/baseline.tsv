@@ -1,0 +1,13 @@
+# label	items	caught
+# The number of items of each label and the number that the battery catches. go test ./bench/fidelity -update writes this file.
+faithful	14	0
+M-hyp-missing	6	1
+M-hyp-extra	5	0
+M-quant	4	0
+M-vacuous	5	5
+M-junk	3	0
+M-def	3	2
+M-type	4	0
+M-conv	3	2
+M-weak	4	0
+M-strong	5	1
