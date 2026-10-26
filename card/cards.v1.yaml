@@ -1,0 +1,77 @@
+# The node cards of math2 (corpus spec K08). Each card lists the sections and the edges of a good node of one kind, in reading order, and the writing level that needs each one (corpus K2.4).
+# level: R is needed for W1, W2 for W2, W3 for W3, and o is optional.
+# An item is one of: section (a level 2 section, or a level 3 heading of the same name in Remarks), edge (edge types of the graph, with dir in, out or both), field (a front matter field), explain (an explanation level L1 to L4, or audience for each level that the audience field asks for), or other (work that the build does not see yet).
+# min is the smallest count, 1 when it is not given. An item with when counts only when its condition holds. The build knows the condition definitions. The other conditions (library, curriculum, computational, known) need data that the build does not have yet, so their items do not count.
+# The house style and the length of each section are the rules of the style linter, not of the cards.
+version: cards.v1
+cards:
+  concept:
+    - {section: Summary, level: R, note: two to four sentences, what the notion is and why it matters}
+    - {section: Motivation, level: W3, note: the question that the notion answers, or the example that leads to it}
+    - {edge: [defines], dir: in, level: W2, note: at least one definition}
+    - {edge: [equivalent], dir: in, level: W2, when: definitions, note: a statement for each pair of definitions that a source proves equivalent}
+    - {edge: [instance_of], dir: in, level: W2, min: 2, note: at least two examples}
+    - {edge: [not_instance_of], dir: in, level: W2, note: at least one non-example, with the reason}
+    - {edge: [specializes], dir: both, level: W2, note: the more general notions and the special cases}
+    - {section: Notation, level: o}
+    - {section: History, level: W3, note: who introduced the notion and when, with sources}
+    - {explain: audience, level: W3}
+    - {section: Remarks, level: o}
+  definition:
+    - {section: Definition, level: R, note: the definition, with each condition as a numbered clause when there are more than two}
+    - {field: formal, level: W2, when: library, note: the binding to a def, structure or class}
+    - {edge: [instance_of], dir: in, level: W2, note: one example}
+    - {edge: [not_instance_of], dir: in, level: W2, note: one non-example that fails one clause}
+    - {section: Notation, level: o}
+    - {section: Remarks, level: o}
+    - {explain: audience, level: W3}
+  statement:
+    - {section: Statement, level: R, note: hypotheses first, then the conclusion}
+    - {edge: [uses], dir: out, level: R, note: each definition that the statement needs}
+    - {edge: [about], dir: out, level: W2, note: the concepts that the statement is about}
+    - {edge: [proves], dir: in, level: W2, note: at least one proof node}
+    - {edge: [instance_of, illustrates], dir: in, level: W2, note: one example that shows the statement at work}
+    - {edge: [refutes], dir: in, level: W3, when: known, note: a counterexample to a weaker form}
+    - {field: formal, level: W2, when: library}
+    - {section: History, level: W3, note: who stated it first and who proved it first, with sources}
+    - {explain: L2, level: W2}
+    - {explain: audience, level: W3}
+    - {other: exercise, level: W3, when: curriculum, note: at least one exercise}
+    - {section: Remarks, level: o}
+  conjecture:
+    - {section: Statement, level: R}
+    - {edge: [uses], dir: out, level: R}
+    - {edge: [bounds], dir: both, level: W2}
+    - {section: History, level: W2, note: with the year of the first source}
+    - {explain: audience, level: W3}
+  problem:
+    - {section: Problem, level: R}
+    - {edge: [bounds], dir: both, level: W2}
+    - {section: History, level: W2, note: with the year of the first source}
+    - {explain: audience, level: W3}
+  proof:
+    - {section: Idea, level: W2, note: one to three sentences, the method and the key step}
+    - {section: Proof, level: R, note: the argument in numbered steps}
+    - {edge: [uses], dir: out, level: R, note: each node that the argument needs}
+    - {edge: [method], dir: out, level: W2, note: the methods, from the methods topic}
+    - {field: formal, level: o}
+    - {section: Variants, level: o}
+  example:
+    - {section: Example, level: R, note: the instance, and the check that it is an instance}
+    - {edge: [instance_of, not_instance_of, illustrates], dir: out, level: R}
+    - {other: computation, level: W3, when: computational, note: a computation node that runs the check}
+    - {section: Explanations, level: o}
+  counterexample:
+    - {section: Counterexample, level: R, note: the instance, and the check that it refutes the target}
+    - {edge: [refutes, not_instance_of], dir: out, level: R}
+    - {other: computation, level: W3, when: computational}
+    - {section: Explanations, level: o}
+  object:
+    - {section: Description, level: R, note: what the object is, its standard name and its main invariants}
+    - {field: same_as, level: R, note: the identifiers in the databases}
+    - {section: Invariants, level: W2, note: a table of the main invariants, each with a source or a computation}
+    - {edge: [instance_of], dir: out, level: W2}
+  computation:
+    - {section: Description, level: R}
+  topic:
+    - {section: Summary, level: R}

@@ -1,8 +1,8 @@
 // Package build makes the derived data of a math2 working tree (spec 07.6).
 //
-// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The battery step runs the machine checks of spec 10.4 on each Lean binding and writes battery.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json, battery.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The store step writes the serving store, store.db, from the nodes, status.json and the aliases (spec 05.7). The search step writes the search index, search.db, from the nodes, status.json, the aliases and extract.json (spec 14). The inventory step counts the rows of the inventory, with the open count of corpus spec K2.1, and writes inventory.json. A tree with no records/inventory/ directory has no inventory step. The site step comes in a later issue.
+// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The battery step runs the machine checks of spec 10.4 on each Lean binding and writes battery.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json, battery.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The store step writes the serving store, store.db, from the nodes, status.json and the aliases (spec 05.7). The search step writes the search index, search.db, from the nodes, status.json, the aliases and extract.json (spec 14). The inventory step counts the rows of the inventory, with the open count of corpus spec K2.1, and writes inventory.json. A tree with no records/inventory/ directory has no inventory step. The writing step computes the writing level and the work list of each node from the cards of schema/cards.v1.yaml (corpus spec K2.4 and K8.8), and writes writing.json. The site step comes in a later issue.
 //
-// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, battery, status, graph, store, search and inventory steps. Two builds of the same tree give the same output hash (rule R01).
+// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, battery, status, graph, store, search, inventory and writing steps. Two builds of the same tree give the same output hash (rule R01).
 package build
 
 import (
@@ -26,6 +26,8 @@ import (
 	"github.com/zeebo/blake3"
 
 	"github.com/tamnd/math2-agent/battery"
+	"github.com/tamnd/math2-agent/card"
+	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/format"
 	"github.com/tamnd/math2-agent/graph"
@@ -33,6 +35,7 @@ import (
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/replay"
+	"github.com/tamnd/math2-agent/schema"
 	"github.com/tamnd/math2-agent/search"
 	"github.com/tamnd/math2-agent/status"
 	"github.com/tamnd/math2-agent/store"
@@ -49,11 +52,12 @@ const (
 	Store     = "store"
 	Search    = "search"
 	Inventory = "inventory"
+	Writing   = "writing"
 )
 
 // Steps returns the names of the steps in order.
 func Steps() []string {
-	return []string{Lean, Extract, Replay, Battery, Status, Graph, Store, Search, Inventory}
+	return []string{Lean, Extract, Replay, Battery, Status, Graph, Store, Search, Inventory, Writing}
 }
 
 // The files of the build, from the output directory.
@@ -67,6 +71,7 @@ const (
 	StoreFile     = "store.db"
 	SearchFile    = "search.db"
 	InventoryFile = "inventory.json"
+	WritingFile   = "writing.json"
 	ComputeDir    = "compute" // the runs of m2 compute, in TAG/ARCH/
 )
 
@@ -186,6 +191,7 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 		{Store, false, b.store},
 		{Search, false, b.search},
 		{Inventory, false, b.inventory},
+		{Writing, false, b.writing},
 	}
 	for _, s := range steps {
 		if opt.Only != "" && s.name != opt.Only {
@@ -910,6 +916,139 @@ func (b *builder) inventory(ctx context.Context, _ []*node.Node) (Step, error) {
 	b.m.Counts.Rows, b.m.Counts.Open = sum.Rows, sum.Open
 	out, err := hashFiles(b.opt.Out, []string{InventoryFile})
 	return Step{Input: input, Output: out}, err
+}
+
+// Levels is the content of writing.json.
+type Levels struct {
+	Cards  string         `json:"cards"`  // the file of the cards, or "embedded"
+	Levels map[string]int `json:"levels"` // the number of nodes at each writing level
+	Nodes  []card.Result  `json:"nodes"`  // the level and the work list of each node, in tag order
+}
+
+// writing computes the writing level and the work list of each node, and writes writing.json (corpus spec K8.8). A node has an inventory row when a row has the outcome node with its tag, when its field inventory names a row, or when it has the Wikidata id of a mention of a row. A definition has the row of the concept that it defines. The body of a node passes when the rules B01 to B03 of m2 check give no finding. No node has the confirmation of rule P04 yet, thus no node is at W3. The input is the version of m2, the content hash of each node, the cards, the rows and the mentions.
+func (b *builder) writing(_ context.Context, nodes []*node.Node) (Step, error) {
+	cards, err := card.Load(b.opt.Root)
+	if err != nil {
+		return Step{}, err
+	}
+	lines := []string{"m2 " + b.opt.Version, "cards " + cards.Source}
+	if data, err := os.ReadFile(filepath.Join(b.opt.Root, filepath.FromSlash(card.File))); err == nil { // #nosec G304 -- the path is in the tree.
+		lines = append(lines, "cards "+hashString(string(data)))
+	}
+	for _, dir := range []string{inventory.RowsDir, inventory.MentionsDir} {
+		h, err := HashTree(filepath.Join(b.opt.Root, dir), func(rel string) bool { return strings.HasSuffix(rel, ".jsonl") })
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return Step{}, err
+		}
+		lines = append(lines, dir+" "+h)
+	}
+	for _, n := range nodes {
+		lines = append(lines, n.ID+" "+node.Hash(n))
+	}
+	input := hashString(strings.Join(lines, "\n"))
+	if out, err := hashFiles(b.opt.Out, []string{WritingFile}); err == nil {
+		if s, ok := b.cached(Writing, input, out); ok {
+			return s, nil
+		}
+	}
+	rows, err := b.rowNodes(nodes)
+	if err != nil {
+		return Step{}, err
+	}
+	files := make([]check.File, 0, len(nodes))
+	for _, n := range nodes {
+		data, err := os.ReadFile(filepath.Join(b.opt.Root, filepath.FromSlash(n.Path))) // #nosec G304 -- the path is in the tree.
+		if err != nil {
+			return Step{}, err
+		}
+		files = append(files, check.File{Path: n.Path, Data: data})
+	}
+	broken := map[string]bool{}
+	c := &check.Checker{Only: []string{"B01", "B02", "B03"}}
+	if c.Schema, err = schema.Load(b.opt.Root); err != nil {
+		return Step{}, err
+	}
+	if c.Macros, err = check.LoadMacros(b.opt.Root); err != nil {
+		return Step{}, err
+	}
+	for _, f := range c.Check(files, nil).Findings {
+		broken[f.Path] = true
+	}
+	paths := map[string]string{}
+	for _, n := range nodes {
+		paths[n.ID] = n.Path
+	}
+	env := card.Env{
+		Graph: graph.Build(nodes),
+		Row:   func(tag string) bool { return rows[tag] },
+		Clean: func(tag string) bool { return !broken[paths[tag]] },
+	}
+	w := Levels{Cards: cards.Source, Levels: map[string]int{}, Nodes: []card.Result{}}
+	for _, n := range nodes {
+		r := cards.Assess(n, env)
+		w.Levels[r.Level.String()]++
+		w.Nodes = append(w.Nodes, r)
+	}
+	slices.SortFunc(w.Nodes, func(x, y card.Result) int { return strings.Compare(x.Tag, y.Tag) })
+	data, err := json.MarshalIndent(w, "", "  ")
+	if err != nil {
+		return Step{}, err
+	}
+	if err := write(filepath.Join(b.opt.Out, WritingFile), append(data, '\n')); err != nil {
+		return Step{}, err
+	}
+	out, err := hashFiles(b.opt.Out, []string{WritingFile})
+	return Step{Input: input, Output: out}, err
+}
+
+// rowNodes returns the tags of the nodes that a row of the inventory accounts for.
+func (b *builder) rowNodes(nodes []*node.Node) (map[string]bool, error) {
+	out := map[string]bool{}
+	if !hasInventory(b.opt.Root) {
+		return out, nil
+	}
+	rows, err := inventory.ReadRows(b.opt.Root)
+	if err != nil {
+		return nil, err
+	}
+	ms, err := inventory.ReadMentions(b.opt.Root)
+	if err != nil {
+		return nil, err
+	}
+	ids, inRow := map[string]bool{}, map[string]bool{}
+	for _, r := range rows {
+		ids[r.ID] = true
+		for _, m := range r.Mentions {
+			inRow[m] = true
+		}
+		if r.Outcome != nil && r.Outcome.Value == inventory.OutcomeNode {
+			for _, t := range r.Outcome.Target {
+				out[t] = true
+			}
+		}
+	}
+	listed := map[string]bool{}
+	for _, m := range ms {
+		if m.NativeID != "" && inRow[m.ID] && inventory.SystemOf(m.Source) == "wikidata" {
+			listed[m.NativeID] = true
+		}
+	}
+	for _, n := range nodes {
+		if slices.ContainsFunc(n.List("inventory"), func(id string) bool { return ids[id] }) {
+			out[n.ID] = true
+		}
+		if same, ok := n.Meta["same_as"].(map[string]any); ok {
+			if q, ok := same["wikidata"].(string); ok && listed[q] {
+				out[n.ID] = true
+			}
+		}
+	}
+	for _, n := range nodes {
+		if n.Kind() == "definition" && out[n.Get("defines")] {
+			out[n.ID] = true
+		}
+	}
+	return out, nil
 }
 
 // command runs a program in dir and returns its standard output. The error has the output of the program.
