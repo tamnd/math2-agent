@@ -20,11 +20,11 @@ import (
 // The Lean directories that no role writes: the attribute and the adapters, the certificate checkers, and the named hypotheses, which are the only place where an axiom can be (spec 20).
 var leanFixed = []string{"lean/Math2/Meta/", "lean/Math2/Cert/", "lean/Math2/Hypotheses/"}
 
-// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of formalize, prove, explain, curate, align, bump and review-assist. The sets of the other roles come with their roles.
+// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of the eight roles.
 //
-// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
+// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. Explore can add computation, conjecture and counterexample nodes with no formal field, no crosswalk edges, no fields of a retirement and no explanations, and add the files of the code of a computation in compute/ID/. Explore writes no Lean and changes no file that exists. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
 func Permit(role, target string, changes []workspace.Change) error {
-	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist"}, role) {
+	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist", "explore"}, role) {
 		return fmt.Errorf("agent: the field permission set of %s is not written yet", role)
 	}
 	var errs []error
@@ -49,8 +49,10 @@ func permit(role, target string, c workspace.Change) error {
 			return fmt.Errorf("review-assist writes only the review packet of the target, reports/review/%s.md", target)
 		}
 		return nil
-	case slices.Contains([]string{"explain", "curate", "align", "bump"}, role) && strings.HasPrefix(p, "lean/"):
+	case slices.Contains([]string{"explain", "curate", "align", "bump", "explore"}, role) && strings.HasPrefix(p, "lean/"):
 		return fmt.Errorf("%s writes no Lean", role)
+	case role == "explore" && strings.HasPrefix(p, "compute/"):
+		return permitCode(p, c)
 	case role == "curate" && p == align.DedupQueue:
 		return permitQueue(c.Old, c.New)
 	case role == "align" && path.Dir(p) == align.QueueDir && path.Ext(p) == ".jsonl":
@@ -107,6 +109,8 @@ func permitNode(role, target string, c workspace.Change) error {
 		return permitCurate(c, n)
 	case "align":
 		return permitAlign(target, c, n)
+	case "explore":
+		return permitExplore(c, n)
 	}
 	formal := entries(n.Meta["formal"])
 	if c.Old == nil {
@@ -244,6 +248,42 @@ func permitCurate(c workspace.Change, n *node.Node) error {
 		if !slices.Contains(curated, k) && !reflect.DeepEqual(o.Meta[k], n.Meta[k]) {
 			return fmt.Errorf("curate changes only the fields %s of a node, and the change changes the field %s", strings.Join(curated, ", "), k)
 		}
+	}
+	return nil
+}
+
+// explored are the kinds of the nodes that explore adds.
+var explored = []string{"computation", "conjecture", "counterexample"}
+
+// permitExplore allows a new computation, conjecture or counterexample node with no field of uncurated and no explanation.
+func permitExplore(c workspace.Change, n *node.Node) error {
+	if c.Old != nil {
+		return errors.New("explore changes no node that exists")
+	}
+	if k := n.Kind(); !slices.Contains(explored, k) {
+		return fmt.Errorf("explore adds %s nodes, and this node is of the kind %s", strings.Join(explored, ", "), k)
+	}
+	for _, k := range uncurated {
+		if n.Meta[k] != nil {
+			return fmt.Errorf("a new node of explore has no field %s", k)
+		}
+	}
+	for f := range prov.Fields(n) {
+		if strings.HasPrefix(f, "body.explanations.") {
+			return errors.New("explore writes no explanations, and the explain role writes them")
+		}
+	}
+	return nil
+}
+
+// permitCode allows a new file of the code of a computation, in compute/ID/ where ID is a tag or a provisional id.
+func permitCode(p string, c workspace.Change) error {
+	id, _, ok := strings.Cut(strings.TrimPrefix(p, "compute/"), "/")
+	if !ok || !isNode(id) {
+		return fmt.Errorf("the code of a computation is in compute/ID/, where ID is the tag or the provisional id of its node, and %s is not", p)
+	}
+	if c.Old != nil {
+		return errors.New("explore adds the code of its computations, and does not change code that exists")
 	}
 	return nil
 }

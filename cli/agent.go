@@ -25,21 +25,27 @@ import (
 	"github.com/tamnd/math2-agent/agent/bump"
 	"github.com/tamnd/math2-agent/agent/curate"
 	"github.com/tamnd/math2-agent/agent/explain"
+	"github.com/tamnd/math2-agent/agent/explore"
 	"github.com/tamnd/math2-agent/agent/formalize"
 	"github.com/tamnd/math2-agent/agent/prove"
 	"github.com/tamnd/math2-agent/agent/reviewassist"
 	"github.com/tamnd/math2-agent/agent/tools"
 	"github.com/tamnd/math2-agent/api"
 	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/claude"
+	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/novelty"
 	"github.com/tamnd/math2-agent/prompts"
 	"github.com/tamnd/math2-agent/sandbox"
+	"github.com/tamnd/math2-agent/search"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|explain|formalize|prove|review-assist"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|explain|explore|formalize|prove|review-assist"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
@@ -47,6 +53,7 @@ var goals = map[string]string{
 	"bump":          "each Lean binding of the node resolves in the pinned Mathlib and is not deprecated",
 	"curate":        "the record has a node in the words of math2 that states the same result, or the node has the right uses, about and msc",
 	"explain":       "the node has an L2 explanation marked agent, with each claim grounded in a cited node",
+	"explore":       "a conjecture or a counterexample about the node, checked by a computation that verifies, with its novelty check",
 	"formalize":     "the node has a Lean binding that passes the checks of the run",
 	"prove":         "the statement of the node has a Lean proof",
 	"review-assist": "the node has a review packet in reports/review with the packet of the last build and the concerns of the critic",
@@ -97,6 +104,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	rung := flags.Int("rung", 0, "the rung of the escalation ladder of the role, from 0")
 	native := flags.Bool("native-decide", false, "permit a proof that uses native_decide. Rule F04 records each use.")
 	typeChange := flags.Bool("type-change", false, "permit a bump rebind to a declaration with another type hash")
+	web := flags.Bool("web", false, "with explore, the novelty check also searches zbMATH Open, arXiv, MathOverflow and the OEIS on the web")
 	asJSON := flags.Bool("json", false, "write the summary of the run as JSON")
 	box := sandboxFlags(flags)
 	if err := flags.Parse(args[1:]); err != nil {
@@ -193,7 +201,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	if *work == "" {
 		*work = filepath.Join(os.TempDir(), "m2-agent", job.ID)
 	}
-	rs := &runSetup{root: *root, out: *out, store: *store, svc: svc, model: model, roles: map[string]*agent.Role{role: r}, box: b}
+	rs := &runSetup{root: *root, out: *out, store: *store, svc: svc, model: model, roles: map[string]*agent.Role{role: r}, box: b, web: *web}
 	rec, ws, changes, err := rs.run(context.Background(), job, *rung, *work)
 	if ws != nil {
 		defer func() { _ = ws.Close() }()
@@ -236,6 +244,7 @@ type runSetup struct {
 	roles  map[string]*agent.Role
 	box    *tools.Box // the sandbox of the Lean programs, or nil
 	shadow bool       // the runs are shadow runs of candidate role versions
+	web    bool       // the novelty check of explore searches the web
 }
 
 // run does one run of the job on the rung in a new work tree at dir, and writes the record of the run to the store. It returns the record, the work tree and its changes. A record with an error is a run that the model service stopped.
@@ -265,8 +274,9 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		check agent.Goal
 		meter *agent.Meter
 		extra []agent.Tool
+		nv    *explore.Novelty
 	)
-	if slices.Contains([]string{"align", "curate", "explain"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
+	if slices.Contains([]string{"align", "curate", "explain", "explore"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
 		return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
 	}
 	switch job.Role {
@@ -313,6 +323,20 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		meter = &agent.Meter{Model: rs.model}
 		check = curate.Goal(ws, job, records, meter, r.Ladder[rung].Model, r.Checks["judge"])
 		extra = []agent.Tool{curate.Read(records), curate.Propose(ws, "m2-agent/curate@"+r.Version)}
+	case "explore":
+		var runner *compute.Runner
+		var done func()
+		if runner, nv, done, err = rs.explore(ctx, dir); err != nil {
+			return nil, ws, nil, err
+		}
+		defer done()
+		if brief, err = explore.Brief(ws, job, runner); err != nil {
+			return nil, ws, nil, err
+		}
+		meter = &agent.Meter{Model: rs.model}
+		nv.Judge = explore.Judge(meter, r.Ladder[rung].Model, r.Checks["judge"])
+		check = explore.Goal(ws, job, runner, nv)
+		extra = []agent.Tool{explore.Run(ws, runner), explore.Lookup(nv)}
 	case "explain":
 		if brief, err = explain.Brief(ws, job); err != nil {
 			return nil, ws, nil, err
@@ -344,6 +368,9 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		return nil, ws, nil, runErr
 	}
 	rec.Shadow = rs.shadow
+	if nv != nil {
+		rec.Novelty = nv.Results()
+	}
 	if _, err := agent.WriteRecord(rs.store, rec); err != nil && len(rec.Turns) > 0 {
 		return rec, ws, nil, errors.Join(runErr, err)
 	}
@@ -352,6 +379,51 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		return rec, ws, nil, err
 	}
 	return rec, ws, changes, runErr
+}
+
+// explore makes the runner of the computations of an explore run in the work tree at dir, and the searches of its novelty check. The runs of the computations go next to the work tree, because they are not changes of the run. The searches are the graph, when the build has a search index, the record plane, and the web when rs.web is set. done closes the search index.
+func (rs *runSetup) explore(ctx context.Context, dir string) (*compute.Runner, *explore.Novelty, func(), error) {
+	images, err := compute.ReadImages(rs.root)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	sb, err := newSandbox(ctx, "")
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	runner := &compute.Runner{Images: images, Sandbox: sb, Out: dir + ".compute"}
+	nv := &explore.Novelty{}
+	done := func() {}
+	ix, err := search.Open(filepath.Join(cmp.Or(rs.out, filepath.Join(rs.root, "build")), build.SearchFile), nil)
+	switch {
+	case err == nil:
+		done = func() { _ = ix.Close() }
+		files, err := check.ReadTree(rs.root)
+		if err != nil {
+			done()
+			return nil, nil, nil, err
+		}
+		g := &novelty.Graph{Index: ix}
+		for _, f := range files {
+			if n, err := node.Parse(f.Path, f.Data); err == nil {
+				g.Nodes = append(g.Nodes, n)
+			}
+		}
+		nv.Searchers = append(nv.Searchers, g)
+	case !errors.Is(err, fs.ErrNotExist):
+		return nil, nil, nil, err
+	}
+	plane, err := novelty.RecordPlane(rs.root, nil)
+	if err != nil {
+		done()
+		return nil, nil, nil, err
+	}
+	nv.Searchers = append(nv.Searchers, plane...)
+	if rs.web {
+		w := novelty.Web{UserAgent: "m2/" + version + " (+https://github.com/tamnd/math2-agent)"}
+		nv.Searchers = append(nv.Searchers, &novelty.ZbMATH{Web: w}, &novelty.ArXiv{Web: w}, &novelty.StackExchange{Web: w, Site: "mathoverflow"}, &novelty.OEIS{Web: w})
+	}
+	return runner, nv, done, nil
 }
 
 // linkPackages links lean/.lake/packages of the tree into the new work tree. Thus the work tree uses the Mathlib build of the tree, and the run does not get Mathlib again. For a run in the sandbox, the link goes to the read-only mount of the packages in the container, and each directory of lean/ in the work tree becomes writable for the user of the container.

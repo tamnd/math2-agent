@@ -14,10 +14,12 @@ import (
 	"github.com/tamnd/math2-agent/agent"
 	"github.com/tamnd/math2-agent/agent/tools"
 	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/llmtest"
+	"github.com/tamnd/math2-agent/novelty"
 	"github.com/tamnd/math2-agent/sandbox"
 )
 
@@ -145,7 +147,7 @@ func TestAgentRun(t *testing.T) {
 		want string
 	}{
 		{[]string{"agent"}, ExitUsage, "Usage: m2 agent run"},
-		{[]string{"agent", "run", "explore"}, ExitUsage, "the role explore is not written yet"},
+		{[]string{"agent", "run", "planner"}, ExitUsage, "the role planner is not written yet"},
 		{[]string{"agent", "run", "-root", root, "-out", out, "-target", "7K3QX2", "-on-behalf-of", "", "prove"}, ExitFailure, "not a person, a project or a schedule"},
 		{[]string{"agent", "run", "-root", root, "-out", t.TempDir(), "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "-no-sandbox", "prove"}, ExitFailure, "Run m2 build first"},
 		{[]string{"agent", "run", "-root", root, "-out", out, "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "prove"}, ExitFailure, "give the image of the Lean sandbox"},
@@ -342,5 +344,73 @@ func TestAgentRunReviewAssist(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/review-assist@0.1.0, 1 turns") || !strings.Contains(stdout, "reports/review/7K3QX2.md") {
 		t.Errorf("the output is\n%s", stdout)
+	}
+}
+
+// judgeless is a scripted model that gives no verdict to each request of the judge of explore, thus the judge finds that each match is about a different thing.
+type judgeless struct{ *llmtest.Script }
+
+func (m judgeless) Complete(ctx context.Context, req *llm.Request) (*llm.Response, error) {
+	if len(req.Tools) == 1 && req.Tools[0].Name == "judge" {
+		return llmtest.Say("I cannot compare them.", llm.Usage{Input: 100, Output: 10}), nil
+	}
+	return m.Script.Complete(ctx, req)
+}
+
+func TestAgentRunExplore(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
+	root, out := agentTree(t)
+	digest := "sha256:" + strings.Repeat("1", 64)
+	image := "m2-python@" + digest
+	fermat := "---\ntag: 4N9QX2\nkind: statement\nrole: fact\nname: The Fermat numbers are prime\n---\n\n## Statement\n\nFor each $n \\ge 0$, the number $2^{2^n} + 1$ is prime.\n"
+	for name, text := range map[string]string{
+		"nodes/4N/4N9QX2.md": fermat,
+		compute.ImagesFile:   "images:\n  - name: m2-python\n    contents: Python 3\n    amd64: " + digest + "\n    arm64: " + digest + "\n",
+	} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, args := range [][]string{{"add", "-A"}, {"-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "fermat"}} {
+		if b, err := exec.Command("git", append([]string{"-C", root}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, b)
+		}
+	}
+	code := "print(641)\n"
+	computation := "---\ntag: ~1a2b3c4d\nkind: computation\nname: A factor of the fifth Fermat number\nclaim: 641 divides $2^{32} + 1$.\nengine:\n  image: " + image + "\n  entry: compute/~1a2b3c4d/main.py\n  resources: {cpu: 1, mem: 1G, wall: 1m}\noutput:\n  hash: " + compute.Hash([]byte(code)) + "\n  summary: \"641\"\n---\n\n## Description\n\nThe program prints the first prime that divides $2^{32} + 1$.\n"
+	counterexample := "---\ntag: ~5e6f7a8b\nkind: counterexample\nname: The fifth Fermat number is not prime\nrefutes:\n  - {target: 4N9QX2, via: ~1a2b3c4d}\n---\n\n## Counterexample\n\nThe number $2^{32} + 1$ is $641 \\cdot 6700417$, thus it is not prime.\n"
+	u := llm.Usage{Input: 1000, Output: 200}
+	write := func(path, text string) llm.Block {
+		return llmtest.Call("write_file", map[string]string{"path": path, "text": text}, u).Content[0]
+	}
+	resp := llmtest.Call("write_file", map[string]string{"path": "compute/~1a2b3c4d/main.py", "text": code}, u)
+	resp.Content = append(resp.Content, write("nodes/~/~1a2b3c4d.md", computation), write("nodes/~/~5e6f7a8b.md", counterexample))
+	oldModel, oldLean, oldSandbox := newModel, newLean, newSandbox
+	newModel = func() (llm.Model, error) { return judgeless{llmtest.New(resp)}, nil }
+	newLean = func(context.Context, string, *tools.Box) (tools.Lean, error) {
+		return nil, errors.New("explore needs no Lean")
+	}
+	newSandbox = func(context.Context, string) (sandbox.Sandbox, error) { return echo{}, nil }
+	t.Cleanup(func() { newModel, newLean, newSandbox = oldModel, oldLean, oldSandbox })
+
+	// The judge finds that each node of the graph is about a different thing, thus the novelty check finds no match.
+	store := t.TempDir()
+	code2, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", store, "-work", filepath.Join(t.TempDir(), "w"), "-target", "4N9QX2", "-on-behalf-of", "project:fermat", "explore")
+	if code2 != ExitOK {
+		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code2, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/explore@0.1.0, 1 turns") || !strings.Contains(stdout, "nodes/~/~5e6f7a8b.md") {
+		t.Errorf("the output is\n%s", stdout)
+	}
+	recs, err := agent.ReadRecords(store)
+	if err != nil || len(recs) != 1 {
+		t.Fatalf("the store has %d records: %v", len(recs), err)
+	}
+	if nv := recs[0].Novelty["~5e6f7a8b"]; nv == nil || nv.Verdict != novelty.NoMatch {
+		t.Errorf("the record keeps the novelty check %+v", recs[0].Novelty)
 	}
 }

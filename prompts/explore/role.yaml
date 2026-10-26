@@ -1,0 +1,15 @@
+role: explore
+version: 0.1.0
+tools: [get, neighbours, path, search, resolve, read_file, write_file, run_computation, lookup]
+ladder:
+  - model: claude-sonnet-5-5
+    effort: medium
+  - model: claude-opus-5-5
+    effort: high
+budget:
+  usd: 3
+  wall: 2h0m0s
+  compute_cpu_s: 7200
+max_tokens: 16000
+turns: 60
+stuck: 5
