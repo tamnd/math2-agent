@@ -21,10 +21,12 @@ func ExampleRun() {
 	fmt.Println("failed:", rep.Failed())
 	// Output:
 	// nodes/3C5/3C53TD.md:1:1: T05: the tag 3C53TD is not in registers/tags.reg. Only the mint workflow gives tags
+	// nodes/3C5/3C53TD.md:6:1: T05: the alias lagrange-theorem names G5S1M9 in registers/aliases.reg, and an alias names one node
 	// nodes/G5S/G5S1M9.md:1:1: T05: the kind is concept, and registers/tags.reg gives definition
+	// nodes/G5S/G5S1M9.md:5:1: T05: the alias abstract-group names 3C53TD in nodes/3C5/3C53TD.md, and an alias names one node
 	// rule  state  checked  findings
-	// T05   fail   3        2
-	// 2 files, 2 findings, 1 rule failed
+	// T05   fail   6        4
+	// 2 files, 4 findings, 1 rule failed
 	// failed: true
 }
 
