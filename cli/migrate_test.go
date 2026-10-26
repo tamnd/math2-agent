@@ -18,7 +18,7 @@ func TestMigrateShard3(t *testing.T) {
 		}
 	}
 	code, out, errOut := run("migrate", "shard3", "-root", root)
-	want := "nodes/7K/7K3QX2.md nodes/7K3/7K3QX2.md\nprov/7K/7K3QX2.jsonl prov/7K3/7K3QX2.jsonl\nreviews/G5/G5S1M9.yaml reviews/G5S/G5S1M9.yaml\n3 files moved\n"
+	want := "nodes/7K/7K3QX2.md nodes/7K3/7K3QX2.md\nprov/7K/7K3QX2.jsonl prov/7K3/7K3QX2.jsonl\nreviews/G5/G5S1M9.yaml reviews/G5S/G5S1M9.yaml\n3 paths moved\n"
 	if code != ExitOK || out != want {
 		t.Fatalf("exit code %d, stdout %q, stderr %q", code, out, errOut)
 	}
@@ -30,7 +30,7 @@ func TestMigrateShard3(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, "reviews", "G5")); err == nil {
 		t.Error("the empty shard reviews/G5 is still there")
 	}
-	if code, out, _ := run("migrate", "shard3", "-root", root); code != ExitOK || out != "0 files moved\n" {
+	if code, out, _ := run("migrate", "shard3", "-root", root); code != ExitOK || out != "0 paths moved\n" {
 		t.Errorf("a second run gives exit code %d, stdout %q", code, out)
 	}
 	if code, _, errOut := run("migrate", "shard2"); code != ExitUsage || !strings.Contains(errOut, "usage") {

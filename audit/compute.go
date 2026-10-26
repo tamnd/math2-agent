@@ -98,7 +98,7 @@ func nestedPos(n *node.Node, outer, inner string) (line, col int) {
 	return line, col
 }
 
-// c01 checks that each computation names an image of the manifest by digest, an entry point that exists in compute/TAG/ and inputs that are a map (rule C01). A computation with no inputs key has no inputs.
+// c01 checks that each computation names an image of the manifest by digest, an entry point that exists in the code directory of the record and inputs that are a map (rule C01). A computation with no inputs key has no inputs.
 func c01(a *auditor) outcome {
 	var o outcome
 	c := a.computed()

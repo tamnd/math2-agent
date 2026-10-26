@@ -259,7 +259,7 @@ func TestRewriteThreeLinkedNodes(t *testing.T) {
 	}
 	write(t, root, "nodes/7K3/7K3QX2.md", node("7K3QX2", "concept", "~00000001 [[a new node|~00000001]]"))
 	write(t, root, "registers/tags.reg", "7K3QX2 aaaaaaa concept\n")
-	write(t, root, "compute/~00000003/main.g", "# The code of ~00000003.\n")
+	write(t, root, "compute/~/~00000003/main.g", "# The code of ~00000003, in compute/~/~00000003/.\n")
 	write(t, root, "prov/~/~00000002.jsonl", `{"field":"*","op":"add","agent":null,"human":"github:writer","at":"2026-09-01T10:00:00Z"}`+"\n")
 
 	minted, err := Rewrite(root, nil, "ccccccc")
@@ -298,9 +298,12 @@ func TestRewriteThreeLinkedNodes(t *testing.T) {
 		if hasLog := err == nil; hasLog != (m.Provisional == "~00000002") {
 			t.Errorf("%s has a provenance log: %v", m.Tag, hasLog)
 		}
-		_, err = os.Stat(filepath.Join(root, "compute", m.Tag, "main.g"))
+		code, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(CodeDir(m.Tag)), "main.g"))
 		if hasCode := err == nil; hasCode != (m.Provisional == "~00000003") {
 			t.Errorf("%s has code in compute/: %v", m.Tag, hasCode)
+		}
+		if want := "# The code of " + m.Tag + ", in " + CodeDir(m.Tag) + "/.\n"; err == nil && string(code) != want {
+			t.Errorf("the code of %s is %q, and it must be %q", m.Tag, code, want)
 		}
 	}
 }

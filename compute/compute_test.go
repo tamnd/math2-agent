@@ -57,7 +57,7 @@ claim: It works.
 role: experiment
 engine:
   image: m2-python@`+amd+`
-  entry: compute/T1TEST/main.py
+  entry: compute/T1T/T1TEST/main.py
   inputs: {limit: 100}
   seed: 7
   resources: {cpu: 2, mem: 512M, wall: 90s}
@@ -74,7 +74,7 @@ certificate:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.Entry != "main.py" || r.EntryPath() != "compute/T1TEST/main.py" || r.Role != "experiment" || r.Claim != "It works." {
+	if r.Entry != "main.py" || r.EntryPath() != "compute/T1T/T1TEST/main.py" || r.Role != "experiment" || r.Claim != "It works." {
 		t.Errorf("record %+v", r)
 	}
 	if r.Seed == nil || *r.Seed != 7 || r.Inputs["limit"] != 100 {
@@ -255,7 +255,7 @@ func record(t *testing.T, extra string) *Record {
 
 func TestRunVerify(t *testing.T) {
 	src := "print('cert')\n"
-	root := tree(t, map[string]string{"compute/T1TEST/main.py": src, "compute/T1TEST/Check.lean": "check\n"})
+	root := tree(t, map[string]string{"compute/T1T/T1TEST/main.py": src, "compute/T1T/T1TEST/Check.lean": "check\n"})
 	f := &fake{}
 	r := &Runner{Root: root, Images: images(t), Sandbox: f, Arch: "arm64"}
 	out := Hash([]byte(src))
@@ -304,7 +304,7 @@ func TestRunVerify(t *testing.T) {
 }
 
 func TestRunErrors(t *testing.T) {
-	root := tree(t, map[string]string{"compute/T1TEST/main.py": "fail\n"})
+	root := tree(t, map[string]string{"compute/T1T/T1TEST/main.py": "fail\n"})
 	r := &Runner{Root: root, Images: images(t), Sandbox: &fake{}, Arch: "amd64"}
 	run, err := r.Verify(context.Background(), record(t, ""))
 	if err != nil || run.ExitCode != 3 || run.Verified || !strings.Contains(run.Problem, "exits with the code 3") {

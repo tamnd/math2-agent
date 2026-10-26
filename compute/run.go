@@ -97,7 +97,7 @@ func (r *Runner) image(ref string) (name, digest string, err error) {
 	return img.Name, digest, nil
 }
 
-// Run runs the computation of rec on the architecture of the runner, and writes run.json, stdout, stderr and the certificate to Dir(rec.Tag). The run reads compute/TAG/ at /work. It gets the inputs as JSON in the variable M2_INPUTS, and the seed in M2_SEED. A run that fails or runs out of time gives a Run with no error. An error means that the computation could not run.
+// Run runs the computation of rec on the architecture of the runner, and writes run.json, stdout, stderr and the certificate to Dir(rec.Tag). The run reads rec.Dir() at /work. It gets the inputs as JSON in the variable M2_INPUTS, and the seed in M2_SEED. A run that fails or runs out of time gives a Run with no error. An error means that the computation could not run.
 func (r *Runner) Run(ctx context.Context, rec *Record) (*Run, error) {
 	name, digest, err := r.image(rec.Image)
 	if err != nil {
@@ -165,7 +165,7 @@ func (r *Runner) Run(ctx context.Context, rec *Record) (*Run, error) {
 	return run, writeRun(dir, run)
 }
 
-// Verify runs the computation of rec, and checks the run against the record: the run ends with the exit code 0 in time, its output has the hash of the record, and, when the record has a certificate, the certificate has the hash of the record and the fixed checker of its kind accepts it. The checker reads compute/TAG/ and the certificate at /work. Verify writes the result to run.json.
+// Verify runs the computation of rec, and checks the run against the record: the run ends with the exit code 0 in time, its output has the hash of the record, and, when the record has a certificate, the certificate has the hash of the record and the fixed checker of its kind accepts it. The checker reads rec.Dir() and the certificate at /work. Verify writes the result to run.json.
 func (r *Runner) Verify(ctx context.Context, rec *Record) (*Run, error) {
 	run, err := r.Run(ctx, rec)
 	if err != nil {
@@ -215,7 +215,7 @@ func (r *Runner) problem(rec *Record, run *Run) string {
 	return ""
 }
 
-// check runs the checker of the certificate of rec on a copy of compute/TAG/ with the certificate.
+// check runs the checker of the certificate of rec on a copy of rec.Dir() with the certificate.
 func (r *Runner) check(ctx context.Context, rec *Record) (*Check, error) {
 	name, digest, err := r.image(rec.Certificate.Checker)
 	if err != nil {

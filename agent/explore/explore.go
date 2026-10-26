@@ -28,6 +28,7 @@ import (
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/novelty"
+	"github.com/tamnd/math2-agent/tag"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
@@ -212,7 +213,7 @@ func Run(ws *workspace.Workspace, r *compute.Runner) agent.Tool {
 	return agent.Func{
 		Def: llm.Tool{
 			Name:        "run_computation",
-			Description: "Run a computation node of the work tree in the sandbox, with no network. Write the node and its code in compute/ID/ first. The result gives the hash of the output and of the certificate, which the node must record.",
+			Description: "Run a computation node of the work tree in the sandbox, with no network. Write the node, and its code in compute/~/ID/, first. The result gives the hash of the output and of the certificate, which the node must record.",
 			Schema: tools.Schema([]api.Param{
 				{Name: "computation", Type: api.String, Required: true, Summary: "the tag or the provisional id of the computation node"},
 			}),
@@ -346,7 +347,7 @@ func Goal(ws *workspace.Workspace, job *agent.Job, r *compute.Runner, nv *Novelt
 			return false, "the run has filed no conjecture or counterexample yet. File what the computations show as a conjecture or a counterexample node", nil
 		}
 		for _, c := range changes {
-			if id, _, ok := strings.Cut(strings.TrimPrefix(c.Path, "compute/"), "/"); ok && strings.HasPrefix(c.Path, "compute/") && computations[id] == nil {
+			if id, ok := tag.CodeID(c.Path); ok && computations[id] == nil {
 				return false, fmt.Sprintf("the run adds %s, and it adds no computation node %s", c.Path, id), nil
 			}
 		}
@@ -416,7 +417,7 @@ func Brief(ws *workspace.Workspace, job *agent.Job, r *compute.Runner) (string, 
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "Job %s of %s: explore from the target %s, a %s node. The goal of the job: %s.\n\n", job.ID, job.OnBehalfOf, job.Target, n.Kind(), strings.TrimSuffix(job.Goal, "."))
-	b.WriteString("Write each computation as a node of kind computation in nodes/~/ID.md, where ID is a new provisional id such as ~1a2b3c4d, with its code in compute/ID/. Run it with run_computation, and record the output hash in the node. File what you find as a conjecture or a counterexample node. A conjecture links to the computation that checks it, and a counterexample gives refutes: [{target: TAG, via: ID}]. Check each claim with lookup before you file it.\n\n")
+	b.WriteString("Write each computation as a node of kind computation in nodes/~/ID.md, where ID is a new provisional id such as ~1a2b3c4d, with its code in compute/~/ID/. Run it with run_computation, and record the output hash in the node. File what you find as a conjecture or a counterexample node. A conjecture links to the computation that checks it, and a counterexample gives refutes: [{target: TAG, via: ID}]. Check each claim with lookup before you file it.\n\n")
 	if r != nil && r.Images != nil {
 		arch := cmp.Or(r.Arch, runtime.GOARCH)
 		var lines []string
