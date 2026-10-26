@@ -22,7 +22,7 @@ func TestMintMillion(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !IsTag(got) || got[0] == '0' || Excluded(got) || strings.ContainsAny(got, "ILOU") {
+		if !IsTag(got) || len(got) != Len || got[0] == '0' || Excluded(got) || strings.ContainsAny(got, "ILOU") {
 			t.Fatalf("Mint gave %q", got)
 		}
 		seen[got] = true
@@ -52,13 +52,81 @@ func TestMintExhausted(t *testing.T) {
 }
 
 func TestEncodeUsesEachCharacter(t *testing.T) {
-	for v := range uint32(32) {
-		if got, want := encode(v), "00000"+string(Alphabet[v]); got != want {
+	for v := range uint64(32) {
+		if got, want := encode(v), "00000000"+string(Alphabet[v]); got != want {
 			t.Fatalf("encode(%d) = %q, want %q", v, got, want)
 		}
 	}
-	if got := encode(1<<30 - 1); got != "ZZZZZZ" {
+	if got := encode(1<<45 - 1); got != "ZZZZZZZZZ" {
 		t.Fatalf("encode(max) = %q", got)
+	}
+}
+
+func TestCheck(t *testing.T) {
+	if got := Check("7K3QX2M9R"); got != '2' {
+		t.Fatalf("Check(7K3QX2M9R) = %q, want '2'", got)
+	}
+	if got := Check("7K3QX2M9U"); got != 0 {
+		t.Fatalf("Check of a payload with U = %q, want 0", got)
+	}
+	// Each change of one character and each swap of two neighbours that differ must fail the check.
+	good := "7K3QX2M9R2"
+	for i := range len(good) {
+		for _, c := range []byte(Alphabet) {
+			if c == good[i] {
+				continue
+			}
+			b := []byte(good)
+			b[i] = c
+			if IsTag(string(b)) {
+				t.Fatalf("IsTag(%s) = true after a change of character %d", b, i)
+			}
+		}
+		if i+1 < len(good) && good[i] != good[i+1] {
+			b := []byte(good)
+			b[i], b[i+1] = b[i+1], b[i]
+			if IsTag(string(b)) {
+				t.Fatalf("IsTag(%s) = true after a swap at %d", b, i)
+			}
+		}
+	}
+}
+
+func TestNormalize(t *testing.T) {
+	cases := []struct{ in, want, err string }{
+		{"7K3QX2M9R2", "7K3QX2M9R2", ""},
+		{"7k3qx-2m9r2", "7K3QX2M9R2", ""},
+		{" 7K3QX 2M9R2 ", "7K3QX2M9R2", ""},
+		{"3c53td", "3C53TD", ""},
+		{"G5SIM9", "G5S1M9", ""},
+		{"7K3XQ2M9R2", "", "check character"},
+		{"7KZQX2M9R2", "", "check character"},
+		{"7K3QX2M9", "", "not a valid tag"},
+		{"7K3QX2M9RU", "", "not a valid tag"},
+	}
+	for _, c := range cases {
+		got, err := Normalize(c.in)
+		if c.err != "" {
+			if err == nil || !strings.Contains(err.Error(), c.err) {
+				t.Errorf("Normalize(%q) = %q, %v; want an error with %q", c.in, got, err, c.err)
+			}
+			continue
+		}
+		if got != c.want || err != nil {
+			t.Errorf("Normalize(%q) = %q, %v; want %q", c.in, got, err, c.want)
+		}
+	}
+	if _, err := Normalize("7K3XQ2M9R2"); !errors.Is(err, ErrCheck) {
+		t.Errorf("a wrong check character gave %v, want ErrCheck", err)
+	}
+}
+
+func TestDisplay(t *testing.T) {
+	if got := Display("7K3QX2M9R2"); got != "7K3QX-2M9R2" {
+		t.Errorf("Display = %q", got)
+	}
+	if got := Display("3C53TD"); got != "3C53TD" {
+		t.Errorf("Display of a legacy tag = %q", got)
 	}
 }
 
@@ -68,7 +136,12 @@ func TestExcluded(t *testing.T) {
 			t.Errorf("Excluded(%q) = false", s)
 		}
 	}
-	for _, s := range []string{"7K3QX2", "1H8D2C", "2E5ABC", "9TX3RB"} {
+	for _, s := range []string{"1234567890", "12E3456789", "20D60XXXXX", "123456789X", "A123456789"} {
+		if !Excluded(s) {
+			t.Errorf("Excluded(%q) = false", s)
+		}
+	}
+	for _, s := range []string{"7K3QX2", "1H8D2C", "2E5ABC", "9TX3RB", "7K3QX2M9R2", "AB12345678"} {
 		if Excluded(s) {
 			t.Errorf("Excluded(%q) = true", s)
 		}
@@ -81,6 +154,9 @@ func TestIDs(t *testing.T) {
 		tag, provis bool
 	}{
 		{"7K3QX2", true, false},
+		{"7K3QX2M9R2", true, false},
+		{"7K3QX2M9R3", false, false},
+		{"7K3QX2M9", false, false},
 		{"7K3QXI", false, false},
 		{"7k3qx2", false, false},
 		{"7K3QX", false, false},

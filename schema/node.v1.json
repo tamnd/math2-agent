@@ -942,9 +942,9 @@
   ],
   "$defs": {
     "tag": {
-      "description": "A permanent tag: 6 characters of Crockford base32, without I, L, O and U.",
+      "description": "A permanent tag: 10 characters of Crockford base32, without I, L, O and U, of which the last is a check character, or a legacy tag of 6 characters. Rule T09 checks the check character.",
       "type": "string",
-      "pattern": "^[0-9A-HJKMNP-TV-Z]{6}$"
+      "pattern": "^([0-9A-HJKMNP-TV-Z]{6}|[0-9A-HJKMNP-TV-Z]{10})$"
     },
     "provisional": {
       "description": "A provisional id: ~ and 8 lowercase hex characters. It is valid only before merge.",
@@ -1190,7 +1190,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^r-([0-9A-HJKMNP-TV-Z]{6}|~[0-9a-f]{8})-[0-9]{2}$"
+            "pattern": "^r-([0-9A-HJKMNP-TV-Z]{6}|[0-9A-HJKMNP-TV-Z]{10}|~[0-9a-f]{8})-[0-9]{2}$"
           },
           "uniqueItems": true
         }
