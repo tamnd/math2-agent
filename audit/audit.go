@@ -2,7 +2,7 @@
 //
 // The audit is the contract of the content. Each rule has an id, a plane and a hardness. A hard rule that finds a problem fails, and a failed rule blocks a merge or a release. A soft rule that finds a problem reports it and does not block. Each rule in the report has one of the five states of spec 15.2. A rule that had nothing to look at has the state n/a, and never the state pass.
 //
-// The catalogue has the 65 rules of spec 15.3. A rule that is not written yet has the state skip with the reason "not written yet". The letter of a rule gives its plane:
+// The catalogue has the 65 rules of spec 15.3 and the 6 rules of the inventory (corpus spec K4.9). A rule that is not written yet has the state skip with the reason "not written yet". The letter of a rule gives its plane:
 //
 //	T, S, B  nodes
 //	G        graph
@@ -13,6 +13,7 @@
 //	P        prov
 //	R        release
 //	X        agents
+//	I        inventory
 //
 // A full audit reads the whole working tree. An audit with a base revision is the audit of a pull request. It reads only the node shards and the other content files that changed since the merge base, and it lets the pull request use the provisional ids of its own new nodes (rule T03). The rules on the registers and on the git history always read the whole tree.
 package audit
@@ -34,20 +35,21 @@ import (
 
 // The planes of the audit, in report order.
 const (
-	Nodes   = "nodes"
-	Graph   = "graph"
-	Formal  = "formal"
-	Compute = "compute"
-	Align   = "align"
-	Licence = "licence"
-	Prov    = "prov"
-	Release = "release"
-	Agents  = "agents"
+	Nodes     = "nodes"
+	Graph     = "graph"
+	Formal    = "formal"
+	Compute   = "compute"
+	Align     = "align"
+	Licence   = "licence"
+	Prov      = "prov"
+	Release   = "release"
+	Agents    = "agents"
+	Inventory = "inventory"
 )
 
 // Planes returns the planes in report order.
 func Planes() []string {
-	return []string{Nodes, Graph, Formal, Compute, Align, Licence, Prov, Release, Agents}
+	return []string{Nodes, Graph, Formal, Compute, Align, Licence, Prov, Release, Agents, Inventory}
 }
 
 // Rule is one rule of the catalogue.
@@ -170,6 +172,7 @@ type auditor struct {
 	last     *built          // the files of the last m2 build, read when a rule needs them
 	imp      *imports        // the catalogue, the import manifests and the records, read when a rule needs them
 	comp     *computations   // the computation records, the image manifest and the runs, read when a rule needs them
+	inv      *invTree        // the inventory, read when a rule needs it
 }
 
 func load(root string, opt Options) (*auditor, error) {
