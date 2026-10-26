@@ -27,4 +27,5 @@ func ExampleRun() {
 	// graph false
 	// store false
 	// search false
+	// writing false
 }
