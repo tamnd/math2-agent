@@ -39,7 +39,7 @@ func WriteMentions(root, source string, ms []Mention) error {
 // ReadMentions reads the mentions of each source from records/mentions/ in the tree at root, in the order of their identifiers. A tree with no mentions gives no error.
 func ReadMentions(root string) ([]Mention, error) {
 	var out []Mention
-	err := readLines(filepath.Join(root, MentionsDir), func(path string, line []byte) error {
+	err := readLines(filepath.Join(root, MentionsDir), func(_ string, _ int, line []byte) error {
 		var m Mention
 		if err := json.Unmarshal(line, &m); err != nil {
 			return err
@@ -73,16 +73,27 @@ func WriteRows(root string, rows []Row) error {
 // ReadRows reads the rows from records/inventory/ in the tree at root, in the order of their identifiers. A tree with no rows gives no error.
 func ReadRows(root string) ([]Row, error) {
 	var out []Row
-	err := readLines(filepath.Join(root, RowsDir), func(path string, line []byte) error {
-		var r Row
-		if err := json.Unmarshal(line, &r); err != nil {
-			return err
-		}
+	err := WalkRows(root, func(_ string, _ int, r Row) error {
 		out = append(out, r)
 		return nil
 	})
 	sortRows(out)
 	return out, err
+}
+
+// WalkRows calls fn for each row of records/inventory/ in the tree at root, in the order of the files and their lines. It gives fn the file of the row, relative to root and with forward slashes, and the line of the row in the file.
+func WalkRows(root string, fn func(file string, line int, r Row) error) error {
+	return readLines(filepath.Join(root, RowsDir), func(path string, n int, line []byte) error {
+		var r Row
+		if err := json.Unmarshal(line, &r); err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		return fn(filepath.ToSlash(rel), n, r)
+	})
 }
 
 // ReadRegister reads the row identifiers of registers/inventory/ in the tree at root.
@@ -152,12 +163,12 @@ func encodeLines[T any](vs []T) ([]byte, error) {
 }
 
 // readLines calls fn for each line of each .jsonl file below dir.
-func readLines(dir string, fn func(path string, line []byte) error) error {
+func readLines(dir string, fn func(path string, n int, line []byte) error) error {
 	return walkFiles(dir, ".jsonl", func(path string, data []byte) error {
 		sc := bufio.NewScanner(bytes.NewReader(data))
 		sc.Buffer(nil, 64<<20)
 		for n := 1; sc.Scan(); n++ {
-			if err := fn(path, sc.Bytes()); err != nil {
+			if err := fn(path, n, sc.Bytes()); err != nil {
 				return fmt.Errorf("%s:%d: %w", path, n, err)
 			}
 		}

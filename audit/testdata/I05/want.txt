@@ -1,0 +1,2 @@
+records/inventory/104.jsonl:1:1: I05: the row 104B6D2ZD1 was deferred until 2026-01-01, and the date has passed
+records/inventory/105.jsonl:1:1: I05: the row 105C7E3AE2 is deferred and has no date

@@ -73,4 +73,10 @@ var catalogue = []entry{
 	{Rule{"X02", Agents, true, "an agent pull request stays in its run budget, and the run record shows the cost"}, x02},
 	{Rule{"X03", Agents, false, "the acceptance rate of a role and a model is below the threshold over 7 days"}, x03},
 	{Rule{"X04", Agents, true, "no agent wrote a status field or a review"}, x04},
+	{Rule{"I01", Inventory, true, "each inventory value in a node points to a row whose outcome is node or member with the tag of that node"}, i01},
+	{Rule{"I02", Inventory, true, "each row with the outcome node or member points to a live node, or to a retired node with a successor"}, i02},
+	{Rule{"I03", Inventory, true, "no row has only mentions from models"}, i03},
+	{Rule{"I04", Inventory, true, "each outcome that a rule gave names a rule in schema/outcomes.v1.yaml"}, i04},
+	{Rule{"I05", Inventory, false, "a deferred row whose date has passed"}, i05},
+	{Rule{"I06", Inventory, false, "an MSC code at two digits whose estimated recall is below 90%"}, nil},
 }

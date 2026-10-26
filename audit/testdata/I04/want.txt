@@ -1,0 +1,2 @@
+records/inventory/106.jsonl:1:1: I04: the row 106D8F4BF3 names the rule book, which is not in schema/outcomes.v1.yaml
+records/inventory/107.jsonl:1:1: I04: the row 107E9G5CG4 has the outcome merged from the rule person, which gives out_of_scope

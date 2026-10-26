@@ -1,0 +1,3 @@
+{"id":"m2://rec/wikidata/Q1#1","source":"wikidata","snapshot":"blake3:0000000000000000000000000000000000000000000000000000000000000000","kind":"statement","class":"open","by":"wikidata/2"}
+{"id":"m2://rec/wikidata/Q2#1","source":"wikidata","snapshot":"blake3:0000000000000000000000000000000000000000000000000000000000000000","kind":"statement","class":"open","by":"agent/enumerate"}
+{"id":"m2://rec/wikidata/Q3#1","source":"wikidata","snapshot":"blake3:0000000000000000000000000000000000000000000000000000000000000000","kind":"statement","class":"open","by":"agent/enumerate"}

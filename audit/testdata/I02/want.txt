@@ -1,0 +1,3 @@
+records/inventory/104.jsonl:1:1: I02: the row 104B6D2ZD1 names the node G5S1M9, which is not live and has no successor
+records/inventory/105.jsonl:1:1: I02: the row 105C7E3AE2 names the node AAYEQE, which is not live and has no successor
+records/inventory/106.jsonl:1:1: I02: the row 106D8F4BF3 has the outcome node and names no node

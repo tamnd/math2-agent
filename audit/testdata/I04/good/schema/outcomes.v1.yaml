@@ -1,0 +1,9 @@
+rules:
+  - id: person
+    outcome: out_of_scope
+    reason: a person, not an item of mathematics
+    match: each mention of the row is a Wikidata item of the class human (Q5)
+  - id: identifiers
+    outcome: merged
+    reason: the row has a shared identifier with an older row
+    match: two rows have a mention with the same identifier

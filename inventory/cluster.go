@@ -178,12 +178,15 @@ func keepFirst(a, b *Row) int {
 // onlyModels reports whether each mention was made by a model.
 func onlyModels(ids []string, byID map[string]*Mention) bool {
 	for _, id := range ids {
-		if !strings.HasPrefix(byID[id].By, "agent") {
+		if !FromModel(byID[id]) {
 			return false
 		}
 	}
 	return true
 }
+
+// FromModel reports whether a model made the mention: its importer is a run of the agent.
+func FromModel(m *Mention) bool { return strings.HasPrefix(m.By, "agent") }
 
 // Keys returns the identifier keys of a mention: its native id in the system of its source, and each id that it gives in other systems. Two mentions with a key in common are one item.
 func Keys(m *Mention) []string {
