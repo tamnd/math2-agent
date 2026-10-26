@@ -105,9 +105,14 @@ type Session struct {
 
 // Start runs the M2Extract program exe with "lake env" in the Lake project directory project. The process stops when ctx is done or when Close is called.
 func Start(ctx context.Context, exe, project string) (*Session, error) {
-	s := &Session{}
-	s.cmd = exec.CommandContext(ctx, "lake", "env", exe) // #nosec G204 -- the caller names the program, and no shell reads the arguments.
-	s.cmd.Dir = project
+	cmd := exec.CommandContext(ctx, "lake", "env", exe) // #nosec G204 -- the caller names the program, and no shell reads the arguments.
+	cmd.Dir = project
+	return StartWith(cmd)
+}
+
+// StartWith starts cmd, a command that runs the M2Extract program, as a Session. Thus a caller can run M2Extract in a sandbox. The command must not have its stdin, its stdout or its stderr set.
+func StartWith(cmd *exec.Cmd) (*Session, error) {
+	s := &Session{cmd: cmd}
 	s.cmd.Stderr = &s.stderr
 	in, err := s.cmd.StdinPipe()
 	if err != nil {

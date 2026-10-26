@@ -16,6 +16,7 @@ import (
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/llmtest"
+	"github.com/tamnd/math2-agent/sandbox"
 )
 
 // agentLean reads each line "def NAME : TYPE := VALUE" or "theorem NAME : TYPE := PROOF" of lean/Math2/T.lean of the tree as a declaration.
@@ -104,17 +105,18 @@ func proveModel(t *testing.T) {
 	newModel = func() (llm.Model, error) {
 		return llmtest.New(write("lean/Math2/T.lean", proved), write("nodes/7K/7K3QX2.md", agentNode("Math2.T.t"))), nil
 	}
-	newLean = func(_ context.Context, tree string) (tools.Lean, error) { return agentLean{tree}, nil }
+	newLean = func(_ context.Context, tree string, _ *tools.Box) (tools.Lean, error) { return agentLean{tree}, nil }
 	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
 }
 
 func TestAgentRun(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
 	root, out := agentTree(t)
 	proveModel(t)
 
 	work := filepath.Join(t.TempDir(), "w")
 	store := t.TempDir()
-	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", store, "-work", work, "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "-json", "prove")
+	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", store, "-work", work, "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "-no-sandbox", "-json", "prove")
 	if code != ExitOK {
 		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 	}
@@ -143,11 +145,34 @@ func TestAgentRun(t *testing.T) {
 		{[]string{"agent"}, ExitUsage, "Usage: m2 agent run"},
 		{[]string{"agent", "run", "explore"}, ExitUsage, "the role explore is not written yet"},
 		{[]string{"agent", "run", "-root", root, "-out", out, "-target", "7K3QX2", "-on-behalf-of", "", "prove"}, ExitFailure, "not a person, a project or a schedule"},
-		{[]string{"agent", "run", "-root", root, "-out", t.TempDir(), "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "prove"}, ExitFailure, "Run m2 build first"},
+		{[]string{"agent", "run", "-root", root, "-out", t.TempDir(), "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "-no-sandbox", "prove"}, ExitFailure, "Run m2 build first"},
+		{[]string{"agent", "run", "-root", root, "-out", out, "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "prove"}, ExitFailure, "give the image of the Lean sandbox"},
+		{[]string{"agent", "run", "-root", root, "-out", out, "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "-sandbox", "m2-lean:latest", "prove"}, ExitFailure, "has no digest"},
+		{[]string{"agent", "run", "-root", root, "-out", out, "-target", "7K3QX2", "-on-behalf-of", "github:octocat", "-sandbox", "m2-lean@sha256:" + strings.Repeat("0", 64), "prove"}, ExitFailure, "needs the Lake packages"},
 	} {
 		code, _, stderr := run(c.args...)
 		if code != c.code || !strings.Contains(stderr, c.want) {
 			t.Errorf("m2 %s: exit code %d, stderr %q", strings.Join(c.args, " "), code, stderr)
+		}
+	}
+}
+
+func TestLinkPackagesBoxed(t *testing.T) {
+	root, tree := t.TempDir(), t.TempDir()
+	if err := os.MkdirAll(filepath.Join(tree, "lean", "Math2"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := linkPackages(root, tree, true); err != nil {
+		t.Fatal(err)
+	}
+	link, err := os.Readlink(filepath.Join(tree, "lean", ".lake", "packages"))
+	if err != nil || link != sandbox.WorkDir {
+		t.Errorf("the link is %q, %v", link, err)
+	}
+	for _, dir := range []string{"lean", "lean/.lake", "lean/Math2"} {
+		fi, err := os.Stat(filepath.Join(tree, dir))
+		if err != nil || fi.Mode().Perm() != 0o777 {
+			t.Errorf("%s: %v %v", dir, fi.Mode(), err)
 		}
 	}
 }

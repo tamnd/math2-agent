@@ -12,6 +12,7 @@ import (
 )
 
 func TestOrchestrate(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
 	root, out := agentTree(t)
 	proveModel(t)
 	store, work := t.TempDir(), filepath.Join(t.TempDir(), "w")
@@ -31,7 +32,7 @@ func TestOrchestrate(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	code, stdout, stderr := run("orchestrate", "-root", root, "-out", out, "-store", store, "-config", filepath.Join(store, "config.yaml"), "-work", work, "-once", "-json")
+	code, stdout, stderr := run("orchestrate", "-root", root, "-out", out, "-store", store, "-config", filepath.Join(store, "config.yaml"), "-work", work, "-once", "-no-sandbox", "-json")
 	if code != ExitOK {
 		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 	}
@@ -74,7 +75,7 @@ func TestOrchestrate(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(store, "config.yaml"), []byte("roles: {formalize: 10}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	code, stdout, _ = run("orchestrate", "-root", root, "-out", out, "-store", store, "-config", filepath.Join(store, "config.yaml"), "-work", work, "-once")
+	code, stdout, _ = run("orchestrate", "-root", root, "-out", out, "-store", store, "-config", filepath.Join(store, "config.yaml"), "-work", work, "-once", "-no-sandbox")
 	if code != ExitOK || stdout != "job j-2026-11-20-b1 waits: orchestrator.yaml gives no budget to the role prove\n" {
 		t.Errorf("exit code %d, stdout %q", code, stdout)
 	}
@@ -86,6 +87,7 @@ func TestOrchestrate(t *testing.T) {
 	}{
 		{[]string{"orchestrate", "extra"}, ExitUsage, "Usage: m2 orchestrate"},
 		{[]string{"orchestrate", "-root", root, "-out", out, "-store", store, "-config", filepath.Join(store, "none.yaml"), "-once"}, ExitFailure, "none.yaml"},
+		{[]string{"orchestrate", "-root", root, "-out", out, "-store", store, "-config", filepath.Join(store, "config.yaml"), "-once"}, ExitFailure, "give the image of the Lean sandbox"},
 	} {
 		code, _, stderr := run(c.args...)
 		if code != c.code || !strings.Contains(stderr, c.want) {

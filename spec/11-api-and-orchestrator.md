@@ -151,7 +151,8 @@ The first version of the orchestrator is in the `orchestrator` package, and `m2 
 - A job starts on the cheapest rung of the ladder of its role with a recorded success on the role, and each failed run moves the job one rung up. A failed attempt on the same target, goal and rung in the retry time (7 days by default) makes the orchestrator skip that rung. A job with the target and the goal of a job in the queues merges into that job.
 - A job ends at success, at a stuck report, when the ladder or the budget of the job is used up, or when a run cannot start. The orchestrator knows the past attempts from the run records in the store.
 - Add refuses a job that names no person, project or schedule (rule P03).
-- The standing queues, the events, the portfolio of strategies, the cap on pull requests of each role and the Lean sessions in the sandbox are not written yet.
+- With `-sandbox IMAGE`, each call of lake, Lean and M2Extract in a run is a container of the image, with no network (11.7). The work tree is writable at `/out`, and the Lake packages of the tree are read-only at `/work`. `m2 agent run` and `m2 orchestrate` refuse to run with no image, unless `-no-sandbox` says that a person watches the run. The image `m2-lean` is not built yet, and the quotas for each identity are not written yet.
+- The standing queues, the events, the portfolio of strategies and the cap on pull requests of each role are not written yet.
 
 ## 11.6 Run records
 
