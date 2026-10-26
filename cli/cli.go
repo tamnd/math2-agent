@@ -69,7 +69,7 @@ var commands = []command{
 	{name: "review", usage: reviewUsage, summary: "Show the review packet of a node, and write a fidelity review.", run: runReview},
 	{name: "autoform", usage: "m2 autoform <tag>", summary: "Make a formal statement for a node.", milestone: "M4"},
 	{name: "agent", usage: agentUsage, summary: "Do one agent run of the formalize or the prove role in a new work tree.", run: runAgent},
-	{name: "orchestrate", usage: "m2 orchestrate", summary: "Run the job scheduler.", milestone: "M5"},
+	{name: "orchestrate", usage: orchestrateUsage, summary: "Run the jobs of the agent roles from a queue, with budgets and the escalation ladder.", run: runOrchestrate},
 }
 
 // version is the m2 version that Run got.

@@ -142,6 +142,17 @@ Money and compute are the real limits, so they are first-class:
 
 Each job records its spend: tokens in and out for each model, cached tokens, session-seconds, CPU-seconds and dollars. The weekly agent report (document 12.9) uses these records. The report shows what a formal proof costs, by area and by difficulty. At this time, the field does not publish this number.
 
+### The first version
+
+The first version of the orchestrator is in the `orchestrator` package, and `m2 orchestrate` runs it on a directory of job files (tamnd/math2-agent#61). It has these parts and limits:
+
+- One queue for each role. The orchestrator takes the roles in turn. In a role, it takes first the project or schedule that spent the least in the month, then the job with the highest priority. The priority is a field of the job, and the formula of the priority is not written yet.
+- The monthly budget of each role and the monthly cap of each project or schedule are in `orchestrator.yaml`. A run gets the least of the money that is left to its job, to its role and to its project or schedule, and the orchestrator reserves that money while the run goes. The job budget is for all the runs of the job together. `agent.Runner` sets `max_tokens` before each turn so that the turn cannot cost more than the money that is left: it counts each byte of the request as one input token at the highest input price. Thus a run never goes over its budget, even when its last turn uses each token that it may use.
+- A job starts on the cheapest rung of the ladder of its role with a recorded success on the role, and each failed run moves the job one rung up. A failed attempt on the same target, goal and rung in the retry time (7 days by default) makes the orchestrator skip that rung. A job with the target and the goal of a job in the queues merges into that job.
+- A job ends at success, at a stuck report, when the ladder or the budget of the job is used up, or when a run cannot start. The orchestrator knows the past attempts from the run records in the store.
+- Add refuses a job that names no person, project or schedule (rule P03).
+- The standing queues, the events, the portfolio of strategies, the cap on pull requests of each role and the Lean sessions in the sandbox are not written yet.
+
 ## 11.6 Run records
 
 Each agent run makes a run record in the artefact store. The run id is the key. The record contains:

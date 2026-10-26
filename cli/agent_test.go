@@ -59,12 +59,14 @@ func agentNode(decl string) string {
 
 const agentLeanFile = "module\n\n@[m2 \"7K3QX2\"]\ndef Math2.T.s : Prop := ∀ n : Nat, n = n\n"
 
-func TestAgentRun(t *testing.T) {
-	out := t.TempDir()
+// agentTree makes a git tree of math2 with the node 7K3QX2 and its statement in Lean, and a build of the valid tree.
+func agentTree(t *testing.T) (root, out string) {
+	t.Helper()
+	out = t.TempDir()
 	if _, err := build.Run(context.Background(), build.Options{Root: valid, Out: out}); err != nil {
 		t.Fatal(err)
 	}
-	root := t.TempDir()
+	root = t.TempDir()
 	for name, text := range map[string]string{
 		"nodes/7K/7K3QX2.md": agentNode("Math2.T.s"),
 		"lean/Math2.lean":    "module\n\npublic import Math2.T\n",
@@ -87,18 +89,28 @@ func TestAgentRun(t *testing.T) {
 			t.Fatalf("git %v: %v\n%s", args, err, b)
 		}
 	}
+	return root, out
+}
 
+// proveModel replaces the model and the Lean environment with a scripted model that proves 7K3QX2 in two turns and the fake agentLean.
+func proveModel(t *testing.T) {
+	t.Helper()
 	u := llm.Usage{Input: 1000, Output: 200}
 	write := func(path, text string) *llm.Response {
 		return llmtest.Call("write_file", map[string]string{"path": path, "text": text}, u)
 	}
 	proved := "module\n\ndef Math2.T.s : Prop := ∀ n : Nat, n = n\n\n@[m2 \"7K3QX2\"]\ntheorem Math2.T.t : Math2.T.s := fun _ => rfl\n"
 	oldModel, oldLean := newModel, newLean
-	defer func() { newModel, newLean = oldModel, oldLean }()
 	newModel = func() (llm.Model, error) {
 		return llmtest.New(write("lean/Math2/T.lean", proved), write("nodes/7K/7K3QX2.md", agentNode("Math2.T.t"))), nil
 	}
 	newLean = func(_ context.Context, tree string) (tools.Lean, error) { return agentLean{tree}, nil }
+	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
+}
+
+func TestAgentRun(t *testing.T) {
+	root, out := agentTree(t)
+	proveModel(t)
 
 	work := filepath.Join(t.TempDir(), "w")
 	store := t.TempDir()

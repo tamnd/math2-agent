@@ -85,7 +85,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 review export [reviewer]` | List the reviews of each reviewer, for a CV or a grant report. | written |
 | `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
 | `m2 agent run formalize\|prove` | Do one agent run of the formalize or the prove role in a new work tree, and write its run record. | written |
-| `m2 orchestrate` | Run the job scheduler. | M5 |
+| `m2 orchestrate` | Run the jobs of the agent roles from a queue, with budgets and the escalation ladder. | written |
 
 ## The wiki
 
@@ -465,6 +465,17 @@ The command needs the last build of the tree for the read API, and `ANTHROPIC_AP
 The model sees only the tools of the role. It cannot use a shell. The run stops when the goal of the role holds, when the budget is used up, when the model makes no progress, or when it reports that it is stuck. For prove, a statement with no proof is a definition `def S : Prop`. The run must write a theorem of type `S`, move the attribute `@[m2 "TAG"]` to it, and change the `decl` of the binding. The goal checks that the theorem has no `sorry`, uses only the standard axioms, uses `native_decide` only with `-native-decide`, and leaves `S` and its closure unchanged.
 
 The full run record goes to `records/<id>.json` and its summary to `runs/<id>.json` in `-store`, which is `build/` by default. Thus the rules P02 and P03 read the summary. The command prints the outcome, the spend and the changed files, and it leaves the work tree for a person to see. The exit code is 0 when the goal holds, and 1 when it does not. The command does not open a pull request yet.
+
+`m2 orchestrate` runs the jobs in a queue (spec 11.4 and 11.5). A job is a YAML file in `queue/` of the store, in the form of `-job`. The budgets are in `orchestrator.yaml` in the tree:
+
+```yaml
+roles: {prove: 200, formalize: 100}         # the monthly budget of each role in dollars
+on_behalf_of: {project:ug-core: 50}         # the monthly cap of a project or a schedule
+retry: 168h                                 # do not try a failed target, goal and rung again for this time
+workers: 2                                  # the most runs at the same time
+```
+
+Each run gets the least of the money that is left to its job, to its role and to its project in the month, and the run cannot spend more. A job starts on the cheapest rung of the ladder with a recorded success, and each failed run moves it one rung up. A job with the target and the goal of a job in the queue merges into it. The orchestrator takes the roles in turn, and in a role it takes first the project that spent the least in the month. The past spend and failures come from the run records in the store, thus a restart counts them again. A job that ends goes to `queue/done/<id>.json` with its outcome. The work tree of a run that reaches the goal stays in `-work`, and the orchestrator removes the others. With `-once`, the command stops when no job can start. Without it, the command reads the queue again after each `-interval`. The exit code is 1 when a run spent more than its budget.
 
 ## The Mathlib bump
 

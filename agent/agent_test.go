@@ -255,3 +255,27 @@ func TestRunWhy(t *testing.T) {
 		t.Errorf("the message after the text turn is %+v", last)
 	}
 }
+
+// greedy is a model that uses each token that a request allows: an input token for each byte of the request, and each output token of the limit.
+type greedy struct{ n int }
+
+func (g *greedy) Complete(_ context.Context, req *llm.Request) (*llm.Response, error) {
+	g.n++
+	data, _ := json.Marshal(req)
+	resp := llmtest.Call("lean_check", code(strings.Repeat("a", g.n)), llm.Usage{Input: len(data), Output: req.MaxTokens})
+	resp.Model = req.Model
+	return resp, nil
+}
+
+func TestRunBudgetBound(t *testing.T) {
+	rn, _ := runner(t, &greedy{})
+	j := job()
+	j.Budget.USD = 0.002
+	rec, err := rn.Run(context.Background(), j, 0, "Prove 7K3QX2.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec.Spend.USD > j.Budget.USD || rec.Reason != "the budget of $0.00 is used up" || len(rec.Turns) < 2 {
+		t.Errorf("the run spends $%.6f of $%.6f in %d turns, and stops with %q", rec.Spend.USD, j.Budget.USD, len(rec.Turns), rec.Reason)
+	}
+}
