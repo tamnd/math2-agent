@@ -1,0 +1,14 @@
+role: enumerate
+version: 0.1.0
+tools: [search, list_items]
+ladder:
+  - model: claude-haiku-5-5
+    effort: medium
+  - model: claude-sonnet-5-5
+    effort: medium
+budget:
+  usd: 0.5
+  wall: 15m0s
+max_tokens: 16000
+turns: 4
+stuck: 2

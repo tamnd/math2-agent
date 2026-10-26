@@ -1,11 +1,14 @@
 package agent_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/tamnd/math2-agent/agent"
 	"github.com/tamnd/math2-agent/align"
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
@@ -50,6 +53,26 @@ func TestPermit(t *testing.T) {
 			t.Fatal(err)
 		}
 		return string(data)
+	}
+	mention := func(source, native, by string) string {
+		m := inventory.Mention{ID: inventory.MentionID(source, native, 1), Source: source, Snapshot: "-", Kind: "statement", Name: "Heine-Borel theorem", Class: "open", By: by}
+		data, err := json.Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data) + "\n"
+	}
+	enumerated := "agent:m2-agent/enumerate@0.1.0"
+	first := mention("model-claude", "54D30.heine-borel-theorem", enumerated)
+	shard := inventory.MentionShard(inventory.MentionID("model-claude", "54D30.heine-borel-theorem", 1))
+	mentions := inventory.MentionsDir + "/model-claude/" + shard + ".jsonl"
+	// second is a mention of the same shard, whose id sorts after the id of first.
+	var second string
+	for i := 0; second == ""; i++ {
+		native := fmt.Sprintf("54D30.z%d", i)
+		if inventory.MentionShard(inventory.MentionID("model-claude", native, 1)) == shard {
+			second = mention("model-claude", native, enumerated)
+		}
 	}
 	edge := func(n, e, system, to, by string) string {
 		p := align.NewProposal(n, e, system, to)
@@ -176,6 +199,18 @@ func TestPermit(t *testing.T) {
 		{"explore explains", "explore", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(conjecture + "\n## Explanations\n\n### L2 agent\n\nA text.\n")}, "writes no explanations"},
 		{"explore changes a node", "explore", workspace.Change{Path: path, Old: []byte(target), New: []byte(rebind)}, "changes no node that exists"},
 		{"explore writes Lean", "explore", workspace.Change{Path: "lean/Math2/Conjectures/A.lean", New: []byte("a")}, "writes no Lean"},
+		{"enumerate adds a mention", "enumerate", workspace.Change{Path: mentions, New: []byte(first)}, ""},
+		{"enumerate adds a second mention", "enumerate", workspace.Change{Path: mentions, Old: []byte(first), New: []byte(first + second)}, ""},
+		{"enumerate changes a mention", "enumerate", workspace.Change{Path: mentions, Old: []byte(first), New: []byte(strings.Replace(first, "Heine-Borel", "Heine Borel", 1))}, "does not change or remove"},
+		{"enumerate removes a mention", "enumerate", workspace.Change{Path: mentions, Old: []byte(first + second), New: []byte(second)}, "does not change or remove"},
+		{"enumerate does not sort", "enumerate", workspace.Change{Path: mentions, New: []byte(second + first)}, "not sorted"},
+		{"enumerate adds a mention of an importer", "enumerate", workspace.Change{Path: mentions, New: []byte(mention("model-claude", "54D30.heine-borel-theorem", "m2/0.2.0 import"))}, "adds only its own mentions"},
+		{"enumerate adds a mention of another source", "enumerate", workspace.Change{Path: inventory.MentionsDir + "/model-gemma/" + shard + ".jsonl", New: []byte(first)}, "the file is of model-gemma"},
+		{"enumerate adds a mention to the wrong shard", "enumerate", workspace.Change{Path: inventory.MentionsDir + "/model-claude/000.jsonl", New: []byte(first)}, "is of the shard"},
+		{"enumerate writes a source", "enumerate", workspace.Change{Path: inventory.MentionsDir + "/wikidata/" + shard + ".jsonl", New: []byte(first)}, "only the mentions of a model list"},
+		{"enumerate adds a field", "enumerate", workspace.Change{Path: mentions, New: []byte(strings.Replace(first, `"by"`, `"score":1,"by"`, 1))}, "unknown field"},
+		{"enumerate adds a node", "enumerate", workspace.Change{Path: "nodes/~/~1a2b3c4d.md", New: []byte(lemma)}, "only the mentions of a model list"},
+		{"enumerate writes Lean", "enumerate", workspace.Change{Path: "lean/Math2/A.lean", New: []byte("a")}, "only the mentions of a model list"},
 		{"an option", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(root + "set_option maxHeartbeats 0\n")}, "does more than add imports"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

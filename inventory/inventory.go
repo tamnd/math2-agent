@@ -48,6 +48,9 @@ type Mention struct {
 	NativeID string              `json:"native_id,omitempty"` // the identifier of the item in the source
 	Kind     string              `json:"kind"`                // one of the kinds of spec 04.2, or unknown
 	Name     string              `json:"name,omitempty"`      // the name that the source uses
+	Aliases  []string            `json:"aliases,omitempty"`   // the other names of the item, from a model list (corpus K7.4)
+	Uses     []string            `json:"uses,omitempty"`      // the names of the prerequisites of the item, from a model list (corpus K7.4)
+	Cites    []Cite              `json:"cites,omitempty"`     // the sources that a model names for the item, which no one has checked yet (corpus K7.4)
 	Text     string              `json:"text,omitempty"`      // the statement, only when the class of the source lets math2 store it
 	Licence  string              `json:"licence,omitempty"`   // the licence of the item, for a source with a licence for each item (rule L06)
 	MSC      []string            `json:"msc,omitempty"`       // the MSC2020 codes
@@ -56,6 +59,13 @@ type Mention struct {
 	TypeHash string              `json:"type_hash,omitempty"` // the hash of the canonical form of the type of a statement of a formal library (pass 2 of K4.3)
 	Class    string              `json:"class"`               // the licence class (spec 9.3)
 	By       string              `json:"by"`                  // the importer and its version, or the run
+}
+
+// Cite is a source that a model names for an item. The clustering does not join mentions by a cite, because a model can give a wrong id. A cite counts only when K9.5 confirms it.
+type Cite struct {
+	System  string `json:"system"`            // a system of the crosswalk, doi or isbn
+	ID      string `json:"id"`                // the id in the system, such as 10.1007/978-3-642-61795-0
+	Locator string `json:"locator,omitempty"` // where the item is in the source, such as Theorem 2.3
 }
 
 // Row is one distinct item of the inventory (corpus spec K4.1).
