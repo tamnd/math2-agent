@@ -5,6 +5,8 @@
 // A [Job] is the unit of work of spec 11.4: a role, a target, a goal and a [Budget]. A [Runner] runs one job on one rung of the ladder of the role. The model sees only the typed tools of the profile of the role, never a shell. Each turn checks the budget and the progress. The run stops when the goal predicate of the runner holds, when the budget or the turns are used up, when the model makes no progress for some turns, or when the model calls the tool report_stuck with a reason. The goal predicate is the verifier: the run records the own assessment of the model and never uses it.
 //
 // The [Record] of a run has the job, the role version, the hashes of the prompt files, the models, the full transcript, the outcome with its reason and the spend (spec 11.6). [WriteRecord] writes the record and its summary, a [prov.Run], to the artefact store.
+//
+// [Permit] checks the changes of a run in its [workspace.Workspace] against the field permission set of its role (spec 12.1). A change outside the set fails, even if it is correct.
 package agent
 
 import (
