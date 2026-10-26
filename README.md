@@ -737,6 +737,13 @@ go test ./bench/agents/align -v
 go test ./bench/agents/bump -v
 ```
 
+`bench/agents/explore` is the suite of the explore role, and it needs no Lean. Its items are planted problems: each target is a plausible statement that is false, such as "the Fermat numbers are prime", and each item has the program that finds the counterexample, the output of the program, and the reference counterexample. Without flags, the sandbox is a fake that gives the output of the item, and no container runs. A scripted model writes the computation, runs it, looks up the claim and files the counterexample, and the goal must hold. Then the goal or the tool must refuse each wrong attempt: no output, an output that says that it is new, a conjecture that no computation checks, a counterexample with no computation, a wrong output hash, and a change of the target. With `-live`, the computations run in docker, thus the run also needs the manifest of the images with `-images`. The report gives the refutations found, the conjectures that the runs filed for a person to read, and the share of the runs that looked up each claim before they filed it.
+
+```sh
+go test ./bench/agents/explore -v
+go test ./bench/agents/explore -live -images ../math2/manifests/images.yaml -rung 0 -v -report explore.md
+```
+
 ## Rules that the toolchain keeps
 
 1. The files in tamnd/math2 are the truth. Each database, index and site comes from these files, and you can make it again from them.

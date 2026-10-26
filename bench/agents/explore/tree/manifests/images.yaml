@@ -1,0 +1,6 @@
+# The image of the suite. The digest is a placeholder for the scripted runs, which use a fake sandbox. A live run gives the manifest of the tree with -images.
+images:
+  - name: m2-python
+    contents: Python 3
+    amd64: sha256:1111111111111111111111111111111111111111111111111111111111111111
+    arm64: sha256:1111111111111111111111111111111111111111111111111111111111111111

@@ -1,0 +1,67 @@
+# The public items of the suite of the explore role (spec 17.3.4). Each target is a plausible statement that is false, with a small counterexample. An item has the program that finds the counterexample, the standard output of the program, and the reference counterexample. The texts are in our own words.
+items:
+  - target: 4N9QX2
+    claim: 641 divides $2^{32} + 1$.
+    code: |
+      n = 1
+      while True:
+          f = 2 ** (2 ** n) + 1
+          d = next((d for d in range(3, 10 ** 4, 2) if d * d <= f and f % d == 0), None)
+          if d:
+              print(n, d)
+              break
+          n += 1
+    output: "5 641\n"
+    name: The fifth Fermat number is not prime
+    text: The number $2^{2^5} + 1 = 2^{32} + 1$ is $641 \cdot 6700417$, thus it is not prime.
+  - target: 4P1YN0
+    claim: $40^2 + 40 + 41 = 41^2$.
+    code: |
+      def prime(m):
+          return m > 1 and all(m % d for d in range(2, int(m ** 0.5) + 1))
+      n = 0
+      while prime(n * n + n + 41):
+          n += 1
+      print(n, n * n + n + 41)
+    output: "40 1681\n"
+    name: The value of n^2 + n + 41 at 40 is not prime
+    text: For $n = 40$, the number $n^2 + n + 41$ is $1681 = 41^2$, thus it is not prime. The values for $n$ from 0 to 39 are prime.
+  - target: 6G0BCH
+    claim: 5777 is odd, it is not prime, and it is not $p + 2k^2$ for a prime $p$ and an integer $k \ge 1$.
+    code: |
+      def prime(m):
+          return m > 1 and all(m % d for d in range(2, int(m ** 0.5) + 1))
+      m = 3
+      while prime(m) or any(prime(m - 2 * k * k) for k in range(1, int((m / 2) ** 0.5) + 1)):
+          m += 2
+      print(m)
+    output: "5777\n"
+    name: 5777 is not a prime plus twice a square
+    text: The odd number $5777 = 53 \cdot 109$ is not prime, and for each $k \ge 1$ with $2k^2 < 5777$, the number $5777 - 2k^2$ is not prime.
+  - target: 2M3RSN
+    claim: $2^{11} - 1 = 23 \cdot 89$.
+    code: |
+      def prime(m):
+          return m > 1 and all(m % d for d in range(2, int(m ** 0.5) + 1))
+      p = next(p for p in range(2, 100) if prime(p) and not prime(2 ** p - 1))
+      q = 2 ** p - 1
+      print(p, next(d for d in range(2, q) if q % d == 0))
+    output: "11 23\n"
+    name: The Mersenne number of exponent 11 is not prime
+    text: The exponent 11 is prime, and $2^{11} - 1 = 2047 = 23 \cdot 89$, thus it is not prime.
+  - target: 3PRM1X
+    claim: $2 \cdot 3 \cdot 5 \cdot 7 \cdot 11 \cdot 13 + 1 = 30031 = 59 \cdot 509$.
+    code: |
+      def prime(m):
+          return m > 1 and all(m % d for d in range(2, int(m ** 0.5) + 1))
+      e, p = 1, 1
+      while True:
+          p += 1
+          if prime(p):
+              e *= p
+              if not prime(e + 1):
+                  print(e + 1, next(d for d in range(2, e) if (e + 1) % d == 0))
+                  break
+    output: "30031 59\n"
+    name: The product of the first six primes plus one is not prime
+    text: The product of the first six primes is 30030, and $30031 = 59 \cdot 509$, thus it is not prime.
