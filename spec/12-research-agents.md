@@ -54,6 +54,8 @@ These decisions are intentional:
 - **The verifier's verdict is the only verdict.** When an agent claims success, it must produce a diff that passes the audit. The system records the agent's own assessment and never uses it.
 - **Failures with reasons are outputs.** "Statement false at n=7, witness attached" closes a prove job and attaches a counterexample job. "Needs a lemma that is not in Mathlib: X" creates a node for X.
 
+The `agent` package runs this loop. A turn makes progress when it calls a tool with an input that the run did not call before, and the run caches the result of each call by the tool and the input. The tool `report_stuck` is in each profile, and the model calls it with the reason. The goal predicate is a function of the role that reads the tree and the build, never the text of the model. Each model turn has a limit of output tokens from the role and from the budget that is left.
+
 ### Statement pinning
 
 In 2026, the worst failure mode was a correct proof of a different statement. The causes were edited context, redefined notions, a weakened hypothesis or an exploited checker. Thus each role that writes Lean works against a **pinned statement**:
