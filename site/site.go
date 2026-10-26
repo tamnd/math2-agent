@@ -90,7 +90,8 @@ var refFields = []struct{ Key, Label, Back string }{
 	{"successor", "Replaced by", "Replaces"},
 }
 
-var specName = regexp.MustCompile(`^([0-9]{2}-[a-z0-9-]+)\.md$`)
+// specName matches the file name of a spec document, for example 02-the-goal.md or 01a-reference-works.md.
+var specName = regexp.MustCompile(`^([0-9]{2}[a-z]?-[A-Za-z0-9-]+)\.md$`)
 
 type link struct {
 	URL, Text, Note string
@@ -124,6 +125,7 @@ type nodeView struct {
 
 type specDoc struct {
 	Slug, Title, File, URL string
+	Part                   string // "" for the main spec, or the name of its sub-spec directory, for example corpus
 	Body                   template.HTML
 	Source                 []byte
 }
@@ -364,53 +366,73 @@ func (b *builder) contentLinks(dest string) (string, bool) {
 	return "https://github.com/" + b.opt.Repo + "/blob/main/" + strings.TrimPrefix(dest, "./"), true
 }
 
-// specLinks resolves a link in a spec document.
-func (b *builder) specLinks(dest string) (string, bool) {
-	file, frag, _ := strings.Cut(dest, "#")
-	if m := specName.FindStringSubmatch(file); m != nil {
-		u := b.url("spec/" + m[1] + "/")
-		if frag != "" {
-			u += "#" + frag
+// specParts are the sub-spec directories of the spec, in the order of the index. Each has its own README and its own numbers.
+var specParts = []string{"corpus"}
+
+// specLinks resolves the links in a spec document of the part dir. dir is "" for the main spec.
+func (b *builder) specLinks(dir string) func(string) (string, bool) {
+	return func(dest string) (string, bool) {
+		if strings.Contains(dest, "://") || strings.HasPrefix(dest, "#") || strings.HasPrefix(dest, "mailto:") {
+			return dest, true
 		}
-		return u, true
+		file, frag, _ := strings.Cut(dest, "#")
+		rel := path.Clean(path.Join(dir, file))
+		d, name := path.Split(rel)
+		d = strings.TrimSuffix(d, "/")
+		if m := specName.FindStringSubmatch(name); m != nil && (d == "" || slices.Contains(specParts, d)) {
+			u := b.url("spec/" + path.Join(d, m[1]) + "/")
+			if frag != "" {
+				u += "#" + frag
+			}
+			return u, true
+		}
+		return "https://github.com/" + b.opt.AgentRepo + "/blob/main/spec/" + path.Join(dir, dest), true
 	}
-	if strings.Contains(dest, "://") || strings.HasPrefix(dest, "#") || strings.HasPrefix(dest, "mailto:") {
-		return dest, true
-	}
-	return "https://github.com/" + b.opt.AgentRepo + "/blob/main/spec/" + dest, true
 }
 
 func (b *builder) loadSpec() error {
 	if b.opt.Spec == "" {
 		return nil
 	}
-	files, err := filepath.Glob(filepath.Join(b.opt.Spec, "[0-9][0-9]-*.md"))
-	if err != nil {
-		return err
-	}
-	slices.Sort(files)
-	for _, f := range files {
-		data, err := os.ReadFile(f) // #nosec G304 -- the path comes from a glob of the spec directory.
+	for _, part := range append([]string{""}, specParts...) {
+		files, err := filepath.Glob(filepath.Join(b.opt.Spec, part, "[0-9][0-9]*-*.md"))
 		if err != nil {
 			return err
 		}
-		slug := strings.TrimSuffix(filepath.Base(f), ".md")
-		title := slug
-		for line := range strings.Lines(string(data)) {
-			if t, ok := strings.CutPrefix(line, "# "); ok {
-				title = strings.TrimSpace(t)
-				break
+		slices.Sort(files)
+		for _, f := range files {
+			if specName.FindString(filepath.Base(f)) == "" {
+				continue
+			}
+			if err := b.loadSpecDoc(part, f); err != nil {
+				return err
 			}
 		}
-		body, err := b.plainMD.render(string(data), b.specLinks)
-		if err != nil {
-			return fmt.Errorf("site: %s: %w", f, err)
-		}
-		b.specs = append(b.specs, &specDoc{
-			Slug: slug, Title: title, File: filepath.Base(f), URL: b.url("spec/" + slug + "/"),
-			Body: template.HTML(body), Source: data, // #nosec G203 -- the spec is in the math2-agent repository, which review gates.
-		})
 	}
+	return nil
+}
+
+func (b *builder) loadSpecDoc(part, f string) error {
+	data, err := os.ReadFile(f) // #nosec G304 -- the path comes from a glob of the spec directory.
+	if err != nil {
+		return err
+	}
+	slug := path.Join(part, strings.TrimSuffix(filepath.Base(f), ".md"))
+	title := slug
+	for line := range strings.Lines(string(data)) {
+		if t, ok := strings.CutPrefix(line, "# "); ok {
+			title = strings.TrimSpace(t)
+			break
+		}
+	}
+	body, err := b.plainMD.render(string(data), b.specLinks(part))
+	if err != nil {
+		return fmt.Errorf("site: %s: %w", f, err)
+	}
+	b.specs = append(b.specs, &specDoc{
+		Slug: slug, Title: title, File: path.Join(part, filepath.Base(f)), URL: b.url("spec/" + slug + "/"), Part: part,
+		Body: template.HTML(body), Source: data, // #nosec G203 -- the spec is in the math2-agent repository, which review gates.
+	})
 	return nil
 }
 
