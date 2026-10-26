@@ -21,14 +21,21 @@ import (
 	"github.com/tamnd/math2-agent/status"
 )
 
-const reviewUsage = "m2 review [-root DIR] [-out DIR] [-decl D] [-json] [-reviewer ID -verdict V [-convention C]... [-class M-X] [-notes TEXT] [-date D] [-dry-run] [-commit]] <tag|alias|uri>\n       m2 review queue [-root DIR] [-out DIR] [-reviewer ID] [-area MSC] [-second] [-n N] [-json]\n       m2 review export [-root DIR] [-url URL] [-json] [reviewer]"
+const reviewUsage = "m2 review [-root DIR] [-out DIR] [-decl D] [-blind] [-json] [-reviewer ID -verdict V [-convention C]... [-class M-X] [-notes TEXT] [-date D] [-dry-run] [-commit]] <tag|alias|uri>\n       m2 review queue [-root DIR] [-out DIR] [-reviewer ID] [-area MSC] [-second] [-n N] [-json]\n       m2 review sample [-root DIR] [-out DIR] [-month YYYY-MM] [-seed S] [-write] [-json]\n       m2 review measure [-root DIR] [-json] [YYYY-MM]\n       m2 review export [-root DIR] [-url URL] [-json] [reviewer]"
 
 func runReview(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 && args[0] == "export" {
 		return runReviewExport(args[1:], stdout, stderr)
 	}
-	if len(args) > 0 && args[0] == "queue" {
-		return runReviewQueue(args[1:], stdout, stderr)
+	if len(args) > 0 {
+		switch args[0] {
+		case "queue":
+			return runReviewQueue(args[1:], stdout, stderr)
+		case "sample":
+			return runReviewSample(args[1:], stdout, stderr)
+		case "measure":
+			return runReviewMeasure(args[1:], stdout, stderr)
+		}
 	}
 	flags := flag.NewFlagSet("m2 review", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -36,6 +43,7 @@ func runReview(args []string, stdout, stderr io.Writer) int {
 	out := flags.String("out", "", "the output directory of m2 build. Empty means build/ in the tree.")
 	decl := flags.String("decl", "", "the declaration or the adapter of the binding. Empty means the only binding.")
 	asJSON := flags.Bool("json", false, "write the packet, or the review, as JSON")
+	blind := flags.Bool("blind", false, "leave the reviews of the binding out of the packet, for a blind re-review (spec 10.8)")
 	width := flags.Int("width", 0, "the width of the text in columns. Zero means $COLUMNS, or 100.")
 	reviewer := flags.String("reviewer", os.Getenv("M2_REVIEWER"), "orcid: and your ORCID iD, or github: and your GitHub login. The default is $M2_REVIEWER.")
 	verdict := flags.String("verdict", "", "faithful, faithful-with-conventions or not-faithful. Without a verdict, m2 review shows the packet.")
@@ -84,6 +92,11 @@ func runReview(args []string, stdout, stderr io.Writer) int {
 		return fail(err)
 	}
 
+	if *blind {
+		for i := range p.Bindings {
+			p.Bindings[i].Reviews = []status.ReviewState{}
+		}
+	}
 	if *verdict == "" {
 		if *asJSON {
 			return writeJSON(stdout, stderr, "m2 review", p)

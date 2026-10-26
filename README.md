@@ -79,6 +79,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 prov` | Show, record, credit, quarantine, confirm and disclose provenance. | written |
 | `m2 review <tag>` | Show the review packet of a node, and write a fidelity review of a Lean binding. | written |
 | `m2 review queue` | List the bindings that wait for a review, with the nodes that more nodes use first. | written |
+| `m2 review sample`, `m2 review measure` | Draw the monthly re-review sample, and measure the disagreement of the re-reviews. | written |
 | `m2 review export [reviewer]` | List the reviews of each reviewer, for a CV or a grant report. | written |
 | `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
 | `m2 agent run <role>` | Do one agent run. | M5 |
@@ -211,6 +212,14 @@ With `-verdict`, the command writes a review. It records the statement hash and 
 ```sh
 m2 review queue -reviewer github:octocat -area 20
 m2 review queue -second -n 0 -json
+```
+
+Each month, a different reviewer does a blind re-review of a sample of the reviewed bindings (spec 10.8). `m2 review sample` draws 1% of the bindings at F2 and 0.5% of the bindings at F3, at least one of each level. The draw depends only on the seed, the month and the bindings, thus anyone can draw the same sample again with the seed. Each binding goes to a registered reviewer who did not write the binding and did not review it, with a reviewer of the area of the node first. `-write` adds the sample to `registers/samples.reg` of the tree. The reviewer runs `m2 review -blind TAG`, which shows the packet without the reviews of the binding, and writes the review as usual. The review files are public, thus the reviewer must not open the review file of the node before the re-review. `m2 review measure` finds the re-review of each sample and shows the share of the re-reviews that disagree, for each level, in all areas and in each top-level MSC2020 class.
+
+```sh
+m2 review sample -month 2026-11 -write
+m2 review -blind 3C53TD
+m2 review measure 2026-11
 ```
 
 A review is signed and public work, and the reviewer can cite it (spec 16.4). `m2 review export` lists the reviews of each reviewer, the newest first, with the node, the declaration and the verdict of each one. Give a reviewer to get only their reviews, and `-json` for JSON. The wiki has the same list for each reviewer at a stable link, `reviewers/SLUG/`, where the slug is the id with a hyphen for the colon. The JSON copy is at `api/reviewers/SLUG.json`, and `api/reviewers.json` lists the reviewers.

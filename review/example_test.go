@@ -64,3 +64,9 @@ func ExampleQueue() {
 	}
 	// Output: 1B0000 F1 Nat.zero_add 0
 }
+
+func ExampleRate_Share() {
+	r := review.Rate{Level: status.F2, Area: "all", Drawn: 60, Done: 50, Disagrees: 1}
+	fmt.Printf("%s %.1f%%\n", r.Level, 100*r.Share())
+	// Output: F2 2.0%
+}
