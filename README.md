@@ -84,7 +84,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 review sample`, `m2 review measure` | Draw the monthly re-review sample, and measure the disagreement of the re-reviews. | written |
 | `m2 review export [reviewer]` | List the reviews of each reviewer, for a CV or a grant report. | written |
 | `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
-| `m2 agent run <role>` | Do one agent run. | M5 |
+| `m2 agent run formalize\|prove` | Do one agent run of the formalize or the prove role in a new work tree, and write its run record. | written |
 | `m2 orchestrate` | Run the job scheduler. | M5 |
 
 ## The wiki
@@ -451,6 +451,20 @@ The summary of each agent run is in `build/runs/<id>.json`, with the agent, the 
 | P04 | An explanation that the node marks as written by a person was not written last by an agent. |
 
 P02 and P03 need the run summaries in `build/runs/`. When they do not exist, the rules skip.
+
+## Agent runs
+
+`m2 agent run` does one run of the formalize or the prove role (spec 12.4) on one target node:
+
+```sh
+m2 agent run -target 7K3QX2 -on-behalf-of github:octocat -budget 2 prove
+```
+
+The command needs the last build of the tree for the read API, and `ANTHROPIC_API_KEY` for the Claude API. It makes a new git work tree at `HEAD` in the temporary directory, or in `-work`. It links `lean/.lake/packages` of the tree into the work tree, so that the run uses the Mathlib build that is there. The role, the prompts and the model ladder come from `prompts/<role>/`, and `-rung` selects the rung of the ladder. A job file in YAML (spec 11.4) can give the job with `-job`. The person, the project or the schedule on whose behalf the run works comes from `-on-behalf-of` or `$M2_ON_BEHALF_OF`.
+
+The model sees only the tools of the role. It cannot use a shell. The run stops when the goal of the role holds, when the budget is used up, when the model makes no progress, or when it reports that it is stuck. For prove, a statement with no proof is a definition `def S : Prop`. The run must write a theorem of type `S`, move the attribute `@[m2 "TAG"]` to it, and change the `decl` of the binding. The goal checks that the theorem has no `sorry`, uses only the standard axioms, uses `native_decide` only with `-native-decide`, and leaves `S` and its closure unchanged.
+
+The full run record goes to `records/<id>.json` and its summary to `runs/<id>.json` in `-store`, which is `build/` by default. Thus the rules P02 and P03 read the summary. The command prints the outcome, the spend and the changed files, and it leaves the work tree for a person to see. The exit code is 0 when the goal holds, and 1 when it does not. The command does not open a pull request yet.
 
 ## The Mathlib bump
 
