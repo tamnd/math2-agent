@@ -1,0 +1,33 @@
+{{define "reviewers"}}
+<header class="page-head">
+  <h1>Reviewers</h1>
+  <p class="lead">A fidelity review checks that a Lean statement says what the informal statement says (spec 10.6). Each review is signed and public, and it carries the name of the reviewer. Each reviewer has a page with a stable link, to cite in a CV or a grant report (spec 16.4).</p>
+</header>
+{{with .}}
+<table class="list">
+  <thead><tr><th>Reviewer</th><th>Reviews</th><th>Since</th></tr></thead>
+  <tbody>
+  {{range .}}<tr><td><a href="{{.Page}}">{{.Who.Text}}</a> <span class="muted">{{.Reviewer}}</span></td><td>{{len .Reviews}}</td><td>{{.First}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<p class="notice">No person has reviewed a binding yet. To review one, read <a href="{{url "contribute/"}}">Contribute</a> and run <code>m2 review</code>.</p>
+{{end}}
+{{end}}
+
+{{define "reviewer"}}
+<header class="page-head">
+  <h1>Reviews by {{if .Who.URL}}<a href="{{.Who.URL}}">{{.Who.Text}}</a>{{else}}{{.Who.Text}}{{end}}</h1>
+  <p class="lead">{{len .Reviews}} fidelity review{{if ne (len .Reviews) 1}}s{{end}} of Lean formalizations for Math 2.0{{with .Areas}}, in the MSC areas {{join . ", "}}{{end}}.{{if not .First}} The register of reviewers has no record of {{.Reviewer}}, thus these reviews do not count for the status yet.{{end}}</p>
+</header>
+<p>Cite this page as <a href="{{.URL}}">{{.URL}}</a>. The JSON copy is at <a href="{{.JSONURL}}"><code>{{.JSONURL}}</code></a>, and <code>m2 review export {{.Reviewer}}</code> gives the same list as text.</p>
+<ul class="chips">{{range $v, $n := .Verdicts}}<li>{{$v}} <span class="count">{{$n}}</span></li>{{end}}</ul>
+<table class="list">
+  <thead><tr><th>Date</th><th>Node</th><th>Declaration</th><th>Verdict</th><th>Review</th></tr></thead>
+  <tbody>
+  {{range .Entries}}<tr><td>{{.Date}}</td><td><a href="{{.Node.URL}}">{{.Node.Text}}</a> <span class="tag">{{.Tag}}</span></td><td><code>{{.Decl}}</code></td><td>{{.Verdict}}{{with .Conventions}} <span class="muted">{{join . "; "}}</span>{{end}}{{with .Class}} <span class="muted">{{.}}</span>{{end}}</td><td><a href="{{.File}}">{{.ID}}</a></td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}

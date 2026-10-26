@@ -78,6 +78,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 compute run\|verify <tag>` | Run a computation in the sandbox, or verify its output and its certificate. | written |
 | `m2 prov` | Show, record, credit, quarantine, confirm and disclose provenance. | written |
 | `m2 review <tag>` | Show the review packet of a node, and write a fidelity review of a Lean binding. | written |
+| `m2 review export [reviewer]` | List the reviews of each reviewer, for a CV or a grant report. | written |
 | `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
 | `m2 agent run <role>` | Do one agent run. | M5 |
 | `m2 orchestrate` | Run the job scheduler. | M5 |
@@ -203,6 +204,13 @@ m2 review -reviewer orcid:0000-0002-1825-0097 -verdict not-faithful -class M-hyp
 ```
 
 With `-verdict`, the command writes a review. It records the statement hash and the type hash of the binding, gives the review the next id of the node, adds it to `reviews/XX/TAG.yaml` and adds the id to `fidelity_reviews` of the binding. The reviewer is `orcid:` and an ORCID iD, or `github:` and a GitHub login, and `$M2_REVIEWER` gives the default. An agent cannot review, and the author of a binding cannot review it. The verdict `faithful-with-conventions` needs one `-convention` or more, and `not-faithful` needs a class of spec 10.5. The command refuses a review when the statement changed after the last build. `-dry-run` checks the review and changes no file. `-commit` commits the two files with `git commit -S`, so the commit has the signature of the reviewer. The tool does not sign for the reviewer. The packet does not yet show the candidate statements of autoformalization or the change of a type after a bump.
+
+A review is signed and public work, and the reviewer can cite it (spec 16.4). `m2 review export` lists the reviews of each reviewer, the newest first, with the node, the declaration and the verdict of each one. Give a reviewer to get only their reviews, and `-json` for JSON. The wiki has the same list for each reviewer at a stable link, `reviewers/SLUG/`, where the slug is the id with a hyphen for the colon. The JSON copy is at `api/reviewers/SLUG.json`, and `api/reviewers.json` lists the reviewers.
+
+```sh
+m2 review export github:octocat
+m2 review export -json
+```
 
 ## The status of a node
 
@@ -629,7 +637,7 @@ propose/  the writes of spec 11.1: the change of each write method, the audit ga
 prov/     the provenance logs, the agent runs, the credit of a person and the quarantine of a model (spec 04.8 and 06.5)
 release/  the release manifest, the levels and the notes of spec 06.2, and the rebuild checks R01 and R02
 replay/   the replay of a declaration in the comparator and the independent kernels
-review/   the review packets of spec 10.6 and the writing of fidelity reviews
+review/   the review packets of spec 10.6, the writing of fidelity reviews and the export of the reviews of each reviewer (spec 16.4)
 schema/   check front matter against the node schema
 search/   the search index: the identifier resolver, the four channels, the fusion and the premise selection (spec 14)
 site/     build the wiki
