@@ -89,6 +89,8 @@ Every agent run is a record (11.6). Together, the records are math2's own datase
 
 The transcripts of merged runs are public (11.6), so their outcome data is public too. Each quarter, math2 also publishes a dataset of all runs, merged or not. It contains targets, outcomes and costs, but no transcripts for unmerged runs. This applies the AGMAI and Tao position on the report of negative results and resource use (document 01) to the project's own agents.
 
+The package `agent/dataset` and `m2 agent dataset` make the dataset of a quarter as JSON Lines, with one row for each run that started in it. A row has the job, the role at its version, the models, the outcome, the budget, the spend and the verdicts of the novelty check. It has no transcript, and the transcripts of the merged runs stay in their run records (11.6). A job on behalf of a person gives only the word `person`, and the free texts lose their email addresses, keys, tokens and home directories.
+
 ## 17.5 The novelty check
 
 Some outputs can be described as new: an explore conjecture, a proof of an open node, a counterexample. Before that, the output goes through a novelty check, and the result of the check is attached to the node:
