@@ -259,3 +259,42 @@ func TestWriteIsStable(t *testing.T) {
 		t.Errorf("the two writes differ:\n%v\n%v", first, second)
 	}
 }
+
+func TestFromRecordsKeepsOnlyAllowedText(t *testing.T) {
+	src := &ingest.Source{ID: "mixed", Licence: "CC-BY-4.0", Class: ingest.Open}
+	var recs []ingest.Record
+	for _, c := range ingest.Classes() {
+		recs = append(recs, ingest.Record{ID: string(c), Title: "A lemma", Text: "Some text.", Class: c})
+	}
+	for _, m := range FromRecords(src, "blake3:00", "mixed/1", recs) {
+		if allowed := ingest.Class(m.Class).StoresText(); (m.Text != "") != allowed {
+			t.Errorf("the mention %s of the class %s has the text %q", m.ID, m.Class, m.Text)
+		}
+	}
+}
+
+func TestFromRecordsLicenceOfEachItem(t *testing.T) {
+	src := &ingest.Source{ID: "zenodo", Licence: "CC-BY-4.0", Class: ingest.Open, PerItemLicence: true}
+	ms := FromRecords(src, "blake3:00", "zenodo/1", []ingest.Record{
+		{ID: "a", Class: ingest.Open, Licence: "CC0-1.0"},
+		{ID: "b", Class: ingest.Open},
+	})
+	if ms[0].Licence != "CC0-1.0" || ms[1].Licence != "CC-BY-4.0" {
+		t.Fatalf("the licences are %q and %q", ms[0].Licence, ms[1].Licence)
+	}
+	src.PerItemLicence = false
+	if ms = FromRecords(src, "blake3:00", "zenodo/1", []ingest.Record{{ID: "a", Class: ingest.Open}}); ms[0].Licence != "" {
+		t.Fatalf("a source with one licence gives the mention the licence %q", ms[0].Licence)
+	}
+}
+
+func TestMathlibKinds(t *testing.T) {
+	src := &ingest.Source{ID: "mathlib", Licence: "Apache-2.0", Class: ingest.Open}
+	want := map[string]string{"theorem": "statement", "axiom": "statement", "def": "definition", "inductive": "definition", "opaque": "definition", "instance": Unknown}
+	for kind, k := range want {
+		ms := FromRecords(src, "blake3:00", "mathlib/1", []ingest.Record{{ID: "X." + kind, Kind: kind, Class: ingest.Open}})
+		if ms[0].Kind != k {
+			t.Errorf("the Mathlib kind %s gives %s, want %s", kind, ms[0].Kind, k)
+		}
+	}
+}

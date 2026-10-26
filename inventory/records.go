@@ -10,7 +10,7 @@ import (
 	"github.com/tamnd/math2-agent/ingest"
 )
 
-// FromRecords gives one mention for each record of one import of the source src. The snapshot is the hash of the snapshot that the import read, and by names the importer and its version. The licence gate of ingest has already removed the text that math2 cannot store. FromRecords also removes text under a share-alike licence, because the record plane keeps no such text.
+// FromRecords gives one mention for each record of one import of the source src. The snapshot is the hash of the snapshot that the import read, and by names the importer and its version. The licence gate of ingest has already removed the text that math2 cannot store. FromRecords also removes text under a share-alike licence, because the record plane keeps no such text. A mention of a source with a licence for each item records the licence of the item (rule L06).
 func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) []Mention {
 	out := make([]Mention, 0, len(recs))
 	for _, r := range recs {
@@ -25,9 +25,12 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 			Class:    string(r.Class),
 			By:       by,
 		}
-		licence := cmp.Or(r.Licence, src.Licence)
+		licence := cmp.Or(r.Licence, src.Elected())
 		if r.Class.StoresText() && !ingest.ShareAlike(licence) {
 			m.Text = r.Text
+		}
+		if src.PerItemLicence {
+			m.Licence = licence
 		}
 		for _, k := range slices.Sorted(maps.Keys(r.Meta)) {
 			v := r.Meta[k]
@@ -70,6 +73,13 @@ func kindOf(source string, r *ingest.Record) string {
 			return "statement"
 		case r.Meta["oeis"] != "" && len(r.Meta) == 1:
 			return "object"
+		}
+	case "mathlib":
+		switch r.Kind {
+		case "theorem", "axiom":
+			return "statement"
+		case "def", "inductive", "opaque":
+			return "definition"
 		}
 	case "oeis", "lmfdb", "house_of_graphs":
 		return "object"

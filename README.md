@@ -76,7 +76,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
-| `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. | written |
+| `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. `-mentions` also writes the mentions. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
@@ -367,7 +367,10 @@ m2 ingest arxiv -snapshot blake3:...   # the recorded snapshot again, from the c
 m2 ingest zbmath -url 'https://oai.zbmath.org/v1/?verb=ListRecords&metadataPrefix=oai_zb_preview&set=11'
 m2 ingest mathlib                      # the declarations of Mathlib at the commit that lean/lake-manifest.json pins
 m2 ingest lmfdb -url 'https://www.lmfdb.org/api/nf_fields/?degree=i2&disc_abs=py{"$lte":1000}'
+m2 ingest wikidata -mentions           # also write the mentions of the inventory
 ```
+
+With `-mentions`, `m2 ingest` also writes one mention for each record to `records/mentions/<source>/`, as `m2 corpus import` does, but it does not group the mentions into rows. A mention has the snapshot, the locator, the native id, the kind, the name, the MSC codes, the class and the importer (corpus K4.1). It holds text only when the class of the record allows it and the licence is not share-alike. A mention of a source with a licence for each item has the licence of the item. Two imports of the same snapshot write the same mentions.
 
 These sources have an adapter now:
 
