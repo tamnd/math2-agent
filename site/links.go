@@ -37,7 +37,17 @@ var sourceURL = map[string]func(id string) string{
 	"proofwiki": func(id string) string {
 		return "https://proofwiki.org/wiki/" + url.PathEscape(strings.ReplaceAll(id, " ", "_"))
 	},
-	"lmfdb": func(id string) string { return "https://www.lmfdb.org/" + id },
+	"lmfdb":     func(id string) string { return "https://www.lmfdb.org/" + id },
+	"mathworld": func(id string) string { return "https://mathworld.wolfram.com/" + url.PathEscape(id) + ".html" },
+	"eom": func(id string) string {
+		return "https://encyclopediaofmath.org/wiki/" + url.PathEscape(strings.ReplaceAll(id, " ", "_"))
+	},
+	"msc":             func(id string) string { return "https://zbmath.org/classification/?q=cc:" + url.QueryEscape(id) },
+	"lmfdb_knowl":     func(id string) string { return "https://www.lmfdb.org/knowledge/show/" + url.PathEscape(id) },
+	"house_of_graphs": func(id string) string { return "https://houseofgraphs.org/graphs/" + url.PathEscape(id) },
+	"mathlib": func(id string) string {
+		return "https://leanprover-community.github.io/mathlib4_docs/find/?pattern=" + url.QueryEscape(id) + "#doc"
+	},
 }
 
 // sourceLabel is the name of each identifier on the page.
@@ -46,7 +56,8 @@ var sourceLabel = map[string]string{
 	"kerodon": "Kerodon", "mathoverflow": "MathOverflow", "mathse": "Math SE", "erdos": "Erdős problem",
 	"formal_conjectures": "formal-conjectures", "palomar": "Palomar", "hexagon": "Hexagon", "url": "Web",
 	"wikidata": "Wikidata", "mardi": "MaRDI", "oeis": "OEIS", "nlab": "nLab", "wikipedia": "Wikipedia",
-	"proofwiki": "ProofWiki", "lmfdb": "LMFDB",
+	"proofwiki": "ProofWiki", "lmfdb": "LMFDB", "mathworld": "MathWorld", "eom": "EoM", "msc": "MSC",
+	"lmfdb_knowl": "LMFDB knowl", "house_of_graphs": "House of Graphs", "mathlib": "Mathlib",
 }
 
 func idLink(key, id string) link {

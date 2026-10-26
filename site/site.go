@@ -21,6 +21,7 @@ import (
 	"github.com/tamnd/math2-agent/build"
 	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/graph"
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/katex"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/status"
@@ -146,6 +147,9 @@ type builder struct {
 	pages     []string // the paths of the HTML pages, for the sitemap
 	nodeMD    *markdown
 	plainMD   *markdown
+
+	invSummary *inventory.Summary
+	invLetters []*invLetter
 }
 
 // Build writes the site to opt.Out.
@@ -169,7 +173,7 @@ func Build(opt Options) error {
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents}
+	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
@@ -240,6 +244,9 @@ func (b *builder) load() error {
 	}
 	b.explore()
 	if err := b.loadProjects(); err != nil {
+		return err
+	}
+	if err := b.loadInventory(); err != nil {
 		return err
 	}
 	return b.loadSpec()
