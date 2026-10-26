@@ -1,0 +1,5 @@
+nodes/3C5/3C53TD.md:9:1: X05: body.statement of 3C53TD is from the run r-2026-09-01-1, and the record of the run has no result of the sanity checks names, dependencies (corpus K9.3)
+nodes/3C5/3C53TD.md:13:1: X05: the record of the run r-2026-09-01-1 has the result "maybe" of the sanity check small_cases for body.proof. Give pass, fail or n/a
+nodes/3C5/3C53TD.md:13:1: X05: the record of the run r-2026-09-01-1 has the sanity check "vibes" for body.proof, and corpus K9.3 has no such check
+nodes/3C5/3C53TD.md:13:1: X05: body.proof of 3C53TD is from the run r-2026-09-01-1, and the record of the run has no result of the sanity checks small_cases (corpus K9.3)
+nodes/5ZQ/5ZQ1PM.md:13:1: X05: body.proof of 5ZQ1PM is from the run r-2026-09-01-1, and the record of the run has no result of the sanity checks small_cases, round_trip, judges, hypotheses, prove_or_disprove, names, dependencies (corpus K9.3)

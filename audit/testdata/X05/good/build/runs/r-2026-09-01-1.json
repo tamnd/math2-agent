@@ -1,0 +1,99 @@
+{
+  "id": "r-2026-09-01-1",
+  "agent": "m2-agent/prove@1.0.0",
+  "prompt": "prove/3",
+  "models": [
+    "claude-opus-5-5"
+  ],
+  "on_behalf_of": "orcid:0000-0002-1825-0097",
+  "started": "2026-09-01T09:00:00Z",
+  "outcome": "success",
+  "sanity": [
+    {
+      "node": "3C53TD",
+      "field": "body.statement",
+      "check": "small_cases",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.statement",
+      "check": "round_trip",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.statement",
+      "check": "judges",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.statement",
+      "check": "hypotheses",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.statement",
+      "check": "prove_or_disprove",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.statement",
+      "check": "names",
+      "result": "n/a"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.statement",
+      "check": "dependencies",
+      "result": "n/a"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "round_trip",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "judges",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "hypotheses",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "prove_or_disprove",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "names",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "dependencies",
+      "result": "pass"
+    },
+    {
+      "node": "3C53TD",
+      "field": "body.proof",
+      "check": "small_cases",
+      "result": "fail",
+      "model": "claude-opus-5-5",
+      "note": "a counterexample candidate of order 12"
+    }
+  ]
+}

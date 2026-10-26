@@ -1,0 +1,2 @@
+registers/audits.reg:106:1: X06: in the stratum theorem|prove|claude-opus-5-5|prove/3|L2, 4 of 100 audits to 2026-10 found an error of the property readable. The upper end of the interval of the error rate is 9.8%, above the threshold of 5%
+registers/audits.reg:236:1: X06: in the stratum theorem|explain|claude-sonnet-5-5|explain/7|L2, 1 of 130 audits to 2026-10 found an error of the property readable. The upper end of the interval of the error rate is 4.2%, near the threshold of 5%

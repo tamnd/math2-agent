@@ -1156,6 +1156,11 @@
         },
         "note": {
           "type": "string"
+        },
+        "locator_unconfirmed": {
+          "description": "The date when the source got the flag: nobody confirmed the locator in the source yet. Only a person removes the flag (corpus K9.5).",
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
         }
       },
       "oneOf": [

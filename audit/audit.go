@@ -2,7 +2,7 @@
 //
 // The audit is the contract of the content. Each rule has an id, a plane and a hardness. A hard rule that finds a problem fails, and a failed rule blocks a merge or a release. A soft rule that finds a problem reports it and does not block. Each rule in the report has one of the five states of spec 15.2. A rule that had nothing to look at has the state n/a, and never the state pass.
 //
-// The catalogue has the 65 rules of spec 15.3, the 3 rules of the tags (corpus spec K3.7), the 6 rules of the inventory (corpus spec K4.9) and the 7 rules of the notation (corpus spec K10.7). A rule that is not written yet has the state skip with the reason "not written yet". The letter of a rule gives its plane:
+// The catalogue has the 65 rules of spec 15.3, the 3 rules of the tags (corpus spec K3.7), the 6 rules of the inventory (corpus spec K4.9), the 7 rules of the notation (corpus spec K10.7) and the 6 rules of the quality gates (corpus spec K9.9). A rule that is not written yet has the state skip with the reason "not written yet". The letter of a rule gives its plane:
 //
 //	T, S, B  nodes
 //	G        graph

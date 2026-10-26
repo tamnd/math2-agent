@@ -1,0 +1,3 @@
+nodes/3C5/3C53TD.md:17:1: X07: body.proof of 3C53TD names "Brown's lemma", and no node has the name and no source of the node names it. Link the theorem, or give its source
+nodes/3C5/3C53TD.md:17:1: X07: body.proof of 3C53TD names "the theorem of Smith and Jones", and no node has the name and no source of the node names it. Link the theorem, or give its source
+nodes/3C5/3C53TD.md:17:1: X07: body.proof of 3C53TD names "The theorem of Cauchy and Kovalevskaya", and no node has the name and no source of the node names it. Link the theorem, or give its source

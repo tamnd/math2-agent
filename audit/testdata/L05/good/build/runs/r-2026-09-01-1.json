@@ -1,0 +1,29 @@
+{
+  "id": "r-2026-09-01-1",
+  "agent": "m2-agent/prove@1.0.0",
+  "prompt": "prove/3",
+  "models": [
+    "claude-opus-5-5"
+  ],
+  "on_behalf_of": "orcid:0000-0002-1825-0097",
+  "started": "2026-09-01T09:00:00Z",
+  "outcome": "success",
+  "copy": [
+    {
+      "node": "3C53TD",
+      "version": "copycheck/1",
+      "matches": [
+        {
+          "field": "body.proof",
+          "start": 0,
+          "end": 33,
+          "stage": 1,
+          "source": "notes",
+          "uri": "https://example.org/notes",
+          "licence": "CC0-1.0",
+          "class": "open"
+        }
+      ]
+    }
+  ]
+}
