@@ -19,6 +19,7 @@ import (
 	"github.com/zeebo/blake3"
 
 	"github.com/tamnd/math2-agent/llm"
+	"github.com/tamnd/math2-agent/novelty"
 	"github.com/tamnd/math2-agent/prov"
 )
 
@@ -69,24 +70,25 @@ type Spend struct {
 
 // Record is the full record of one run (spec 11.6).
 type Record struct {
-	ID       string            `json:"id"`
-	Job      Job               `json:"job"`
-	Agent    string            `json:"agent"`  // the role at its version
-	Prompt   string            `json:"prompt"` // the prompt version
-	Files    map[string]string `json:"files"`  // the hash of each prompt file
-	Rung     Rung              `json:"rung"`
-	Tools    []string          `json:"tools"` // the tools that the model saw
-	System   string            `json:"system"`
-	Context  string            `json:"context"` // the first message of the run
-	Turns    []Turn            `json:"turns"`
-	Started  time.Time         `json:"started"`
-	Finished time.Time         `json:"finished"`
-	Outcome  string            `json:"outcome"`
-	Reason   string            `json:"reason"`          // why the run stopped
-	Claim    string            `json:"claim,omitempty"` // the last text of the model: its own assessment, which the run records and never uses
-	Budget   Budget            `json:"budget"`          // the budget of the run: the budget of the job, with the budget of the role for each limit that the job does not give
-	Spend    Spend             `json:"spend"`
-	Shadow   bool              `json:"shadow,omitempty"` // the run is a shadow run of a candidate role version (spec 12.8). The system uses none of its output.
+	ID       string                     `json:"id"`
+	Job      Job                        `json:"job"`
+	Agent    string                     `json:"agent"`  // the role at its version
+	Prompt   string                     `json:"prompt"` // the prompt version
+	Files    map[string]string          `json:"files"`  // the hash of each prompt file
+	Rung     Rung                       `json:"rung"`
+	Tools    []string                   `json:"tools"` // the tools that the model saw
+	System   string                     `json:"system"`
+	Context  string                     `json:"context"` // the first message of the run
+	Turns    []Turn                     `json:"turns"`
+	Started  time.Time                  `json:"started"`
+	Finished time.Time                  `json:"finished"`
+	Outcome  string                     `json:"outcome"`
+	Reason   string                     `json:"reason"`          // why the run stopped
+	Claim    string                     `json:"claim,omitempty"` // the last text of the model: its own assessment, which the run records and never uses
+	Budget   Budget                     `json:"budget"`          // the budget of the run: the budget of the job, with the budget of the role for each limit that the job does not give
+	Spend    Spend                      `json:"spend"`
+	Shadow   bool                       `json:"shadow,omitempty"`  // the run is a shadow run of a candidate role version (spec 12.8). The system uses none of its output.
+	Novelty  map[string]*novelty.Result `json:"novelty,omitempty"` // the novelty check of each output of the run, by the id of its node (spec 17.5)
 }
 
 // Models returns the models that answered in the run, in the order of their first answer.
