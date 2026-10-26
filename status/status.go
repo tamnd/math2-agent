@@ -53,7 +53,7 @@ type Input struct {
 	Records map[string]lean.Record             // the extraction record of each declaration
 	Reviews map[string]Review                  // the reviews by id
 	Replays map[string]Replay                  // the replay result of each declaration. It is empty until the checker stack runs.
-	Battery map[string]bool                    // the result of the machine checks of each declaration (spec 10.4). It is empty until M4.
+	Battery map[Key]bool                       // whether the machine checks give F1, by tag and by the declaration that the kernel checks (spec 10.4), from build/battery.json
 	Runs    map[string]map[string]*compute.Run // the runs of each computation, by tag and architecture, from build/compute
 
 	Reviewers map[string]Reviewer // the reviewers of registers/reviewers.reg, by id
@@ -436,7 +436,7 @@ func binding(in Input, f formal, tag, stmt string) Binding {
 		b.Fidelity = F3
 	case len(counted) > 0:
 		b.Fidelity = F2
-	case in.Battery[b.Checked]:
+	case in.Battery[Key{tag, b.Checked}]:
 		b.Fidelity = F1
 	}
 	if r, ok := in.Replays[b.Checked]; ok {

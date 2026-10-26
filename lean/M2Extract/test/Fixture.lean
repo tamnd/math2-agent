@@ -48,4 +48,15 @@ theorem false_claim : 2 + 2 = 5 := sorry
 @[deprecated add_comm_a (since := "2026-01-01")]
 theorem add_comm_old (m n : Nat) : m + n = n + m := add_comm_a m n
 
+/-- A general statement. It implies `le_add_one`. -/
+theorem le_add (m n : Nat) : m ≤ m + n := Nat.le_add_right m n
+
+theorem le_add_one (m : Nat) : m ≤ m + 1 := Nat.le_add_right m 1
+
+/-- A false statement. `le_add` implies its negation. -/
+theorem lt_self (m : Nat) : m < m := sorry
+
+/-- A hard statement. Automation does not prove it and does not prove its negation from `add_comm_a`. -/
+theorem fermat (n : Nat) (h : n > 2) (a b c : Nat) (ha : a > 0) (hb : b > 0) : a ^ n + b ^ n ≠ c ^ n := sorry
+
 end Fixture

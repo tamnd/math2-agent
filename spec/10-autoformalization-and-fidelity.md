@@ -66,6 +66,15 @@ A candidate is F1 if checks 1, 3, 4, 6, 7, 8 and 10 pass, and checks 2 and 9 rai
 
 Checks 4, 5 and 6 are also rule `F09`. This rule runs on each F1+ binding at each release, because a Mathlib bump can make a statement trivial or vacuous and not change its text.
 
+**The battery in m2.** The package `battery` runs the checks. The build step `battery` runs after the replay step and writes `build/battery.json`, with one report for each Lean binding. The status step reads the reports and gives F1 to a binding when its report is F1. Each check gives one of six results: pass, fail, flag, open, skip or not-run. A blocking check passes F1 with pass, flag or skip. Checks 2 and 9 pass F1 with pass or flag. Thus an open or not-run result blocks F1. The checks work as follows:
+
+- Check 1 uses the extraction record of the declaration.
+- Check 3 maps each constant of the statement to the nodes that bind it. The constants of logic and notation, and the instances, do not need a node. A constant that no node binds gives open. A set of patterns on the `pp.all` statement finds the junk values of 10.5 (natural subtraction, division by zero, `Real.sqrt`, `Real.log` and others) and gives a flag with the class `M-junk`.
+- Checks 4, 5 and 6 use the degenerate-statement checks of the extract step.
+- Checks 7 and 8 ask a Lean session for a short tactic proof of `A → B` or of `A → ¬B`, with the `implies` command of M2Extract. Check 7 does not instantiate the statement yet. It compares the statement with the formal statement of each example and counterexample of its concepts. When the statement implies the negation of an example, the class is `M-strong`. When a counterexample implies the negation of the statement, the class is `M-hyp-missing`. Check 8 uses the edges `generalizes`, `specializes`, `implies` and `equivalent`.
+- Check 10 uses the comparator result of the replay step.
+- Checks 2 and 9 need models. The build does not run them until the model calls are approved, so no binding is F1 before then.
+
 ## 10.5 A taxonomy of misformalization
 
 Each class has a name, a detector and an example. Reviews and audit samples get labels from these classes. Thus we can measure the error rate for each class (17.3), and we can improve the battery where it is weak.

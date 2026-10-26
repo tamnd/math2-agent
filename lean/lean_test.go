@@ -185,6 +185,42 @@ func TestChecks(t *testing.T) {
 	}
 }
 
+func TestImplies(t *testing.T) {
+	s := start(t, local(t), ".", "Fixture")
+	pairs := [][2]string{
+		{"le_add", "le_add_one"},
+		{"le_add", "lt_self"},
+		{"add_comm_a", "fermat"},
+		{"add_comm_a", "add_comm_b"},
+		{"id_u", "em"},
+		{"absent", "em"},
+	}
+	for i, p := range pairs {
+		pairs[i] = [2]string{"Fixture." + p[0], "Fixture." + p[1]}
+	}
+	got, err := s.Implies(lean.CheckHeartbeats, pairs...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []lean.Implication{
+		{Implies: "(intro h; simpa using h)"},
+		{Contradicts: "(intro h hb; simp_all)"},
+		{},
+		{Implies: "(intro h; exact h)"},
+		{Error: "not a statement"},
+		{Error: "unknown declaration"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("Implies gives %d results for %d pairs", len(got), len(pairs))
+	}
+	for i, w := range want {
+		w.From, w.To = pairs[i][0], pairs[i][1]
+		if got[i] != w {
+			t.Errorf("Implies gives %+v, and it must give %+v", got[i], w)
+		}
+	}
+}
+
 func TestLibrary(t *testing.T) {
 	s := start(t, local(t), ".", "Fixture")
 	all, total, err := s.Library("Fixture", 0, 1000)

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tamnd/math2-agent/battery"
 	"github.com/tamnd/math2-agent/build"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/node"
@@ -153,6 +154,20 @@ func TestMath2(t *testing.T) {
 		if s.Tag == "3C53TD" && (len(s.Bindings) != 1 || s.Bindings[0].TypeHash == "" || s.Bindings[0].Checked != "Math2.Match.lagrange") {
 			t.Errorf("the status of 3C53TD is %+v", s)
 		}
+	}
+
+	reports, err := build.ReadBattery(opt.Out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found = false
+	for _, r := range reports {
+		if r.Tag == "3C53TD" && r.Decl == "Math2.Match.lagrange" {
+			found = r.Check(1).Result == battery.Pass && r.Check(4).Result == battery.Pass && !r.F1
+		}
+	}
+	if !found {
+		t.Errorf("the battery has no report of the adapter of 3C53TD that passes the checks 1 and 4 and is not F1: %+v", reports)
 	}
 
 	opt.Out = t.TempDir()
