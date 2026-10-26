@@ -214,6 +214,44 @@ func (s *Session) Checks(heartbeats int, decls ...string) (map[string]Checks, er
 	return out, nil
 }
 
+// Implication is the result of [Session.Implies] on one pair of theorems. Each tactic field is the first tactic that proved the goal, or empty when no tactic proved it.
+type Implication struct {
+	From        string `json:"from"`
+	To          string `json:"to"`
+	Implies     string `json:"implies,omitempty"`     // the tactic that proves that the statement of From implies the statement of To
+	Contradicts string `json:"contradicts,omitempty"` // the tactic that proves that the statement of From implies the negation of the statement of To
+	Error       string `json:"error,omitempty"`       // the reason when Lean cannot compare the two, for example "not a statement"
+}
+
+// Implies compares the statements of the theorems of each pair, for the checks 7 and 8 of spec 10.4. The first element of a pair is the premise. The proofs must not use the two theorems themselves, and each tactic stops after heartbeats thousand heartbeats. The result has one [Implication] for each pair, in the same order.
+func (s *Session) Implies(heartbeats int, pairs ...[2]string) ([]Implication, error) {
+	ps := make([][]string, len(pairs))
+	for i, p := range pairs {
+		ps[i] = []string{p[0], p[1]}
+	}
+	var resp struct {
+		Implies []struct {
+			Implication
+			Implies     *string `json:"implies"`
+			Contradicts *string `json:"contradicts"`
+		} `json:"implies"`
+	}
+	if err := s.call(map[string]any{"cmd": "implies", "pairs": ps, "heartbeats": heartbeats}, &resp); err != nil {
+		return nil, err
+	}
+	out := make([]Implication, len(resp.Implies))
+	for i, r := range resp.Implies {
+		out[i] = r.Implication
+		if r.Implies != nil {
+			out[i].Implies = *r.Implies
+		}
+		if r.Contradicts != nil {
+			out[i].Contradicts = *r.Contradicts
+		}
+	}
+	return out, nil
+}
+
 // Binding is a declaration with the attribute @[m2 "TAG"] of the Math2 package.
 type Binding struct {
 	Decl string `json:"decl"`

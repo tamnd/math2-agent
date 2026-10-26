@@ -53,7 +53,7 @@ var commands = []command{
 	{name: "check", usage: "m2 check [-root DIR] [-rule R,...] [-json] [-q] [path...]", summary: "Check schema, body and links on the working tree. This does not use Lean.", run: runCheck},
 	{name: "mint", usage: "m2 mint [-root DIR] [-commit C] [-seed]", summary: "Change the provisional ids to tags before merge, and add the tags to registers/tags.reg.", run: runMint},
 	{name: "site", usage: "m2 site build|check|serve|archive [flags]", summary: "Build, check, preview and archive the wiki: a static site for people and agents.", run: runSite},
-	{name: "build", usage: "m2 build [-root DIR] [-out DIR] [-cache DIR] [-only STEP] [-no-sandbox] [-json]", summary: "Build the derived data: Lean, extraction, replay, status, graph, store and search.", run: runBuild},
+	{name: "build", usage: "m2 build [-root DIR] [-out DIR] [-cache DIR] [-only STEP] [-no-sandbox] [-json]", summary: "Build the derived data: Lean, extraction, replay, battery, status, graph, store and search.", run: runBuild},
 	{name: "audit", usage: "m2 audit [-root DIR] [-plane P] [-rule R,...] [-changed] [-base REV] [-release R] [-json] [-q]", summary: "Run the audit rules and write the report to reports/.", run: runAudit},
 	{name: "status", usage: "m2 status [-root DIR] [-out DIR] [-json] <tag|alias|uri>", summary: "Show the computed status of a node and the evidence for it.", run: runStatus},
 	{name: "graph", usage: graphUsage, summary: "Run a graph query.", run: runGraph},

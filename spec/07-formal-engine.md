@@ -101,7 +101,7 @@ Extraction runs in the same pinned environment as the build. Its output is a bui
 ## 7.6 Building
 
 ```
-m2 build                  # nodes → lean → extract → status → graph → search → site
+m2 build                  # nodes → lean → extract → replay → battery → status → graph → store → search
 m2 build -only lean       # lake build of Math2, with the Mathlib cache
 ```
 

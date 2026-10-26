@@ -64,7 +64,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 site check` | Test the wiki against the size, MathML, no-JavaScript, figure and offline targets. | written |
 | `m2 site serve` | Preview the wiki with gzip, as GitHub Pages serves it. | written |
 | `m2 site archive` | Write the wiki as a zip file that works offline. | written |
-| `m2 build` | Build the derived data: Lean, extraction, replay, status, graph, store and the search index. | written |
+| `m2 build` | Build the derived data: Lean, extraction, replay, the fidelity battery, status, graph, store and the search index. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
@@ -135,9 +135,9 @@ m2 build -json          # write the manifest as JSON
 m2 build -no-sandbox    # run the checkers without the sandbox, for example on macOS
 ```
 
-The steps are `lean`, `extract`, `replay`, `status`, `graph`, `store` and `search`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `replay` step checks each binding that passes each check of E5 except the replay, and writes `build/replay.json`. The `status` step computes the evidence level and the fidelity level of each node from the nodes, `build/extract.json`, `build/replay.json` and the reviews in `reviews/`, and writes `build/status.json`. The `graph` step writes the graph as Parquet to `build/graph/`. The `store` step writes the graph, the status of each node and the aliases to the SQLite file `build/store.db`, for `m2 graph`. The `search` step writes the search index to `build/search.db`, for `m2 search`. A tree without `lean/` has only the `status`, `graph`, `store` and `search` steps.
+The steps are `lean`, `extract`, `replay`, `battery`, `status`, `graph`, `store` and `search`. The `lean` step gets the Mathlib cache and runs `lake build` in `lean/`. The `extract` step runs M2Extract on each formal declaration and adapter that a node names, and on each declaration with the attribute `@[m2 "TAG"]`. It writes `build/extract.json`. The `replay` step checks each binding that passes each check of E5 except the replay, and writes `build/replay.json`. The `battery` step runs the machine checks of spec 10.4 on each Lean binding and writes `build/battery.json`. The `status` step computes the evidence level and the fidelity level of each node from the nodes, `build/extract.json`, `build/replay.json`, `build/battery.json` and the reviews in `reviews/`, and writes `build/status.json`. The `graph` step writes the graph as Parquet to `build/graph/`. The `store` step writes the graph, the status of each node and the aliases to the SQLite file `build/store.db`, for `m2 graph`. The `search` step writes the search index to `build/search.db`, for `m2 search`. A tree without `lean/` has only the `status`, `graph`, `store` and `search` steps.
 
-`build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `replay.json`, `status.json`, `graph/`, `store.db` and `search.db`.
+`build/manifest.json` records the Lean toolchain, the Mathlib commit, the hash of each checker program of the toolchain, and the input hash and output hash of each step. When the inputs of a step and its files do not change, the step does not run again. The output hash of the build covers `extract.json`, `replay.json`, `battery.json`, `status.json`, `graph/`, `store.db` and `search.db`.
 
 ## Computations
 
@@ -185,6 +185,10 @@ The test builds the probe as a static binary in an image `FROM scratch`, so it p
 The `replay` package checks a formal declaration again, outside the process that elaborated it (spec 07.7). It writes a challenge module that states the declaration again from its record, with `sorry` as the proof. It exports the challenge and the module of the declaration with `leanexport`, and runs `lake comparator --paranoid` on the two exports. The declaration passes when it has the statement of the challenge, uses only the standard axioms, and each kernel of the toolchain accepts it. The kernels are `leanchecker`, `leanchecker-paranoid`, `lean4lean`, `nanoda_bin`, `con-leche` and `con-ron`. A check takes about 20 seconds for a declaration that imports Mathlib.
 
 The comparator runs the checkers in a `bwrap` sandbox, and `bwrap` needs Linux. On macOS, `m2 build -no-sandbox` runs the checkers without the sandbox. A replay without the sandbox does not give E5, and `m2 status` gives the reason. E5 also needs two kernels that accept the proof. Two builds of the same commit give the same output hash (rule R01).
+
+## The F1 battery
+
+The `battery` package runs the ten machine checks of spec 10.4 on each Lean binding. Each check gives pass, fail, flag, open, skip or not-run, and a fail has a class of the taxonomy of spec 10.5, for example `M-junk` or `M-strong`. The constant audit maps each constant of the statement to the nodes that bind it, and it flags the junk values of Mathlib, such as natural subtraction and division by zero. The examples check and the neighbour check ask Lean for a short tactic proof of `A → B` or of `A → ¬B`. A binding is F1 when no blocking check fails or stays open. The back-translation and the critic need models, and the build does not run them yet, so no binding is F1 yet.
 
 ## The status of a node
 
@@ -555,6 +559,7 @@ cmd/m2/   the m2 binary
 align/    the aligner: candidates, scores, the curation queues and the register of decisions (spec 05.3, 05.4 and 16.3)
 api/      the read API of spec 11.2, its HTTP handler and its rate limit
 audit/    the audit rules of spec 15, with a fixture pair for each rule
+battery/  the F1 battery: the ten machine checks of the fidelity of a Lean binding (spec 10.4)
 bench/    the benchmarks: bench/graph measures the graph queries of spec 05.6, bench/align measures the precision of the aligner, bench/extract measures the extraction of results from papers, and bench/search measures the quality of search
 bump/     the Mathlib bump: the pins, the breaks of a bump, the renames and the bump report (spec 07.9)
 build/    the steps of m2 build, their cache and the build manifest

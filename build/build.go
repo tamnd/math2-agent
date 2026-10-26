@@ -1,8 +1,8 @@
 // Package build makes the derived data of a math2 working tree (spec 07.6).
 //
-// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The store step writes the serving store, store.db, from the nodes, status.json and the aliases (spec 05.7). The search step writes the search index, search.db, from the nodes, status.json, the aliases and extract.json (spec 14). The site step comes in a later issue.
+// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The battery step runs the machine checks of spec 10.4 on each Lean binding and writes battery.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json, battery.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The store step writes the serving store, store.db, from the nodes, status.json and the aliases (spec 05.7). The search step writes the search index, search.db, from the nodes, status.json, the aliases and extract.json (spec 14). The site step comes in a later issue.
 //
-// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, status, graph, store and search steps. Two builds of the same tree give the same output hash (rule R01).
+// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, battery, status, graph, store and search steps. Two builds of the same tree give the same output hash (rule R01).
 package build
 
 import (
@@ -24,6 +24,7 @@ import (
 
 	"github.com/zeebo/blake3"
 
+	"github.com/tamnd/math2-agent/battery"
 	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/format"
 	"github.com/tamnd/math2-agent/graph"
@@ -40,6 +41,7 @@ const (
 	Lean    = "lean"
 	Extract = "extract"
 	Replay  = "replay"
+	Battery = "battery"
 	Status  = "status"
 	Graph   = "graph"
 	Store   = "store"
@@ -47,13 +49,14 @@ const (
 )
 
 // Steps returns the names of the steps in order.
-func Steps() []string { return []string{Lean, Extract, Replay, Status, Graph, Store, Search} }
+func Steps() []string { return []string{Lean, Extract, Replay, Battery, Status, Graph, Store, Search} }
 
 // The files of the build, from the output directory.
 const (
 	ManifestFile = "manifest.json"
 	ExtractFile  = "extract.json"
 	ReplayFile   = "replay.json"
+	BatteryFile  = "battery.json"
 	StatusFile   = "status.json"
 	GraphDir     = "graph"
 	StoreFile    = "store.db"
@@ -87,7 +90,7 @@ type Manifest struct {
 	Checkers    map[string]string `json:"checkers"`     // the hash of each checker program of the toolchain
 	Steps       []Step            `json:"steps"`
 	Counts      Counts            `json:"counts"`
-	Output      string            `json:"output"` // the hash of the files of the extract, replay, status and graph steps
+	Output      string            `json:"output"` // the hash of the files of the steps after the lean step
 }
 
 // Step is the record of one step.
@@ -168,6 +171,7 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 		{Lean, true, b.lean},
 		{Extract, true, b.extract},
 		{Replay, true, b.replay},
+		{Battery, true, b.battery},
 		{Status, false, b.status},
 		{Graph, false, b.graph},
 		{Store, false, b.store},
@@ -248,6 +252,19 @@ func ReadReplays(out string) ([]replay.Result, error) {
 	var rs []replay.Result
 	if err := json.Unmarshal(data, &rs); err != nil {
 		return nil, fmt.Errorf("build: %s: %w", ReplayFile, err)
+	}
+	return rs, nil
+}
+
+// ReadBattery reads battery.json of the build in the output directory out. It holds the report of each Lean binding, in order of tag and declaration.
+func ReadBattery(out string) ([]battery.Report, error) {
+	data, err := os.ReadFile(filepath.Join(out, BatteryFile)) // #nosec G304 -- the caller names the output directory.
+	if err != nil {
+		return nil, err
+	}
+	var rs []battery.Report
+	if err := json.Unmarshal(data, &rs); err != nil {
+		return nil, fmt.Errorf("build: %s: %w", BatteryFile, err)
 	}
 	return rs, nil
 }
@@ -473,7 +490,7 @@ func formalDecls(nodes []*node.Node) []string {
 	return slices.Compact(out)
 }
 
-// input returns the evidence of the build for the status: the nodes, the records of extract.json, the reviews, the reviewers, the authors of the bindings and the runs of the computations. It has the results of replay.json when replays is set.
+// input returns the evidence of the build for the status: the nodes, the records of extract.json, the reviews, the reviewers, the authors of the bindings and the runs of the computations. It has the results of replay.json and battery.json when replays is set.
 func (b *builder) input(nodes []*node.Node, replays bool) (status.Input, error) {
 	in := status.Input{Nodes: nodes, Records: map[string]lean.Record{}, Replays: map[string]status.Replay{}}
 	var err error
@@ -505,6 +522,16 @@ func (b *builder) input(nodes []*node.Node, replays bool) (status.Input, error) 
 		}
 		for _, r := range rs {
 			in.Replays[r.Decl] = b.verdict(r)
+		}
+	}
+	if replays && b.output(Battery) != "" {
+		reports, err := ReadBattery(b.opt.Out)
+		if err != nil {
+			return in, err
+		}
+		in.Battery = map[status.Key]bool{}
+		for _, r := range reports {
+			in.Battery[status.Key{Tag: r.Tag, Decl: r.Decl}] = r.F1
 		}
 	}
 	return in, nil
@@ -586,9 +613,93 @@ func (b *builder) replay(ctx context.Context, nodes []*node.Node) (Step, error) 
 	return Step{Input: input, Output: out}, err
 }
 
+// battery runs the machine checks of spec 10.4 on each Lean binding, and writes battery.json. The input is the output of the extract and replay steps and the content hash of each node. The checks 7 and 8 use a Lean session, which starts only when a check has a pair of statements to compare. The back-translation and the critic need models, and the step does not run them, thus no binding is F1 yet.
+func (b *builder) battery(ctx context.Context, nodes []*node.Node) (Step, error) {
+	lines := []string{"extract " + b.output(Extract), "replay " + b.output(Replay), fmt.Sprintf("heartbeats %d", lean.CheckHeartbeats)}
+	for _, n := range nodes {
+		lines = append(lines, n.ID+" "+node.Hash(n))
+	}
+	input := hashString(strings.Join(lines, "\n"))
+	if out, err := hashFiles(b.opt.Out, []string{BatteryFile}); err == nil {
+		if s, ok := b.cached(Battery, input, out); ok {
+			return s, nil
+		}
+	}
+	x, err := ReadExtraction(b.opt.Out)
+	if err != nil {
+		return Step{}, err
+	}
+	in := battery.Input{Nodes: nodes, Records: map[string]lean.Record{}, Bindings: x.Bindings, Replays: map[string]replay.Result{}}
+	for _, r := range x.Records {
+		in.Records[r.Decl] = r
+	}
+	if b.output(Replay) != "" {
+		rs, err := ReadReplays(b.opt.Out)
+		if err != nil {
+			return Step{}, err
+		}
+		for _, r := range rs {
+			in.Replays[r.Decl] = r
+		}
+	}
+	p := &prover{ctx: ctx, b: b}
+	reports, err := battery.Run(ctx, in, battery.Options{Prover: p})
+	if cerr := p.close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return Step{}, err
+	}
+	if reports == nil {
+		reports = []battery.Report{}
+	}
+	data, err := json.MarshalIndent(reports, "", "  ")
+	if err != nil {
+		return Step{}, err
+	}
+	if err := write(filepath.Join(b.opt.Out, BatteryFile), append(data, '\n')); err != nil {
+		return Step{}, err
+	}
+	out, err := hashFiles(b.opt.Out, []string{BatteryFile})
+	return Step{Input: input, Output: out}, err
+}
+
+// prover is the Prover of the battery step. It starts a Lean session with the modules of the build at the first call.
+type prover struct {
+	ctx  context.Context
+	b    *builder
+	sess *lean.Session
+}
+
+func (p *prover) Implies(heartbeats int, pairs ...[2]string) ([]lean.Implication, error) {
+	if p.sess == nil {
+		exe, err := lean.Install(p.ctx, p.b.project, p.b.opt.Cache)
+		if err != nil {
+			return nil, err
+		}
+		sess, err := lean.Start(p.ctx, exe, p.b.project)
+		if err != nil {
+			return nil, err
+		}
+		if err := sess.Import(p.b.opt.Modules...); err != nil {
+			_ = sess.Close()
+			return nil, err
+		}
+		p.sess = sess
+	}
+	return p.sess.Implies(heartbeats, pairs...)
+}
+
+func (p *prover) close() error {
+	if p.sess == nil {
+		return nil
+	}
+	return p.sess.Close()
+}
+
 // status computes the status of each node and writes status.json. The step is fast, so it always runs, and the input hash only records the inputs: the output of the extract and replay steps, the content hash of each node, the reviews and the registers of the reviewers and the bindings. The step is cached when status.json does not change, so that a new version of the rules always gives a new status.
 func (b *builder) status(_ context.Context, nodes []*node.Node) (Step, error) {
-	lines := []string{"extract " + b.output(Extract), "replay " + b.output(Replay)}
+	lines := []string{"extract " + b.output(Extract), "replay " + b.output(Replay), "battery " + b.output(Battery)}
 	for _, n := range nodes {
 		lines = append(lines, n.ID+" "+node.Hash(n))
 	}

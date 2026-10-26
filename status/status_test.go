@@ -184,7 +184,7 @@ func TestKernel(t *testing.T) {
 			if tt.native {
 				rec.NativeDecideAxioms = []string{"X.thm._native.1"}
 			}
-			in := Input{Nodes: nodes, Records: map[string]lean.Record{checked: rec}, Reviews: map[string]Review{}, Reviewers: registered, Replays: map[string]Replay{}, Battery: map[string]bool{checked: tt.battery}}
+			in := Input{Nodes: nodes, Records: map[string]lean.Record{checked: rec}, Reviews: map[string]Review{}, Reviewers: registered, Replays: map[string]Replay{}, Battery: map[Key]bool{{"1A0000", checked}: tt.battery}}
 			for i, id := range ids {
 				in.Reviews[id] = review(id, tt.reviews[i], checked, nodes[0], rec)
 			}

@@ -9,6 +9,8 @@ import Lean
 * `trivial`: a tactic proves the statement, and the proof does not use the theorem itself.
 * `refuted`: a tactic proves the negation of the statement.
 
+`implies` compares two statements for the checks 7 and 8. It tries to prove that the first statement implies the second, and that the first statement implies the negation of the second.
+
 The parser reads each tactic at run time. Thus a tactic of Mathlib, for example `aesop`, works when the session loaded Mathlib, and it fails quietly when the session did not.
 -/
 
@@ -30,7 +32,7 @@ def attempt (goal : Expr) (tac : String) (heartbeats : Nat) (avoid : List Name :
   let .ok stx := Parser.runParserCategory (← getEnv) `tactic tac | return false
   let s ← saveState
   let ok ← tryCatchRuntimeEx
-    (withTheReader Core.Context (fun ctx => { ctx with maxHeartbeats := heartbeats * 1000 }) do
+    (withTheReader Core.Context (fun ctx => { ctx with maxHeartbeats := heartbeats * 1000, fileMap := FileMap.ofString tac }) do
       withCurrHeartbeats do
         let mvar ← mkFreshExprMVar goal
         let rest ← Term.TermElabM.run' (Term.withoutErrToSorry (Tactic.run mvar.mvarId! (Tactic.evalTactic stx)))
@@ -70,5 +72,23 @@ def checks (heartbeats : Nat) (d : Name) : MetaM Json := do
     ("trivial", optStr trivial),
     ("refuted", optStr refuted)
   ]
+
+/-- The tactics that try to prove `A → B` for two statements `A` and `B`. -/
+def impliesTactics : List String := ["(intro h; exact h)", "(intro h; simpa using h)", "(intro h; grind)", "(intro h; aesop)"]
+
+/-- The tactics that try to prove `A → ¬B`. -/
+def contradictsTactics : List String := ["(intro h hb; simp_all)", "(intro h hb; grind)", "(intro h hb; aesop)"]
+
+/-- `implies heartbeats a b` compares the statements of the theorems `a` and `b`. The field `implies` is the first tactic that proves that the statement of `a` implies the statement of `b`, and the field `contradicts` is the first tactic that proves that it implies the negation. The proofs must not use `a` or `b`. -/
+def implies (heartbeats : Nat) (a b : Name) : MetaM Json := do
+  let base := [("from", Json.str a.toString), ("to", Json.str b.toString)]
+  let env ← getEnv
+  let (some ca, some cb) := (env.find? a, env.find? b)
+    | return Json.mkObj (base ++ [("error", Json.str "unknown declaration")])
+  unless (← isProp ca.type) && (← isProp cb.type) do
+    return Json.mkObj (base ++ [("error", Json.str "not a statement")])
+  let imp ← first (← mkArrow ca.type cb.type) impliesTactics heartbeats [a, b]
+  let con ← first (← mkArrow ca.type (mkNot cb.type)) contradictsTactics heartbeats [a, b]
+  return Json.mkObj (base ++ [("implies", optStr imp), ("contradicts", optStr con)])
 
 end M2Extract
