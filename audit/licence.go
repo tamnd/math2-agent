@@ -11,6 +11,7 @@ import (
 	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/node"
 )
 
@@ -195,6 +196,28 @@ func l01(a *auditor) outcome {
 			o.add(mf.path, 1, 1, "the classes count %d records, and the manifest has %d", total, m.Records)
 		}
 		o.findings = append(o.findings, recordFindings(a, src, m)...)
+	}
+	err := inventory.WalkMentions(a.root, func(file string, line int, m inventory.Mention) error {
+		o.checked++
+		if m.Text == "" {
+			return nil
+		}
+		licence := m.Licence
+		if licence == "" && im.cat != nil {
+			if src := im.cat.Source(m.Source); src != nil {
+				licence = src.Elected()
+			}
+		}
+		switch cls := ingest.Class(m.Class); {
+		case !cls.StoresText():
+			o.add(file, line, 1, "the mention %s holds text, and the class %s does not let math2 store it. A mention of this class has only names, numbers and locators", m.ID, cls)
+		case ingest.ShareAlike(licence):
+			o.add(file, line, 1, "the mention %s holds text under the share-alike licence %s. The record plane keeps no such text", m.ID, licence)
+		}
+		return nil
+	})
+	if err != nil {
+		o.add(inventory.MentionsDir, 0, 0, "%v", err)
 	}
 	return o
 }

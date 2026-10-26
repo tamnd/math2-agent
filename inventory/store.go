@@ -11,14 +11,19 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/tamnd/math2-agent/ingest"
 )
 
-// WriteMentions writes the mentions of one source to records/mentions/<source>/ in the tree at root. It replaces each file of the source, and it removes the shards that have no mention now. Each mention must be of the source.
+// WriteMentions writes the mentions of one source to records/mentions/<source>/ in the tree at root. It replaces each file of the source, and it removes the shards that have no mention now. Each mention must be of the source. WriteMentions refuses a mention with text whose class does not let math2 store text, such as a mention of the record or the gfdl class (corpus K5.1).
 func WriteMentions(root, source string, ms []Mention) error {
 	shards := map[string][]Mention{}
 	for _, m := range ms {
 		if m.Source != source {
 			return fmt.Errorf("inventory: the mention %s is of %s, not of %s", m.ID, m.Source, source)
+		}
+		if m.Text != "" && !ingest.Class(m.Class).StoresText() {
+			return fmt.Errorf("inventory: the mention %s holds text, and the class %s does not let math2 store it", m.ID, m.Class)
 		}
 		k := MentionShard(m.ID)
 		shards[k] = append(shards[k], m)

@@ -112,6 +112,12 @@ func TestStoreRoundTrip(t *testing.T) {
 	if err := WriteMentions(root, "oeis", ms); err == nil {
 		t.Fatal("WriteMentions accepted the mentions of another source")
 	}
+	for _, c := range []ingest.Class{ingest.RecordOnly, ingest.GFDL} {
+		m := Mention{ID: MentionID("stacks", "01H8", 1), Source: "stacks", NativeID: "01H8", Class: string(c), Text: "Some text.", By: "stacks/1"}
+		if err := WriteMentions(root, "stacks", []Mention{m}); err == nil {
+			t.Errorf("WriteMentions accepted a mention of the class %s with text", c)
+		}
+	}
 	got, err := ReadMentions(root)
 	if err != nil || len(got) != 2 || got[0].NativeID != "Q1" || got[1].Kind != "topic" || got[0].Kind != "object" {
 		t.Fatalf("ReadMentions = %+v, %v", got, err)
@@ -296,5 +302,23 @@ func TestMathlibKinds(t *testing.T) {
 		if ms[0].Kind != k {
 			t.Errorf("the Mathlib kind %s gives %s, want %s", kind, ms[0].Kind, k)
 		}
+	}
+}
+
+func TestClusterJoinsNLab(t *testing.T) {
+	src := &ingest.Source{ID: "nlab", Licence: "LicenseRef-unknown", Class: ingest.RecordOnly}
+	ms := []Mention{
+		wikidata("Q177646", "group", map[string]string{"nlab": "group"}),
+		FromRecords(src, "blake3:00", "nlab/1", []ingest.Record{{ID: "group", Title: "group", Class: ingest.RecordOnly, Text: "Some text."}})[0],
+	}
+	if ms[1].Text != "" {
+		t.Fatalf("the nLab mention holds the text %q", ms[1].Text)
+	}
+	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Rows) != 1 || len(res.Rows[0].Mentions) != 2 {
+		t.Fatalf("the rows are %+v, want one row with the two mentions", res.Rows)
 	}
 }
