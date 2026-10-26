@@ -128,7 +128,7 @@ func runner(t *testing.T, model llm.Model) (*agent.Runner, *checker) {
 		t.Fatal(err)
 	}
 	c := &checker{}
-	return &agent.Runner{Role: r, Model: model, Tools: []agent.Tool{c.tool()}, Goal: func(context.Context) (bool, error) { return c.done, nil }}, c
+	return &agent.Runner{Role: r, Model: model, Tools: []agent.Tool{c.tool()}, Goal: func(context.Context) (bool, string, error) { return c.done, "", nil }}, c
 }
 
 var u = llm.Usage{Input: 100, Output: 100}
@@ -231,5 +231,27 @@ func TestRunErrors(t *testing.T) {
 	rn, _ = runner(t, llmtest.New())
 	if _, err := rn.Run(context.Background(), job(), 0, "x"); !errors.Is(err, llmtest.ErrEnd) {
 		t.Errorf("an error of the model gives %v", err)
+	}
+}
+
+func TestRunWhy(t *testing.T) {
+	model := llmtest.New(llmtest.Call("lean_check", code("try"), u), llmtest.Say("I think it is done.", u), llmtest.Call(agent.StuckTool, map[string]string{"reason": "the statement is false"}, u))
+	r, _ := runner(t, model)
+	r.Goal = func(context.Context) (bool, string, error) { return false, "the type hash of Lagrange changed.", nil }
+	rec, err := r.Run(context.Background(), job(), 0, "Prove it.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec.Outcome != agent.Failure || rec.Turns[0].Why != "the type hash of Lagrange changed." {
+		t.Fatalf("record %+v", rec)
+	}
+	want := "The goal does not hold yet: the type hash of Lagrange changed. Continue with the tools, or call report_stuck with the reason."
+	reqs := model.Requests()
+	after := reqs[1].Messages[len(reqs[1].Messages)-1].Content
+	if len(after) != 2 || after[0].Type != llm.ToolResult || after[1].Text != want {
+		t.Errorf("the message after the tool call is %+v", after)
+	}
+	if last := reqs[2].Messages[len(reqs[2].Messages)-1].Content; len(last) != 1 || last[0].Text != want {
+		t.Errorf("the message after the text turn is %+v", last)
 	}
 }

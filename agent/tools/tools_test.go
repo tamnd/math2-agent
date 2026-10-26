@@ -155,7 +155,7 @@ func (f *fake) Check(_ context.Context, file string) (*lean.Elaboration, error) 
 	return f.e, nil
 }
 
-func (f *fake) Extract(context.Context, []string) ([]lean.Record, error) { return nil, nil }
+func (f *fake) Extract(context.Context, []string, bool) ([]lean.Record, error) { return nil, nil }
 
 func TestCheck(t *testing.T) {
 	w := tree(t, map[string]string{".gitignore": "/lean/.lake/\n", "lean/Math2.lean": "module\n"})
@@ -245,17 +245,20 @@ func TestLake(t *testing.T) {
 	if err := w.Write("lean/Math2/D.lean", []byte("import Math2.A\n\ntheorem Math2.d : 2 = 1 + 1 := Math2.a.symm\n")); err != nil {
 		t.Fatal(err)
 	}
-	rs, err := l.Extract(context.Background(), []string{"Math2.d", "Math2.none"})
+	rs, err := l.Extract(context.Background(), []string{"Math2.d", "Math2.none"}, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(rs) != 2 || rs[0].Kind != "theorem" || rs[0].TypeHash == "" || len(rs[0].Axioms) != 0 || rs[1].Error == "" {
 		t.Errorf("records %+v", rs)
 	}
+	if c := rs[0].Checks; c == nil || c.Trivial == "" || c.Vacuous != "" || c.Refuted != "" {
+		t.Errorf("the checks of Math2.d are %+v", c)
+	}
 	if err := w.Write("lean/Math2/D.lean", []byte("import Math2.A\n\ntheorem Math2.d : 2 = 3 := rfl\n")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := l.Extract(context.Background(), []string{"Math2.d"}); err == nil || !strings.Contains(err.Error(), "the build of the work tree fails") {
+	if _, err := l.Extract(context.Background(), []string{"Math2.d"}, false); err == nil || !strings.Contains(err.Error(), "the build of the work tree fails") {
 		t.Errorf("extract of a tree that does not build: %v", err)
 	}
 }

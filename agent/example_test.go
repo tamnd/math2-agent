@@ -30,7 +30,7 @@ func ExampleRunner_Run() {
 		},
 	}
 	model := llmtest.New(llmtest.Call("lean_check", map[string]string{"code": "theorem t (n : Nat) : 0 + n = n := by simp"}, llm.Usage{Input: 3000, Output: 500}))
-	r := agent.Runner{Role: role, Model: model, Tools: []agent.Tool{check}, Goal: func(context.Context) (bool, error) { return proved, nil }}
+	r := agent.Runner{Role: role, Model: model, Tools: []agent.Tool{check}, Goal: func(context.Context) (bool, string, error) { return proved, "", nil }}
 	job := &agent.Job{ID: "j-2026-11-02-1", Role: "prove", Target: "7K3QX2", Goal: "the binding has a proof", OnBehalfOf: "github:octocat"}
 	rec, err := r.Run(context.Background(), job, 0, "Prove the statement of 7K3QX2.")
 	if err != nil {

@@ -57,14 +57,14 @@ These decisions are intentional:
 - **The verifier's verdict is the only verdict.** When an agent claims success, it must produce a diff that passes the audit. The system records the agent's own assessment and never uses it.
 - **Failures with reasons are outputs.** "Statement false at n=7, witness attached" closes a prove job and attaches a counterexample job. "Needs a lemma that is not in Mathlib: X" creates a node for X.
 
-The `agent` package runs this loop. A turn makes progress when it calls a tool with an input that the run did not call before, and the run caches the result of each call by the tool and the input. The tool `report_stuck` is in each profile, and the model calls it with the reason. The goal predicate is a function of the role that reads the tree and the build, never the text of the model. Each model turn has a limit of output tokens from the role and from the budget that is left.
+The `agent` package runs this loop. A turn makes progress when it calls a tool with an input that the run did not call before, and the run caches the result of each call by the tool and the input. The tool `report_stuck` is in each profile, and the model calls it with the reason. The goal predicate is a function of the role that reads the tree and the build, never the text of the model. Each model turn has a limit of output tokens from the role and from the budget that is left. When the goal does not hold, the predicate also gives the reason in one sentence, and the next message to the model starts with this reason. `agent.OnChanges` makes a goal that runs its check only when the changes of the work tree are different from the changes of the last check, because a check can build the library. `tools.Profile` makes the tools of a role from the tool names in its `role.yaml`, and a name with no tool is an error.
 
 ### Statement pinning
 
 In 2026, the worst failure mode was a correct proof of a different statement. The causes were edited context, redefined notions, a weakened hypothesis or an exploited checker. Thus each role that writes Lean works against a **pinned statement**:
 
-- The elaborated type hash of the target is fixed when the job is created.
-- The proof is accepted only if its declaration has the same type hash and its axioms are a subset of the allowed set (rule `F03`).
+- A statement with no proof is a definition of a proposition, `def S : Prop`, because rule `F06` refuses `sorry` (07.2). When the job starts, the pin records `S` and the hash of each declaration of math2 in its closure. For a definition, this is the hash of the value. For a theorem, it is the hash of the type.
+- The proof is accepted only if it is a theorem of type `S`, its axioms are a subset of the allowed set (rule `F03`), and each hash of the closure is unchanged.
 - The agent's Lean files must not modify, shadow or re-declare anything in the closure of the target. The check runs on the elaborated environment, not on the source text.
 - Before merge, a Comparator-style check confirms that the statement is identical to the pinned one. This check builds against Mathlib and `Math2` only. Then the external checkers replay the proof (07.7).
 
@@ -112,6 +112,8 @@ A **prove** job has a target node with a binding at F1 or above. Before F2, a pr
 6. **Assemble and check.** The proof must build against the pinned toolchain with no `sorry`. Its axioms must be in the allowed set, and the type hash of the target must not change. The external replay and the comparator check must pass. Only then does the PR open.
 7. **Clean up.** The system records the proof size and the build time. A proof is marked `needs-golf` if it is more than 10× the size of comparable Mathlib proofs, or if it takes longer than a set time to elaborate. It gets a follow-up job to make it shorter. The main complaint about the landmark formalizations of 2026 was AI-written proofs that work but are not maintainable. math2 must maintain its proofs through each Mathlib bump.
 
+The packages `agent/prove` and `agent/formalize` have the goal and the first message of each role. These are the first parts of the loop above. A prove run writes the theorem `T : S`, moves the attribute `@[m2 "TAG"]` from `S` to `T`, and changes the `decl` of the binding to `T`. Its goal holds when the changes are in the field permissions of prove, the library builds, and the pin accepts `T`. A formalize run adds Lean files and appends bindings. Its goal holds when the changes are in the field permissions of formalize, the library builds, each new declaration has the right kind for the node, it uses only the standard axioms, and the degenerate checks of 10.4 do not find a problem. The decomposition, the cross-check and the portfolio of steps 2 to 4 are not written yet.
+
 **What prove does not do.** It does not prove anything with `native_decide` unless the job permits it (rule `F04` records it in all cases). It does not add axioms. It does not edit the statement of the target. If the statement is wrong, it says so and stops.
 
 ## 12.5 Explore
@@ -157,6 +159,7 @@ prompts/prove/
   CHANGELOG.md
 ```
 
+- The package `prompts` embeds the role directories, and `agent.LoadRole` reads one. The first versions are formalize 0.1.0 and prove 0.1.0. They have no examples yet, because there is no merged run yet.
 - Each run records the role version and the hashes of each prompt file that it loaded.
 - A change to any file bumps the version. A minor bump must pass the evaluation suite of the role (17.3), with results no worse than the previous version. A major bump also needs a shadow week. In that week, the new version runs with the old one on the same jobs, and the system uses only the output of the old one.
 - Provenance can be queried by role version. Thus "everything prove 3.2.x produced" is one command, and quarantine can use it as a target (06.5).

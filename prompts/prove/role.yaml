@@ -1,0 +1,17 @@
+role: prove
+version: 0.1.0
+tools: [get, get_formal, neighbours, search, search_formal, premises, read_file, write_file, lean_check]
+ladder:
+  - model: claude-sonnet-5-5
+    effort: medium
+  - model: claude-opus-5-5
+    effort: high
+  - model: claude-fable-5-1
+    effort: max
+budget:
+  usd: 5
+  wall: 2h0m0s
+  lean_session_s: 3600
+max_tokens: 32000
+turns: 80
+stuck: 6

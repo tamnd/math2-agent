@@ -50,8 +50,8 @@ func (l *Lake) Check(ctx context.Context, file string) (*lean.Elaboration, error
 	return e, nil
 }
 
-// Extract builds the library of the tree, then extracts the declarations with M2Extract. A build that fails is an error.
-func (l *Lake) Extract(ctx context.Context, decls []string) ([]lean.Record, error) {
+// Extract builds the library of the tree, then extracts the declarations with M2Extract. With checks, it runs the degenerate-statement checks on each statement, with lean.CheckHeartbeats. A build that fails is an error.
+func (l *Lake) Extract(ctx context.Context, decls []string, checks bool) ([]lean.Record, error) {
 	if b := l.build(ctx); len(b.Messages) > 0 {
 		return nil, fmt.Errorf("tools: the build of the work tree fails: %s", b.Messages[0].Text)
 	}
@@ -67,7 +67,29 @@ func (l *Lake) Extract(ctx context.Context, decls []string) ([]lean.Record, erro
 	if err := s.Import(mods...); err != nil {
 		return nil, fmt.Errorf("tools: %w", err)
 	}
-	return s.Extract(decls, nil)
+	rs, err := s.Extract(decls, nil)
+	if err != nil || !checks {
+		return rs, err
+	}
+	var statements []string
+	for _, r := range rs {
+		if r.Statement() {
+			statements = append(statements, r.Decl)
+		}
+	}
+	if len(statements) == 0 {
+		return rs, nil
+	}
+	cs, err := s.Checks(lean.CheckHeartbeats, statements...)
+	if err != nil {
+		return nil, fmt.Errorf("tools: %w", err)
+	}
+	for i := range rs {
+		if c, ok := cs[rs[i].Decl]; ok {
+			rs[i].Checks = &c
+		}
+	}
+	return rs, nil
 }
 
 // build runs lake build on the targets, or on the default targets when there are none. The result has no messages when the build passes, and one error when it fails.
