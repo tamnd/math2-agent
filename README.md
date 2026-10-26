@@ -625,6 +625,13 @@ With `-tree`, the items are the reviews of a math2 tree, with the reports of its
 
 The machine checks catch the vacuous statements, and the false statements whose negation a tactic proves. They do not catch a wrong quantifier, and they catch no false statement that needs a counterexample, such as n² < 2ⁿ. The flags come from the constant audit, which names natural subtraction and division, and from check 5, which flags a statement that a tactic proves. Check 5 also flags 10 of the 14 faithful items, thus a flag tells a reviewer where to look, and it is not a verdict. The other faults need the back-translation and the critic. No class has 30 items yet, thus the target of a recall of 0.9 does not apply yet.
 
+`bench/agents` is the suite of the formalize and prove roles (spec 17.3.4). Each line of `bench/agents/items.tsv` is a target node and its role. A prove item has a pinned statement and a reference proof. A formalize item has a node with no binding and a reference formal statement. The 11 public items use only the Lean core library, and we wrote them. The test builds one work tree with all the items and runs each item in it with real Lean. Without flags, a scripted model writes the reference of each item, and the goal of the role must hold. Then it writes wrong attempts: a proof with `sorry`, a proof that changes the statement, a proof of another statement, and a false formal statement. The goal must refuse each of them with the right reason. No model service is called. With `-live`, the test runs the roles with the Claude models of the rung `-rung` of each ladder and reports the items solved, the turns and the dollars. This needs `ANTHROPIC_API_KEY` and spends money.
+
+```sh
+go test ./bench/agents -v
+go test ./bench/agents -live -rung 0 -v -report agents.md
+```
+
 ## Rules that the toolchain keeps
 
 1. The files in tamnd/math2 are the truth. Each database, index and site comes from these files, and you can make it again from them.
