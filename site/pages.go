@@ -104,7 +104,10 @@ func (b *builder) writeNodes() error {
 	for _, v := range b.order {
 		desc := v.Name + ". A " + v.Kind + " in Math 2.0."
 		p := page{Title: v.Name, Description: desc, Section: "nodes", MarkdownURL: v.MarkdownURL, JSONURL: v.JSONURL, Math: true}
-		if err := b.writePage("node/"+v.Tag, "node", v, p); err != nil {
+		if err := b.writePage("wiki/"+v.Slug, "node", v, p); err != nil {
+			return err
+		}
+		if err := b.write("node/"+v.Tag+"/index.html", b.shortLink(v)); err != nil {
 			return err
 		}
 		src, err := os.ReadFile(filepath.Join(b.opt.Content, filepath.FromSlash(v.Path))) // #nosec G304 -- the path comes from node.Load.
@@ -338,4 +341,21 @@ func subjectCount(groups []*mscGroup, code string) int {
 		}
 	}
 	return 0
+}
+
+// shortLink returns the page at node/TAG/, the short link of a node that does not change when the name changes. It sends the reader to the page of the node.
+func (b *builder) shortLink(v *nodeView) []byte {
+	to := template.HTMLEscapeString(v.URL)
+	rel := template.HTMLEscapeString("../../wiki/" + v.Slug + "/")
+	name := template.HTMLEscapeString(v.Name)
+	return []byte(`<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>` + name + `</title>
+<link rel="canonical" href="` + to + `">
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="0; url=` + rel + `">
+<p>The page of this node is <a href="` + to + `">` + name + `</a>.</p>
+</html>
+`)
 }

@@ -26,7 +26,7 @@ func TestRunPanel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	page := readFile(t, opt.Out, "node/ZNAZT5/index.html")
+	page := readNode(t, opt.Out, "ZNAZT5")
 	for _, want := range []string{
 		`<h2 id="run-h">Run this</h2>`,
 		`<pre><code>m2 compute verify ZNAZT5</code></pre>`,
@@ -39,10 +39,10 @@ func TestRunPanel(t *testing.T) {
 			t.Errorf("the page of ZNAZT5 has no %q", want)
 		}
 	}
-	if page := readFile(t, opt.Out, "node/586J26/index.html"); !strings.Contains(page, "The build has no run of this computation.") || !strings.Contains(page, "<tr><th>Seed</th><td>0</td></tr>") {
+	if page := readNode(t, opt.Out, "586J26"); !strings.Contains(page, "The build has no run of this computation.") || !strings.Contains(page, "<tr><th>Seed</th><td>0</td></tr>") {
 		t.Error("the page of 586J26 does not say that the build has no run, or does not show the seed 0")
 	}
-	if page := readFile(t, opt.Out, "node/Q529ES/index.html"); strings.Contains(page, "Run this") {
+	if page := readNode(t, opt.Out, "Q529ES"); strings.Contains(page, "Run this") {
 		t.Error("a statement has a run panel")
 	}
 }
