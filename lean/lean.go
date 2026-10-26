@@ -2,6 +2,8 @@
 //
 // The source of M2Extract is in this directory as a Lake package. [Install] builds it with the toolchain of a Lake project. [Start] runs it in that project, so that it reads the modules of the project and of the dependencies of the project. A [Session] sends requests to the process and reads the answers. The process loads the modules one time and then answers many requests.
 //
+// [Elaborate] elaborates one Lean file in a Lake project and gives the messages of Lean. The agent roles use it to check the Lean files that they write (spec 12.4).
+//
 // The protocol is one line of JSON for each request and one line of JSON for each answer. The comment at the top of Main.lean gives the requests.
 package lean
 
