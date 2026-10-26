@@ -1,0 +1,27 @@
+:root { --ink: #1f2328; --muted: #59636e; --line: #d1d9e0; --paper: #ffffff; --accent: #0b5cad; --tint: #f6f8fa; }
+@media (prefers-color-scheme: dark) { :root { --ink: #e6edf3; --muted: #9198a1; --line: #3d444d; --paper: #0d1117; --accent: #6cb6ff; --tint: #151b23; } }
+html { background: var(--paper); color: var(--ink); }
+body { font: 1.05rem/1.6 Georgia, "Times New Roman", serif; max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+a { color: var(--accent); }
+a.missing { color: var(--muted); text-decoration: line-through; }
+h1 { font-size: 2rem; line-height: 1.2; margin-bottom: 0.25rem; }
+h2 { margin-top: 2.5rem; border-bottom: 1px solid var(--line); }
+.meta, .uri, .note { color: var(--muted); font-size: 0.9rem; }
+.toc ol { padding-left: 1.25rem; }
+.item { margin: 1.5rem 0; }
+.item .head { margin-bottom: 0.25rem; }
+.label { font-weight: bold; }
+.definition .name, .concept .name { font-style: italic; }
+.statement .main, .claim .main { font-style: italic; }
+.badges { float: right; font: 0.75rem/1.6 ui-monospace, monospace; }
+.badge { border: 1px solid var(--line); border-radius: 4px; padding: 0 0.3rem; color: var(--muted); }
+.claim .badge.status { border-color: currentColor; }
+.sub { font-style: italic; margin-bottom: 0; }
+.proof { margin-left: 1rem; }
+.qed { text-align: right; margin-top: -1rem; }
+.glue { background: var(--tint); padding: 0.25rem 1rem; border-left: 3px solid var(--line); }
+.math.display { overflow-x: auto; overflow-y: hidden; }
+table { border-collapse: collapse; }
+td, th { border-bottom: 1px solid var(--line); padding: 0.25rem 0.75rem; text-align: left; }
+.tex-error { color: #b42318; }
+@media print { .badges, nav.toc { display: none; } body { max-width: none; } }

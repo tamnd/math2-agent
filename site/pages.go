@@ -261,7 +261,7 @@ func (b *builder) writeDocs() error {
 		case err != nil:
 			return err
 		}
-		body, err := b.plainMD.render(string(data), b.contentLinks)
+		body, err := b.plainMD.Render(string(data), dests(b.contentLinks))
 		if err != nil {
 			return fmt.Errorf("site: %s: %w", d.File, err)
 		}

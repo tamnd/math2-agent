@@ -1,4 +1,7 @@
-package site
+// Package markup renders Markdown to HTML: the bodies of nodes, with their math and their links to nodes, and the documents of the content repository.
+//
+// A node body links to a node with a wiki link, [[text|TAG]]. Render changes each wiki link to a Markdown link with the destination NodeScheme and the id, so that the caller can resolve it. Math is $...$ and $$...$$ on one line, or a block that starts and ends with a line of $$. The caller renders the math, for example with package katex.
+package markup
 
 import (
 	"bytes"
@@ -19,25 +22,33 @@ import (
 // wikiLink is a link to a node: [[text|TAG]].
 var wikiLink = regexp.MustCompile(`\[\[([^\]|]+)\|([^\]|\s]+)\]\]`)
 
-// nodeScheme marks a link to a node after the wiki links change to Markdown links.
-const nodeScheme = "m2node:"
+// NodeScheme starts the destination of a link to a node, for example m2node:G5S1M9, after the wiki links change to Markdown links.
+const NodeScheme = "m2node:"
 
 // displayMarker stands for a block of display math while goldmark parses the text.
 const displayMarker = "M2DISPLAYMATH"
 
-// linkFunc changes a link destination. It returns the new destination and false when the target does not exist.
-type linkFunc func(dest string) (string, bool)
-
-// texFunc returns the HTML of a formula.
-type texFunc func(tex string, display bool) string
-
-// markdown renders Markdown to HTML. In a node body, tex renders the math at build time.
-type markdown struct {
-	md  goldmark.Markdown
-	tex texFunc // nil for a document with no math and no wiki links
+// Target is where a link goes.
+type Target struct {
+	Dest  string // the new destination
+	Title string // the title of the link, or ""
+	Class string // the class of the link, or ""
 }
 
-func newMarkdown(tex texFunc) *markdown {
+// Links resolves the destination of a link. It returns false when the target does not exist. Render then gives the link the class missing and, when the target has no title, a title that says so.
+type Links func(dest string) (Target, bool)
+
+// TeX returns the HTML of a formula.
+type TeX func(tex string, display bool) string
+
+// Markdown renders Markdown to HTML. A Markdown is safe for concurrent use when its TeX function is.
+type Markdown struct {
+	md  goldmark.Markdown
+	tex TeX
+}
+
+// New returns a renderer. With a TeX function, the renderer reads math and wiki links, as in a node body. With nil, it reads plain Markdown, as in a document.
+func New(tex TeX) *Markdown {
 	inline := []util.PrioritizedValue{}
 	if tex != nil {
 		inline = append(inline, util.Prioritized(mathParser{}, 50))
@@ -47,11 +58,11 @@ func newMarkdown(tex texFunc) *markdown {
 		goldmark.WithParserOptions(parser.WithAutoHeadingID(), parser.WithInlineParsers(inline...)),
 		goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(mathRenderer{tex}, 50)), gmhtml.WithUnsafe()),
 	)
-	return &markdown{md: md, tex: tex}
+	return &Markdown{md: md, tex: tex}
 }
 
-// render renders src. Each link destination goes through links. A node link to a missing node gets the class missing.
-func (m *markdown) render(src string, links linkFunc) (string, error) {
+// Render renders src. Each link destination goes through links, when links is not nil. The HTML of the source is kept, because the content of math2 is reviewed.
+func (m *Markdown) Render(src string, links Links) (string, error) {
 	var blocks []string
 	if m.tex != nil {
 		src, blocks = takeDisplayMath(src)
@@ -63,11 +74,19 @@ func (m *markdown) render(src string, links linkFunc) (string, error) {
 			return ast.WalkContinue, nil
 		}
 		if l, ok := n.(*ast.Link); ok && links != nil {
-			dest, ok := links(string(l.Destination))
-			l.Destination = []byte(dest)
+			t, ok := links(string(l.Destination))
+			l.Destination = []byte(t.Dest)
 			if !ok {
-				l.SetAttributeString("class", []byte("missing"))
-				l.Title = []byte("This node does not exist yet")
+				t.Class = strings.TrimSpace(t.Class + " missing")
+				if t.Title == "" {
+					t.Title = "This node does not exist yet"
+				}
+			}
+			if t.Class != "" {
+				l.SetAttributeString("class", []byte(t.Class))
+			}
+			if t.Title != "" {
+				l.Title = []byte(t.Title)
 			}
 		}
 		return ast.WalkContinue, nil
@@ -97,7 +116,7 @@ func wikiLinks(src string) string {
 		case fence != "" && strings.HasPrefix(trimmed, fence):
 			fence = ""
 		case fence == "":
-			lines[i] = wikiLink.ReplaceAllString(line, "[$1]("+nodeScheme+"$2)")
+			lines[i] = wikiLink.ReplaceAllString(line, "[$1]("+NodeScheme+"$2)")
 		}
 	}
 	return strings.Join(lines, "\n")
@@ -194,7 +213,7 @@ func (mathParser) Parse(_ ast.Node, block text.Reader, _ parser.Context) ast.Nod
 	return n
 }
 
-type mathRenderer struct{ tex texFunc }
+type mathRenderer struct{ tex TeX }
 
 func (r mathRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(mathKind, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {

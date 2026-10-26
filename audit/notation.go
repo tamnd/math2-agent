@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 
@@ -158,23 +157,6 @@ func n01(a *auditor) outcome {
 	return o
 }
 
-var argRE = regexp.MustCompile(`#[1-9]`)
-
-// glyph returns what an expansion prints with no arguments: the expansion with no #n, no \left and \right, no spaces and no brackets or commas. For example \varphi(#1) and \varphi give \varphi. An expansion that is only brackets, such as (#1, #2), gives itself with no spaces.
-func glyph(latex string) string {
-	s := argRE.ReplaceAllString(latex, "")
-	s = strings.NewReplacer(`\left`, "", `\right`, "", " ", "").Replace(s)
-	if g := strings.Map(func(r rune) rune {
-		if strings.ContainsRune("()[],", r) {
-			return -1
-		}
-		return r
-	}, s); g != "" {
-		return g
-	}
-	return s
-}
-
 // n02 checks that two entries that print the same glyph in scopes with a topic in common list each other in conflicts (rule N02). It also reports a conflict that names no entry.
 func n02(a *auditor) outcome {
 	t := a.notationOf()
@@ -188,7 +170,7 @@ func n02(a *auditor) outcome {
 	}
 	glyphs := make([]string, len(t.reg.Entries))
 	for i, e := range t.reg.Entries {
-		glyphs[i] = glyph(e.LaTeX)
+		glyphs[i] = notation.Glyph(e.LaTeX)
 		o.checked++
 		for _, id := range e.Conflicts {
 			if !ids[id] {

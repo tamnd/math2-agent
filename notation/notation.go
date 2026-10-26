@@ -324,3 +324,18 @@ func Marshal(entries []*Entry) ([]byte, error) {
 	}
 	return b.Bytes(), nil
 }
+
+// Glyph returns what an expansion prints with no arguments: the expansion with no #n, no \left and \right, no spaces and no brackets or commas. For example \varphi(#1) and \varphi give \varphi. An expansion that is only brackets, such as (#1, #2), gives itself with no spaces.
+func Glyph(latex string) string {
+	s := paramRE.ReplaceAllString(latex, "")
+	s = strings.NewReplacer(`\left`, "", `\right`, "", " ", "").Replace(s)
+	if g := strings.Map(func(r rune) rune {
+		if strings.ContainsRune("()[],", r) {
+			return -1
+		}
+		return r
+	}, s); g != "" {
+		return g
+	}
+	return s
+}

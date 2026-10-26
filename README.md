@@ -71,6 +71,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 site check` | Test the wiki against the size, MathML, no-JavaScript, figure and offline targets. | written |
 | `m2 site serve` | Preview the wiki with gzip, as GitHub Pages serves it. | written |
 | `m2 site archive` | Write the wiki as a zip file that works offline. | written |
+| `m2 pack <volume>` | Assemble a volume of `volumes/` into an edition: the order of the nodes, the numbers, the glue, the HTML page and the lock file. `-check` runs the pack checks PC1 to PC10 and writes no file. | written |
 | `m2 build` | Build the derived data: Lean, extraction, replay, the fidelity battery, status, graph, store and the search index. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
@@ -135,6 +136,27 @@ Spec 13.7 sets these targets for each page of the wiki:
 - The first paint and the largest paint come in less than 1 s on a mid-range phone on 4G.
 
 `m2 site check` tests the first five targets on each page of a built site. It prints the heaviest page and each problem, and exits with code 1 when a page misses a target. The last two targets need a browser. The CI job `site targets` builds the site of the fixtures, runs `m2 site check`, and runs Lighthouse CI on one page of each template through `m2 site serve`. It puts the report in the summary of the run. Each release has the same report as `site-report.md`. See [.github/lighthouse](.github/lighthouse/README.md) for the profile and for a local run.
+
+## Volumes
+
+A volume is a book that `m2 pack` assembles from the nodes of the tree (corpus K11). Its file `volumes/<id>.yaml` gives the targets, the levels that each node must have, the choice of a definition for a concept with two or more, the conventions, the glue and the formats. `m2 pack <volume>` takes the closure of the targets, puts the nodes in an order where no node comes before a node that it uses, groups them into chapters and sections by their MSC codes and the curricula, and numbers the items. It writes the edition to `build/volumes/<id>/` and the lock file to `volumes/<id>.lock`. The lock file pins each node to a release and to the hash of its file, so the same lock builds the same edition again.
+
+The HTML edition is one page with KaTeX and no JavaScript. Each item has its tag as its anchor. A link to a node in the volume goes to its item, and a link to a node outside the volume is a citation to its page on the wiki. The page has the conventions, the table of notation, the cited nodes and the attribution of each node and each glue text. A statement below evidence level E2 shows as a claim.
+
+| Check | What it checks |
+|---|---|
+| PC1 | Each node of the volume has the writing level and the evidence level of the volume. |
+| PC2 | No item comes before a node that it uses, and no proof uses an item after its statement. |
+| PC3 | Each node that an item uses is in the volume or in `assumes`. |
+| PC4 | No two macros of the volume print the same glyph for two meanings, unless the volume chooses a variant. |
+| PC5 | Each node uses the option of the volume for each convention, or the volume names the node in `differ`. |
+| PC6 | Each link of the volume ends at a node. |
+| PC7 | The glue has no mathematics and has a writer, and a person confirmed the glue of an agent. |
+| PC8 | The nodes of the volume pass the provenance rules L02 and L03. |
+| PC9 | Each format builds the same bytes two times, and the lock file of a pinned release is up to date. |
+| PC10 | Each section has the exercises that the volume asks for. |
+
+Each check is hard. A volume that fails one does not build an edition.
 
 ## The build
 
@@ -811,7 +833,9 @@ katex/    render TeX to HTML and MathML with KaTeX in pure Go, with the style sh
 ingest/   the adapters of the external sources, the licence gate, the snapshots and the import manifests (spec 09)
 lean/     M2Extract, its Lake package and the Go package that drives it
 mcp/      the MCP server: a read-only tool for each method of the API (spec 11.2 and 11.7)
+pack/     assemble a volume into an edition: the closure, the order, the numbers, the HTML, the lock file and the pack checks (corpus K11)
 notation/ the notation register and the register of conventions (corpus K10.4 and K10.5), and the macro files that the register gives
+markup/   render the Markdown of a body to HTML, with a resolver for node links and math
 node/     read node files, write the canonical form and compute the content hash
 propose/  the writes of spec 11.1: the change of each write method, the audit gate, the cap and the pull request on GitHub
 project/  the projects of the tree: the goal, the budget, the roles and the members (spec 13.6)

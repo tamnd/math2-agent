@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Volume.Title}}</title>
+<link rel="stylesheet" href="katex/katex.min.css">
+<link rel="stylesheet" href="{{.Style}}">
+{{.LD}}
+</head>
+<body>
+<header class="volume">
+<h1>{{.Volume.Title}}</h1>
+<p class="meta">{{.Volume.Kind}}{{with .Volume.Audience}} for {{.}}{{end}}. Edited by {{range $i, $e := .Volume.Editors}}{{if $i}}, {{end}}{{$e}}{{end}}. math2 release {{.Release}}.</p>
+</header>
+<nav class="toc" aria-label="Contents">
+<h2>Contents</h2>
+<ol>
+{{- range .Chapters}}
+<li><a href="#{{.ID}}">{{.Number}}. {{.Title}}</a>
+<ol>
+{{- range .Sections}}
+<li><a href="#{{.ID}}">{{.Number}} {{.Title}}</a></li>
+{{- end}}
+</ol>
+</li>
+{{- end}}
+{{- if .Conventions}}
+<li><a href="#conventions">Conventions</a></li>
+{{- end}}
+{{- if .Notation}}
+<li><a href="#notation">Notation</a></li>
+{{- end}}
+<li><a href="#attribution">Attribution</a></li>
+</ol>
+</nav>
+<main>
+{{- if .Preface}}
+<section class="preface" id="preface">
+<h2>Preface</h2>
+{{- range .Preface}}
+<div class="glue">{{md .Text}}</div>
+{{- end}}
+</section>
+{{- end}}
+{{- if .Assumed}}
+<section class="assumed" id="assumed">
+<p>The reader knows these nodes:</p>
+<ul>
+{{- range .Assumed}}
+<li><a class="cite" href="{{.URL}}" title="{{.URI}}">{{.Name}}</a></li>
+{{- end}}
+</ul>
+</section>
+{{- end}}
+{{- range .Chapters}}
+<section class="chapter" id="{{.ID}}">
+<h2>{{.Number}}. {{.Title}}</h2>
+{{- range .Glue}}
+<div class="glue">{{md .Text}}</div>
+{{- end}}
+{{- range .Sections}}
+<section class="section" id="{{.ID}}">
+<h3>{{.Number}} {{.Title}}</h3>
+{{- range .Glue}}
+<div class="glue">{{md .Text}}</div>
+{{- end}}
+{{- range .Items}}
+<article class="item {{.Kind}}{{if .Claim}} claim{{end}}" id="{{.Tag}}">
+<p class="head"><span class="label">{{.Label}} {{.Number}}</span> <span class="name">({{.Name}})</span>
+<span class="badges"><span class="badge writing" title="writing level">{{.Writing}}</span> {{with .Evidence.String}}<span class="badge evidence" title="evidence level">{{.}}</span>{{end}}{{if .Claim}} <span class="badge status">{{.Claim}}</span>{{end}}</span></p>
+{{- if .Characterizes}}
+<p class="note">An equivalent characterization of the definition in <a class="ref" href="#{{.Characterizes}}">{{.Characterizes}}</a>.</p>
+{{- end}}
+<div class="main">{{md .Main}}</div>
+{{- if .Remarks}}
+<div class="remarks"><p class="sub">Remarks</p>{{md .Remarks}}</div>
+{{- end}}
+{{- range .Proofs}}
+<div class="proof" id="{{.Tag}}"><p class="sub">Proof</p>{{md .Main}}<p class="qed" aria-hidden="true">∎</p></div>
+{{- end}}
+<p class="uri"><a href="m2://{{.Tag}}">m2://{{.Tag}}</a></p>
+</article>
+{{- end}}
+</section>
+{{- end}}
+</section>
+{{- end}}
+{{- if .Conventions}}
+<section class="back" id="conventions">
+<h2>Conventions</h2>
+<dl>
+{{- range .Conventions}}
+<dt>{{.ID}}</dt>
+<dd>This volume uses {{.Option}}{{if .Default}}, the default of math2{{end}}.{{range .Differ}} <a class="ref" href="#{{.Tag}}">{{.Name}}</a> uses {{.Option}}{{with .Note}}: {{.}}{{else}}.{{end}}{{end}}</dd>
+{{- end}}
+</dl>
+</section>
+{{- end}}
+{{- if .Notation}}
+<section class="back" id="notation">
+<h2>Notation</h2>
+<table>
+<thead><tr><th>Symbol</th><th>Reads</th><th>Introduced</th></tr></thead>
+<tbody>
+{{- range .Notation}}
+<tr><td>{{tex (notation .)}}</td><td>{{.Reads}}</td><td>{{.Introduced}}</td></tr>
+{{- end}}
+</tbody>
+</table>
+</section>
+{{- end}}
+{{- if .Cited}}
+<section class="back" id="cited">
+<h2>Cited nodes</h2>
+<ul>
+{{- range .Cited}}
+<li><a class="cite" href="{{.URL}}">{{.Name}}</a>, {{.URI}}</li>
+{{- end}}
+</ul>
+</section>
+{{- end}}
+<section class="back" id="attribution">
+<h2>Attribution</h2>
+{{- with .Attribution}}
+{{- if .People}}
+<ul>
+{{- range .People}}
+<li>{{.Person}}{{if .Edited}}, editor{{end}}{{if .Nodes}}, {{.Nodes}} nodes{{end}}{{if .Reviews}}, {{.Reviews}} reviews{{end}}{{if .Glue}}, {{.Glue}} parts of the editorial text{{end}}</li>
+{{- end}}
+</ul>
+{{- end}}
+{{- if .Agents}}
+<p>Agent runs that helped:</p>
+<ul>
+{{- range .Agents}}
+<li>{{.}}</li>
+{{- end}}
+</ul>
+{{- end}}
+{{- if .NoLog}}
+<p>These nodes have no provenance log: {{range $i, $t := .NoLog}}{{if $i}}, {{end}}<a href="#{{$t}}">{{$t}}</a>{{end}}.</p>
+{{- end}}
+{{- end}}
+</section>
+</main>
+</body>
+</html>
