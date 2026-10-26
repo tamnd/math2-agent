@@ -206,6 +206,46 @@ func TestAgentRunExplain(t *testing.T) {
 	}
 }
 
+func TestAgentRunWrite(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
+	root, out := agentTree(t)
+	nat := "---\ntag: 9N4TQ2\nkind: definition\nname: Natural number\n---\n\n## Definition\n\nA **natural number** is one of $0, 1, 2$ and so on.\n"
+	// A statement has a role, which write cannot add, and a definition for its uses.
+	stated := strings.Replace(agentNode("Math2.T.s"), "name: Reflexivity\n", "name: Reflexivity\nrole: proposition\n", 1)
+	for name, text := range map[string]string{"nodes/7K3/7K3QX2.md": stated, "nodes/9N4/9N4TQ2.md": nat} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, args := range [][]string{{"add", "-A"}, {"-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "a statement and a definition"}} {
+		if b, err := exec.Command("git", append([]string{"-C", root}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, b)
+		}
+	}
+	u := llm.Usage{Input: 1000, Output: 200}
+	text := strings.Replace(stated, "role: proposition\n", "role: proposition\nuses: [9N4TQ2]\n", 1)
+	oldModel, oldLean := newModel, newLean
+	newModel = func() (llm.Model, error) {
+		return llmtest.New(llmtest.Call("write_file", map[string]string{"path": "nodes/7K3/7K3QX2.md", "text": text}, u)), nil
+	}
+	newLean = func(context.Context, string, *tools.Box) (tools.Lean, error) {
+		return nil, errors.New("write needs no Lean")
+	}
+	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
+
+	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", t.TempDir(), "-work", filepath.Join(t.TempDir(), "w"), "-target", "7K3QX2", "-goal", "the W1 sections", "-on-behalf-of", "github:octocat", "write")
+	if code != ExitOK {
+		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/write@0.1.0, 1 turns") {
+		t.Errorf("the output is\n%s", stdout)
+	}
+}
+
 func TestAgentRunCurate(t *testing.T) {
 	t.Setenv("M2_LEAN_IMAGE", "")
 	root, out := agentTree(t)
