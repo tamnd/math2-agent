@@ -204,7 +204,7 @@ func Embedded() *Cards {
 
 // Load reads the cards from the working tree at root. When the tree has no cards file, Load returns the embedded copy.
 func Load(root string) (*Cards, error) {
-	data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(File)))
+	data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(File))) // #nosec G304 -- the path is in the working tree, which the caller owns.
 	if errors.Is(err, fs.ErrNotExist) {
 		return Embedded(), nil
 	}
