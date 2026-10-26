@@ -15,15 +15,17 @@ func ExampleMint() {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(tag.IsTag(t), t[0] != '0', tag.Shard(t) == t[:2])
-	// Output: true true true
+	fmt.Println(len(t), tag.IsTag(t), t[0] != '0', tag.Shard(t) == t[:2])
+	// Output: 10 true true true
 }
 
 func ExampleIsTag() {
-	for _, s := range []string{"7K3QX2", "7k3qx2", "7K3QXI", "~3fa94c01"} {
+	for _, s := range []string{"7K3QX2M9R2", "7K3QX2M9R3", "7K3QX2", "7k3qx2", "7K3QXI", "~3fa94c01"} {
 		fmt.Println(s, tag.IsTag(s), tag.IsProvisional(s))
 	}
 	// Output:
+	// 7K3QX2M9R2 true false
+	// 7K3QX2M9R3 false false
 	// 7K3QX2 true false
 	// 7k3qx2 false false
 	// 7K3QXI false false
@@ -31,9 +33,31 @@ func ExampleIsTag() {
 }
 
 func ExampleExcluded() {
-	// A tag must not look like a number or an MSC code.
-	fmt.Println(tag.Excluded("123456"), tag.Excluded("20D60X"), tag.Excluded("7K3QX2"))
-	// Output: true true false
+	// A tag must not look like a number or an MSC code, and a long tag must have two letters or more.
+	fmt.Println(tag.Excluded("123456"), tag.Excluded("20D60X"), tag.Excluded("123456789X"), tag.Excluded("7K3QX2M9R2"))
+	// Output: true true true false
+}
+
+func ExampleCheck() {
+	p := "7K3QX2M9R"
+	fmt.Println(p + string(tag.Check(p)))
+	// Output: 7K3QX2M9R2
+}
+
+func ExampleNormalize() {
+	for _, s := range []string{"7k3qx-2m9r2", "7K3XQ2M9R2", "g5sim9"} {
+		t, err := tag.Normalize(s)
+		fmt.Println(t, err)
+	}
+	// Output:
+	// 7K3QX2M9R2 <nil>
+	//  not a valid tag: the check character does not match
+	// G5S1M9 <nil>
+}
+
+func ExampleDisplay() {
+	fmt.Println(tag.Display("7K3QX2M9R2"), tag.Display("3C53TD"))
+	// Output: 7K3QX-2M9R2 3C53TD
 }
 
 func ExampleIsAlias() {
