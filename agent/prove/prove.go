@@ -18,6 +18,9 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
+// Tampered starts each reason of [Pin.Verify] that is a change to the closure of the statement. The weekly agent report counts the runs in which the pin caught such a change (spec 12.9).
+const Tampered = "the closure of the statement changed"
+
 // Pin is a pinned statement (spec 12.2).
 type Pin struct {
 	Target       string            `json:"target"`    // the id of the node of the job
@@ -175,9 +178,9 @@ func (p *Pin) Verify(proof string, recs []lean.Record) error {
 		c, ok := by[d]
 		switch {
 		case !ok || c.Error != "":
-			errs = append(errs, fmt.Errorf("the statement uses %s, and the library no longer has it", d))
+			errs = append(errs, fmt.Errorf("%s: the statement uses %s, and the library no longer has it", Tampered, d))
 		case closureHash(c) != p.Closure[d]:
-			errs = append(errs, fmt.Errorf("the run changed %s, which the statement uses; put it back as it was", d))
+			errs = append(errs, fmt.Errorf("%s: the run changed %s, which the statement uses; put it back as it was", Tampered, d))
 		}
 	}
 	return errors.Join(errs...)
