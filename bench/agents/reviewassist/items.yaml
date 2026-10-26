@@ -1,0 +1,50 @@
+# The public items of the suite of the review-assist role (spec 17.3.4). Each item is a node with one Lean binding and the verdict that a review gave the binding. A not-faithful item has the class of spec 10.5 that the critic must name, and a reference concern. A faithful item has no concern. The statements, the Lean records and the concerns are in our own words, and we wrote the records by hand for the suite.
+items:
+  - target: R7JK2M
+    name: Subtraction and addition
+    statement: Let $a$ and $b$ be natural numbers with $b \le a$. Then $(a - b) + b = a$.
+    decl: Bench.sub_add
+    lean: "∀ (a b : Nat), a - b + b = a"
+    lean_all: "∀ (a b : Nat), @Eq.{1} Nat (@HAdd.hAdd.{0, 0, 0} Nat Nat Nat (@instHAdd.{0} Nat instAddNat) (@HSub.hSub.{0, 0, 0} Nat Nat Nat (@instHSub.{0} Nat instSubNat) a b) b) a"
+    constants: [Nat, Eq, HAdd.hAdd, HSub.hSub]
+    verdict: not-faithful
+    class: M-hyp-missing
+    concern: the Lean statement has no hypothesis b ≤ a. Natural subtraction gives 0 when b > a, thus the statement is false for a = 0 and b = 1.
+  - target: R7QV3N
+    name: Lagrange's theorem
+    statement: Let $G$ be a finite group and let $H$ be a subgroup of $G$. Then the order of $H$ divides the order of $G$.
+    decl: Bench.lagrange
+    lean: "∀ {G : Type u_1} [inst : Group G] (H : Subgroup G), Nat.card ↥H ∣ Nat.card G"
+    lean_all: "∀ {G : Type u_1} [inst : Group.{u_1} G] (H : Subgroup.{u_1} G inst), @Dvd.dvd.{0} Nat Nat.instDvdNat (Nat.card.{u_1} (Subgroup.toSet H)) (Nat.card.{u_1} G)"
+    constants: [Group, Subgroup, Nat.card, Dvd.dvd]
+    verdict: not-faithful
+    class: M-junk
+    concern: the statement has no hypothesis that G is finite. Nat.card G is 0 when G is infinite, and each number divides 0, thus the infinite case is true for a trivial reason.
+  - target: R7TP4H
+    name: No largest natural number
+    statement: For each natural number $n$ there is a natural number $m$ with $n < m$.
+    decl: Bench.no_max
+    lean: "∃ (m : Nat), ∀ (n : Nat), n < m"
+    lean_all: "@Exists.{1} Nat fun (m : Nat) => ∀ (n : Nat), @LT.lt.{0} Nat instLTNat n m"
+    constants: [Nat, Exists, LT.lt]
+    verdict: not-faithful
+    class: M-quant
+    concern: the Lean statement puts the existential first. It says that one m is larger than each n, and the informal statement lets m depend on n.
+  - target: R7WX5C
+    name: Sum of the first integers
+    statement: For each natural number $n$, the sum $1 + 2 + \dots + n$ is $n(n+1)/2$.
+    decl: Bench.gauss_sum
+    lean: "∀ (n : Nat), (∑ i ∈ Finset.range n, i) * 2 = n * (n + 1)"
+    lean_all: "∀ (n : Nat), @Eq.{1} Nat (@HMul.hMul.{0, 0, 0} Nat Nat Nat (@instHMul.{0} Nat instMulNat) (@Finset.sum.{0, 0} Nat Nat Nat.instAddCommMonoid (Finset.range n) fun (i : Nat) => i) 2) (@HMul.hMul.{0, 0, 0} Nat Nat Nat (@instHMul.{0} Nat instMulNat) n (@HAdd.hAdd.{0, 0, 0} Nat Nat Nat (@instHAdd.{0} Nat instAddNat) n 1))"
+    constants: [Nat, Eq, Finset.sum, Finset.range, HMul.hMul, HAdd.hAdd]
+    verdict: not-faithful
+    class: M-type
+    concern: Finset.range n has the numbers 0 to n - 1, and the informal sum is over 1 to n. The Lean sum misses n, thus the statement is false for n = 1.
+  - target: R7ZD6F
+    name: Commutativity of addition
+    statement: For all natural numbers $a$ and $b$, $a + b = b + a$.
+    decl: Bench.add_comm
+    lean: "∀ (a b : Nat), a + b = b + a"
+    lean_all: "∀ (a b : Nat), @Eq.{1} Nat (@HAdd.hAdd.{0, 0, 0} Nat Nat Nat (@instHAdd.{0} Nat instAddNat) a b) (@HAdd.hAdd.{0, 0, 0} Nat Nat Nat (@instHAdd.{0} Nat instAddNat) b a)"
+    constants: [Nat, Eq, HAdd.hAdd]
+    verdict: faithful
