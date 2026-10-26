@@ -36,6 +36,10 @@ func runMigrate(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "m2 migrate shard3: %v\n", err)
 		return ExitFailure
 	}
-	fmt.Fprintf(stdout, "%d paths moved\n", len(moves))
+	if len(moves) == 1 {
+		fmt.Fprintln(stdout, "1 path moved")
+	} else {
+		fmt.Fprintf(stdout, "%d paths moved\n", len(moves))
+	}
 	return ExitOK
 }

@@ -116,3 +116,158 @@ func ExampleCodeID() {
 	// AAYEQE true
 	//  false
 }
+
+func ExampleIsLegacy() {
+	fmt.Println(tag.IsLegacy("3C53TD"), tag.IsLegacy("7K3QX2M9R2"))
+	// Output: true false
+}
+
+func ExampleIsProvisional() {
+	fmt.Println(tag.IsProvisional("~3fa94c01"), tag.IsProvisional("~3FA94C01"), tag.IsProvisional("3C53TD"))
+	// Output: true false false
+}
+
+func ExampleIsSeed() {
+	seed := "0K3QX2M9R" + string(tag.Check("0K3QX2M9R"))
+	fmt.Println(tag.IsSeed(seed), tag.IsSeed("7K3QX2M9R2"))
+	// Output: true false
+}
+
+func ExampleMintSeed() {
+	r := bytes.NewReader(bytes.Repeat([]byte{0x5a, 0x17, 0x3c, 0x99}, 16))
+	t, err := tag.MintSeed(r, func(string) bool { return false })
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(len(t), t[0], tag.IsSeed(t))
+	// Output: 10 48 true
+}
+
+func ExampleProvisional() {
+	// A fixed reader gives the same id each time. Use a nil reader to draw from crypto/rand.
+	id, err := tag.Provisional(bytes.NewReader([]byte{0x3f, 0xa9, 0x4c, 0x01}))
+	fmt.Println(id, err)
+	// Output: ~3fa94c01 <nil>
+}
+
+func ExampleShard() {
+	fmt.Println(tag.Shard("7K3QX2M9R2"), tag.Shard("3C53TD"), tag.Shard("~3fa94c01"))
+	// Output: 7K3 3C5 ~
+}
+
+func ExampleContentDirs() {
+	fmt.Println(tag.ContentDirs())
+	// Output: [nodes topics reviews compute lean]
+}
+
+func ExampleAppend() {
+	root, err := os.MkdirTemp("", "register")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer os.RemoveAll(root)
+	path := filepath.Join(root, "registers", "tags.reg")
+	if err := tag.Append(path, []tag.Entry{{Tag: "G5S1M9", Commit: "aaaaaaa", Kind: "concept"}, {Tag: "3C53TD", Commit: "aaaaaaa", Kind: "statement"}}); err != nil {
+		fmt.Println(err)
+		return
+	}
+	data, _ := os.ReadFile(path)
+	fmt.Print(string(data))
+	// Output:
+	// 3C53TD aaaaaaa statement
+	// G5S1M9 aaaaaaa concept
+}
+
+func ExampleReadUsed() {
+	root, err := os.MkdirTemp("", "register")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer os.RemoveAll(root)
+	path := filepath.Join(root, "tags.reg")
+	if err := os.WriteFile(path, []byte("# The tags.\n3C53TD aaaaaaa statement\n\nG5S1M9 aaaaaaa concept\n"), 0o600); err != nil {
+		fmt.Println(err)
+		return
+	}
+	used, err := tag.ReadUsed(path, filepath.Join(root, "retired.reg"))
+	fmt.Println(used, err)
+	// Output: map[3C53TD:true G5S1M9:true] <nil>
+}
+
+func ExampleReadAliases() {
+	root, err := os.MkdirTemp("", "register")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer os.RemoveAll(root)
+	path := filepath.Join(root, "aliases.reg")
+	if err := os.WriteFile(path, []byte("# The aliases.\ngroup G5S1M9 2026-05-01 -\n"), 0o600); err != nil {
+		fmt.Println(err)
+		return
+	}
+	aliases, err := tag.ReadAliases(path)
+	fmt.Println(aliases, err)
+	// Output: [group G5S1M9 2026-05-01 -] <nil>
+}
+
+// rewriteTree makes a working tree with one new node, ~3fa94c01, and one node that links to it.
+func rewriteTree() (string, error) {
+	root, err := os.MkdirTemp("", "rewrite")
+	if err != nil {
+		return "", err
+	}
+	files := map[string]string{
+		"nodes/~/~3fa94c01.md": "---\ntag: ~3fa94c01\nkind: statement\nname: A new node\n---\n",
+		"nodes/G5S/G5S1M9.md":  "---\ntag: G5S1M9\nkind: concept\nname: Group\n---\n\nSee [[a new node|~3fa94c01]].\n",
+		"registers/tags.reg":   "G5S1M9 aaaaaaa concept\n",
+	}
+	for p, text := range files {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(root, p)), 0o750); err != nil {
+			return root, err
+		}
+		if err := os.WriteFile(filepath.Join(root, p), []byte(text), 0o600); err != nil {
+			return root, err
+		}
+	}
+	return root, nil
+}
+
+func ExampleRewrite() {
+	root, err := rewriteTree()
+	defer os.RemoveAll(root)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// Use a nil reader to draw the tags from crypto/rand.
+	minted, err := tag.Rewrite(root, nil, "bbbbbbb")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	m := minted[0]
+	data, _ := os.ReadFile(filepath.Join(root, "nodes", "G5S", "G5S1M9.md"))
+	_, err = os.Stat(filepath.Join(root, "nodes", tag.Shard(m.Tag), m.Tag+".md"))
+	fmt.Println(m.Provisional, tag.IsTag(m.Tag), m.Kind, bytes.Contains(data, []byte("|"+m.Tag+"]]")), err)
+	// Output: ~3fa94c01 true statement true <nil>
+}
+
+func ExampleRewriteSeed() {
+	root, err := rewriteTree()
+	defer os.RemoveAll(root)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	minted, err := tag.RewriteSeed(root, nil, "bbbbbbb")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(len(minted), tag.IsSeed(minted[0].Tag))
+	// Output: 1 true
+}
