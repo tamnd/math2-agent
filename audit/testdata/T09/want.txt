@@ -1,0 +1,2 @@
+records/inventory/9DK.jsonl:1:1: T09: the check character of 9DK2RX7Q4Y is Y, and it must be X. A typing error in the value can give this
+registers/tags.reg:3:1: T09: the check character of 7K3QX2M9R3 is 3, and it must be 2. A typing error in the value can give this

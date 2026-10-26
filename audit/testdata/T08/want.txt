@@ -1,0 +1,1 @@
+records/inventory/7K3.jsonl:1:1: T08: the row 7K3QX2M9R2 has the value of a tag. A tag and a row never have the same value
