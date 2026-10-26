@@ -65,7 +65,7 @@ In 2026, the worst failure mode was a correct proof of a different statement. Th
 
 ## 12.3 Models
 
-The model is a configuration value, never a dependency in code. Each run records the exact model ids that it called. The `llm` package has one interface. Its first client is the Anthropic client. It has adapters for local open-weight prover models served behind gRPC (document 20.2).
+The model is a configuration value, never a dependency in code. Each run records the exact model ids that it called. The `llm` package has one interface. Its first client is the Anthropic client. It has adapters for local open-weight prover models served behind gRPC (document 20.2). The client of the Claude models is in `llm/claude`, on the official Go SDK. It streams each request, caches the system prompt, the tools and the prefix of the conversation, and keeps the thinking blocks as the service returned them. `llm/llmtest` has a scripted model, thus the tests of the roles call no model service. `llm.Cost` gives the price of a usage from a table of prices, and `llm.Prices` is the table above.
 
 | Tier | Model | Price in/out per MTok | Used for |
 |---|---|---|---|
