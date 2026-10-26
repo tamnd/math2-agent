@@ -918,6 +918,9 @@ func (b *builder) inventory(ctx context.Context, _ []*node.Node) (Step, error) {
 	return Step{Input: input, Output: out}, err
 }
 
+// writingRules is the version of the rules of the writing step and of package card. A change to the rules changes it, so that the step runs again.
+const writingRules = "1"
+
 // Levels is the content of writing.json.
 type Levels struct {
 	Cards  string         `json:"cards"`  // the file of the cards, or "embedded"
@@ -925,13 +928,13 @@ type Levels struct {
 	Nodes  []card.Result  `json:"nodes"`  // the level and the work list of each node, in tag order
 }
 
-// writing computes the writing level and the work list of each node, and writes writing.json (corpus spec K8.8). A node has an inventory row when a row has the outcome node with its tag, when its field inventory names a row, or when it has the Wikidata id of a mention of a row. A definition has the row of the concept that it defines. The body of a node passes when the rules B01 to B03 of m2 check give no finding. No node has the confirmation of rule P04 yet, thus no node is at W3. The input is the version of m2, the content hash of each node, the cards, the rows and the mentions.
+// writing computes the writing level and the work list of each node, and writes writing.json (corpus spec K8.8). A node has an inventory row when a row has the outcome node with its tag, when its field inventory names a row, or when it has the Wikidata id of a mention of a row. A definition has the row of the concept that it defines. The body of a node passes when the rules B01 to B03 of m2 check give no finding. No node has the confirmation of rule P04 yet, thus no node is at W3. The input is the version of the rules, the content hash of each node, the cards, the rows and the mentions.
 func (b *builder) writing(_ context.Context, nodes []*node.Node) (Step, error) {
 	cards, err := card.Load(b.opt.Root)
 	if err != nil {
 		return Step{}, err
 	}
-	lines := []string{"m2 " + b.opt.Version, "cards " + cards.Source}
+	lines := []string{"rules " + writingRules, "cards " + cards.Source}
 	if data, err := os.ReadFile(filepath.Join(b.opt.Root, filepath.FromSlash(card.File))); err == nil { // #nosec G304 -- the path is in the tree.
 		lines = append(lines, "cards "+hashString(string(data)))
 	}
