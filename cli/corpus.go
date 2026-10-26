@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -21,7 +22,7 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus cluster [-root DIR] [-commit C]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -70,11 +71,25 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	root := fs.String("root", ".", "the math2 working tree")
 	commit := fs.String("commit", "", "the commit that goes into registers/inventory/. Empty means the HEAD commit of the working tree.")
+	plan := fs.String("plan", "", "run the importers of this plan, for example "+ingest.PlanFile+", before the mentions")
+	cache := fs.String("cache", "", "with -plan, the directory of the downloaded snapshots. Empty means m2 in the user cache directory.")
+	summary := fs.String("summary", "", "with -plan, also write the summary in Markdown to this file, for the body of a pull request")
 	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if *plan == "" && (*cache != "" || *summary != "") || *plan != "" && fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "usage: "+corpusUsage)
 		return ExitUsage
 	}
 	if !headCommit(name, *root, commit, stderr) {
 		return ExitFailure
+	}
+	if *plan != "" {
+		if err := importPlan(*root, *commit, *plan, *cache, *summary, stdout); err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		return ExitOK
 	}
 	sources := fs.Args()
 	if len(sources) == 0 {
@@ -106,11 +121,101 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 		}
 		fmt.Fprintf(stdout, "%s: %d mentions\n", id, n)
 	}
-	if err := cluster(*root, *commit, stdout); err != nil {
+	if _, err := cluster(*root, *commit, stdout); err != nil {
 		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
 	}
 	return ExitOK
+}
+
+// importPlan runs the importers of the plan at path one after the other, writes their mentions, groups the mentions into rows and prints a summary. Each adapter keeps the rate limit of its source, and each request has the User-Agent of the toolchain. When summary is not empty, the summary also goes to that file.
+func importPlan(root, commit, path, cache, summary string, stdout io.Writer) error {
+	p, err := ingest.ReadPlan(path)
+	if err != nil {
+		return err
+	}
+	adapters := make([]ingest.Adapter, len(p.Imports))
+	for i, s := range p.Imports {
+		a, ok := ingest.Lookup(s.Source)
+		if !ok {
+			return fmt.Errorf("%s: the source %s has no adapter. The sources with an adapter: %s", path, s.Source, sourceList())
+		}
+		adapters[i] = a
+	}
+	before, err := inventory.ReadMentions(root)
+	if err != nil {
+		return err
+	}
+	oldRows, err := inventory.ReadRows(root)
+	if err != nil {
+		return err
+	}
+	had := map[string]bool{}
+	for _, m := range before {
+		had[m.ID] = true
+	}
+	type line struct {
+		source, state, date string
+		records, mentions   int
+	}
+	var lines []line
+	for i, s := range p.Imports {
+		res, err := ingest.Pull(context.Background(), adapters[i], ingest.Options{
+			Root:      root,
+			Snapshot:  s.Snapshot,
+			URL:       s.URL,
+			Cache:     cache,
+			UserAgent: userAgent(),
+		})
+		if err != nil {
+			return err
+		}
+		cat, err := ingest.ReadCatalogue(root)
+		if err != nil {
+			return err
+		}
+		n, err := writeMentions(root, cat.Source(s.Source))
+		if err != nil {
+			return err
+		}
+		state := "pinned"
+		if res.New {
+			state = "new"
+		}
+		lines = append(lines, line{s.Source, state, res.Snapshot.Date, res.Manifest.Records, n})
+		fmt.Fprintf(stdout, "%s: %d records from a %s snapshot of %s, %d mentions\n", s.Source, res.Manifest.Records, state, res.Snapshot.Date, n)
+	}
+	res, err := cluster(root, commit, stdout)
+	if err != nil {
+		return err
+	}
+	after, err := inventory.ReadMentions(root)
+	if err != nil {
+		return err
+	}
+	added := map[string]int{}
+	for _, m := range after {
+		if !had[m.ID] {
+			added[m.Source]++
+		}
+	}
+	now := time.Now()
+	open, wasOpen := inventory.Summarize(res.Rows, after, now).Open, inventory.Summarize(oldRows, before, now).Open
+	var b strings.Builder
+	b.WriteString("| source | snapshot | records | mentions | new mentions |\n|---|---|---:|---:|---:|\n")
+	total := 0
+	for _, l := range lines {
+		fmt.Fprintf(&b, "| %s | %s, %s | %d | %d | %d |\n", l.source, l.state, l.date, l.records, l.mentions, added[l.source])
+		total += added[l.source]
+	}
+	fmt.Fprintf(&b, "\nThe run added %d mentions and %d rows. The inventory has %d rows, and the open count is %d (it was %d).\n", total, len(res.Added), len(res.Rows), open, wasOpen)
+	if _, err := io.WriteString(stdout, "\n"+b.String()); err != nil {
+		return err
+	}
+	if summary == "" {
+		return nil
+	}
+	return os.WriteFile(summary, []byte(b.String()), 0o644) // #nosec G306 -- the summary is the public body of a pull request.
 }
 
 // runCorpusCluster groups the mentions of the tree into rows again, with the passes 1 and 2 of corpus K4.3. It reads no records.
@@ -130,7 +235,7 @@ func runCorpusCluster(args []string, stdout, stderr io.Writer) int {
 	if !headCommit(name, *root, commit, stderr) {
 		return ExitFailure
 	}
-	if err := cluster(*root, *commit, stdout); err != nil {
+	if _, err := cluster(*root, *commit, stdout); err != nil {
 		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
 	}
@@ -152,22 +257,22 @@ func headCommit(name, root string, commit *string, stderr io.Writer) bool {
 }
 
 // cluster groups the mentions of the tree at root into its rows, writes the rows, and adds the new row identifiers to the register with the commit.
-func cluster(root, commit string, stdout io.Writer) error {
+func cluster(root, commit string, stdout io.Writer) (*inventory.Result, error) {
 	ms, err := inventory.ReadMentions(root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	rows, err := inventory.ReadRows(root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	reg, err := inventory.ReadRegister(root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	tags, err := tag.ReadUsed(filepath.Join(root, "registers", "tags.reg"), filepath.Join(root, "registers", "retired.reg"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	res, err := inventory.Cluster(rows, ms, inventory.Options{
 		Day:  time.Now(),
@@ -175,16 +280,16 @@ func cluster(root, commit string, stdout io.Writer) error {
 		Used: func(id string) bool { return reg[id] || tags[id] },
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := inventory.WriteRows(root, res.Rows); err != nil {
-		return err
+		return nil, err
 	}
 	if err := inventory.AppendRegister(root, res.Added, commit); err != nil {
-		return err
+		return nil, err
 	}
 	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal formal statements %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Equivalent)
-	return nil
+	return res, nil
 }
 
 // goldReport is the file that m2 corpus gold -write writes, relative to the root of the tree.
