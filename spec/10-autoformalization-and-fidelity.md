@@ -147,7 +147,7 @@ The formal-conjectures repository and the Annals Challenge are the two largest c
 
 Fidelity levels are claims too, and math2 measures how reliable they are:
 
-- **Sampled re-review.** Each month, a different reviewer does a blind re-review of 1% of F2 bindings and 0.5% of F3 bindings. We adjudicate and publish the disagreements. The measured error rate per level, by area, is a headline number in the notes of each release.
+- **Sampled re-review.** Each month, a different reviewer does a blind re-review of 1% of F2 bindings and 0.5% of F3 bindings. We adjudicate and publish the disagreements. The measured error rate per level, by area, is a headline number in the notes of each release. `m2 review sample` draws the sample with a seed and records it in `registers/samples.reg`, and `m2 review measure` gives the rate.
 - **Battery evaluation.** We evaluate each check in 10.4 against a labelled set of known misformalizations. The set starts from the published benchmark audits and grows with each `not-faithful` review. We publish detection rates per class (17.3).
 - **Downstream evidence.** Sometimes the proof of a statement needs a hypothesis that the informal statement does not have. Sometimes the proof is suspiciously short. In both cases, the statement goes back to the fidelity queue with a flag. A suspiciously short proof means that the measured size is much smaller than that of comparable proofs.
 

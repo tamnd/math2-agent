@@ -6,6 +6,8 @@
 //
 // [Queue] gives the fidelity queue of spec 16.3: the bindings that wait for a review, with the nodes that most nodes use first.
 //
+// [Draw] draws the monthly re-review sample of spec 10.8 with a seed that anyone can use again, and gives each binding to a reviewer who did not review it. [LoadSamples] and [AppendSamples] read and write the register of the samples, and [Measure] finds the re-reviews and computes the disagreement of each level.
+//
 // [Exports] gives the reviews of each reviewer, for the credit of spec 16.4. [Export.WriteText] writes them as text for a CV, and [Slug] gives the last segment of the stable link of a reviewer on the site.
 package review
 
