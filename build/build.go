@@ -451,13 +451,13 @@ func run(s *lean.Session, modules, decls []string) (*Extraction, error) {
 	if x.Records, err = s.Extract(decls, decls); err != nil {
 		return nil, err
 	}
-	var theorems []string
+	var statements []string
 	for _, r := range x.Records {
-		if r.Error == "" && r.Kind == "theorem" {
-			theorems = append(theorems, r.Decl)
+		if r.Statement() {
+			statements = append(statements, r.Decl)
 		}
 	}
-	checks, err := s.Checks(lean.CheckHeartbeats, theorems...)
+	checks, err := s.Checks(lean.CheckHeartbeats, statements...)
 	if err != nil {
 		return nil, err
 	}

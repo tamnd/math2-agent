@@ -56,6 +56,12 @@ theorem le_add_one (m : Nat) : m ≤ m + 1 := Nat.le_add_right m 1
 /-- A false statement. `le_add` implies its negation. -/
 theorem lt_self (m : Nat) : m < m := sorry
 
+/-- A false statement with no proof, as a definition of a proposition. The check `refuted` must find a tactic. -/
+def false_statement : Prop := 2 + 2 = 5
+
+/-- The statement of `lt_self` as a definition of a proposition. `le_add` implies its negation. -/
+def lt_self_statement : Prop := ∀ m : Nat, m < m
+
 /-- A hard statement. Automation does not prove it and does not prove its negation from `add_comm_a`. -/
 theorem fermat (n : Nat) (h : n > 2) (a b c : Nat) (ha : a > 0) (hb : b > 0) : a ^ n + b ^ n ≠ c ^ n := sorry
 

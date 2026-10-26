@@ -12,8 +12,8 @@ import M2Extract.Library
 * `{"cmd":"import","modules":["Mathlib"]}` loads the modules from the search path.
 * `{"cmd":"extract","decls":[...],"bound":[...]}` gives one record for each declaration in `decls`. `bound` is the list of all bound declarations.
 * `{"cmd":"axioms","decls":[...]}` gives the axioms of each declaration, as `#print axioms` gives them.
-* `{"cmd":"checks","decls":[...],"heartbeats":N}` runs the degenerate-statement checks on each theorem in `decls`. Each tactic has a limit of `N` thousand heartbeats.
-* `{"cmd":"implies","pairs":[["A","B"],...],"heartbeats":N}` compares the statements of the theorems `A` and `B` of each pair: it tries to prove that `A` implies `B`, and that `A` implies the negation of `B`.
+* `{"cmd":"checks","decls":[...],"heartbeats":N}` runs the degenerate-statement checks on each statement in `decls`: a theorem, or a definition of a proposition. Each tactic has a limit of `N` thousand heartbeats.
+* `{"cmd":"implies","pairs":[["A","B"],...],"heartbeats":N}` compares the statements `A` and `B` of each pair: it tries to prove that `A` implies `B`, and that `A` implies the negation of `B`.
 * `{"cmd":"library","root":"Mathlib","offset":0,"limit":1000}` gives the library records of the declarations of the modules under `root`, from the position `offset` in the order of the names, and the number of declarations in `total`.
 * `{"cmd":"bindings"}` gives each declaration that has the attribute `@[m2 "TAG"]` of tamnd/math2, and its tag.
 

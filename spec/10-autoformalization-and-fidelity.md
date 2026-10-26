@@ -47,7 +47,7 @@ A statement can only be as faithful as the definitions that it uses. A faithful 
 
 ## 10.4 The F1 battery
 
-F1 means that a candidate has passed each check that needs no human. The battery report records each check. Each check has an evaluation set with a measured detection rate (17.3).
+F1 means that a candidate has passed each check that needs no human. A candidate is a statement: a theorem, or a definition of a proposition when the result has no proof yet (07.2). The battery report records each check. Each check has an evaluation set with a measured detection rate (17.3).
 
 | # | Check | How | Catches |
 |---|---|---|---|
