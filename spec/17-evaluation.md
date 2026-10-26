@@ -38,6 +38,8 @@ The battery (10.4) is a classifier. Its verdict is faithful, or misformalized wi
 
 Measured: recall per taxonomy class, and the false-alarm rate on faithful items. The report is a confusion matrix over classes. A battery change must not decrease recall on any class by more than the noise band of that class. The band is published with the matrix.
 
+**The suite in m2.** `bench/fidelity` has the synthetic part, in the Lean core library, and it reads the live part from the reviews of a math2 tree. The seed part needs the published audits, and it comes later. The noise band is zero items, because the tactics of the battery have limits in heartbeats and give the same result on each run. Thus the test fails when one class catches one item less. The report is attached to each release of tamnd/math2-agent.
+
 ### 17.3.2 Extraction
 
 The suite has five hundred papers across MSC codes, decades and source types (LaTeX, HTML only, OCR). Each paper is labelled by hand with its results, their kinds, their in-paper dependencies, and a reference unfolding of each result. Measured: result recall and precision; kind accuracy; dependency edge F1; unfolding fidelity. People grade unfolding fidelity on a sample, and the back-translation judge of the battery grades it on all items. The report gives errors by source type, so a regression in the OCR path cannot hide behind the LaTeX path.

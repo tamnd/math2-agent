@@ -1,0 +1,8 @@
+name = "FidelitySuite"
+version = "0.1.0"
+defaultTargets = ["Suite"]
+
+# The statements of the fidelity suite. The suite uses only the Lean core library, thus a run does not need Mathlib. The toolchain must be the same as the toolchain in lean/lean-toolchain, because M2Extract from lean/ reads the modules.
+
+[[lean_lib]]
+name = "Suite"
