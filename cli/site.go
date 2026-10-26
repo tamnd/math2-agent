@@ -20,7 +20,7 @@ import (
 )
 
 const siteUsage = `Usage:
-  m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-build DIR] [-commit C] [-date now]
+  m2 site build [-content DIR] [-spec DIR] [-out DIR] [-url URL] [-build DIR] [-store DIR] [-commit C] [-date now]
   m2 site check [-url URL] [-json] [DIR]
   m2 site serve [-url URL] [-addr HOST:PORT] [DIR]
   m2 site archive [-url URL] [-o FILE] [-name NAME] [DIR]`
@@ -207,6 +207,7 @@ func runSiteBuild(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.Repo, "repo", "tamnd/math2", "the content repository on GitHub")
 	fs.StringVar(&opt.AgentRepo, "agent-repo", "tamnd/math2-agent", "the toolchain repository on GitHub")
 	fs.StringVar(&opt.Build, "build", "", "the output directory of m2 build for the tree. The pages then show the status that the build computed. Leave it empty for no status.")
+	fs.StringVar(&opt.Store, "store", "", "the directory of the agent run records. The project pages then show the runs and the spend of each project. Leave it empty for no runs.")
 	fs.StringVar(&opt.Commit, "commit", "", "the content commit")
 	date := fs.String("date", "", "the build date: now, or empty for no date. SOURCE_DATE_EPOCH also sets it.")
 	if err := fs.Parse(args); err != nil {

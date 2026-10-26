@@ -364,8 +364,9 @@ func TestAgentRunExplore(t *testing.T) {
 	image := "m2-python@" + digest
 	fermat := "---\ntag: 4N9QX2\nkind: statement\nrole: fact\nname: The Fermat numbers are prime\n---\n\n## Statement\n\nFor each $n \\ge 0$, the number $2^{2^n} + 1$ is prime.\n"
 	for name, text := range map[string]string{
-		"nodes/4N/4N9QX2.md": fermat,
-		compute.ImagesFile:   "images:\n  - name: m2-python\n    contents: Python 3\n    amd64: " + digest + "\n    arm64: " + digest + "\n",
+		"nodes/4N/4N9QX2.md":   fermat,
+		compute.ImagesFile:     "images:\n  - name: m2-python\n    contents: Python 3\n    amd64: " + digest + "\n    arm64: " + digest + "\n",
+		"projects/fermat.yaml": "name: The Fermat numbers\ngoal: Test the Fermat numbers for primes.\ntopic: T0PC1X\nbudget: 10\nroles: [explore]\nmembers:\n  - {id: github:octocat, role: owner}\n",
 	} {
 		p := filepath.Join(root, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
@@ -413,4 +414,28 @@ func TestAgentRunExplore(t *testing.T) {
 	if nv := recs[0].Novelty["~5e6f7a8b"]; nv == nil || nv.Verdict != novelty.NoMatch {
 		t.Errorf("the record keeps the novelty check %+v", recs[0].Novelty)
 	}
+
+	// A job of a project that the tree does not have, or of a person who is not a member, does not run.
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"-on-behalf-of", "project:other"}, "the tree has no projects/other.yaml"},
+		{[]string{"-on-behalf-of", "project:fermat", "-job", writeJob(t, "requested_by: github:someone\n")}, "github:someone requested the job and is not a member"},
+	} {
+		args := append([]string{"agent", "run", "-root", root, "-out", out, "-store", t.TempDir(), "-work", filepath.Join(t.TempDir(), "w"), "-target", "4N9QX2"}, tc.args...)
+		if code, _, stderr := run(append(args, "explore")...); code != ExitFailure || !strings.Contains(stderr, tc.want) {
+			t.Errorf("%v: exit code %d, stderr %q", tc.args, code, stderr)
+		}
+	}
+}
+
+// writeJob writes a job file of explore with the extra fields, and returns its path.
+func writeJob(t *testing.T, extra string) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), "job.yaml")
+	if err := os.WriteFile(p, []byte("job: j-2026-10-26-7\nrole: explore\ntarget: 4N9QX2\ngoal: test the claim\non_behalf_of: project:fermat\n"+extra), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return p
 }

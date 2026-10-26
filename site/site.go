@@ -45,6 +45,7 @@ type Options struct {
 	Repo       string      // the content repository, for example tamnd/math2
 	AgentRepo  string      // the toolchain repository, for example tamnd/math2-agent
 	Build      string      // the output directory of m2 build for the tree, or "". With a build, the pages show the status that the build computed.
+	Store      string      // the directory of the agent run records, or "". With a store, the project pages show the runs and the spend of each project.
 	Commit     string      // the content commit, or ""
 	Version    string      // the m2 version
 	Date       time.Time   // the build date. A zero date leaves it out, so that two builds give the same bytes.
@@ -139,6 +140,7 @@ type builder struct {
 	runs      map[string]map[string]*compute.Run // the runs of the computations in the build, by tag and architecture
 	tmpl      *template.Template
 	reviewers []*reviewerView
+	projects  []*projectView
 	pages     []string // the paths of the HTML pages, for the sitemap
 	nodeMD    *markdown
 	plainMD   *markdown
@@ -165,7 +167,7 @@ func Build(opt Options) error {
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeAgents}
+	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
@@ -235,6 +237,9 @@ func (b *builder) load() error {
 		return err
 	}
 	b.explore()
+	if err := b.loadProjects(); err != nil {
+		return err
+	}
 	return b.loadSpec()
 }
 

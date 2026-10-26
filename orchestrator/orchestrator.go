@@ -66,6 +66,17 @@ func ReadConfig(path string) (*Config, error) {
 	return &c, nil
 }
 
+// Cap sets the monthly cap of the project or the schedule id to usd, unless the configuration gives it a lower cap. The budget of a project file (spec 13.6) is such a cap: the owner of the project sets it, and orchestrator.yaml can give a lower one.
+func (c *Config) Cap(id string, usd float64) {
+	if old, ok := c.OnBehalfOf[id]; ok && old <= usd {
+		return
+	}
+	if c.OnBehalfOf == nil {
+		c.OnBehalfOf = map[string]float64{}
+	}
+	c.OnBehalfOf[id] = usd
+}
+
 // Validate reports the first problem of the configuration: a role that is not in spec 12.1, an id that is not a project or a schedule, a shadow week of a role with no budget or with no directory, or a budget, a retry time or a number of workers that is negative.
 func (c *Config) Validate() error {
 	for _, r := range slices.Sorted(maps.Keys(c.Roles)) {

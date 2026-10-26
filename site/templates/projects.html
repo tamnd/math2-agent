@@ -1,0 +1,85 @@
+{{define "projects"}}
+<header class="page-head">
+  <h1>Projects</h1>
+  <p class="lead">A project is a campaign with people attached (spec 13.6). It has a goal in the graph, a monthly budget for agent runs and the people who run it. Each project is a file in <code>projects/</code> of the content repository.</p>
+</header>
+{{with .}}
+<table class="list">
+  <thead><tr><th>Project</th><th>Topic</th><th>Goal</th><th>Budget a month</th></tr></thead>
+  <tbody>
+  {{range .}}<tr><td><a href="{{.Page}}">{{.Name}}</a></td><td><a href="{{.Topic.URL}}"{{if .Topic.Missing}} class="missing"{{end}}>{{.Topic.Text}}</a> <span class="tag">{{.Topic.Tag}}</span></td><td>{{with .Level}}{{.}}{{else}}<span class="muted">none</span>{{end}}</td><td>${{printf "%.2f" .Budget}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<p class="notice">The content repository has no projects yet. To start one, add the file <code>projects/ID.yaml</code> in a pull request. Read <a href="{{agentRepo}}/blob/main/spec/13-research-workspace.md">spec 13.6</a> for the fields.</p>
+{{end}}
+{{end}}
+
+{{define "project"}}
+<header class="page-head">
+  <h1>{{.Name}}</h1>
+  <p class="lead">{{.Goal}}</p>
+</header>
+<table class="infobox" aria-label="The project">
+  <tr><th>Topic</th><td><a href="{{.Topic.URL}}"{{if .Topic.Missing}} class="missing"{{end}}>{{.Topic.Text}}</a> <span class="tag">{{.Topic.Tag}}</span></td></tr>
+  <tr><th>Goal level</th><td>{{with .Level}}{{.}}{{else}}<span class="muted">none</span>{{end}}</td></tr>
+  <tr><th>Budget</th><td>${{printf "%.2f" .Budget}} a month</td></tr>
+  <tr><th>Agent roles</th><td>{{with .Roles}}{{join . ", "}}{{else}}<span class="muted">none</span>{{end}}</td></tr>
+  <tr><th>Jobs</th><td><code>on_behalf_of: {{.OnBehalfOf}}</code></td></tr>
+</table>
+<p>Cite this page as <a href="{{.URL}}">{{.URL}}</a>. The JSON copy is at <a href="{{.JSONURL}}"><code>{{.JSONURL}}</code></a>.</p>
+{{if .Topic.Missing}}<p class="notice">The graph has no topic {{.Topic.Tag}}, so the project has no blueprint.</p>{{end}}
+{{with .Blueprint}}
+<section class="blueprint" aria-labelledby="blueprint-h">
+  <h2 id="blueprint-h">Blueprint</h2>
+  <p>The members of the topic and each node that they need, {{len .Items}} nodes in all. A member has a thick border in the figure and the mark "member" in the list.</p>
+  {{template "dag" .}}
+</section>
+{{end}}
+<section aria-labelledby="tasks-h">
+  <h2 id="tasks-h">Tasks</h2>
+  <p>The nodes of the blueprint that need work: statements with no proof, open conjectures and problems{{if .Level}}, and the members of the topic below {{.Level}}{{end}}. To claim a task, open an issue in the content repository.</p>
+  {{if not .HasStatus}}<p class="notice">This copy of the site has no build data, so the list gives no evidence levels{{if .Level}} and no members below the goal{{end}}.</p>{{end}}
+  {{with .Tasks}}
+  <table class="list">
+    <thead><tr><th>Name</th><th>Tag</th><th>Kind</th><th>Evidence</th><th>Task</th></tr></thead>
+    <tbody>
+    {{range .}}<tr><td><a href="{{.URL}}">{{.Text}}</a></td><td><span class="tag">{{.Tag}}</span></td><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td><td>{{if .Evidence}}{{.Evidence}} <span class="muted">{{.Word}}</span>{{else}}<span class="muted">none</span>{{end}}</td><td>{{.Why}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="muted">None.</p>{{end}}
+</section>
+<section aria-labelledby="members-h">
+  <h2 id="members-h">Members</h2>
+  <p>An owner sets the goal and the budget. A member can request agent work for the project.</p>
+  <ul>{{range .Members}}<li>{{if .Who.URL}}<a href="{{.Who.URL}}">{{.Who.Text}}</a>{{else}}{{.Who.Text}}{{end}} <span class="muted">{{.ID}}, {{.Role}}</span></li>{{end}}</ul>
+</section>
+<section aria-labelledby="spend-h">
+  <h2 id="spend-h">Spend</h2>
+  {{if not .HasRuns}}<p class="notice">This copy of the site has no run records, so it gives no spend and no run log.</p>
+  {{else}}{{with .Months}}
+  <table class="list">
+    <thead><tr><th>Month</th><th>Runs</th><th>Spend</th><th>Budget</th></tr></thead>
+    <tbody>
+    {{range .}}<tr><td>{{.Month}}</td><td>{{.Runs}}</td><td>${{printf "%.2f" .USD}}{{if .Over}} <span class="muted">over the budget</span>{{end}}</td><td>${{printf "%.2f" .Budget}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="muted">No agent run worked for the project yet.</p>{{end}}{{end}}
+</section>
+{{if .Runs}}
+<section aria-labelledby="runs-h">
+  <h2 id="runs-h">Run log</h2>
+  <p>Each agent run on behalf of the project, in the order of its start. A shadow run is not in the list.</p>
+  <table class="list">
+    <thead><tr><th>Date</th><th>Run</th><th>Role</th><th>Target</th><th>Outcome</th><th>Spend</th></tr></thead>
+    <tbody>
+    {{range .Runs}}<tr><td>{{.Date}}</td><td><code>{{.ID}}</code></td><td>{{.Role}}</td><td>{{if .Target.URL}}<a href="{{.Target.URL}}"{{if .Target.Missing}} class="missing"{{end}}>{{.Target.Text}}</a>{{else}}<span class="muted">none</span>{{end}}</td><td>{{.Outcome}}</td><td>${{printf "%.2f" .USD}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}
+{{end}}

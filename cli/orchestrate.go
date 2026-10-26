@@ -22,6 +22,7 @@ import (
 	"github.com/tamnd/math2-agent/agent"
 	"github.com/tamnd/math2-agent/api"
 	"github.com/tamnd/math2-agent/orchestrator"
+	"github.com/tamnd/math2-agent/project"
 	"github.com/tamnd/math2-agent/prompts"
 )
 
@@ -69,6 +70,13 @@ func runOrchestrate(args []string, stdout, stderr io.Writer) int {
 	config, err := orchestrator.ReadConfig(*configFile)
 	if err != nil {
 		return fail(err)
+	}
+	projects, err := project.Read(*root)
+	if err != nil {
+		return fail(err)
+	}
+	for _, p := range projects {
+		config.Cap(p.OnBehalfOf(), p.Budget)
 	}
 	b, err := box(*root)
 	if err != nil {
