@@ -20,7 +20,7 @@ import (
 	"github.com/tamnd/math2-agent/build"
 )
 
-var update = flag.Bool("update", false, "write the files in testdata/contract again")
+var update = flag.Bool("update", false, "write the files in testdata/contract and m2.proto again")
 
 const tree = "../testdata/nodes/valid"
 

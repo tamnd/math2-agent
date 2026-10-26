@@ -17,19 +17,21 @@ import (
 	"time"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/tamnd/math2-agent/api"
 	"github.com/tamnd/math2-agent/mcp"
 )
 
-const serveUsage = "m2 serve [-root DIR] [-out DIR] [-addr A] [-rate R] [-burst B] [-commit C] [-stdio]"
+const serveUsage = "m2 serve [-root DIR] [-out DIR] [-addr A] [-grpc A] [-rate R] [-burst B] [-commit C] [-stdio]"
 
 // interrupt returns the context of the server. The server stops when the context is done. Tests change it.
 var interrupt = func() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 }
 
-// listening tells a test the address of the server.
+// listening tells a test the address of the HTTP server, and then the address of the gRPC server when it is on.
 var listening = func(string) {}
 
 func runServe(args []string, stdout, stderr io.Writer) int {
@@ -38,6 +40,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	root := flags.String("root", ".", "the math2 working tree")
 	out := flags.String("out", "", "the output directory of m2 build. Empty means build/ in the tree.")
 	addr := flags.String("addr", "localhost:8080", "the address to listen on")
+	grpcAddr := flags.String("grpc", "", "the address of the gRPC server. Empty means no gRPC server.")
 	rate := flags.Float64("rate", 10, "the requests per second of each client. A negative rate means no limit.")
 	burst := flags.Int("burst", 20, "the requests that a client can send at once")
 	commit := flags.String("commit", "", "the commit of the tree, for the responses. Empty means the HEAD of the tree when it is a git repository.")
@@ -89,10 +92,25 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		WriteTimeout:      60 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 	}
-	done := make(chan error, 1)
+	done := make(chan error, 2)
 	go func() { done <- hs.Serve(ln) }()
 	fmt.Fprintf(stdout, "m2 serve: the API is at http://%s/%s and the MCP server is at http://%s/mcp\n", ln.Addr(), api.Version, ln.Addr())
 	listening(ln.Addr().String())
+	if *grpcAddr != "" {
+		gl, err := net.Listen("tcp", *grpcAddr)
+		if err != nil {
+			fmt.Fprintf(stderr, "m2 serve: %v\n", err)
+			_ = hs.Close()
+			return ExitFailure
+		}
+		gs := grpc.NewServer(grpc.UnaryInterceptor(api.LimitGRPC(api.Options{Rate: *rate, Burst: *burst})))
+		s.RegisterGRPC(gs)
+		reflection.Register(gs)
+		go func() { done <- gs.Serve(gl) }()
+		defer gs.GracefulStop()
+		fmt.Fprintf(stdout, "m2 serve: the gRPC service %s is at %s\n", api.ProtoService, gl.Addr())
+		listening(gl.Addr().String())
+	}
 	select {
 	case err := <-done:
 		fmt.Fprintf(stderr, "m2 serve: %v\n", err)

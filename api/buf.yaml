@@ -1,0 +1,13 @@
+# buf generate in this directory makes the Go code in m2pb/ from m2.proto. The table of methods in methods.go makes m2.proto. See the target proto of the Makefile.
+version: v2
+modules:
+  - path: .
+    excludes: [third_party]
+  - path: third_party
+lint:
+  use: [STANDARD]
+  # Each rpc gives the same Response, as each HTTP call gives the same JSON envelope. The file is in api/ and not in m2/v1/, next to the table that makes it.
+  except: [RPC_REQUEST_RESPONSE_UNIQUE, RPC_RESPONSE_STANDARD_NAME, PACKAGE_DIRECTORY_MATCH]
+  ignore: [third_party]
+breaking:
+  use: [WIRE_JSON]

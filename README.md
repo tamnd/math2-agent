@@ -23,7 +23,7 @@ The code of M2 connects the graph to the world. The `store` package puts the gra
 
 Some acceptance items of M2 need time or people, and they stay open: three monthly bumps in a row, the releases of April to June 2027, the full harvests of zbMATH Open and arXiv for C0, and a test of the curation guide by a new curator.
 
-The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON, and the `mcp` package gives the same methods as MCP tools. The `sandbox` package runs a program with no network and with limits, and the `compute` package and `m2 compute` run the computations in it. The rules C01 to C05 check the computations and their runs. The `prov` package reads and writes the provenance log of each node (spec 04.8), and `m2 prov` shows, records, credits, quarantines and confirms the lines. The rules P01 to P04 check the logs and the agent runs. The `ingest/arxivresults` adapter reads the results of arXiv papers from the content plane of tamnd/arxiv, and `bench/extract` measures it.
+The code of M3 opens the graph to readers. The `search` package writes the search index in `m2 build`, and `m2 search` runs the identifier resolver and the lexical, formula, formal and embedding channels, with the premise search of spec 14.5. `bench/search` measures the quality of search on labelled queries. The `api` package and `m2 serve` give the read methods of spec 11.2 over HTTP with JSON and over gRPC, and the `mcp` package gives the same methods as MCP tools. The `sandbox` package runs a program with no network and with limits, and the `compute` package and `m2 compute` run the computations in it. The rules C01 to C05 check the computations and their runs. The `prov` package reads and writes the provenance log of each node (spec 04.8), and `m2 prov` shows, records, credits, quarantines and confirms the lines. The rules P01 to P04 check the logs and the agent runs. The `ingest/arxivresults` adapter reads the results of arXiv papers from the content plane of tamnd/arxiv, and `bench/extract` measures it.
 
 The audit report shows each other rule of spec 15.3 with the state skip and the reason "not written yet". `m2 help` shows the milestone that delivers each command. A command that is not written yet exits with code 3 and names its milestone. It does not exit with code 0, because a command that does nothing and exits with code 0 looks like a command that worked.
 
@@ -74,7 +74,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
 | `m2 release` | Cut a release with its manifest, levels and notes, write the release notes, or rebuild a release from its manifest. | written |
 | `m2 search <query>` | Search the knowledge graph with the identifier resolver and the lexical, formula, formal and embedding channels. `m2 search -premises <goal>` ranks the Lean declarations that can help to prove a goal. | written |
-| `m2 serve` | Serve the read API over HTTP with JSON, and the MCP server over HTTP or stdio, from the last build. | written |
+| `m2 serve` | Serve the read API over HTTP with JSON and over gRPC, and the MCP server over HTTP or stdio, from the last build. | written |
 | `m2 compute run\|verify <tag>` | Run a computation in the sandbox, or verify its output and its certificate. | written |
 | `m2 prov` | Show, record, credit, quarantine, confirm and disclose provenance. | written |
 | `m2 review <tag>` | Review a formal statement against its informal statement. | M4 |
@@ -261,6 +261,13 @@ The MCP server (spec 11.2 and 11.7) has one tool for each method, with the same 
 ```
 claude mcp add math2 -- m2 serve -stdio -root ~/math2
 claude mcp add --transport http math2 http://localhost:8080/mcp
+```
+
+The gRPC service `m2.v1.ReadService` (spec 11.2) has one rpc for each method, for example `GetFormal` for `get_formal`. `api/m2.proto` defines it, and the table of methods in `api/methods.go` makes that file, so that the three encodings agree. `m2 serve -grpc localhost:9090` serves it next to HTTP, with the same rate limit for each client and with server reflection. The rpc gives the response of the HTTP API, with the result as a `google.protobuf.Value`. An error has the gRPC code of its code: `InvalidArgument`, `NotFound`, `ResourceExhausted` or `Internal`. The package `api/m2pb` has the Go client. After a change to the table, `make proto` makes `api/m2.proto` and `api/m2pb` again with `buf`, `protoc-gen-go` and `protoc-gen-go-grpc`.
+
+```
+m2 serve -grpc localhost:9090
+grpcurl -plaintext -d '{"ref": "Q529ES"}' localhost:9090 m2.v1.ReadService/Status
 ```
 
 ## Ingest
