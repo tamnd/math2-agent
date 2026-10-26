@@ -3,8 +3,9 @@
   <h1>Specification</h1>
   <p class="lead">The design of Math 2.0. Start with the overview, then read the documents in order. Each document is also available as Markdown.</p>
 </header>
-{{with .}}<ul class="bare spec-list">
-{{range .}}<li><a href="{{.URL}}">{{.Title}}</a></li>
-{{end}}
-</ul>{{else}}<p class="notice">This build has no spec documents. Read them in <a href="{{agentRepo}}/tree/main/spec">the toolchain repository</a>.</p>{{end}}
+{{range .}}{{with .Title}}<h2>{{.}}</h2>
+{{end}}<ul class="bare spec-list">
+{{range .Docs}}<li><a href="{{.URL}}">{{.Title}}</a></li>
+{{end}}</ul>
+{{else}}<p class="notice">This build has no spec documents. Read them in <a href="{{agentRepo}}/tree/main/spec">the toolchain repository</a>.</p>{{end}}
 {{end}}

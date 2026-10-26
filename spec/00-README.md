@@ -43,6 +43,10 @@ The date of this specification is 2026-10-25. Document 01 is its evidence base. 
 | 20 | [Repository layout](20-repository-layout.md) | the directory trees of both repositories and the `m2` command tree |
 | 21 | [Open questions](21-open-questions.md) | Q-01 to Q-17, each with options, a lean and a deciding measurement |
 
+## The corpus sub-spec
+
+The directory [`corpus/`](corpus/00-README.md) holds the corpus sub-spec, K00 to K15. It says how math2 gets each definition, theorem, proof and example from public sources and from what models know, and how each node becomes ready for a course, a book or an article. It adds to this spec and changes it in the places that its README lists. Its phases P0 to P5 come after the milestones of document 19.
+
 ## Reading order
 
 - **Overview, in about 20 minutes:** 02, then 03, then 19.

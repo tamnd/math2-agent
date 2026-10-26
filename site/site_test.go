@@ -199,6 +199,32 @@ func TestSpec(t *testing.T) {
 	checkLinks(t, out)
 }
 
+func TestSpecParts(t *testing.T) {
+	spec := t.TempDir()
+	writeFile(t, spec, "00-README.md", "# Overview\n\nThe [corpus spec](corpus/00-README.md).\n")
+	writeFile(t, spec, "corpus/00-README.md", "# The corpus\n\nRead [part A](01a-reference-works.md#k) and [the main goal](../02-the-goal.md).\n")
+	writeFile(t, spec, "corpus/01a-reference-works.md", "# K01, part A\n\n## K\n\nText.\n")
+	writeFile(t, spec, "02-the-goal.md", "# 02. The goal\n")
+	out := buildSite(t, newContent(t), spec)
+	page := readFile(t, out, "spec/corpus/00-README/index.html")
+	for _, want := range []string{`href="/math2/spec/corpus/01a-reference-works/#k"`, `href="/math2/spec/02-the-goal/"`, "Next: K01, part A", "blob/main/spec/corpus/00-README.md"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the corpus README has no %s", want)
+		}
+	}
+	if strings.Contains(page, "Next: 02. The goal") {
+		t.Error("the pager of a part goes to the main spec")
+	}
+	if page := readFile(t, out, "spec/00-README/index.html"); !strings.Contains(page, `href="/math2/spec/corpus/00-README/"`) {
+		t.Error("the link from the main spec to the corpus spec is not rewritten")
+	}
+	if index := readFile(t, out, "spec/index.html"); !strings.Contains(index, "<h2>The corpus</h2>") {
+		t.Error("the spec index has no heading for the corpus part")
+	}
+	readFile(t, out, "spec/corpus/01a-reference-works.md")
+	checkLinks(t, out)
+}
+
 var href = regexp.MustCompile(`(?:href|src)="(/math2/[^"#?]*)`)
 
 // checkLinks checks that each link inside the site goes to a file of the site.

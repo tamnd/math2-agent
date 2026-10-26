@@ -165,24 +165,49 @@ type specPage struct {
 	Prev, Next *specDoc
 }
 
+// specGroup is the main spec or one of its parts, in the spec index.
+type specGroup struct {
+	Title string
+	Docs  []*specDoc
+}
+
+// specGroups splits the spec documents by part, in the order of loadSpec.
+func (b *builder) specGroups() []specGroup {
+	var gs []specGroup
+	for _, d := range b.specs {
+		if len(gs) == 0 || gs[len(gs)-1].Docs[0].Part != d.Part {
+			title := ""
+			if d.Part != "" {
+				title = d.Title
+			}
+			gs = append(gs, specGroup{Title: title})
+		}
+		gs[len(gs)-1].Docs = append(gs[len(gs)-1].Docs, d)
+	}
+	return gs
+}
+
 func (b *builder) writeSpec() error {
-	if err := b.writePage("spec", "specindex", b.specs, page{Title: "Specification", Description: fmt.Sprintf("The design of Math 2.0 in %d documents.", len(b.specs)), Section: "spec"}); err != nil {
+	groups := b.specGroups()
+	if err := b.writePage("spec", "specindex", groups, page{Title: "Specification", Description: fmt.Sprintf("The design of Math 2.0 in %d documents.", len(b.specs)), Section: "spec"}); err != nil {
 		return err
 	}
-	for i, d := range b.specs {
-		sp := specPage{Doc: d, Docs: b.specs}
-		if i > 0 {
-			sp.Prev = b.specs[i-1]
-		}
-		if i < len(b.specs)-1 {
-			sp.Next = b.specs[i+1]
-		}
-		p := page{Title: d.Title, Description: d.Title + ". A part of the Math 2.0 specification.", Section: "spec", MarkdownURL: b.url("spec/" + d.Slug + ".md")}
-		if err := b.writePage("spec/"+d.Slug, "spec", sp, p); err != nil {
-			return err
-		}
-		if err := b.write("spec/"+d.Slug+".md", d.Source); err != nil {
-			return err
+	for _, g := range groups {
+		for i, d := range g.Docs {
+			sp := specPage{Doc: d, Docs: g.Docs}
+			if i > 0 {
+				sp.Prev = g.Docs[i-1]
+			}
+			if i < len(g.Docs)-1 {
+				sp.Next = g.Docs[i+1]
+			}
+			p := page{Title: d.Title, Description: d.Title + ". A part of the Math 2.0 specification.", Section: "spec", MarkdownURL: b.url("spec/" + d.Slug + ".md")}
+			if err := b.writePage("spec/"+d.Slug, "spec", sp, p); err != nil {
+				return err
+			}
+			if err := b.write("spec/"+d.Slug+".md", d.Source); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
