@@ -116,6 +116,8 @@ Review-assist builds a packet for each binding in the fidelity queue. `m2 review
 - the battery report, the critic's concerns, the dissenting candidate clusters and how they differ;
 - for a re-review after a bump, the old and new types as a diff.
 
+**The packet in m2.** The package `review` makes the packet from the files of the last build, and `m2 review <tag>` shows it. The packet has the informal statement and the Lean statement side by side, the Lean statement with `pp.all`, each constant with its type and the nodes that bind it with their fidelity level, the battery report, and the reviews of the binding. The back-translation, the critic and the candidate clusters need the model runs of the formalize pipeline, and the old and new types need the bump data, so the packet does not show them yet. With a verdict, `m2 review` writes the review to `reviews/XX/TAG.yaml` and adds its id to the binding. It refuses a reviewer that is not a person, the author of the binding, and a statement that changed after the build. The check of rule `V03` on the agent runs that a reviewer started needs the run records of M5.
+
 Review-assist never signs. An agent cannot be a reviewer. A reviewer cannot review a binding that came from an agent run that the reviewer started (rule `V03`).
 
 ### Independence
