@@ -68,7 +68,7 @@ var commands = []command{
 	{name: "prov", usage: provUsage, summary: "Show, record, credit, quarantine and confirm provenance.", run: runProv},
 	{name: "review", usage: reviewUsage, summary: "Show the review packet of a node, and write a fidelity review.", run: runReview},
 	{name: "autoform", usage: "m2 autoform <tag>", summary: "Make a formal statement for a node.", milestone: "M4"},
-	{name: "agent", usage: "m2 agent run <role> [-target T] [-budget B]", summary: "Do one agent run.", milestone: "M5"},
+	{name: "agent", usage: agentUsage, summary: "Do one agent run of the formalize or the prove role in a new work tree.", run: runAgent},
 	{name: "orchestrate", usage: "m2 orchestrate", summary: "Run the job scheduler.", milestone: "M5"},
 }
 
