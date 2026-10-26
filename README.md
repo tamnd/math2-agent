@@ -699,6 +699,12 @@ go test ./bench/agents/explain ./bench/agents/curate -v
 go test ./bench/agents/curate -live -rung 0 -v -report curate.md
 ```
 
+`bench/agents/reviewassist` is the suite of the review-assist role, and it needs no Lean either. Each item is a node with one Lean binding, a Lean record that we wrote by hand, and the verdict of a review. A not-faithful item has the class of spec 10.5 that the critic must name. Without flags, a scripted model writes the packet with the reference concern, and the goal must hold. Then the goal or the tool must refuse each wrong attempt: no packet, a concern of a binding that the packet does not have, a class that spec 10.5 does not have, too many concerns, and a write of the node. With `-live`, the report gives the recall of the critic, which is the share of the not-faithful items whose packet names the class of the review, the concerns on the faithful items, and the length of the packets.
+
+```sh
+go test ./bench/agents/reviewassist -v
+```
+
 ## Rules that the toolchain keeps
 
 1. The files in tamnd/math2 are the truth. Each database, index and site comes from these files, and you can make it again from them.
