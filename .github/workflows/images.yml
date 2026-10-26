@@ -27,6 +27,10 @@ jobs:
       matrix:
         image: [m2-pari, m2-gap, m2-python, m2-smt, m2-sat, m2-lp, m2-m2, m2-sage]
         arch: [amd64, arm64]
+        # The Sage doctests of nixpkgs fail on arm64 now and then: GF((2^29-3)^2) gives "the order of a finite field must be a prime power". A wrong answer that comes and goes is not safe for a computation, thus m2-sage is amd64 only until nixpkgs fixes it.
+        exclude:
+          - image: m2-sage
+            arch: arm64
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 90
     steps:
