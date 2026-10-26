@@ -40,8 +40,8 @@ func Licence(path string) string {
 	return "CC0-1.0"
 }
 
-// schema returns the JSON Schema of an object with the properties.
-func schema(params []api.Param) json.RawMessage {
+// Schema returns the JSON Schema of the input of a tool: an object with a property for each parameter.
+func Schema(params []api.Param) json.RawMessage {
 	props := map[string]any{}
 	required := []string{}
 	for _, p := range params {
@@ -80,7 +80,7 @@ func API(s *api.Service, names ...string) []agent.Tool {
 			panic("tools: " + name + " is not a read method of the API")
 		}
 		out = append(out, agent.Func{
-			Def: llm.Tool{Name: m.Name, Description: m.Summary, Schema: schema(m.Params)},
+			Def: llm.Tool{Name: m.Name, Description: m.Summary, Schema: Schema(m.Params)},
 			Fn: func(_ context.Context, _ *agent.Job, input json.RawMessage) (agent.Result, error) {
 				params := map[string]any{}
 				dec := json.NewDecoder(bytes.NewReader(input))
@@ -112,7 +112,7 @@ var pathParam = api.Param{Name: "path", Type: api.String, Required: true, Summar
 // Read returns the tool read_file, which reads a file of the work tree.
 func Read(ws *workspace.Workspace) agent.Tool {
 	return agent.Func{
-		Def: llm.Tool{Name: "read_file", Description: "Read a file of the work tree of the run: a node file in nodes/ or a Lean file in lean/.", Schema: schema([]api.Param{pathParam})},
+		Def: llm.Tool{Name: "read_file", Description: "Read a file of the work tree of the run: a node file in nodes/ or a Lean file in lean/.", Schema: Schema([]api.Param{pathParam})},
 		Fn: func(_ context.Context, _ *agent.Job, input json.RawMessage) (agent.Result, error) {
 			var in struct{ Path string }
 			if err := decode(input, &in); err != nil {
@@ -133,7 +133,7 @@ func Write(ws *workspace.Workspace) agent.Tool {
 		Def: llm.Tool{
 			Name:        "write_file",
 			Description: "Write the full text of a file of the work tree of the run. The write fails when the role may not make the change, and then the file stays as it was.",
-			Schema:      schema([]api.Param{pathParam, {Name: "text", Type: api.String, Required: true, Summary: "the full text of the file"}}),
+			Schema:      Schema([]api.Param{pathParam, {Name: "text", Type: api.String, Required: true, Summary: "the full text of the file"}}),
 		},
 		Fn: func(ctx context.Context, job *agent.Job, input json.RawMessage) (agent.Result, error) {
 			var in struct{ Path, Text string }
@@ -181,7 +181,7 @@ func Check(ws *workspace.Workspace, env Lean) agent.Tool {
 		Def: llm.Tool{
 			Name:        "lean_check",
 			Description: "Elaborate a Lean file of the work tree, or Lean text in a scratch file, with the pinned toolchain, Mathlib and the Math2 library. The result has each error and warning with its line and column, and says if a declaration uses sorry.",
-			Schema: schema([]api.Param{
+			Schema: Schema([]api.Param{
 				{Name: "path", Type: api.String, Summary: "the path of a Lean file in the work tree"},
 				{Name: "text", Type: api.String, Summary: "Lean text to elaborate in a scratch file that is not part of the change, when there is no path"},
 			}),
@@ -241,15 +241,21 @@ func NodePath(id string) string {
 	return ""
 }
 
-// Profile returns the tools of the profile of the role, in the order of the profile: a tool from [API] for each read method of the API, and [Read], [Write] and [Check] for read_file, write_file and lean_check. A name that is none of these is an error.
-func Profile(r *agent.Role, s *api.Service, ws *workspace.Workspace, env Lean) ([]agent.Tool, error) {
+// Profile returns the tools of the profile of the role, in the order of the profile: a tool from [API] for each read method of the API, and [Read], [Write] and [Check] for read_file, write_file and lean_check. The extra tools are the tools of one role, for example the record tool of curate, and a name in the profile can name one of them. A name that is none of these is an error.
+func Profile(r *agent.Role, s *api.Service, ws *workspace.Workspace, env Lean, extra ...agent.Tool) ([]agent.Tool, error) {
 	read := map[string]bool{}
 	for _, m := range api.Methods() {
 		read[m.Name] = true
 	}
+	own := map[string]agent.Tool{}
+	for _, t := range extra {
+		own[t.Spec().Name] = t
+	}
 	var out []agent.Tool
 	for _, name := range r.Tools {
 		switch {
+		case own[name] != nil:
+			out = append(out, own[name])
 		case read[name]:
 			out = append(out, API(s, name)...)
 		case name == "read_file":

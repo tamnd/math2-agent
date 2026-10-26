@@ -14,6 +14,7 @@ import (
 	"github.com/tamnd/math2-agent/agent"
 	"github.com/tamnd/math2-agent/agent/tools"
 	"github.com/tamnd/math2-agent/build"
+	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/llmtest"
@@ -199,6 +200,51 @@ func TestAgentRunExplain(t *testing.T) {
 		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 	}
 	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/explain@0.1.0, 1 turns") || !strings.Contains(stdout, "nodes/7K/7K3QX2.md") {
+		t.Errorf("the output is\n%s", stdout)
+	}
+}
+
+func TestAgentRunCurate(t *testing.T) {
+	t.Setenv("M2_LEAN_IMAGE", "")
+	root, out := agentTree(t)
+	// The records are in build/records, which git does not track. The run reads them from the tree and not from the work tree.
+	recordText := "Proposition 1. For every natural number n we have n = n."
+	rec, err := json.Marshal(ingest.Record{ID: "2401.00001#1AB2", Kind: "statement", Locator: "ax://paper/2401.00001#1AB2", Class: ingest.Open, Text: recordText, Fingerprints: ingest.Fingerprints(recordText), Meta: map[string]string{"paper": "2401.00001", "version": "v2"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, text := range map[string]string{
+		ingest.CatalogueFile:                "sources:\n  - id: arxiv_results\n    name: The results of arXiv papers\n    licence: CC-BY-4.0\n    class: open\n",
+		"build/records/arxiv_results.jsonl": string(rec) + "\n",
+	} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	u := llm.Usage{Input: 1000, Output: 200}
+	text := "---\ntag: ~0a1b2c3d\nkind: statement\nrole: theorem\nname: Reflexivity of equality\nsources:\n  - arxiv: 2401.00001v2\n    locator: ax://paper/2401.00001#1AB2\n---\n\n## Statement\n\nEach natural number is equal to itself.\n"
+	oldModel, oldLean := newModel, newLean
+	newModel = func() (llm.Model, error) {
+		return llmtest.New(
+			llmtest.Call("record", map[string]string{"ref": "arxiv_results:2401.00001#1AB2"}, u),
+			llmtest.Call("write_file", map[string]string{"path": "nodes/~/~0a1b2c3d.md", "text": text}, u),
+			llmtest.Call("judge", map[string]string{"verdict": "same", "why": "n is the number."}, u),
+		), nil
+	}
+	newLean = func(context.Context, string, *tools.Box) (tools.Lean, error) {
+		return nil, errors.New("curate needs no Lean")
+	}
+	t.Cleanup(func() { newModel, newLean = oldModel, oldLean })
+
+	code, stdout, stderr := run("agent", "run", "-root", root, "-out", out, "-store", t.TempDir(), "-work", filepath.Join(t.TempDir(), "w"), "-target", "arxiv_results:2401.00001#1AB2", "-on-behalf-of", "github:octocat", "curate")
+	if code != ExitOK {
+		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/curate@0.1.0, 2 turns") || !strings.Contains(stdout, "nodes/~/~0a1b2c3d.md") {
 		t.Errorf("the output is\n%s", stdout)
 	}
 }

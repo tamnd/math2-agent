@@ -20,6 +20,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/tamnd/math2-agent/agent"
+	"github.com/tamnd/math2-agent/agent/curate"
 	"github.com/tamnd/math2-agent/agent/explain"
 	"github.com/tamnd/math2-agent/agent/formalize"
 	"github.com/tamnd/math2-agent/agent/prove"
@@ -33,10 +34,11 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] explain|formalize|prove"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-sandbox IMAGE | -no-sandbox] [-json] curate|explain|formalize|prove"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
+	"curate":    "the record has a node in the words of math2 that states the same result, or the node has the right uses, about and msc",
 	"explain":   "the node has an L2 explanation marked agent, with each claim grounded in a cited node",
 	"formalize": "the node has a Lean binding that passes the checks of the run",
 	"prove":     "the statement of the node has a Lean proof",
@@ -250,12 +252,22 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		brief string
 		check agent.Goal
 		meter *agent.Meter
+		extra []agent.Tool
 	)
+	if (job.Role == "explain" || job.Role == "curate") && (rung < 0 || rung >= len(r.Ladder)) {
+		return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
+	}
 	switch job.Role {
-	case "explain":
-		if rung < 0 || rung >= len(r.Ladder) {
-			return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
+	case "curate":
+		// The records are in build/records of the tree, which git does not track, thus they are not in the work tree.
+		records := &curate.Records{Root: rs.root}
+		if brief, err = curate.Brief(ws, job, records); err != nil {
+			return nil, ws, nil, err
 		}
+		meter = &agent.Meter{Model: rs.model}
+		check = curate.Goal(ws, job, records, meter, r.Ladder[rung].Model, r.Checks["judge"])
+		extra = []agent.Tool{curate.Read(records), curate.Propose(ws, "m2-agent/curate@"+r.Version)}
+	case "explain":
 		if brief, err = explain.Brief(ws, job); err != nil {
 			return nil, ws, nil, err
 		}
@@ -276,7 +288,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		}
 		check = formalize.Goal(ws, env, job)
 	}
-	ts, err := tools.Profile(r, rs.svc, ws, env)
+	ts, err := tools.Profile(r, rs.svc, ws, env, extra...)
 	if err != nil {
 		return nil, ws, nil, err
 	}
@@ -287,7 +299,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 	}
 	rec.Shadow = rs.shadow
 	if _, err := agent.WriteRecord(rs.store, rec); err != nil && len(rec.Turns) > 0 {
-		return rec, ws, nil, err
+		return rec, ws, nil, errors.Join(runErr, err)
 	}
 	changes, err := ws.Changes(ctx)
 	if err != nil {
