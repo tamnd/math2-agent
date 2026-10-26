@@ -34,7 +34,7 @@ type expect struct {
 var rules = []string{"S01", "S02", "S03", "S04", "B01", "B02", "B03", "G01"}
 
 // edgeFields are the front matter fields whose values are node references.
-var edgeFields = []string{"topics", "uses", "proofs", "defines", "proves", "specializes", "about", "instance_of", "methods", "resolved_by", "successor", "target", "via"}
+var edgeFields = []string{"topics", "uses", "proofs", "defines", "proves", "specializes", "about", "instance_of", "not_instance_of", "illustrates", "methods", "resolved_by", "successor", "target", "via"}
 
 func TestValidFixtures(t *testing.T) {
 	nodes, err := node.Load(validRoot)

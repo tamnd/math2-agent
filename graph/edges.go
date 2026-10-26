@@ -2,6 +2,7 @@ package graph
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tamnd/math2-agent/node"
 )
@@ -46,6 +47,10 @@ func edges(n *node.Node) []Edge {
 
 	add(Edge{Type: Defines, From: from, To: n.Get("defines")})
 	list(InstanceOf, "instance_of")
+	for _, m := range maps(n.Meta["not_instance_of"]) {
+		add(Edge{Type: NotInstance, From: from, To: str(m["target"]), Label: fails(m["fails"])})
+	}
+	list(Illustrates, "illustrates")
 	list(About, "about")
 	list(Specializes, "specializes")
 	list(Method, "methods")
@@ -140,4 +145,13 @@ func str(v any) string {
 	default:
 		return fmt.Sprint(v)
 	}
+}
+
+// fails returns the clause numbers of a not_instance_of edge as one label, for example "clauses 1, 3".
+func fails(v any) string {
+	cs := strs(v)
+	if len(cs) == 0 {
+		return ""
+	}
+	return "clauses " + strings.Join(cs, ", ")
 }

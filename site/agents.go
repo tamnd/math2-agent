@@ -158,7 +158,7 @@ func (b *builder) llms(full bool) []byte {
 	fmt.Fprintf(&w, "- [All nodes](%s): the tag, kind, name, aliases and MSC classes of each node\n", b.abs("api/nodes.json"))
 	fmt.Fprintf(&w, "- [Reviewers](%s): the reviewers and their fidelity reviews\n", b.abs("api/reviewers.json"))
 	fmt.Fprintf(&w, "- [Node schema](%s): JSON Schema 2020-12 for the front matter\n", b.abs("schema/node.v1.json"))
-	fmt.Fprintf(&w, "- [Edges](%s): the 23 link types between nodes\n", b.abs("schema/edges.md"))
+	fmt.Fprintf(&w, "- [Edges](%s): the 25 link types between nodes\n", b.abs("schema/edges.md"))
 	fmt.Fprintf(&w, "- [Macros](%s): the TeX macros that node bodies use\n", b.abs("macros/m2.katex.json"))
 	fmt.Fprintf(&w, "- [Contribute](%s): how to add a node\n", b.abs("contribute.md"))
 	if b.hasDoc(contentDocs[1]) {

@@ -30,7 +30,7 @@ func ExampleSchema_Sections() {
 
 func ExampleSchema_Refs() {
 	fmt.Println(schema.Embedded().Refs[:4])
-	// Output: [about defines instance_of methods]
+	// Output: [about defines illustrates instance_of]
 }
 
 func ExampleSchema_Template() {
