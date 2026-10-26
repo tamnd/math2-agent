@@ -147,6 +147,14 @@ func TestPermit(t *testing.T) {
 		{"align writes same_as", "align", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "msc: [20D60]", "msc: [20D60]\nsame_as: {wikidata: Q1}", 1))}, "the field same_as"},
 		{"align binds another node", "align", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(mathlib, "3C53TD", "AA0001", 1))}, "not the target"},
 		{"align writes Lean", "align", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", New: []byte("module\n")}, "writes no Lean"},
+		{"bump rebinds", "bump", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "Subgroup.card_subgroup_dvd_card", "Subgroup.card_dvd_card", 1))}, ""},
+		{"bump changes the match", "bump", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "match: stronger", "match: exact", 1))}, "bump changes only formal[0].decl"},
+		{"bump binds", "bump", workspace.Change{Path: path, Old: []byte(target), New: []byte(bind)}, "does not add or remove bindings"},
+		{"bump changes the msc", "bump", workspace.Change{Path: path, Old: []byte(target), New: []byte(strings.Replace(target, "msc: [20D60]", "msc: [20D60, 20E07]", 1))}, "the field msc"},
+		{"bump rebinds another node", "bump", workspace.Change{Path: "nodes/AA/AA0001.md", Old: []byte(strings.Replace(target, "3C53TD", "AA0001", 1)), New: []byte(strings.Replace(rebind, "3C53TD", "AA0001", 1))}, "not the target"},
+		{"bump adds a node", "bump", workspace.Change{Path: "nodes/~1/~1a2b3c4d.md", New: []byte(lemma)}, "bump does not add nodes"},
+		{"bump writes Lean", "bump", workspace.Change{Path: "lean/Math2/Algebra/Lagrange.lean", Old: []byte("a"), New: []byte("b")}, "writes no Lean"},
+		{"bump writes the register", "bump", workspace.Change{Path: "registers/bindings.reg", Old: []byte("# tag\n"), New: []byte("# tag\n3C53TD lean4 a b rename c -\n")}, "does not write this file"},
 		{"an option", "prove", workspace.Change{Path: "lean/Math2.lean", Old: []byte(root), New: []byte(root + "set_option maxHeartbeats 0\n")}, "does more than add imports"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -159,7 +167,7 @@ func TestPermit(t *testing.T) {
 			}
 		})
 	}
-	if err := agent.Permit("bump", "3C53TD", nil); err == nil {
-		t.Error("bump has no permission set yet, and Permit gave no error")
+	if err := agent.Permit("review-assist", "3C53TD", nil); err == nil {
+		t.Error("review-assist has no permission set yet, and Permit gave no error")
 	}
 }

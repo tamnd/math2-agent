@@ -60,7 +60,7 @@ func Rebind(root string, bs []Break, mathlib string) (int, error) {
 		}
 		for _, n := range nodes {
 			r := renames[n.ID]
-			if r == nil || !rename(n, r) {
+			if r == nil || !Rename(n, r) {
 				continue
 			}
 			path := filepath.Join(root, filepath.FromSlash(n.Path))
@@ -73,8 +73,8 @@ func Rebind(root string, bs []Break, mathlib string) (int, error) {
 	return changed, appendRecords(root, lines)
 }
 
-// rename writes the new declarations into the Lean bindings of the node. It tells if it changed one.
-func rename(n *node.Node, r map[string]string) bool {
+// Rename writes the new declarations into the Lean bindings of the node, in place. r gives the new declaration of each old declaration. Rename reports whether it changed a binding. Format the node with [node.Format] to write it.
+func Rename(n *node.Node, r map[string]string) bool {
 	if n.Front == nil || len(n.Front.Content) == 0 || n.Front.Content[0].Kind != yaml.MappingNode {
 		return false
 	}

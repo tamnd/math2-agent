@@ -1,0 +1,15 @@
+role: bump
+version: 0.1.0
+tools: [get, get_formal, search_formal, read_file, lean_check, rebind]
+ladder:
+  - model: claude-sonnet-5-5
+    effort: medium
+  - model: claude-opus-5-5
+    effort: high
+budget:
+  usd: 1
+  wall: 30m0s
+  lean_session_s: 900
+max_tokens: 8000
+turns: 30
+stuck: 4
