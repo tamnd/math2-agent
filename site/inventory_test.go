@@ -43,7 +43,7 @@ func TestInventory(t *testing.T) {
 		t.Error("the row of the Pythagorean theorem does not link to its node and its card")
 	}
 	card := readFile(t, out, "inventory/row/7K/index.html")
-	for _, want := range []string{`<section class="card inv-card" id="7K3QX2M9R2">`, `<a href="https://www.wikidata.org/wiki/Q11518">`, `<a href="/math2/wiki/pythagorean-theorem/">Pythagorean theorem</a>`} {
+	for _, want := range []string{`<section class="card inv-card" id="7K3QX2M9R2">`, `<code>m2://inv/7K3QX2M9R2</code>`, `<a href="https://www.wikidata.org/wiki/Q11518">`, `<a href="/math2/wiki/pythagorean-theorem/">Pythagorean theorem</a>`} {
 		if !strings.Contains(card, want) {
 			t.Errorf("inventory/row/7K/index.html has no %q", want)
 		}

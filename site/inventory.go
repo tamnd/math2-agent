@@ -11,11 +11,13 @@ import (
 	"unicode/utf8"
 
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/uri"
 )
 
 // invRow is one row of the inventory on a page.
 type invRow struct {
 	ID, Name, Kind, Layer string
+	URI                   string // m2://inv/<id>
 	Outcome, Reason       string // the outcome, or "open"
 	Spread                int
 	MSC                   []string
@@ -147,6 +149,7 @@ func (b *builder) loadInventory() error {
 		}
 		prefix := r.ID[:min(cardPrefix, len(r.ID))]
 		v.Card = b.url("inventory/row/" + prefix + "/#" + r.ID)
+		v.URI = uri.Row(r.ID)
 		cp := cards[prefix]
 		if cp == nil {
 			cp = &invCards{Prefix: prefix, Dir: "inventory/row/" + prefix}

@@ -329,6 +329,8 @@ func (s *Store) Resolve(ref string) ([]string, error) {
 			return nil, fmt.Errorf("%s names a release or a commit, and the store holds only the last build", ref)
 		}
 		switch {
+		case u.IsRow():
+			return nil, fmt.Errorf("%s names an inventory row, not a node", ref)
 		case !u.IsAlias():
 			return s.node(u.Tag)
 		case u.Namespace == "lean":

@@ -91,6 +91,7 @@ func TestResolve(t *testing.T) {
 		{"d2sbo1", "D2SB01"},
 		{"7k3q-x2ab-ce", "error: no node has the tag 7K3QX2ABCE"},
 		{"7K3QX2ABCF", "error: the check character of 7K3QX2ABCF is not correct"},
+		{"m2://inv/7K3QX2M9R2", "error: m2://inv/7K3QX2M9R2 names an inventory row, not a node"},
 	}
 	for _, tt := range tests {
 		tags, err := s.Resolve(tt.ref)
