@@ -1,0 +1,14 @@
+role: exercise
+version: 0.1.0
+tools: [get, neighbours, path, search, resolve, read_file, write_file]
+ladder:
+  - model: claude-sonnet-5-5
+    effort: medium
+  - model: claude-opus-5-5
+    effort: high
+budget:
+  usd: 0.5
+  wall: 20m0s
+max_tokens: 8000
+turns: 20
+stuck: 4

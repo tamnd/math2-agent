@@ -25,6 +25,7 @@ import (
 	"github.com/tamnd/math2-agent/agent/bump"
 	"github.com/tamnd/math2-agent/agent/curate"
 	"github.com/tamnd/math2-agent/agent/enumerate"
+	"github.com/tamnd/math2-agent/agent/exercise"
 	"github.com/tamnd/math2-agent/agent/explain"
 	"github.com/tamnd/math2-agent/agent/explore"
 	"github.com/tamnd/math2-agent/agent/formalize"
@@ -52,7 +53,7 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|enumerate|explain|explore|formalize|informalize|prove|review-assist|write"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|enumerate|exercise|explain|explore|formalize|informalize|prove|review-assist|write"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
@@ -63,6 +64,7 @@ var goals = map[string]string{
 	"explain":       "the node has an L2 explanation marked agent, with each claim grounded in a cited node",
 	"explore":       "a conjecture or a counterexample about the node, checked by a computation that verifies, with its novelty check",
 	"formalize":     "the node has a Lean binding that passes the checks of the run",
+	"exercise":      "the node has an exercise with a task, an answer, a solution in steps and a check",
 	"informalize":   "the declaration has a node that states it in words, in the house style, with an exact binding to it",
 	"prove":         "the statement of the node has a Lean proof",
 	"write":         "the node has each section, example and proof that its card asks for at the next writing level, in the house style",
@@ -400,6 +402,12 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		}
 		// The tree has no reference corpus yet, thus the copy check runs in CI and not in the loop.
 		check = write.Goal(ws, job, cards, nil)
+	case "exercise":
+		if brief, err = exercise.Brief(ws, job); err != nil {
+			return nil, ws, nil, err
+		}
+		// The solver must be a model of a family other than the family of the writer, and the model register has no such model yet. Thus each exercise goes to a person.
+		check = exercise.Goal(ws, job, nil, "", r.Agent())
 	case "informalize":
 		// The target can be any declaration of Mathlib, and the Math2 library imports only a part of it. The docstring comes from the records in build/records of the tree.
 		if l, ok := env.(*tools.Lake); ok {

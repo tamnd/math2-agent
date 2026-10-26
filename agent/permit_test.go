@@ -286,3 +286,39 @@ func TestPermitInformalize(t *testing.T) {
 		})
 	}
 }
+
+func TestPermitExercise(t *testing.T) {
+	const path = "nodes/~/~1a2b3c4d.md"
+	ex := "---\ntag: ~1a2b3c4d\nkind: example\nname: A large subgroup\nuses: [3C53TD]\n---\n\n## Example\n\nWhat is the order of $H$?\n\n## Remarks\n\nRole: exercise. About: 3C53TD. Difficulty: 2. Group: B. Check: exact.\n\n### Answer\n\n12\n"
+	ref := `{"exercise":"~1a2b3c4d","about":["3C53TD"],"check":"exact","reason":"r","by":"m2-agent/exercise@0.1.0"}` + "\n"
+	for _, tc := range []struct {
+		name string
+		c    workspace.Change
+		err  string
+	}{
+		{"a new exercise", workspace.Change{Path: path, New: []byte(ex)}, ""},
+		{"an example", workspace.Change{Path: path, New: []byte(strings.Replace(ex, "Role: exercise. ", "", 1))}, "writes only exercises"},
+		{"no target in uses", workspace.Change{Path: path, New: []byte(strings.Replace(ex, "uses: [3C53TD]\n", "uses: [G5S1M9]\n", 1))}, "has it in its uses"},
+		{"another field", workspace.Change{Path: path, New: []byte(strings.Replace(ex, "uses:", "illustrates: [3C53TD]\nuses:", 1))}, "it has illustrates"},
+		{"an explanation", workspace.Change{Path: path, New: []byte(ex + "\n## Explanations\n\n### L2 agent\n\nA text.\n")}, "writes no explanations"},
+		{"a section of an exercise", workspace.Change{Path: path, Old: []byte(ex), New: []byte(strings.Replace(ex, "12\n", "12, the order of $G$\n", 1))}, ""},
+		{"the uses of an exercise", workspace.Change{Path: path, Old: []byte(ex), New: []byte(strings.Replace(ex, "[3C53TD]", "[3C53TD, G5S1M9]", 1))}, ""},
+		{"the msc of an exercise", workspace.Change{Path: path, Old: []byte(ex), New: []byte(strings.Replace(ex, "uses:", "msc: [20D60]\nuses:", 1))}, "changes the field msc"},
+		{"the target", workspace.Change{Path: "nodes/3C5/3C53TD.md", Old: []byte(target), New: []byte(target + "\nMore.\n")}, "writes only exercises"},
+		{"a referral", workspace.Change{Path: agent.ExerciseQueue, New: []byte(ref)}, ""},
+		{"a second referral", workspace.Change{Path: agent.ExerciseQueue, Old: []byte(ref), New: []byte(ref + ref)}, ""},
+		{"a changed referral", workspace.Change{Path: agent.ExerciseQueue, Old: []byte(ref), New: []byte(strings.Replace(ref, `"r"`, `"s"`, 1))}, "changes a line"},
+		{"a referral of another role", workspace.Change{Path: agent.ExerciseQueue, New: []byte(strings.Replace(ref, "exercise@", "write@", 1))}, "is by exercise"},
+		{"Lean", workspace.Change{Path: "lean/Math2/A.lean", New: []byte("a")}, "writes no Lean"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := agent.Permit("exercise", "3C53TD", []workspace.Change{tc.c})
+			switch {
+			case tc.err == "" && err != nil:
+				t.Errorf("error %v", err)
+			case tc.err != "" && (err == nil || !strings.Contains(err.Error(), tc.err)):
+				t.Errorf("error %v, want %q", err, tc.err)
+			}
+		})
+	}
+}

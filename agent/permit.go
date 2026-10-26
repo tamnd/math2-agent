@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -21,11 +23,11 @@ import (
 // The Lean directories that no role writes: the attribute and the adapters, the certificate checkers, and the named hypotheses, which are the only place where an axiom can be (spec 20).
 var leanFixed = []string{"lean/Math2/Meta/", "lean/Math2/Cert/", "lean/Math2/Hypotheses/"}
 
-// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of the eight roles of spec 12.1 and of enumerate, write and informalize (corpus K7.3).
+// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of the eight roles of spec 12.1 and of enumerate, write, informalize and exercise (corpus K7.3).
 //
-// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. Explore can add computation, conjecture and counterexample nodes with no formal field, no crosswalk edges, no fields of a retirement and no explanations, and add the files of the code of a computation in compute/SHARD/ID/. Explore writes no Lean and changes no file that exists. Enumerate can add mentions by enumerate to the shard files of records/mentions/model-FAMILY/, and keeps each line that is there. Enumerate writes no node and no Lean. Write can change the sections of the target other than Explanations, change its notation, and add nodes to its uses. It can add example nodes that are an instance, a non-example or an illustration of the target, and proof nodes that prove the target, with no formal field and no explanations. Write writes no Lean. The target of informalize is a declaration of Mathlib, in the form mathlib:DECL. Informalize can add statement and definition nodes with one exact Lean binding to the declaration, with no fidelity reviews, and concept nodes with no formal field, all with no crosswalk edges, no fields of a retirement and no explanations. It can change the sections other than Explanations, the name, the aliases, the notation and the uses (add only) of a node that binds the declaration. Informalize writes no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
+// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. Explore can add computation, conjecture and counterexample nodes with no formal field, no crosswalk edges, no fields of a retirement and no explanations, and add the files of the code of a computation in compute/SHARD/ID/. Explore writes no Lean and changes no file that exists. Enumerate can add mentions by enumerate to the shard files of records/mentions/model-FAMILY/, and keeps each line that is there. Enumerate writes no node and no Lean. Write can change the sections of the target other than Explanations, change its notation, and add nodes to its uses. It can add example nodes that are an instance, a non-example or an illustration of the target, and proof nodes that prove the target, with no formal field and no explanations. Write writes no Lean. The target of informalize is a declaration of Mathlib, in the form mathlib:DECL. Informalize can add statement and definition nodes with one exact Lean binding to the declaration, with no fidelity reviews, and concept nodes with no formal field, all with no crosswalk edges, no fields of a retirement and no explanations. It can change the sections other than Explanations, the name, the aliases, the notation and the uses (add only) of a node that binds the declaration. Informalize writes no Lean. Exercise can add exercises about the target: example nodes whose Remarks section opens with the line of the role, with the target in uses and no front matter other than the name, the aliases, the msc, the topics, the audience and the uses. It can change the sections other than Explanations, the name, the aliases and the uses of an exercise, and append referrals by exercise to queues/exercises.jsonl. Exercise writes no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
 func Permit(role, target string, changes []workspace.Change) error {
-	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist", "explore", "enumerate", "write", "informalize"}, role) {
+	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist", "explore", "enumerate", "write", "informalize", "exercise"}, role) {
 		return fmt.Errorf("agent: the field permission set of %s is not written yet", role)
 	}
 	var errs []error
@@ -52,10 +54,12 @@ func permit(role, target string, c workspace.Change) error {
 		return nil
 	case role == "enumerate":
 		return permitMentions(p, c)
-	case slices.Contains([]string{"explain", "curate", "align", "bump", "explore", "write", "informalize"}, role) && strings.HasPrefix(p, "lean/"):
+	case slices.Contains([]string{"explain", "curate", "align", "bump", "explore", "write", "informalize", "exercise"}, role) && strings.HasPrefix(p, "lean/"):
 		return fmt.Errorf("%s writes no Lean", role)
 	case role == "explore" && strings.HasPrefix(p, "compute/"):
 		return permitCode(p, c)
+	case role == "exercise" && p == ExerciseQueue:
+		return permitReferrals(c.Old, c.New)
 	case role == "curate" && p == align.DedupQueue:
 		return permitQueue(c.Old, c.New)
 	case role == "align" && path.Dir(p) == align.QueueDir && path.Ext(p) == ".jsonl":
@@ -118,6 +122,8 @@ func permitNode(role, target string, c workspace.Change) error {
 		return permitWrite(target, c, n)
 	case "informalize":
 		return permitInformalize(target, c, n)
+	case "exercise":
+		return permitExercise(target, c, n)
 	}
 	formal := entries(n.Meta["formal"])
 	if c.Old == nil {
@@ -614,4 +620,78 @@ func union[V any](a, b map[string]V) map[string]V {
 	}
 	maps.Copy(u, b)
 	return u
+}
+
+// ExerciseQueue is the file of the exercises that go to a person. The package agent/exercise appends to it.
+const ExerciseQueue = "queues/exercises.jsonl"
+
+// exerciseMarker opens the Remarks section of an exercise in node.v1 (corpus K2.3), as in the package agent/exercise.
+const exerciseMarker = "Role: exercise."
+
+// exerciseFields are the fields of the front matter of a new exercise.
+var exerciseFields = []string{"tag", "kind", "name", "aliases", "msc", "topics", "audience", "uses"}
+
+func isExercise(n *node.Node) bool {
+	return n.Kind() == "example" && strings.HasPrefix(prov.Fields(n)["body.remarks"], exerciseMarker)
+}
+
+// permitExercise allows a new exercise with the target in its uses, no explanations and no field other than exerciseFields, and a change of an exercise in its sections other than Explanations, its name, its aliases and its uses.
+func permitExercise(target string, c workspace.Change, n *node.Node) error {
+	if !isExercise(n) {
+		return fmt.Errorf("exercise writes only exercises: example nodes whose Remarks section opens with %q", exerciseMarker)
+	}
+	if c.Old == nil {
+		for k := range n.Meta {
+			if !slices.Contains(exerciseFields, k) {
+				return fmt.Errorf("a new exercise has only the fields %s, and it has %s", strings.Join(exerciseFields, ", "), k)
+			}
+		}
+		if !slices.Contains(n.List("uses"), target) {
+			return fmt.Errorf("a new exercise of the target %s has it in its uses", target)
+		}
+		if slices.ContainsFunc(slices.Collect(maps.Keys(prov.Fields(n))), explanation) {
+			return errors.New("exercise writes no explanations, and the new node has the section Explanations")
+		}
+		return nil
+	}
+	o, err := node.Parse(c.Path, c.Old)
+	if err != nil {
+		return err
+	}
+	if !isExercise(o) {
+		return fmt.Errorf("exercise changes only exercises, and %s is not one", o.ID)
+	}
+	before, after := prov.Fields(o), prov.Fields(n)
+	for _, f := range slices.Sorted(maps.Keys(union(before, after))) {
+		switch {
+		case before[f] == after[f]:
+		case explanation(f):
+			return fmt.Errorf("exercise writes no explanations, and the change changes the field %s", f)
+		case strings.HasPrefix(f, "body.") || f == "name" || f == "aliases" || f == "uses":
+		default:
+			return fmt.Errorf("exercise changes only the sections, the name, the aliases and the uses of an exercise, and the change changes the field %s", f)
+		}
+	}
+	return nil
+}
+
+// permitReferrals allows a change of the exercise queue that keeps each line and appends referrals of exercise: JSON objects whose by is an agent of exercise.
+func permitReferrals(before, after []byte) error {
+	rest, ok := bytes.CutPrefix(after, before)
+	if !ok {
+		return errors.New("exercise appends to the queue, and the change changes a line that is there")
+	}
+	for line := range strings.Lines(string(rest)) {
+		var r struct {
+			Exercise string `json:"exercise"`
+			By       string `json:"by"`
+		}
+		if err := json.Unmarshal([]byte(line), &r); err != nil {
+			return fmt.Errorf("a line of the queue is not a referral: %w", err)
+		}
+		if r.Exercise == "" || !strings.HasPrefix(r.By, "m2-agent/exercise@") {
+			return fmt.Errorf("a referral names an exercise and is by exercise, and the line is %q", strings.TrimSpace(line))
+		}
+	}
+	return nil
 }
