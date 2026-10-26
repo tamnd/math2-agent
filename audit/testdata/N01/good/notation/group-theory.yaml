@@ -1,0 +1,11 @@
+- macro: \ord
+  denotes: G5S1M9
+  args: 1
+  latex: '\operatorname{ord}(#1)'
+  reads: 'the order of #1'
+  scope: [20-XX]
+- macro: \idx
+  denotes: G5S1M9
+  args: 2
+  latex: '[#1 : #2]'
+  reads: 'the index of #2 in #1'

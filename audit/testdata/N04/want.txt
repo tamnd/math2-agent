@@ -1,0 +1,3 @@
+nodes/7ND/7NDC00.md:8:1: N04: the node cites isbn:9780471433347, which uses the option without-zero of the convention natural-numbers, and the front matter does not name the convention. Add the convention and its option to the conventions field. The default is with-zero
+nodes/8MN/8MNE00.md:8:1: N04: the convention natural-numbers has no option "positive". Its options are with-zero, without-zero
+nodes/8MN/8MNE00.md:8:1: N04: the convention ring is not in notation/conventions.yaml

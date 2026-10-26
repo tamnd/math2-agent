@@ -1,0 +1,12 @@
+% The LaTeX macros that a node body can use.
+% m2 notation build writes this file from the notation register in notation/. Do not change it by hand.
+% Write one \newcommand on each line. test_macros.py reads this file line by line.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{m2}[2026/10/26 math2 node macros v2]
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+% notation/global.yaml
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbf{Z}}
+% notation/group-theory.yaml
+\newcommand{\ord}[1]{\operatorname{ord}(#1)}

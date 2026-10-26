@@ -1,0 +1,5 @@
+{
+  "\\R": "\\mathbb{R}",
+  "\\Z": "\\mathbb{Z}",
+  "\\ord": "\\operatorname{ord}(#1)"
+}

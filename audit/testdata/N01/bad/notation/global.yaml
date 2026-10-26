@@ -1,0 +1,5 @@
+- macro: \R
+  denotes: G5S1M9
+  args: 0
+  latex: \mathbb{R}
+  reads: R

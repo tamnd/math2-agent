@@ -53,6 +53,7 @@ var commands = []command{
 	{name: "check", usage: "m2 check [-root DIR] [-rule R,...] [-json] [-q] [path...]", summary: "Check schema, body and links on the working tree. This does not use Lean.", run: runCheck},
 	{name: "mint", usage: "m2 mint [-root DIR] [-commit C] [-seed]", summary: "Change the provisional ids to tags before merge, and add the tags to registers/tags.reg.", run: runMint},
 	{name: "migrate", usage: migrateUsage, summary: "Move the files of the tree to a new layout. shard3 moves each file of nodes/, prov/ and reviews/, and the code of each computation in compute/, to the shard of the first three characters of its tag.", run: runMigrate},
+	{name: "notation", usage: notationUsage, summary: "Write the macro files from the notation register, or make a first register from the macro file.", run: runNotation},
 	{name: "site", usage: "m2 site build|check|serve|archive [flags]", summary: "Build, check, preview and archive the wiki: a static site for people and agents.", run: runSite},
 	{name: "build", usage: "m2 build [-root DIR] [-out DIR] [-cache DIR] [-only STEP] [-no-sandbox] [-json]", summary: "Build the derived data: Lean, extraction, replay, battery, status, graph, store and search.", run: runBuild},
 	{name: "audit", usage: "m2 audit [-root DIR] [-plane P] [-rule R,...] [-changed] [-base REV] [-release R] [-json] [-q]", summary: "Run the audit rules and write the report to reports/.", run: runAudit},

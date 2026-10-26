@@ -1,0 +1,3 @@
+notation/combinatorics.yaml:1:1: N02: combinatorics.card and global.abs (notation/global.yaml:1) print || in scopes with a topic in common. List each in the conflicts field of the other
+notation/number-theory.yaml:1:1: N02: the conflict geo.goldenratio of \totient names no entry of the register. An id is the name of the file with no extension, a dot and the macro with no backslash, for example global.ip
+notation/number-theory.yaml:1:1: N02: number-theory.totient and geometry.goldenratio (notation/geometry.yaml:1) print \varphi in scopes with a topic in common. List each in the conflicts field of the other

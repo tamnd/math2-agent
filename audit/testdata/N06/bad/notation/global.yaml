@@ -1,0 +1,15 @@
+- macro: \R
+  denotes: ''
+  args: 0
+  latex: \mathbb{R}
+  reads: R
+- macro: \Z
+  denotes: 2ZZZZZ
+  args: 0
+  latex: \mathbb{Z}
+  reads: Z
+- macro: \Q
+  denotes: 9RET00
+  args: 0
+  latex: \mathbb{Q}
+  reads: Q

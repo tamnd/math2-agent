@@ -1,0 +1,8 @@
+- id: natural-numbers
+  concept: 0MWKJ44V5A
+  default: with-zero
+  options:
+    - option: with-zero
+      sources: [isbn:9780471433347]
+    - option: without-zero
+      sources: ['https://example.org/book']

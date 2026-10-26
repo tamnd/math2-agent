@@ -1,0 +1,7 @@
+- macro: \goldenratio
+  denotes: 3C53TD7K3Q
+  args: 0
+  latex: \varphi
+  reads: phi
+  scope: [geometry, number-theory]
+  conflicts: [number-theory.totient]

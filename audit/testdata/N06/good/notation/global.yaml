@@ -1,0 +1,10 @@
+- macro: \R
+  denotes: G5S1M9
+  args: 0
+  latex: \mathbb{R}
+  reads: R
+- macro: \Z
+  denotes: 3C53TD
+  args: 0
+  latex: \mathbb{Z}
+  reads: Z

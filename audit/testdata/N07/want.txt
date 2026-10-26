@@ -1,0 +1,2 @@
+nodes/D3F/D3F1N0.md:7:1: N07: the node introduces \totient in its notation field, and the entry number-theory.totient has introduced_by "2HQ7XK"
+nodes/D4S/D4SGM0.md:7:1: N07: the node introduces \divsum in its notation field, and the notation register has no entry for it

@@ -1,0 +1,7 @@
+curriculum: algebra
+courses:
+  - course: groups
+    items:
+      - {name: set, kind: concept}
+      - {name: 'group', kind: x, node: G5S1M9}
+      - {name: "Lagrange's theorem", kind: x, node: 3C53TD}

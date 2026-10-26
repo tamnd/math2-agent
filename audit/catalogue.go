@@ -82,4 +82,11 @@ var catalogue = []entry{
 	{Rule{"I04", Inventory, true, "each outcome that a rule gave names a rule in schema/outcomes.v1.yaml"}, i04},
 	{Rule{"I05", Inventory, false, "a deferred row whose date has passed"}, i05},
 	{Rule{"I06", Inventory, false, "an MSC code at two digits whose estimated recall is below 90%"}, nil},
+	{Rule{"N01", Notation, true, "each macro in a body has an entry in the notation register whose scope includes a topic of the node, or the global scope, or the node defines it"}, n01},
+	{Rule{"N02", Notation, true, "two entries with the same glyph in scopes with a topic in common are the same macro, or each lists the other in conflicts"}, n02},
+	{Rule{"N03", Notation, false, "a curriculum puts a member before one of its prerequisites"}, n03},
+	{Rule{"N04", Notation, false, "a node uses an option of a convention other than the default and does not say so in its front matter"}, n04},
+	{Rule{"N05", Notation, false, "a concept with no specializes edge and no topic other than its MSC code"}, n05},
+	{Rule{"N06", Notation, true, "each macro in the register has one denotes, and macros/m2.sty and macros/m2.katex.json are the output of the register"}, n06},
+	{Rule{"N07", Notation, false, "a definition introduces a symbol in its notation field, and no register entry has it as introduced_by"}, n07},
 }

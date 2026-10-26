@@ -1,0 +1,10 @@
+- macro: \ord
+  denotes: G5S1M9
+  args: 1
+  latex: '\operatorname{ord}(#1)'
+  reads: 'the order of #1'
+- macro: \R
+  denotes: G5S1M9
+  args: 0
+  latex: \mathbf{R}
+  reads: R

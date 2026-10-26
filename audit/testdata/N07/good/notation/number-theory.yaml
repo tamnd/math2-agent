@@ -1,0 +1,12 @@
+- macro: \totient
+  denotes: 2HQ7XK
+  args: 1
+  latex: '\varphi(#1)'
+  reads: 'phi of #1'
+  introduced_by: D3F1N0
+- macro: \divsum
+  denotes: 3SGM00
+  args: 1
+  latex: '\sigma(#1)'
+  reads: 'sigma of #1'
+  introduced_by: D4SGM0

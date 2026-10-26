@@ -1,0 +1,3 @@
+nodes/3C5/3C53TD.md:15:60: N01: the macro \ord has the scope 11-XX, and the node has none of these topics
+nodes/3C5/3C53TD.md:15:93: N01: the macro \idx has the scope group-theory, and the node has none of these topics
+nodes/G5S/G5S1M9.md:16:8: N01: the macro \grp has no entry in the notation register. Add an entry to a file in notation/, or list the macro in the notation field of the node that introduces it
