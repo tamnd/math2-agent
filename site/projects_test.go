@@ -22,6 +22,8 @@ roles: [prove]
 members:
   - {id: github:octocat, role: owner}
   - {id: orcid:0000-0002-1825-0097, role: member}
+publications:
+  - {title: Notes on finite groups, doi: 10.1234/example, year: 2027}
 `
 
 // writeRecord writes a run record to the store.
@@ -80,6 +82,7 @@ func TestProjects(t *testing.T) {
 		"<tr><td>2026-09</td><td>1</td><td>$1.50</td><td>$5.00</td></tr>",
 		"<code>r-2026-10-02-0000000b</code>",
 		`href="/math2/node/Q529ES/"`,
+		`<a href="https://doi.org/10.1234/example">Notes on finite groups</a> (2027)`,
 		`Cite this page as <a href="https://example.org/math2/projects/finite-groups/">`,
 	} {
 		if !strings.Contains(p, want) {
@@ -102,7 +105,7 @@ func TestProjects(t *testing.T) {
 	if err := json.Unmarshal([]byte(readFile(t, out, "api/projects/finite-groups.json")), &j); err != nil {
 		t.Fatal(err)
 	}
-	if j.OnBehalfOf != "project:finite-groups" || j.Level != "E2" || len(j.Blueprint) == 0 || len(j.Tasks) == 0 || len(j.Months) != 2 || j.Months[0].Month != "2026-10" || !j.Months[0].Over {
+	if j.OnBehalfOf != "project:finite-groups" || j.Level != "E2" || len(j.Blueprint) == 0 || len(j.Tasks) == 0 || len(j.Months) != 2 || len(j.Publications) != 1 || j.Members[0].ID != "github:octocat" || j.Months[0].Month != "2026-10" || !j.Months[0].Over {
 		t.Errorf("the JSON copy is %+v", j)
 	}
 	var index []struct{ ID string }

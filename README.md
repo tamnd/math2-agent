@@ -549,11 +549,13 @@ roles: [explore]     # the agent roles that work for the project
 members:
   - {id: github:octocat, role: owner}
   - {id: orcid:0000-0002-1825-0097, role: member}
+publications:        # the works in which the people of the project published its work
+  - {title: Factors of Fermat numbers, doi: 10.1234/example, year: 2027}
 ```
 
 The id of the project is the name of the file, and a job works for the project when it runs on behalf of `project:<id>`. `m2 agent run` refuses such a job when the tree has no file for the project, when the role is not in `roles`, or when the person who requested the job is not a member. `m2 orchestrate` adds the budget of each project to the caps of `on_behalf_of`, and a lower cap in `orchestrator.yaml` stays. Each project needs an owner, and the members review the file as they review a node. `m2 check` on the whole tree also reads the projects, and it fails on a project that is not valid or whose topic is not a topic node of the tree.
 
-The wiki has a page for each project at `projects/<id>/`, with a JSON copy at `api/projects/<id>.json`. The page shows the goal, the blueprint of the topic, the tasks, the members, the spend of each month and the run log. The tasks are the statements with no proof and the open conjectures and problems of the blueprint, and with `-build`, the members of the topic below the level of the goal. Give `m2 site build -store DIR` to show the spend and the runs from the run records in DIR. A shadow run is not a run of its project. The log does not show the pull requests, the reviews and the discussions yet.
+The wiki has a page for each project at `projects/<id>/`, with a JSON copy at `api/projects/<id>.json`. The page shows the goal, the blueprint of the topic, the tasks, the members, the publications, the spend of each month and the run log. The tasks are the statements with no proof and the open conjectures and problems of the blueprint, and with `-build`, the members of the topic below the level of the goal. Give `m2 site build -store DIR` to show the spend and the runs from the run records in DIR. A shadow run is not a run of its project. The log does not show the pull requests, the reviews and the discussions yet.
 
 ## The Mathlib bump
 

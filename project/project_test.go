@@ -45,6 +45,9 @@ func TestRead(t *testing.T) {
 	if p.Name != "The Fermat numbers" || p.Topic != "T0PC1X" || p.Level != status.Certified || p.Budget != 40 || len(p.Roles) != 2 || len(p.Members) != 2 || p.OnBehalfOf() != "project:fermat" {
 		t.Errorf("the project is %+v", p)
 	}
+	if p.Publications != nil {
+		t.Errorf("a project with no publications has %v", p.Publications)
+	}
 	if ps[0].Level != status.None {
 		t.Errorf("a project with no level has the level %v", ps[0].Level)
 	}
@@ -62,6 +65,10 @@ func TestRead(t *testing.T) {
 		{"a person", "fermat.yaml", strings.Replace(fermat, "github:octocat", "octocat", 1), "is not a GitHub login or an ORCID iD"},
 		{"a member role", "fermat.yaml", strings.Replace(fermat, "role: member", "role: chair", 1), `has the role "chair"`},
 		{"a member twice", "fermat.yaml", strings.Replace(fermat, "orcid:0000-0002-1825-0097", "github:octocat", 1), "is in the list twice"},
+		{"a publication title", "fermat.yaml", fermat + "publications:\n  - {doi: 10.1234/x}\n", "has no title"},
+		{"a publication link", "fermat.yaml", fermat + "publications:\n  - {title: A paper}\n", "has no DOI and no URL"},
+		{"a DOI", "fermat.yaml", fermat + "publications:\n  - {title: A paper, doi: 'https://doi.org/10.1234/x'}\n", "is not a DOI"},
+		{"a URL", "fermat.yaml", fermat + "publications:\n  - {title: A paper, url: 'http://example.org/a'}\n", "does not start with https://"},
 		{"no owner", "fermat.yaml", strings.Replace(fermat, "role: owner", "role: member", 1), "has no owner"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -69,6 +76,17 @@ func TestRead(t *testing.T) {
 				t.Errorf("Read gives %v, and it must say %q", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestPublications(t *testing.T) {
+	ps, err := project.Read(tree(t, map[string]string{"fermat.yaml": fermat + "publications:\n  - {title: A paper, doi: 10.1234/x.y, year: 2027}\n  - {title: A talk, url: 'https://example.org/talk'}\n"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := ps[0].Publications
+	if len(w) != 2 || w[0].Link() != "https://doi.org/10.1234/x.y" || w[0].Year != 2027 || w[1].Link() != "https://example.org/talk" {
+		t.Errorf("the publications are %+v", w)
 	}
 }
 

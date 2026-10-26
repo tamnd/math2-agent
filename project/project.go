@@ -10,8 +10,10 @@
 //	roles: [explore, prove]
 //	members:
 //	  - {id: github:octocat, role: owner}
+//	publications:
+//	  - {title: Factors of Fermat numbers, doi: 10.1234/example, year: 2027}
 //
-// The goal is the topic node and the evidence level that its members must reach, and the text says it in words. The blueprint of the project is the closure of the members of the topic, and its tasks are the frontier items inside the blueprint. The budget is the most money in US dollars that the agent runs of the project can spend in a month. A job runs for the project when it runs on behalf of project:ID, and only the agent roles of the project work for it. A person who requests a job for the project must be a member. The members of the project review the file, as they review a node.
+// The goal is the topic node and the evidence level that its members must reach, and the text says it in words. The blueprint of the project is the closure of the members of the topic, and its tasks are the frontier items inside the blueprint. The budget is the most money in US dollars that the agent runs of the project can spend in a month. A job runs for the project when it runs on behalf of project:ID, and only the agent roles of the project work for it. A person who requests a job for the project must be a member. The members of the project review the file, as they review a node. The publications are the papers and the other works in which the people of the project publish what they did in it.
 package project
 
 import (
@@ -54,20 +56,41 @@ type Project struct {
 	Budget  float64      `yaml:"budget"`          // the most US dollars that the agent runs of the project can spend in a month
 	Roles   []string     `yaml:"roles"`           // the agent roles that work for the project. No role means no agent work.
 	Members []Person     `yaml:"members"`
+	// The works that the people of the project published about its work, elsewhere than in the tree.
+	Publications []Publication `yaml:"publications,omitempty"`
+}
+
+// A Publication is a work that the people of a project published. It has a DOI, a URL or both.
+type Publication struct {
+	Title string `yaml:"title" json:"title"`
+	DOI   string `yaml:"doi,omitempty" json:"doi,omitempty"` // for example 10.1234/example, with no https://doi.org/
+	URL   string `yaml:"url,omitempty" json:"url,omitempty"` // an https URL
+	Year  int    `yaml:"year,omitempty" json:"year,omitempty"`
+}
+
+// Link returns the link of the publication: the DOI as an https://doi.org URL when it has one, and else its URL.
+func (p Publication) Link() string {
+	if p.DOI != "" {
+		return "https://doi.org/" + p.DOI
+	}
+	return p.URL
 }
 
 // A Person is a member of a project.
 type Person struct {
-	ID   string `yaml:"id"`   // a GitHub login or an ORCID iD, for example github:octocat
-	Role string `yaml:"role"` // Owner or Member
+	ID   string `yaml:"id" json:"id"`     // a GitHub login or an ORCID iD, for example github:octocat
+	Role string `yaml:"role" json:"role"` // Owner or Member
 }
 
-var idRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
+var (
+	idRe  = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
+	doiRe = regexp.MustCompile(`^10\.[0-9]{4,9}(?:\.[0-9]+)*/\S+$`)
+)
 
 // OnBehalfOf returns the id of the project in a job, project:ID.
 func (p *Project) OnBehalfOf() string { return "project:" + p.ID }
 
-// Validate reports the first problem of the project: an id that is not in the form of a project id, no name, no goal or no topic tag, a level below E1, a negative budget, a role that is not in spec 12.1, or members with no owner, a person id that is not valid, a role that is not owner or member, or a person twice.
+// Validate reports the first problem of the project: an id that is not in the form of a project id, no name, no goal or no topic tag, a level below E1, a negative budget, a role that is not in spec 12.1, or members with no owner, a person id that is not valid, a role that is not owner or member, or a person twice, or a publication with no title, or with no DOI and no URL.
 func (p *Project) Validate() error {
 	switch {
 	case !idRe.MatchString(p.ID):
@@ -107,6 +130,20 @@ func (p *Project) Validate() error {
 	}
 	if owners == 0 {
 		return fmt.Errorf("project %s: the project has no owner", p.ID)
+	}
+	for i, w := range p.Publications {
+		switch {
+		case strings.TrimSpace(w.Title) == "":
+			return fmt.Errorf("project %s: the publication %d has no title", p.ID, i+1)
+		case w.DOI == "" && w.URL == "":
+			return fmt.Errorf("project %s: the publication %q has no DOI and no URL", p.ID, w.Title)
+		case w.DOI != "" && !doiRe.MatchString(w.DOI):
+			return fmt.Errorf("project %s: %q is not a DOI, such as 10.1234/example", p.ID, w.DOI)
+		case w.URL != "" && !strings.HasPrefix(w.URL, "https://"):
+			return fmt.Errorf("project %s: the URL %q of a publication does not start with https://", p.ID, w.URL)
+		case w.Year < 0:
+			return fmt.Errorf("project %s: the publication %q has the year %d", p.ID, w.Title, w.Year)
+		}
 	}
 	return nil
 }
