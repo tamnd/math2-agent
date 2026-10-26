@@ -21,7 +21,7 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus cluster [-root DIR] [-commit C]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -31,6 +31,10 @@ func runCorpus(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "import":
 		return runCorpusImport(args[1:], stdout, stderr)
+	case "cluster":
+		return runCorpusCluster(args[1:], stdout, stderr)
+	case "gold":
+		return runCorpusGold(args[1:], stdout, stderr)
 	case "status":
 		return runCorpusStatus(args[1:], stdout, stderr)
 	case "queue", "plan":
@@ -59,70 +63,109 @@ func writeMentions(root string, src *ingest.Source) (int, error) {
 
 // runCorpusImport changes the records of the last import of each source to mentions, and groups the mentions into rows.
 func runCorpusImport(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("m2 corpus import", flag.ContinueOnError)
+	const name = "m2 corpus import"
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	root := fs.String("root", ".", "the math2 working tree")
 	commit := fs.String("commit", "", "the commit that goes into registers/inventory/. Empty means the HEAD commit of the working tree.")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
-	if *commit == "" {
-		out, err := git(*root, "rev-parse", "HEAD")
-		if err != nil {
-			fmt.Fprintln(stderr, "m2 corpus import: the working tree has no HEAD commit. Give the commit with -commit.")
-			return ExitFailure
-		}
-		*commit = strings.TrimSpace(out)
+	if !headCommit(name, *root, commit, stderr) {
+		return ExitFailure
 	}
 	sources := fs.Args()
 	if len(sources) == 0 {
 		var err error
 		if sources, err = importedSources(*root); err != nil {
-			fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
 		}
 	}
 	if len(sources) == 0 {
-		fmt.Fprintf(stderr, "m2 corpus import: %s has no records. Run m2 ingest first.\n", filepath.Join(*root, ingest.RecordsDir))
+		fmt.Fprintf(stderr, "%s: %s has no records. Run m2 ingest first.\n", name, filepath.Join(*root, ingest.RecordsDir))
 		return ExitFailure
 	}
 	cat, err := ingest.ReadCatalogue(*root)
 	if err != nil {
-		fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
 	}
 	for _, id := range sources {
 		src := cat.Source(id)
 		if src == nil {
-			fmt.Fprintf(stderr, "m2 corpus import: manifests/sources.yaml has no source %s\n", id)
+			fmt.Fprintf(stderr, "%s: manifests/sources.yaml has no source %s\n", name, id)
 			return ExitFailure
 		}
 		n, err := writeMentions(*root, src)
 		if err != nil {
-			fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
 		}
 		fmt.Fprintf(stdout, "%s: %d mentions\n", id, n)
 	}
-	ms, err := inventory.ReadMentions(*root)
-	if err != nil {
-		fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
+	if err := cluster(*root, *commit, stdout); err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
 	}
-	rows, err := inventory.ReadRows(*root)
-	if err != nil {
-		fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
+	return ExitOK
+}
+
+// runCorpusCluster groups the mentions of the tree into rows again, with the passes 1 and 2 of corpus K4.3. It reads no records.
+func runCorpusCluster(args []string, stdout, stderr io.Writer) int {
+	const name = "m2 corpus cluster"
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	root := fs.String("root", ".", "the math2 working tree")
+	commit := fs.String("commit", "", "the commit that goes into registers/inventory/. Empty means the HEAD commit of the working tree.")
+	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "usage: "+corpusUsage)
+		return ExitUsage
+	}
+	if !headCommit(name, *root, commit, stderr) {
 		return ExitFailure
 	}
-	reg, err := inventory.ReadRegister(*root)
-	if err != nil {
-		fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
+	if err := cluster(*root, *commit, stdout); err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
 	}
-	tags, err := tag.ReadUsed(filepath.Join(*root, "registers", "tags.reg"), filepath.Join(*root, "registers", "retired.reg"))
+	return ExitOK
+}
+
+// headCommit sets an empty commit to the HEAD commit of the working tree at root. It reports whether it has a commit.
+func headCommit(name, root string, commit *string, stderr io.Writer) bool {
+	if *commit != "" {
+		return true
+	}
+	out, err := git(root, "rev-parse", "HEAD")
 	if err != nil {
-		fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
-		return ExitFailure
+		fmt.Fprintf(stderr, "%s: the working tree has no HEAD commit. Give the commit with -commit.\n", name)
+		return false
+	}
+	*commit = strings.TrimSpace(out)
+	return true
+}
+
+// cluster groups the mentions of the tree at root into its rows, writes the rows, and adds the new row identifiers to the register with the commit.
+func cluster(root, commit string, stdout io.Writer) error {
+	ms, err := inventory.ReadMentions(root)
+	if err != nil {
+		return err
+	}
+	rows, err := inventory.ReadRows(root)
+	if err != nil {
+		return err
+	}
+	reg, err := inventory.ReadRegister(root)
+	if err != nil {
+		return err
+	}
+	tags, err := tag.ReadUsed(filepath.Join(root, "registers", "tags.reg"), filepath.Join(root, "registers", "retired.reg"))
+	if err != nil {
+		return err
 	}
 	res, err := inventory.Cluster(rows, ms, inventory.Options{
 		Day:  time.Now(),
@@ -130,18 +173,91 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 		Used: func(id string) bool { return reg[id] || tags[id] },
 	})
 	if err != nil {
-		fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
+		return err
+	}
+	if err := inventory.WriteRows(root, res.Rows); err != nil {
+		return err
+	}
+	if err := inventory.AppendRegister(root, res.Added, commit); err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal formal statements %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Equivalent)
+	return nil
+}
+
+// goldReport is the file that m2 corpus gold -write writes, relative to the root of the tree.
+const goldReport = "reports/inventory/clustering.json"
+
+// runCorpusGold prints the precision and the recall of the passes of the clustering on the gold set of the tree.
+func runCorpusGold(args []string, stdout, stderr io.Writer) int {
+	const name = "m2 corpus gold"
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	root := fs.String("root", ".", "the math2 working tree")
+	asJSON := fs.Bool("json", false, "print JSON")
+	write := fs.Bool("write", false, "also write the scores to "+goldReport)
+	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "usage: "+corpusUsage)
+		return ExitUsage
+	}
+	gold, err := inventory.ReadGold(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
 	}
-	if err := inventory.WriteRows(*root, res.Rows); err != nil {
-		fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
+	if len(gold) == 0 {
+		fmt.Fprintf(stderr, "%s: the tree has no gold set in %s\n", name, inventory.GoldFile)
 		return ExitFailure
 	}
-	if err := inventory.AppendRegister(*root, res.Added, *commit); err != nil {
-		fmt.Fprintf(stderr, "m2 corpus import: %v\n", err)
+	ms, err := inventory.ReadMentions(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
 	}
-	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting)
+	scores := inventory.Measure(ms, gold)
+	data, err := json.MarshalIndent(struct {
+		Gold   int               `json:"gold"`
+		Scores []inventory.Score `json:"scores"`
+	}{len(gold), scores}, "", "  ")
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	data = append(data, '\n')
+	if *write {
+		path := filepath.Join(*root, filepath.FromSlash(goldReport))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- the reports are public.
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		if err := os.WriteFile(path, data, 0o644); err != nil { // #nosec G306 -- the reports are public text in a git tree.
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+	}
+	if *asJSON {
+		if _, err := stdout.Write(data); err != nil {
+			return ExitFailure
+		}
+		return ExitOK
+	}
+	pct := func(v *float64) string {
+		if v == nil {
+			return "-"
+		}
+		return fmt.Sprintf("%.1f%%", 100**v)
+	}
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "pass\tlayer\tpairs\tprecision\trecall\tfalse merges\tfalse splits\tmissing")
+	for _, s := range scores {
+		fmt.Fprintf(tw, "%s\t%s\t%d\t%s\t%s\t%d\t%d\t%d\n", s.Pass, s.Layer, s.Pairs, pct(s.Precision), pct(s.Recall), s.FalsePos, s.FalseNeg, s.Missing)
+	}
+	if err := tw.Flush(); err != nil {
+		return ExitFailure
+	}
 	return ExitOK
 }
 

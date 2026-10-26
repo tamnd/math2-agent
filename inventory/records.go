@@ -39,6 +39,11 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 				m.MSC = append(m.MSC, strings.FieldsFunc(v, func(r rune) bool { return r == '|' || r == ' ' })...)
 			case k == "instance_of":
 				m.Types = split(v)
+			case k == "type_hash":
+				// Only a statement keeps its hash. Pass 2 of Cluster joins statements and never definitions.
+				if m.Kind == "statement" {
+					m.TypeHash = v
+				}
 			case crosswalk.Known(k) || k == "mathlib" || src.ID == "wikidata":
 				if m.Same == nil {
 					m.Same = map[string][]string{}

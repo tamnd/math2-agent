@@ -53,6 +53,7 @@ type Mention struct {
 	MSC      []string            `json:"msc,omitempty"`       // the MSC2020 codes
 	Same     map[string][]string `json:"same,omitempty"`      // the identifiers of the item in other systems, by the system names of the crosswalk
 	Types    []string            `json:"types,omitempty"`     // the classes of the item in the source, for example the Wikidata items of its property P31
+	TypeHash string              `json:"type_hash,omitempty"` // the hash of the canonical form of the type of a statement of a formal library (pass 2 of K4.3)
 	Class    string              `json:"class"`               // the licence class (spec 9.3)
 	By       string              `json:"by"`                  // the importer and its version, or the run
 }
