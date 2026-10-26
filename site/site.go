@@ -25,6 +25,7 @@ import (
 	"github.com/tamnd/math2-agent/graph"
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/katex"
+	"github.com/tamnd/math2-agent/markup"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/status"
 	"github.com/tamnd/math2-agent/store"
@@ -161,8 +162,8 @@ type builder struct {
 	reviewers []*reviewerView
 	projects  []*projectView
 	pages     []string // the paths of the HTML pages, for the sitemap
-	nodeMD    *markdown
-	plainMD   *markdown
+	nodeMD    *markup.Markdown
+	plainMD   *markup.Markdown
 
 	invSummary *inventory.Summary
 	invLetters []*invLetter
@@ -171,7 +172,7 @@ type builder struct {
 
 // Build writes the site to opt.Out.
 func Build(opt Options) error {
-	b := &builder{opt: opt, nodes: map[string]*nodeView{}, plainMD: newMarkdown(nil)}
+	b := &builder{opt: opt, nodes: map[string]*nodeView{}, plainMD: markup.New(nil)}
 	if opt.URL != "" {
 		u := strings.TrimSuffix(opt.URL, "/")
 		if i := strings.Index(u, "://"); i >= 0 {
@@ -249,7 +250,7 @@ func (b *builder) load() error {
 	if b.katex, err = katex.New(macros); err != nil {
 		return fmt.Errorf("site: %w", err)
 	}
-	b.nodeMD = newMarkdown(b.math)
+	b.nodeMD = markup.New(b.math)
 	if err := b.loadProv(); err != nil {
 		return err
 	}
@@ -394,7 +395,7 @@ func (b *builder) resolve(v *nodeView) error {
 	v.Formal = formalLinks(meta["formal"])
 	v.Sources = sourceLinks(meta["sources"])
 	v.SameAs = sameAsLinks(meta["same_as"])
-	body, err := b.nodeMD.render(v.Body, b.contentLinks)
+	body, err := b.nodeMD.Render(v.Body, dests(b.contentLinks))
 	if err != nil {
 		return fmt.Errorf("site: %s: %w", v.Path, err)
 	}
@@ -421,9 +422,17 @@ func (v *nodeView) addBacklink(field, label string, l link) {
 	v.Backlinks = append(v.Backlinks, refGroup{Field: field, Label: label, Links: []link{l}})
 }
 
+// dests turns a function that changes a link destination into the links of package markup.
+func dests(f func(string) (string, bool)) markup.Links {
+	return func(dest string) (markup.Target, bool) {
+		d, ok := f(dest)
+		return markup.Target{Dest: d}, ok
+	}
+}
+
 // contentLinks resolves a link in a node body or in a document of the content repository.
 func (b *builder) contentLinks(dest string) (string, bool) {
-	if id, ok := strings.CutPrefix(dest, nodeScheme); ok {
+	if id, ok := strings.CutPrefix(dest, markup.NodeScheme); ok {
 		l := b.nodeLink(id)
 		return l.URL, !l.Missing
 	}
@@ -497,7 +506,7 @@ func (b *builder) loadSpecDoc(part, f string) error {
 			break
 		}
 	}
-	body, err := b.plainMD.render(string(data), b.specLinks(part))
+	body, err := b.plainMD.Render(string(data), dests(b.specLinks(part)))
 	if err != nil {
 		return fmt.Errorf("site: %s: %w", f, err)
 	}
