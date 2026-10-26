@@ -1,8 +1,8 @@
 // Package build makes the derived data of a math2 working tree (spec 07.6).
 //
-// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The battery step runs the machine checks of spec 10.4 on each Lean binding and writes battery.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json, battery.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The store step writes the serving store, store.db, from the nodes, status.json and the aliases (spec 05.7). The search step writes the search index, search.db, from the nodes, status.json, the aliases and extract.json (spec 14). The site step comes in a later issue.
+// [Run] runs the steps in order. The lean step runs lake build in the lean/ directory of the tree. The extract step runs M2Extract on each formal declaration that a node names and on each declaration with the attribute @[m2 "TAG"], and writes extract.json. The step also runs the degenerate-statement checks of spec 10.4 on each of these declarations that is a theorem. The replay step checks again each binding that passes each check of E5 except the replay, with the comparator and the independent kernels of the toolchain (spec 07.7), and writes replay.json. The battery step runs the machine checks of spec 10.4 on each Lean binding and writes battery.json. The status step computes the evidence level and the fidelity level of each node from the nodes, extract.json, replay.json, battery.json and the reviews, and writes status.json (spec 04.7). The graph step derives the graph from the nodes and writes it as Parquet to graph/ (spec 05.1). The store step writes the serving store, store.db, from the nodes, status.json and the aliases (spec 05.7). The search step writes the search index, search.db, from the nodes, status.json, the aliases and extract.json (spec 14). The inventory step counts the rows of the inventory, with the open count of corpus spec K2.1, and writes inventory.json. A tree with no records/inventory/ directory has no inventory step. The site step comes in a later issue.
 //
-// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, battery, status, graph, store and search steps. Two builds of the same tree give the same output hash (rule R01).
+// Each step has an input hash and an output hash. When the input hash of a step and the hash of its files are the same as in the manifest of the last build, the step does not run again. The manifest records the Lean toolchain, the Mathlib commit and the checkers of the toolchain. The output hash covers the files of the extract, replay, battery, status, graph, store, search and inventory steps. Two builds of the same tree give the same output hash (rule R01).
 package build
 
 import (
@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/zeebo/blake3"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/tamnd/math2-agent/compute"
 	"github.com/tamnd/math2-agent/format"
 	"github.com/tamnd/math2-agent/graph"
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/replay"
@@ -38,30 +40,34 @@ import (
 
 // The steps, in the order that Run runs them.
 const (
-	Lean    = "lean"
-	Extract = "extract"
-	Replay  = "replay"
-	Battery = "battery"
-	Status  = "status"
-	Graph   = "graph"
-	Store   = "store"
-	Search  = "search"
+	Lean      = "lean"
+	Extract   = "extract"
+	Replay    = "replay"
+	Battery   = "battery"
+	Status    = "status"
+	Graph     = "graph"
+	Store     = "store"
+	Search    = "search"
+	Inventory = "inventory"
 )
 
 // Steps returns the names of the steps in order.
-func Steps() []string { return []string{Lean, Extract, Replay, Battery, Status, Graph, Store, Search} }
+func Steps() []string {
+	return []string{Lean, Extract, Replay, Battery, Status, Graph, Store, Search, Inventory}
+}
 
 // The files of the build, from the output directory.
 const (
-	ManifestFile = "manifest.json"
-	ExtractFile  = "extract.json"
-	ReplayFile   = "replay.json"
-	BatteryFile  = "battery.json"
-	StatusFile   = "status.json"
-	GraphDir     = "graph"
-	StoreFile    = "store.db"
-	SearchFile   = "search.db"
-	ComputeDir   = "compute" // the runs of m2 compute, in TAG/ARCH/
+	ManifestFile  = "manifest.json"
+	ExtractFile   = "extract.json"
+	ReplayFile    = "replay.json"
+	BatteryFile   = "battery.json"
+	StatusFile    = "status.json"
+	GraphDir      = "graph"
+	StoreFile     = "store.db"
+	SearchFile    = "search.db"
+	InventoryFile = "inventory.json"
+	ComputeDir    = "compute" // the runs of m2 compute, in TAG/ARCH/
 )
 
 // Checkers are the programs of the Lean toolchain that check an environment again (spec 07.7). The manifest records the hash of each one that the toolchain has.
@@ -77,6 +83,7 @@ type Options struct {
 	// NoSandbox runs the checkers of the replay step without the bwrap sandbox, which needs Linux. A replay without the sandbox is not trustworthy, thus it does not give E5.
 	NoSandbox bool
 	Modules   []string  // the modules that the extract step loads. Empty means Mathlib and Math2.
+	Day       time.Time // the day of the open count. The zero time means the date of the HEAD commit of the tree, or today when the tree is not a git repository.
 	Version   string    // the m2 version, for the manifest
 	Log       io.Writer // one line for each step. Nil means no log.
 }
@@ -108,6 +115,8 @@ type Counts struct {
 	Records  int `json:"records"`
 	Bindings int `json:"bindings"`
 	Replays  int `json:"replays"`
+	Rows     int `json:"rows,omitempty"` // the rows of the inventory that are not merged
+	Open     int `json:"open,omitempty"` // the open count (corpus spec K2.1)
 }
 
 // Extraction is the content of extract.json.
@@ -176,6 +185,7 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 		{Graph, false, b.graph},
 		{Store, false, b.store},
 		{Search, false, b.search},
+		{Inventory, false, b.inventory},
 	}
 	for _, s := range steps {
 		if opt.Only != "" && s.name != opt.Only {
@@ -183,6 +193,10 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 		}
 		if s.lean && !hasLean {
 			b.logf("%s: skip, the tree has no lean/ directory", s.name)
+			continue
+		}
+		if s.name == Inventory && !hasInventory(opt.Root) {
+			b.logf("%s: skip, the tree has no inventory", s.name)
 			continue
 		}
 		st, err := s.run(ctx, nodes)
@@ -839,6 +853,62 @@ func (b *builder) search(_ context.Context, nodes []*node.Node) (Step, error) {
 		return Step{}, err
 	}
 	out, err := hashFiles(b.opt.Out, []string{SearchFile})
+	return Step{Input: input, Output: out}, err
+}
+
+// hasInventory reports whether the tree at root has the rows of an inventory.
+func hasInventory(root string) bool {
+	_, err := os.Stat(filepath.Join(root, inventory.RowsDir))
+	return err == nil
+}
+
+// inventory counts the rows of the inventory on the day of the build and writes inventory.json (corpus spec K4.9). The input is the hash of the rows, the hash of the mentions and the day, because a deferred row is open again when its date passes.
+func (b *builder) inventory(ctx context.Context, _ []*node.Node) (Step, error) {
+	day := b.opt.Day
+	if day.IsZero() {
+		day = time.Now().UTC()
+		if out, err := command(ctx, b.opt.Root, "git", "log", "-1", "--format=%cs"); err == nil {
+			if t, err := time.Parse(time.DateOnly, strings.TrimSpace(out)); err == nil {
+				day = t
+			}
+		}
+	}
+	lines := []string{"day " + day.Format(time.DateOnly)}
+	for _, dir := range []string{inventory.RowsDir, inventory.MentionsDir} {
+		h, err := HashTree(filepath.Join(b.opt.Root, dir), func(rel string) bool { return strings.HasSuffix(rel, ".jsonl") })
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return Step{}, err
+		}
+		lines = append(lines, dir+" "+h)
+	}
+	input := hashString(strings.Join(lines, "\n"))
+	if out, err := hashFiles(b.opt.Out, []string{InventoryFile}); err == nil {
+		if s, ok := b.cached(Inventory, input, out); ok {
+			b.m.Counts.Rows, b.m.Counts.Open = b.prev.Counts.Rows, b.prev.Counts.Open
+			return s, nil
+		}
+	}
+	rows, err := inventory.ReadRows(b.opt.Root)
+	if err != nil {
+		return Step{}, err
+	}
+	ms, err := inventory.ReadMentions(b.opt.Root)
+	if err != nil {
+		return Step{}, err
+	}
+	sum := inventory.Summarize(rows, ms, day)
+	data, err := json.MarshalIndent(struct {
+		Day string `json:"day"`
+		*inventory.Summary
+	}{day.Format(time.DateOnly), sum}, "", "  ")
+	if err != nil {
+		return Step{}, err
+	}
+	if err := write(filepath.Join(b.opt.Out, InventoryFile), append(data, '\n')); err != nil {
+		return Step{}, err
+	}
+	b.m.Counts.Rows, b.m.Counts.Open = sum.Rows, sum.Open
+	out, err := hashFiles(b.opt.Out, []string{InventoryFile})
 	return Step{Input: input, Output: out}, err
 }
 

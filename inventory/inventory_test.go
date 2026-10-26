@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -213,5 +214,48 @@ func TestRules(t *testing.T) {
 	}
 	if len(got) != 2 || got["Euclid"] != "person" || got["Elements"] != "book" {
 		t.Fatalf("the rules gave %v", got)
+	}
+}
+
+// TestWriteIsStable checks that two writes of the same mentions and rows, in any order, give the same bytes (corpus spec K4.8).
+func TestWriteIsStable(t *testing.T) {
+	ms := []Mention{wikidata("Q2", "b", map[string]string{"msc": "20-XX"}), wikidata("Q1", "a", map[string]string{"oeis": "A000045"}), wikidata("Q3", "c", nil)}
+	res, err := Cluster(nil, ms, Options{Day: day, Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	write := func(ms []Mention, rows []Row) map[string]string {
+		root := t.TempDir()
+		if err := WriteMentions(root, "wikidata", ms); err != nil {
+			t.Fatal(err)
+		}
+		if err := WriteRows(root, rows); err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]string{}
+		for _, dir := range []string{MentionsDir, RowsDir} {
+			err := filepath.WalkDir(filepath.Join(root, dir), func(path string, d os.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				data, err := os.ReadFile(path)
+				rel, _ := filepath.Rel(root, path)
+				out[rel] = string(data)
+				return err
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		return out
+	}
+	first := write(ms, res.Rows)
+	rev := slices.Clone(ms)
+	slices.Reverse(rev)
+	rows := slices.Clone(res.Rows)
+	slices.Reverse(rows)
+	second := write(rev, rows)
+	if len(first) == 0 || !maps.Equal(first, second) {
+		t.Errorf("the two writes differ:\n%v\n%v", first, second)
 	}
 }

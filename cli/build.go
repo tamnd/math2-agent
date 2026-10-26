@@ -55,6 +55,9 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		return ExitOK
 	}
 	fmt.Fprintf(stdout, "%d nodes, %d edges, %d records, %d bindings\n", m.Counts.Nodes, m.Counts.Edges, m.Counts.Records, m.Counts.Bindings)
+	if m.Counts.Rows > 0 {
+		fmt.Fprintf(stdout, "%d inventory rows, %d open\n", m.Counts.Rows, m.Counts.Open)
+	}
 	fmt.Fprintf(stdout, "output %s\n", m.Output)
 	return ExitOK
 }
