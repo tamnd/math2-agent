@@ -41,8 +41,8 @@ func TestFetch(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if len(recs) != 18 {
-		t.Fatalf("the snapshot has %d records, want 18", len(recs))
+	if len(recs) != 20 {
+		t.Fatalf("the snapshot has %d records, want 20", len(recs))
 	}
 	by := map[string]ingest.Record{}
 	for _, r := range recs {

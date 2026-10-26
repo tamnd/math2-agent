@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/zeebo/blake3"
@@ -34,14 +35,17 @@ const (
 // RecordsDir is the directory of the full run records in the artefact store. The summaries are in [prov.RunsDir].
 const RecordsDir = "records"
 
+// A Goal is the goal predicate of a run. It reports whether the goal holds. When the goal does not hold, why is the reason, and the run gives it to the model. An error stops the run.
+type Goal func(ctx context.Context) (done bool, why string, err error)
+
 // Runner runs jobs of one role.
 type Runner struct {
 	Role   *Role
 	Model  llm.Model
-	Tools  []Tool                                  // the tools of the role. The model sees only the tools in the profile of the role.
-	Goal   func(ctx context.Context) (bool, error) // the goal predicate. It runs after each turn with a tool call. Nil means that no goal can hold, which is for tests.
-	Prices map[string]llm.Price                    // the prices of the models. Nil means llm.Prices.
-	Now    func() time.Time                        // the clock. Nil means time.Now.
+	Tools  []Tool               // the tools of the role. The model sees only the tools in the profile of the role.
+	Goal   Goal                 // the goal predicate. It runs after each turn. Nil means that no goal can hold, which is for tests.
+	Prices map[string]llm.Price // the prices of the models. Nil means llm.Prices.
+	Now    func() time.Time     // the clock. Nil means time.Now.
 }
 
 // Turn is one model turn of a run: the response and the results of its tool calls.
@@ -49,6 +53,7 @@ type Turn struct {
 	Response *llm.Response `json:"response"`
 	USD      float64       `json:"usd"`
 	Results  []llm.Block   `json:"results,omitempty"`
+	Why      string        `json:"why,omitempty"` // why the goal did not hold after the turn
 }
 
 // Spend is the spend of a run (spec 11.5).
@@ -201,8 +206,9 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 			rec.Turns = append(rec.Turns, t)
 			return stop(Partial, "the model stopped at the limit of the output tokens")
 		case len(calls) == 0:
+			done, why, err := rn.goal(ctx)
+			t.Why = why
 			rec.Turns = append(rec.Turns, t)
-			done, err := rn.goal(ctx)
 			if err != nil {
 				return stop(Failure, "the goal check failed: "+err.Error())
 			}
@@ -213,7 +219,7 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 			if idle >= role.Stuck {
 				return stop(Failure, fmt.Sprintf("no progress in %d turns", idle))
 			}
-			msgs = append(msgs, llm.Message{Role: llm.User, Content: []llm.Block{llm.TextBlock(fmt.Sprintf("The goal does not hold yet: %s. Continue with the tools, or call %s with the reason.", job.Goal, StuckTool))}})
+			msgs = append(msgs, llm.Message{Role: llm.User, Content: []llm.Block{llm.TextBlock(nudge(job, why))}})
 			continue
 		}
 		progress := false
@@ -235,15 +241,20 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 				return stop(Failure, "stuck: "+res.Text)
 			}
 		}
+		done, why, err := rn.goal(ctx)
+		t.Why = why
 		rec.Turns = append(rec.Turns, t)
-		msgs = append(msgs, llm.Message{Role: llm.User, Content: t.Results})
-		done, err := rn.goal(ctx)
 		if err != nil {
 			return stop(Failure, "the goal check failed: "+err.Error())
 		}
 		if done {
 			return stop(Success, "the goal holds")
 		}
+		content := slices.Clone(t.Results)
+		if why != "" {
+			content = append(content, llm.TextBlock(nudge(job, why)))
+		}
+		msgs = append(msgs, llm.Message{Role: llm.User, Content: content})
 		if progress {
 			idle = 0
 		} else if idle++; idle >= role.Stuck {
@@ -252,11 +263,16 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 	}
 }
 
-func (rn *Runner) goal(ctx context.Context) (bool, error) {
+func (rn *Runner) goal(ctx context.Context) (bool, string, error) {
 	if rn.Goal == nil {
-		return false, nil
+		return false, "", nil
 	}
 	return rn.Goal(ctx)
+}
+
+// nudge returns the message to the model when the goal does not hold.
+func nudge(job *Job, why string) string {
+	return fmt.Sprintf("The goal does not hold yet: %s. Continue with the tools, or call %s with the reason.", strings.TrimSuffix(cmp.Or(why, job.Goal), "."), StuckTool)
 }
 
 // over returns why the spend is over the budget, or "".

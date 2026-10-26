@@ -18,6 +18,7 @@ import (
 	"github.com/tamnd/math2-agent/api"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
+	"github.com/tamnd/math2-agent/tag"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
@@ -167,8 +168,8 @@ func Write(ws *workspace.Workspace) agent.Tool {
 type Lean interface {
 	// Check elaborates the Lean file at the path. It builds the modules of the tree that the file imports first.
 	Check(ctx context.Context, file string) (*lean.Elaboration, error)
-	// Extract builds the Lean library of the tree and returns the extraction record of each declaration, in order.
-	Extract(ctx context.Context, decls []string) ([]lean.Record, error)
+	// Extract builds the Lean library of the tree and returns the extraction record of each declaration, in order. With checks, each record of a statement (see [lean.Record.Statement]) has the result of the degenerate-statement checks of spec 10.4.
+	Extract(ctx context.Context, decls []string, checks bool) ([]lean.Record, error)
 }
 
 // Scratch is the path of the file of the text that Check elaborates when a call gives text and no path. Git ignores it, thus it is not a change of the run.
@@ -227,4 +228,39 @@ func Messages(file string, e *lean.Elaboration) string {
 		fmt.Fprintf(&b, "%s elaborates with no errors and no sorry.", file)
 	}
 	return b.String()
+}
+
+// NodePath returns the path of the file of the node with the id in a tree of math2: nodes/XX/TAG.md for a tag, where XX is the first two characters of the tag, and nodes/~/ID.md for a provisional id. It returns "" for an id that is neither.
+func NodePath(id string) string {
+	switch {
+	case tag.IsTag(id):
+		return "nodes/" + id[:2] + "/" + id + ".md"
+	case tag.IsProvisional(id):
+		return "nodes/~/" + id + ".md"
+	}
+	return ""
+}
+
+// Profile returns the tools of the profile of the role, in the order of the profile: a tool from [API] for each read method of the API, and [Read], [Write] and [Check] for read_file, write_file and lean_check. A name that is none of these is an error.
+func Profile(r *agent.Role, s *api.Service, ws *workspace.Workspace, env Lean) ([]agent.Tool, error) {
+	read := map[string]bool{}
+	for _, m := range api.Methods() {
+		read[m.Name] = true
+	}
+	var out []agent.Tool
+	for _, name := range r.Tools {
+		switch {
+		case read[name]:
+			out = append(out, API(s, name)...)
+		case name == "read_file":
+			out = append(out, Read(ws))
+		case name == "write_file":
+			out = append(out, Write(ws))
+		case name == "lean_check":
+			out = append(out, Check(ws, env))
+		default:
+			return nil, fmt.Errorf("tools: the profile of %s has the tool %s, and this package does not have it", r.Name, name)
+		}
+	}
+	return out, nil
 }

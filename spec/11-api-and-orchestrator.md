@@ -106,7 +106,7 @@ priority: 0.73            # computed (11.5)
 budget: {usd: 4.00, wall: 2h, lean_session_s: 3600, compute_cpu_s: 7200}
 on_behalf_of: campaign:ug-core   # or a person, or schedule:standing-prove
 requested_by: orcid:0000-0002-1825-0097
-constraints: {models: [claude-opus-5-5, claude-sonnet-5-5], no_native_decide: true}
+constraints: {models: [claude-opus-5-5, claude-sonnet-5-5]}   # native_decide: true permits native_decide
 ```
 
 ### Priority

@@ -169,8 +169,8 @@ func (r *Role) Prompt() string { return r.Name + "/" + r.Version }
 
 // Constraints are the limits that a job sets on its run.
 type Constraints struct {
-	Models         []string `yaml:"models,omitempty" json:"models,omitempty"` // the models that the run can use. Empty means each model of the ladder.
-	NoNativeDecide bool     `yaml:"no_native_decide,omitempty" json:"no_native_decide,omitempty"`
+	Models       []string `yaml:"models,omitempty" json:"models,omitempty"`               // the models that the run can use. Empty means each model of the ladder.
+	NativeDecide bool     `yaml:"native_decide,omitempty" json:"native_decide,omitempty"` // the job permits a proof that uses native_decide (spec 12.4). Rule F04 records each use.
 }
 
 // Job is a unit of work with a goal, a target and a budget (spec 11.4).
