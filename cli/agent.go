@@ -155,59 +155,14 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	}
 	defer func() { _ = svc.Close() }()
 
-	ctx := context.Background()
 	if *work == "" {
 		*work = filepath.Join(os.TempDir(), "m2-agent", job.ID)
 	}
-	if err := os.MkdirAll(filepath.Dir(*work), 0o750); err != nil {
-		return fail(err)
+	rs := &runSetup{root: *root, store: *store, svc: svc, model: model, roles: map[string]*agent.Role{role: r}}
+	rec, ws, changes, err := rs.run(context.Background(), job, *rung, *work)
+	if ws != nil {
+		defer func() { _ = ws.Close() }()
 	}
-	ws, err := workspace.Add(ctx, *root, *work, "HEAD")
-	if err != nil {
-		return fail(err)
-	}
-	defer func() { _ = ws.Close() }()
-	if err := linkPackages(*root, ws.Dir); err != nil {
-		return fail(err)
-	}
-	env, err := newLean(ctx, ws.Dir)
-	if err != nil {
-		return fail(err)
-	}
-
-	var (
-		brief string
-		check agent.Goal
-	)
-	switch role {
-	case "prove":
-		pin, err := prove.NewPin(ctx, ws, env, job)
-		if err != nil {
-			return fail(err)
-		}
-		if brief, err = prove.Brief(ws, job, pin); err != nil {
-			return fail(err)
-		}
-		check = prove.Goal(ws, env, job, pin)
-	case "formalize":
-		if brief, err = formalize.Brief(ws, job); err != nil {
-			return fail(err)
-		}
-		check = formalize.Goal(ws, env, job)
-	}
-	ts, err := tools.Profile(r, svc, ws, env)
-	if err != nil {
-		return fail(err)
-	}
-	rn := agent.Runner{Role: r, Model: model, Tools: ts, Goal: check}
-	rec, err := rn.Run(ctx, job, *rung, brief)
-	if err != nil {
-		return fail(err)
-	}
-	if _, err := agent.WriteRecord(*store, rec); err != nil && len(rec.Turns) > 0 {
-		return fail(err)
-	}
-	changes, err := ws.Changes(ctx)
 	if err != nil {
 		return fail(err)
 	}
@@ -234,6 +189,74 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	return ExitOK
+}
+
+// runSetup is what the runs of m2 agent run and m2 orchestrate share.
+type runSetup struct {
+	root  string // the math2 working tree
+	store string // the directory of the run records
+	svc   *api.Service
+	model llm.Model
+	roles map[string]*agent.Role
+}
+
+// run does one run of the job on the rung in a new work tree at dir, and writes the record of the run to the store. It returns the record, the work tree and its changes. A record with an error is a run that the model service stopped.
+func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir string) (*agent.Record, *workspace.Workspace, []workspace.Change, error) {
+	r := rs.roles[job.Role]
+	if r == nil {
+		return nil, nil, nil, fmt.Errorf("the role %s is not written yet", job.Role)
+	}
+	if err := os.MkdirAll(filepath.Dir(dir), 0o750); err != nil {
+		return nil, nil, nil, err
+	}
+	ws, err := workspace.Add(ctx, rs.root, dir, "HEAD")
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err := linkPackages(rs.root, ws.Dir); err != nil {
+		return nil, ws, nil, err
+	}
+	env, err := newLean(ctx, ws.Dir)
+	if err != nil {
+		return nil, ws, nil, err
+	}
+	var (
+		brief string
+		check agent.Goal
+	)
+	switch job.Role {
+	case "prove":
+		pin, err := prove.NewPin(ctx, ws, env, job)
+		if err != nil {
+			return nil, ws, nil, err
+		}
+		if brief, err = prove.Brief(ws, job, pin); err != nil {
+			return nil, ws, nil, err
+		}
+		check = prove.Goal(ws, env, job, pin)
+	case "formalize":
+		if brief, err = formalize.Brief(ws, job); err != nil {
+			return nil, ws, nil, err
+		}
+		check = formalize.Goal(ws, env, job)
+	}
+	ts, err := tools.Profile(r, rs.svc, ws, env)
+	if err != nil {
+		return nil, ws, nil, err
+	}
+	rn := agent.Runner{Role: r, Model: rs.model, Tools: ts, Goal: check}
+	rec, runErr := rn.Run(ctx, job, rung, brief)
+	if rec == nil {
+		return nil, ws, nil, runErr
+	}
+	if _, err := agent.WriteRecord(rs.store, rec); err != nil && len(rec.Turns) > 0 {
+		return rec, ws, nil, err
+	}
+	changes, err := ws.Changes(ctx)
+	if err != nil {
+		return rec, ws, nil, err
+	}
+	return rec, ws, changes, runErr
 }
 
 // linkPackages links lean/.lake/packages of the tree into the new work tree. Thus the work tree uses the Mathlib build of the tree, and the run does not get Mathlib again.

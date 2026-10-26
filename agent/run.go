@@ -104,6 +104,8 @@ func newID(t time.Time) string {
 }
 
 // Run runs the job on the rung of the ladder of the role, from 0, with the brief as the first message. The brief is the target, its neighbourhood and what the role needs (spec 12.2). An error means that the run could not start or that the model service failed. A run that stops for another reason gives a record with the outcome and the reason.
+//
+// A run never spends more than its budget in dollars. Before each turn, Run sets the limit of the output tokens so that the turn costs at most the money that is left. For the input, it counts each byte of the request as one token at the highest input price of the model.
 func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*Record, error) {
 	if err := job.Validate(); err != nil {
 		return nil, err
@@ -170,19 +172,15 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 		if reason := over(b, rec.Spend, now().Sub(start)); reason != "" {
 			return stop(Failure, reason)
 		}
-		limit := role.MaxTokens
+		req := &llm.Request{Model: g.Model, System: role.System, Messages: msgs, Tools: defs, MaxTokens: role.MaxTokens, Effort: g.Effort}
 		if b.USD > 0 {
-			p := price
-			if p.Over != nil {
-				p = *p.Over
-			}
-			left := int(math.Floor((b.USD - rec.Spend.USD) / p.Output * 1e6))
-			limit = min(limit, left)
-			if limit < 1 {
+			left := int(math.Floor((b.USD - rec.Spend.USD - inputBound(req, price)) / outputPrice(price) * 1e6))
+			req.MaxTokens = min(req.MaxTokens, left)
+			if req.MaxTokens < 1 {
 				return stop(Failure, fmt.Sprintf("the budget of $%.2f is used up", b.USD))
 			}
 		}
-		resp, err := rn.Model.Complete(ctx, &llm.Request{Model: g.Model, System: role.System, Messages: msgs, Tools: defs, MaxTokens: limit, Effort: g.Effort})
+		resp, err := rn.Model.Complete(ctx, req)
 		if err != nil {
 			rec.Finished = now()
 			return rec, fmt.Errorf("agent: turn %d: %w", turn, err)
@@ -273,6 +271,26 @@ func (rn *Runner) goal(ctx context.Context) (bool, string, error) {
 // nudge returns the message to the model when the goal does not hold.
 func nudge(job *Job, why string) string {
 	return fmt.Sprintf("The goal does not hold yet: %s. Continue with the tools, or call %s with the reason.", strings.TrimSuffix(cmp.Or(why, job.Goal), "."), StuckTool)
+}
+
+// overhead is the number of input tokens that inputBound adds to each request for the text that the model service adds, such as the instructions for the tools.
+const overhead = 2000
+
+// inputBound returns the most that the input of the request can cost in dollars. A token has at least one byte, thus the bound counts each byte of the request in JSON as one token, at the highest input price of the model.
+func inputBound(req *llm.Request, p llm.Price) float64 {
+	data, _ := json.Marshal(req)
+	if p.Over != nil {
+		p = *p.Over
+	}
+	return float64(len(data)+overhead) * max(p.Input, p.CacheRead, p.CacheWrite) / 1e6
+}
+
+// outputPrice returns the highest price of an output token of the model.
+func outputPrice(p llm.Price) float64 {
+	if p.Over != nil {
+		return max(p.Output, p.Over.Output)
+	}
+	return p.Output
 }
 
 // over returns why the spend is over the budget, or "".
