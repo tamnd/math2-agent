@@ -64,6 +64,8 @@ Each role in 12.1 has a suite of tasks with an objective outcome:
 
 The suite of formalize and prove is in `bench/agents`. Its first items are public, use only the Lean core library, and have a reference solution. Without a model service, a scripted model writes the reference and some wrong attempts, thus the suite checks the goal predicates of the roles on real Lean. A live run with the Claude models gives the items solved and the dollars of each item.
 
+The suites of explain and curate are in `bench/agents/explain` and `bench/agents/curate`. They need no Lean. The scripted model writes the reference and wrong attempts, and the scripted grounding check or judge gives the labels or the verdicts of the items. Thus the suites check the mechanical parts of the goals: the citations and the levels of explain, and the locator, the kind and the copy check of curate. A live run also grades the grounding check and the judge alone against the labels and the verdicts of the items, because the goals depend on them.
+
 Every role suite has three splits. **Public** items can be anywhere. **Held-out** items are never published. They are in a private repository that the tools of the agents cannot reach. **Fresh** items were made after the training cutoff of the model. Fresh items come from new Mathlib declarations, new formal-conjectures statements, new arXiv results with formal statements, and items that the maintainers write. Each model version is compared on all three splits. If public scores are much higher than fresh scores, the report gives the difference as a contamination signal.
 
 ### 17.3.5 Explanations
