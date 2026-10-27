@@ -1,0 +1,30 @@
+title = "A Toy Entry"
+date = 2024-05-06
+topics = [
+  "Mathematics/Algebra",
+  "Logic/Proof theory",
+]
+abstract = """
+<p>This entry is a fixture of the tests. It proves that
+&ldquo;<em>x</em> + 0 = <em>x</em>&rdquo; in a toy setting.</p>
+<p>The text is ours.</p>"""
+license = "bsd"
+note = ""
+
+[authors]
+
+[authors.tester]
+homepage = "tester_homepage"
+
+[authors.sample]
+
+[contributors]
+
+[notify]
+tester = "tester_email"
+
+[history]
+
+[extra]
+
+[related]

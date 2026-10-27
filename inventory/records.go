@@ -66,9 +66,9 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 	return out
 }
 
-// kindOf reads the kind of a record of the source. A record of a textbook has a kind of the inventory. It returns Unknown when the record does not show its kind.
+// kindOf reads the kind of a record of the source. A record of a textbook or a library can have a kind of the inventory. It returns Unknown when the record does not show its kind.
 func kindOf(src *ingest.Source, r *ingest.Record) string {
-	if src.Kind == "textbook" && slices.Contains(Kinds(), r.Kind) {
+	if (src.Kind == "textbook" || src.Kind == ingest.Library) && slices.Contains(Kinds(), r.Kind) {
 		return r.Kind
 	}
 	switch src.ID {
