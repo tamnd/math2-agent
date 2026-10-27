@@ -12,7 +12,7 @@ import (
 
 // Kinds returns the kinds of spec 04.2 that a mention or a row can have, and Unknown.
 func Kinds() []string {
-	return []string{"concept", "definition", "statement", "conjecture", "problem", "example", "counterexample", "object", "proof", "computation", "topic", Unknown}
+	return []string{"concept", "definition", "statement", "conjecture", "problem", "example", "counterexample", "object", "proof", "computation", "topic", "exercise", Unknown}
 }
 
 // Options controls one run of Cluster.
@@ -32,6 +32,7 @@ type Result struct {
 	Waiting int      // the number of groups of mentions that wait, because only models give them (rule I03)
 	// Equivalent is the number of joins of pass 2: each join puts two groups of pass 1 into one group, because they have statements with the same canonical type.
 	Equivalent int
+	Orphans    int // the number of attached mentions whose target has no row
 }
 
 // Cluster runs the first two passes of corpus spec K4.3 on the mentions. Pass 1 joins two mentions with the same identifier, or with identifiers that a crosswalk links. Pass 2 joins two statements of formal libraries with the same canonical type hash: Lean then proves each from the other with the identity, so they are one statement. Pass 2 never joins definitions, because two definitions with one type, such as two functions from ℕ to ℕ, are not one item. A row that a pass merged names the pass as its rule: identifiers or equivalence. Mentions that a row holds stay in one row, so Cluster never splits a row. Only a curator splits a row. When one group of mentions touches more than one row, Cluster keeps one row and gives the others the outcome merged.
@@ -73,6 +74,9 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 	res := &Result{Equivalent: joinEquivalent(u, ms)}
 	groups := map[string][]string{}
 	for i := range ms {
+		if ms[i].Attached() {
+			continue
+		}
 		r := u.find(ms[i].ID)
 		groups[r] = append(groups[r], ms[i].ID)
 	}
@@ -134,6 +138,7 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 		derive(keep, byID)
 		applyRules(keep, byID, opt.By)
 	}
+	res.Orphans = attach(rows, ms, byID)
 	sortRows(rows)
 	slices.Sort(res.Added)
 	res.Rows = rows
@@ -188,6 +193,9 @@ func joinIdentifiers(u unionFind, ms []Mention) {
 	owner := map[string]string{}
 	for i := range ms {
 		m := &ms[i]
+		if m.Attached() {
+			continue
+		}
 		u.find(m.ID)
 		for _, k := range Keys(m) {
 			if o, ok := owner[k]; ok {
@@ -340,4 +348,48 @@ func derive(r *Row, byID map[string]*Mention) {
 	r.MSC = slices.Compact(msc)
 	r.Spread = len(sources)
 	r.Layer = layerOf(slices.Sorted(maps.Keys(sources)))
+}
+
+// attach lists each attached mention in the row of its target: a proof in the field proofs, and a claim inside a proof in the field local (corpus arxiv AX5.2). The target of a claim is the target of the proof that holds it. It returns the number of attached mentions with no row to go to.
+func attach(rows []Row, ms []Mention, byID map[string]*Mention) int {
+	rowOf := map[string]int{}
+	for i := range rows {
+		rows[i].Proofs, rows[i].Local = nil, nil
+		if rows[i].Outcome != nil && rows[i].Outcome.Value == OutcomeMerged {
+			continue
+		}
+		for _, id := range rows[i].Mentions {
+			rowOf[id] = i
+		}
+	}
+	orphans := 0
+	for i := range ms {
+		m := &ms[i]
+		if !m.Attached() {
+			continue
+		}
+		to := m.AttachedTo
+		for n := 0; n < 8; n++ {
+			t := byID[to]
+			if t == nil || !t.Attached() {
+				break
+			}
+			to = t.AttachedTo
+		}
+		r, ok := rowOf[to]
+		if !ok {
+			orphans++
+			continue
+		}
+		if m.Kind == "proof" {
+			rows[r].Proofs = append(rows[r].Proofs, m.ID)
+		} else {
+			rows[r].Local = append(rows[r].Local, m.ID)
+		}
+	}
+	for i := range rows {
+		slices.Sort(rows[i].Proofs)
+		slices.Sort(rows[i].Local)
+	}
+	return orphans
 }

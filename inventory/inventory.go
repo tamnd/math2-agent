@@ -59,6 +59,28 @@ type Mention struct {
 	TypeHash string              `json:"type_hash,omitempty"` // the hash of the canonical form of the type of a statement of a formal library (pass 2 of K4.3)
 	Class    string              `json:"class"`               // the licence class (spec 9.3)
 	By       string              `json:"by"`                  // the importer and its version, or the run
+
+	// The fields below are for the mentions of the items of research papers (corpus arxiv AX5.3). The other sources leave them empty.
+	Role        string        `json:"role,omitempty"`         // the role of a statement in spec 04.2, for example lemma
+	Label       string        `json:"label,omitempty"`        // the label of the item in the paper, for example lem:key
+	Hash        string        `json:"hash,omitempty"`         // the content hash of the item (AX3.8)
+	TextRef     string        `json:"text_ref,omitempty"`     // where the text of the item is, when math2 does not copy it (spec 9.3)
+	Version     int           `json:"version,omitempty"`      // the version of the paper that the mention describes
+	Versions    []VersionRef  `json:"versions,omitempty"`     // the other versions that have the item, with their numbers
+	Number      string        `json:"number,omitempty"`       // the number that the paper prints
+	Env         string        `json:"env,omitempty"`          // the environment of the item
+	Head        string        `json:"head,omitempty"`         // how the item starts: environment, command or text
+	Also        []string      `json:"also,omitempty"`         // the locators of the other prints of a restated item (AX5.5)
+	Origin      string        `json:"origin,omitempty"`       // own, cited or restated (AX3.7)
+	CitesResult []CitedResult `json:"cites_result,omitempty"` // the results of other works that the item states (AX5.7)
+	ProofStatus string        `json:"proof_status,omitempty"` // of a statement: the state of its proof in the paper
+	Census      string        `json:"census,omitempty"`       // the census strength of the version (AX4.6)
+	Structure   *Structure    `json:"structure,omitempty"`    // the edges of the item in its paper (AX06)
+	AttachedTo  string        `json:"attached_to,omitempty"`  // of an attached mention: what it proves, or the proof that holds it (AX5.2)
+	Retired     int           `json:"retired,omitempty"`      // the version in which the item is gone (AX5.6)
+	Hints       []string      `json:"hints,omitempty"`        // hints for the passes, for example conjecture-candidate
+	Flags       []string      `json:"flags,omitempty"`        // the flags of the object record
+	Extractor   string        `json:"extractor,omitempty"`    // the extractor that made the object record
 }
 
 // Cite is a source that a model names for an item. The clustering does not join mentions by a cite, because a model can give a wrong id. A cite counts only when K9.5 confirms it.
@@ -67,6 +89,29 @@ type Cite struct {
 	ID      string `json:"id"`                // the id in the system, such as 10.1007/978-3-642-61795-0
 	Locator string `json:"locator,omitempty"` // where the item is in the source, such as Theorem 2.3
 }
+
+// VersionRef is one other version of a paper that has the item of a mention.
+type VersionRef struct {
+	Version int    `json:"version"`
+	Number  string `json:"number,omitempty"`
+}
+
+// CitedResult is a result of another work that an item states (corpus arxiv AX5.7).
+type CitedResult struct {
+	To         string `json:"to"`                // the mention id, the record id of the work, or bib:<key> while the key is not resolved
+	Locator    string `json:"locator,omitempty"` // where the result is in the work, for example Theorem 4.1
+	Confidence string `json:"confidence"`
+}
+
+// Structure is the edges of an item in its paper, as mention ids.
+type Structure struct {
+	Uses     []string `json:"uses,omitempty"`      // what the item uses
+	ProvedBy []string `json:"proved_by,omitempty"` // the proofs of the item
+	In       string   `json:"in,omitempty"`        // the section that the item is in
+}
+
+// Attached reports whether the mention is attached to another mention and is not a row by itself (corpus arxiv AX5.2).
+func (m *Mention) Attached() bool { return m.AttachedTo != "" }
 
 // Row is one distinct item of the inventory (corpus spec K4.1).
 type Row struct {
@@ -79,6 +124,8 @@ type Row struct {
 	Spread   int      `json:"spread"`            // the number of different sources among the mentions
 	Outcome  *Outcome `json:"outcome,omitempty"` // nil while the row is open
 	History  []Event  `json:"history,omitempty"`
+	Proofs   []string `json:"proofs,omitempty"` // the attached mentions of the proofs of the item (corpus arxiv AX5.2)
+	Local    []string `json:"local,omitempty"`  // the attached mentions of the claims inside these proofs
 }
 
 // The outcomes of a row (corpus spec K4.4).
