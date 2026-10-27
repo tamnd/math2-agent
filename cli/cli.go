@@ -71,7 +71,7 @@ var commands = []command{
 	{name: "compute", usage: "m2 compute run|verify [-root DIR] [-out DIR] [-runtime R] [-json] <tag>...|-all", summary: "Run a computation in the sandbox, or verify its output and its certificate.", run: runCompute},
 	{name: "prov", usage: provUsage, summary: "Show, record, credit, quarantine and confirm provenance.", run: runProv},
 	{name: "review", usage: reviewUsage, summary: "Show the review packet of a node, and write a fidelity review.", run: runReview},
-	{name: "autoform", usage: "m2 autoform <tag>", summary: "Make a formal statement for a node.", milestone: "M4"},
+	{name: "autoform", usage: autoformUsage, summary: "Run formalize for several candidate statements of a node, run the battery on each, and put the winner of the largest agreeing group on a branch.", run: runAutoform},
 	{name: "agent", usage: agentUsage + "\n       " + agentReportUsage + "\n       " + agentDatasetUsage, summary: "Do one agent run in a new work tree, write the weekly agent report, or write the dataset of the runs of a quarter.", run: runAgent},
 	{name: "orchestrate", usage: orchestrateUsage, summary: "Run the jobs of the agent roles from a queue, with budgets and the escalation ladder.", run: runOrchestrate},
 }

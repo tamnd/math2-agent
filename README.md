@@ -90,7 +90,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 review queue` | List the bindings that wait for a review, with the nodes that more nodes use first. | written |
 | `m2 review sample`, `m2 review measure` | Draw the monthly re-review sample, and measure the disagreement of the re-reviews. | written |
 | `m2 review export [reviewer]` | List the reviews of each reviewer, for a CV or a grant report. | written |
-| `m2 autoform <tag>` | Make a formal statement for a node. | M4 |
+| `m2 autoform <tag>` | Run the formalize role several times on a node, one candidate for each rung of `-rungs`, run the battery on each candidate, put the candidates that pass into groups by the hash of their statement, and commit the first candidate of the largest group on a branch, with its provenance lines. The report in `autoform/` of the store lists the candidates, the groups, the battery of the winner, the dissenting candidates and the definitions in the uses closure that have no Lean binding. `-pr` pushes the branch and opens the pull request with `gh`. | written |
 | `m2 agent run align\|bump\|curate\|enumerate\|exercise\|explain\|explore\|formalize\|informalize\|prove\|review-assist\|understand\|write` | Do one agent run of one of the thirteen roles in a new work tree, and write its run record. | written |
 | `m2 agent report` | Write the weekly agent report of the runs: volume, acceptance, cost and incidents. | written |
 | `m2 corpus report` | Print the cost, the acceptance rate and the review hours of each stage of the corpus, from the run records, the provenance logs, the reviews and the inventory. | written |
