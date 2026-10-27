@@ -1,0 +1,10 @@
+[tester]
+name = "Ada Tester"
+
+[tester.emails]
+
+[tester.emails.tester_email]
+user = ["ada"]
+
+[sample]
+name = "Bo Sample"

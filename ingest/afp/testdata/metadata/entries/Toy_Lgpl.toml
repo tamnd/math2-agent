@@ -1,0 +1,9 @@
+title = "An LGPL Toy"
+date = 2023-01-02
+topics = ["Computer science/Algorithms"]
+abstract = """<p>An abstract that the records must not keep.</p>"""
+license = "lgpl"
+
+[authors]
+
+[authors.unknown_person]

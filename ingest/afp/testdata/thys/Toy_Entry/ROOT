@@ -1,0 +1,5 @@
+chapter AFP
+
+session Toy_Entry = HOL +
+  theories
+    Toy

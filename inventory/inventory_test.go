@@ -173,9 +173,9 @@ func TestFromRecordsDropsShareAlikeText(t *testing.T) {
 func TestFromRecordsLibrary(t *testing.T) {
 	src := &ingest.Source{ID: "afp", Kind: ingest.Library, Licence: "BSD-3-Clause", Class: ingest.Open, Intake: "crosswalk", Authored: "mixed",
 		Snapshots: []ingest.Snapshot{{Hash: "blake3:00", Commit: "c0"}, {Hash: "blake3:01", Commit: "c1"}}}
-	ms := FromRecords(src, "blake3:01", "afp/1", []ingest.Record{{ID: "Prime_Cyclic", Licence: "LGPL-2.1-only", Class: ingest.RecordOnly}, {ID: "Prime_Factors", Class: ingest.Open}})
-	got := []string{ms[0].Pin, ms[0].Intake, ms[0].Authored, ms[0].Licence, ms[1].Licence}
-	if want := []string{"c1", "crosswalk", "mixed", "LGPL-2.1-only", "BSD-3-Clause"}; !slices.Equal(got, want) {
+	ms := FromRecords(src, "blake3:01", "afp/1", []ingest.Record{{ID: "Prime_Cyclic", Kind: "statement", Licence: "LGPL-2.1-only", Class: ingest.RecordOnly}, {ID: "Prime_Factors", Kind: "entry", Class: ingest.Open}})
+	got := []string{ms[0].Pin, ms[0].Intake, ms[0].Authored, ms[0].Licence, ms[1].Licence, ms[0].Kind, ms[1].Kind}
+	if want := []string{"c1", "crosswalk", "mixed", "LGPL-2.1-only", "BSD-3-Clause", "statement", Unknown}; !slices.Equal(got, want) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 	src.Kind = "wiki"
