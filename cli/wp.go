@@ -14,12 +14,11 @@ import (
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-const wpUsage = "m2 wp extract [-corpus DIR] [-list FILE] [-page ID] [-type T] [-api URL] [title...]\n       m2 wp scope -store DB -dump DATE -assess FILE [-cited FILE] [-wikidata FILE] [-corpus DIR] [-work DIR]\n       m2 wp fetch|census|refresh|gold"
+const wpUsage = "m2 wp extract [-corpus DIR] [-list FILE] [-page ID] [-type T] [-api URL] [title...]\n       m2 wp scope -store DB -dump DATE -assess FILE [-cited FILE] [-wikidata FILE] [-corpus DIR] [-work DIR]\n       m2 wp gold draw|measure [-corpus DIR] [-seed N]\n       m2 wp fetch|census|refresh"
 
 // wpLater holds the wp subcommands that are not written yet, with the
 // milestone of the Wikipedia roadmap (WP14) that delivers each of them.
 var wpLater = map[string]string{
-	"gold":    "WP-M1, the scope",
 	"fetch":   "WP-M2, the content plane",
 	"census":  "WP-M3, extraction and the census",
 	"refresh": "WP-M7, all of the scope",
@@ -38,6 +37,8 @@ func runWP(args []string, stdout, stderr io.Writer) int {
 		return runWPExtract(args[1:], stdout, stderr)
 	case sub == "scope":
 		return runWPScope(args[1:], stdout, stderr)
+	case sub == "gold":
+		return runWPGold(args[1:], stdout, stderr)
 	case wpLater[sub] != "":
 		fmt.Fprintf(stderr, "m2 wp %s: this command is not written yet. It arrives in %s.\n", sub, wpLater[sub])
 		return ExitNotWritten
