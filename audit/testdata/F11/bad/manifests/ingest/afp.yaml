@@ -1,0 +1,9 @@
+# The import manifest of afp. m2 ingest writes this file.
+source: afp
+adapter: afp/1
+snapshot: blake3:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+records: 2
+hash: blake3:7da40d4dd2d2842ee65f9e69e2872c0dd8e5f7cddfb6c6520c5c45fd8b78536a
+classes:
+  open: 1
+  record: 1

@@ -42,12 +42,17 @@ func init() { ingest.Register(Adapter{}) }
 // Source returns the catalogue entry of Mathlib.
 func (Adapter) Source() ingest.Source {
 	return ingest.Source{
-		ID:          "mathlib",
-		Name:        "Mathlib",
-		Home:        Repository,
-		Licence:     "Apache-2.0",
-		Class:       ingest.Open,
-		Attribution: "Mathlib, the Mathlib Community, " + Repository + ", Apache License 2.0",
+		ID:           "mathlib",
+		Name:         "Mathlib",
+		Home:         Repository,
+		Licence:      "Apache-2.0",
+		Kind:         ingest.Library,
+		Class:        ingest.Open,
+		Authored:     "human",
+		Intake:       "bind",
+		IntakeReason: "a Lean 4 library under Apache-2.0, which allows its text in the prose zone with attribution",
+		Modules:      []string{"Mathlib"},
+		Attribution:  "Mathlib, the Mathlib Community, " + Repository + ", Apache License 2.0",
 	}
 }
 

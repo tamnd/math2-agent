@@ -63,12 +63,17 @@ func init() { ingest.Register(Adapter{}) }
 // Source returns the catalogue entry of formal-conjectures.
 func (Adapter) Source() ingest.Source {
 	return ingest.Source{
-		ID:          "formal_conjectures",
-		Name:        "Formal Conjectures",
-		Home:        Repository,
-		Licence:     "Apache-2.0",
-		Class:       ingest.Open,
-		Attribution: "The Formal Conjectures Authors, " + Repository + ", Apache License 2.0",
+		ID:           "formal_conjectures",
+		Name:         "Formal Conjectures",
+		Home:         Repository,
+		Licence:      "Apache-2.0",
+		Kind:         ingest.Library,
+		Class:        ingest.Open,
+		Authored:     "human",
+		Intake:       "bind",
+		IntakeReason: "a Lean 4 library under Apache-2.0, which allows its text in the prose zone with attribution",
+		Modules:      []string{"FormalConjectures"},
+		Attribution:  "The Formal Conjectures Authors, " + Repository + ", Apache License 2.0",
 	}
 }
 

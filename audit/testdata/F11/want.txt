@@ -1,0 +1,2 @@
+nodes/3C5/3C53TD.md:9:1: F11: the body shares 5 fingerprints with onelab category, and the library has the intake class link, which gives no text. Write the text in your own words
+nodes/5ZQ/5ZQ1PM.md:9:1: F11: the body shares 5 fingerprints with afp Prime_Cyclic, which has the licence LGPL-2.1-only. Only the text of an item with an open licence can go into a node. Write the text in your own words

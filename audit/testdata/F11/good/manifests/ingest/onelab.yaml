@@ -1,0 +1,8 @@
+# The import manifest of onelab. m2 ingest writes this file.
+source: onelab
+adapter: onelab/1
+snapshot: blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+records: 1
+hash: blake3:cf3d70be4f81253952703d5bf887a0ab0604c536da0906c6ce1606ef5900f005
+classes:
+  record: 1

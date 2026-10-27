@@ -1,0 +1,4 @@
+manifests/sources.yaml:24:1: F10: blib: the intake class "share" is not one of [bind crosswalk link evaluate exclude]
+manifests/sources.yaml:44:1: F10: clib: the library has the intake class crosswalk and no intake_reason
+records/mentions/alib/AAA.jsonl:2:1: F10: the mention m2://rec/alib/Nat.three_le#1 of the library alib has no pin and no licence. Import the library again
+records/mentions/alib/AAA.jsonl:3:1: F10: the mention m2://rec/alib/Nat.four_le#1 has the intake class "bound", which is not one of [bind crosswalk link evaluate exclude]

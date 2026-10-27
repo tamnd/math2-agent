@@ -10,9 +10,15 @@ import (
 	"github.com/tamnd/math2-agent/ingest"
 )
 
-// FromRecords gives one mention for each record of one import of the source src. The snapshot is the hash of the snapshot that the import read, and by names the importer and its version. The licence gate of ingest has already removed the text that math2 cannot store. FromRecords also removes text under a share-alike licence, because the record plane keeps no such text. A mention of a source with a licence for each item records the licence of the item (rule L06).
+// FromRecords gives one mention for each record of one import of the source src. The snapshot is the hash of the snapshot that the import read, and by names the importer and its version. The licence gate of ingest has already removed the text that math2 cannot store. FromRecords also removes text under a share-alike licence, because the record plane keeps no such text. A mention of a source with a licence for each item records the licence of the item (rule L06). A mention of a formal library records the licence of the item, the commit of the snapshot, the intake class and the field authored of the library (rules F10 and F12).
 func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) []Mention {
 	out := make([]Mention, 0, len(recs))
+	var pin string
+	for _, sn := range src.Snapshots {
+		if sn.Hash == snapshot {
+			pin = sn.Commit
+		}
+	}
 	for _, r := range recs {
 		m := Mention{
 			ID:       MentionID(src.ID, r.ID, 1),
@@ -29,8 +35,11 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 		if r.Class.StoresText() && !ingest.ShareAlike(licence) {
 			m.Text = r.Text
 		}
-		if src.PerItemLicence {
+		if src.PerItemLicence || src.Kind == ingest.Library {
 			m.Licence = licence
+		}
+		if src.Kind == ingest.Library {
+			m.Pin, m.Intake, m.Authored = pin, src.Intake, src.Authored
 		}
 		for _, k := range slices.Sorted(maps.Keys(r.Meta)) {
 			v := r.Meta[k]

@@ -37,6 +37,9 @@ type Source struct {
 	PerItemLicence bool          `yaml:"per_item_licence,omitempty"` // each item has its own licence (K13.4)
 	PublicDomain   *PublicDomain `yaml:"public_domain,omitempty"`    // the public-domain answers for a work in the public domain (K5.2.3)
 	Authored       string        `yaml:"authored,omitempty"`         // one of Authorships
+	Intake         string        `yaml:"intake,omitempty"`           // for a formal library, one of Intakes (corpus K6.2)
+	IntakeReason   string        `yaml:"intake_reason,omitempty"`    // why the library has its intake class
+	Modules        []string      `yaml:"modules,omitempty"`          // for a Lean library, the root modules, for example Mathlib. Rule F13 finds the library of a declaration by them.
 	Edition        string        `yaml:"edition,omitempty"`          // the pinned edition, where editions differ in licence
 	Channel        string        `yaml:"channel,omitempty"`          // one of Channels
 	Terms          *Terms        `yaml:"terms,omitempty"`            // the terms of use of the source
@@ -67,12 +70,26 @@ type Terms struct {
 	AI     string `yaml:"ai,omitempty"`     // the clause on AI or machine learning, or "none stated"
 }
 
-// The values of the fields kind, authored and channel of a source document (corpus K5.2).
+// The values of the fields kind, authored, channel and intake of a source document (corpus K5.2 and K6.2).
 var (
-	Kinds       = []string{"reference", "wiki", "textbook", "paper-index", "extraction", "curriculum", "exercises", "database"}
+	Kinds       = []string{"reference", "wiki", "textbook", "paper-index", "extraction", "curriculum", "exercises", "database", Library}
 	Authorships = []string{"human", "ai", "mixed"}
 	Channels    = []string{"dump", "git", "api", "bulk", "page", "catalogue"}
+	Intakes     = []string{"bind", "crosswalk", "link", "evaluate", "exclude"}
 )
+
+// Library is the kind of a formal library, for example Mathlib (corpus K6.3).
+const Library = "library"
+
+// NoText reports whether the corpus takes no text and no statements from a library with the intake class: link, evaluate or exclude (rule F11).
+func NoText(intake string) bool {
+	return intake == "link" || intake == "evaluate" || intake == "exclude"
+}
+
+// ByAI reports whether a model wrote all or part of a source whose field authored has the value. The value mixed has the rules of ai (corpus K6.5).
+func ByAI(authored string) bool {
+	return authored == "ai" || authored == "mixed"
+}
 
 // PublicDomainLicence is the licence of a work in the public domain. SPDX has no identifier for it.
 const PublicDomainLicence = "LicenseRef-public-domain"

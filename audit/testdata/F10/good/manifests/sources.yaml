@@ -1,0 +1,23 @@
+# The external sources of math2 and each snapshot that math2 used (spec 09.2). m2 ingest writes this file. A maintainer approves the class of each new source.
+sources:
+  - id: alib
+    name: A test Lean library
+    kind: library
+    home: https://example.org/alib
+    licence: Apache-2.0
+    class: open
+    licence_read:
+      at: https://example.org/alib/LICENSE
+      on: "2026-10-01"
+      by: a-reader
+    authored: human
+    intake: bind
+    intake_reason: a Lean 4 library under Apache-2.0
+    channel: git
+    attribution: A test Lean library, https://example.org/alib, Apache-2.0
+    approved_by: a-maintainer
+    snapshots:
+      - url: https://example.org/alib.tar.gz
+        hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        date: "2026-10-01"
+        commit: 0123456789abcdef0123456789abcdef01234567
