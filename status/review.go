@@ -24,6 +24,7 @@ type Review struct {
 	Conventions   []string `yaml:"conventions,omitempty" json:"conventions,omitempty"`
 	Class         string   `yaml:"class,omitempty" json:"class,omitempty"` // the class of the fault for a not-faithful verdict
 	Notes         string   `yaml:"notes,omitempty" json:"notes,omitempty"`
+	Minutes       float64  `yaml:"minutes,omitempty" json:"minutes,omitempty"` // the time of the review as the reviewer gives it, or 0 when the review does not record it (corpus K12.5)
 }
 
 // The verdicts of a review.

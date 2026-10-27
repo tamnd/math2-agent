@@ -85,13 +85,13 @@ func TestReviewWrite(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, "reviews")); err == nil {
 		t.Error("a dry run wrote a review")
 	}
-	code, stdout, stderr = run("review", "-root", root, "-reviewer", "github:reviewer", "-verdict", "faithful-with-conventions", "-convention", "ℕ starts at 0", "-date", "2026-11-01", "-json", "1B0000")
+	code, stdout, stderr = run("review", "-root", root, "-reviewer", "github:reviewer", "-verdict", "faithful-with-conventions", "-convention", "ℕ starts at 0", "-date", "2026-11-01", "-minutes", "4.5", "-json", "1B0000")
 	var r status.Review
-	if err := json.Unmarshal([]byte(stdout), &r); code != ExitOK || err != nil || r.ID != "r-1B0000-01" || r.Decl != "Nat.zero_add" || len(r.Conventions) != 1 {
+	if err := json.Unmarshal([]byte(stdout), &r); code != ExitOK || err != nil || r.ID != "r-1B0000-01" || r.Decl != "Nat.zero_add" || len(r.Conventions) != 1 || r.Minutes != 4.5 {
 		t.Fatalf("exit code %d, %v, %s %s", code, err, stdout, stderr)
 	}
 	reviews, err := status.LoadReviews(root)
-	if err != nil || reviews["r-1B0000-01"].TypeHash != "blake3:zeroadd" {
+	if err != nil || reviews["r-1B0000-01"].TypeHash != "blake3:zeroadd" || reviews["r-1B0000-01"].Minutes != 4.5 {
 		t.Errorf("the tree has %+v, %v", reviews, err)
 	}
 }
@@ -105,6 +105,7 @@ func TestReviewErrors(t *testing.T) {
 	}{
 		{[]string{"review"}, ExitUsage, "give one tag"},
 		{[]string{"review", "-root", root, "-dry-run", "1B0000"}, ExitUsage, "need a verdict"},
+		{[]string{"review", "-root", root, "-reviewer", "github:reviewer", "-verdict", "faithful", "-minutes", "-1", "1B0000"}, ExitUsage, "-minutes is below 0"},
 		{[]string{"review", "-root", root, "-out", t.TempDir(), "1B0000"}, ExitFailure, "Run m2 build first"},
 		{[]string{"review", "-root", root, "ZZZZZZ"}, ExitFailure, "no node has the tag ZZZZZZ"},
 		{[]string{"review", "-root", root, "-decl", "Nat.add_zero", "1B0000"}, ExitFailure, "no Lean binding of Nat.add_zero"},
