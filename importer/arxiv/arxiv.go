@@ -5,6 +5,7 @@
 //	analysis/objects/<YYMM>/<id>.jsonl   the object records of each version (AX03)
 //	analysis/edges/<YYMM>/<id>.jsonl     the in-paper edges (AX06)
 //	analysis/census/<YYMM>/<id>v<n>.json the census of each version (AX04)
+//	analysis/bib/<YYMM>/<id>.jsonl       the bibliography entries of each version, for the cited results (AX5.7)
 //	metadata/<YYMM>.jsonl                the metadata of the papers, for the licence and the MSC codes
 //
 // The id of a mention is ax://paper/<id>#<tag>, where the tag is the tag of the object in the analysis plane. The id has no version, because the tag stays on its object from version to version. The mention describes the latest version that has the object. A mention whose object is not in the latest version of the paper is retired.
@@ -128,6 +129,9 @@ type Result struct {
 	Attached int
 	Retired  int
 	Restated int
+	// CitedMentions is the cited results that go to a mention of a paper of the import, and CitedWorks is the cited results that go to the record id of a work, as arxiv:<id> or doi:<doi> (AX5.7). The other cited results keep the key bib:<key>, because the bibliography does not resolve it.
+	CitedMentions int
+	CitedWorks    int
 }
 
 // Import reads the checkout of tamnd/arxiv at root.
@@ -167,10 +171,15 @@ func ImportNames(root string, names *Names) (*Result, error) {
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return nil, err
 		}
-		p := paperIn{root: root, month: month, id: id, file: filepath.ToSlash(filepath.Join("analysis", "objects", month, filepath.Base(f))), snapshot: snapshot, meta: meta[id], names: names}
+		bs, err := readLines[Bib](filepath.Join(root, "analysis", "bib", month, filepath.Base(f)))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return nil, err
+		}
+		p := paperIn{root: root, month: month, id: id, file: filepath.ToSlash(filepath.Join("analysis", "objects", month, filepath.Base(f))), snapshot: snapshot, meta: meta[id], names: names, bib: bibOf(bs)}
 		p.add(res, objs, es)
 		res.Papers++
 	}
+	res.CitedMentions, res.CitedWorks = resolveCites(res.Mentions)
 	slices.SortFunc(res.Mentions, func(a, b inventory.Mention) int { return strings.Compare(a.ID, b.ID) })
 	return res, nil
 }
@@ -210,6 +219,7 @@ type paperIn struct {
 	root, month, id, file, snapshot string
 	meta                            *Paper
 	names                           *Names
+	bib                             map[int]map[string]Bib
 }
 
 func (p *paperIn) add(res *Result, objs []Object, es []Edge) {
@@ -409,6 +419,11 @@ func (vp *versionIn) mention(o Object) inventory.Mention {
 		from, to := localOf(e.From), localOf(e.To)
 		switch {
 		case from == o.Local && e.Predicate == "cites-result":
+			if key, ok := strings.CutPrefix(to, "bib:"); ok {
+				if w := vp.work(key); w != "" {
+					to = w
+				}
+			}
 			m.CitesResult = append(m.CitesResult, inventory.CitedResult{To: to, Locator: e.Part, Confidence: e.Confidence})
 		case from == o.Local && e.Predicate == "uses" && !strings.HasPrefix(to, "bib:"):
 			if t := vp.target(to); t != "" && !slices.Contains(s.Uses, t) {

@@ -32,6 +32,8 @@ type Result struct {
 	Merged  int      // the number of rows that the run merged into other rows
 	Touched int      // the number of old rows that got new mentions
 	Waiting int      // the number of groups of mentions that wait, because only models give them (rule I03)
+	// Cited is the number of joins of pass 1 by a cited result: each join puts two groups into one group, because a mention states the result of another mention with the confidence high (corpus arxiv AX5.7 and AX8.2).
+	Cited int
 	// Hashed is the number of joins of the hash pass: each join puts two groups into one group, because they have items of one kind and one block with the same content hash (corpus arxiv AX8.2).
 	Hashed int
 	// Equivalent is the number of joins of pass 2: each join puts two groups of pass 1 into one group, because they have statements with the same canonical type.
@@ -78,8 +80,9 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 		}
 	}
 	joinIdentifiers(u, ms)
+	cited := joinCited(u, ms, byID)
 	pass1 := u.roots(ms)
-	res := &Result{Hashed: joinHash(u, ms)}
+	res := &Result{Cited: cited, Hashed: joinHash(u, ms)}
 	hashed := u.roots(ms)
 	res.Equivalent = joinEquivalent(u, ms)
 	groups := map[string][]string{}
@@ -229,6 +232,32 @@ func joinIdentifiers(u unionFind, ms []Mention) {
 	}
 }
 
+// joinCited joins a mention to the mention whose result it states, when the cited result has the confidence high and the target is a mention of this run (corpus arxiv AX5.7 and AX8.2). The kinds must agree, or be statement and conjecture, which share a block (AX8.1). It returns the number of joins.
+func joinCited(u unionFind, ms []Mention, byID map[string]*Mention) int {
+	n := 0
+	for i := range ms {
+		m := &ms[i]
+		if m.Attached() {
+			continue
+		}
+		for _, c := range m.CitesResult {
+			t := byID[c.To]
+			if c.Confidence != "high" || t == nil || t == m || t.Attached() || !sameBlockKind(m.Kind, t.Kind) {
+				continue
+			}
+			if u.union(m.ID, t.ID) {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+func sameBlockKind(a, b string) bool {
+	claim := func(k string) bool { return k == "statement" || k == "conjecture" }
+	return a == b || claim(a) && claim(b)
+}
+
 // joinHash joins the mentions of one kind and one block with the same content hash. It returns the number of joins.
 func joinHash(u unionFind, ms []Mention) int {
 	n := 0
@@ -286,6 +315,11 @@ func joinEquivalent(u unionFind, ms []Mention) int {
 func Passes(ms []Mention) []map[string]string {
 	u := unionFind{}
 	joinIdentifiers(u, ms)
+	byID := map[string]*Mention{}
+	for i := range ms {
+		byID[ms[i].ID] = &ms[i]
+	}
+	joinCited(u, ms, byID)
 	p1 := u.roots(ms)
 	joinHash(u, ms)
 	p2 := u.roots(ms)

@@ -129,7 +129,7 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
 		}
-		fmt.Fprintf(stdout, "%s: %d mentions from %d papers, %d attached, %d retired, %d restated prints, %d objects with no tag\n", *source, len(res.Mentions), res.Papers, res.Attached, res.Retired, res.Restated, len(res.Untagged))
+		fmt.Fprintf(stdout, "%s: %d mentions from %d papers, %d attached, %d retired, %d restated prints, %d cited results to a mention and %d to a work, %d objects with no tag\n", *source, len(res.Mentions), res.Papers, res.Attached, res.Retired, res.Restated, res.CitedMentions, res.CitedWorks, len(res.Untagged))
 		if len(res.Untagged) > 0 {
 			fmt.Fprintf(stderr, "%s: %d objects of %s have no tag, so they have no mention. Run ax tags analysis -all on the checkout.\n", name, len(res.Untagged), *corpus)
 		}
@@ -323,7 +323,7 @@ func arxivReport(root string, res *inventory.Result, msc string, stdout io.Write
 	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(arxivInventory)), []byte(report), 0o644); err != nil { // #nosec G306 -- the report is public.
 		return err
 	}
-	fmt.Fprintf(stdout, "arxiv: joined by hash %d, name candidates %d, wrote %s and %s\n", res.Hashed, len(cands), arxivNames, arxivInventory)
+	fmt.Fprintf(stdout, "arxiv: joined by cited results %d, joined by hash %d, name candidates %d, wrote %s and %s\n", res.Cited, res.Hashed, len(cands), arxivNames, arxivInventory)
 	return nil
 }
 
@@ -378,7 +378,7 @@ func cluster(root, commit string, stdout io.Writer) (*inventory.Result, error) {
 	if err := inventory.AppendRegister(root, res.Added, commit); err != nil {
 		return nil, err
 	}
-	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal hashes %d, joined by equal formal statements %d, attached with no row %d, changed by the formal rules %d, changed by aligned edges %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Hashed, res.Equivalent, res.Orphans, res.Formal, res.Aligned)
+	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by cited results %d, joined by equal hashes %d, joined by equal formal statements %d, attached with no row %d, changed by the formal rules %d, changed by aligned edges %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Cited, res.Hashed, res.Equivalent, res.Orphans, res.Formal, res.Aligned)
 	return res, nil
 }
 
