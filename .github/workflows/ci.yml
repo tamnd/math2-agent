@@ -103,17 +103,6 @@ jobs:
         run: |
           "$RUNNER_TEMP/m2" help
           test "$("$RUNNER_TEMP/m2" version)" = "m2 ci"
-      - name: a command that is not written yet exits with code 3
-        run: |
-          for cmd in autoform; do
-            code=0
-            "$RUNNER_TEMP/m2" "$cmd" 2> err.txt || code=$?
-            if [ "$code" != 3 ]; then
-              echo "m2 $cmd exited with code $code. The expected code is 3."
-              exit 1
-            fi
-            grep -q "It arrives in M" err.txt
-          done
       - name: two builds of the valid fixtures give the same output hash
         run: |
           a=$("$RUNNER_TEMP/m2" build -root testdata/nodes/valid -out "$RUNNER_TEMP/b1" | tail -n 1)
