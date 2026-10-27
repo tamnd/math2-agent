@@ -12,9 +12,8 @@
         "tag": "ETCDHB"
       },
       {
-        "evidence": "E1",
-        "hash": "blake3:08b64ab3317168988c4af39c9b0dfa7a70fc0a1f1c6ebb2a9dd8ff84aeb7b191",
-        "tag": "7S3BEX"
+        "hash": "blake3:41f4bda5b92efcaa89d1f6e6d3aab59260b0331321d7d841ed46ad446a877095",
+        "tag": "EX1A9Q"
       }
     ],
     "api": "v1",
@@ -27,18 +26,18 @@
           {
             "channel": "lexical",
             "rank": 1,
-            "score": 9.655024
+            "score": 9.752384
           },
           {
             "channel": "embedding",
-            "rank": 9,
+            "rank": 10,
             "score": 0.45613
           }
         ],
         "evidence": "E1",
         "kind": "counterexample",
         "name": "A4 has no subgroup of order 6",
-        "score": 0.021469,
+        "score": 0.021385,
         "tag": "2J2QXT"
       },
       {
@@ -46,38 +45,37 @@
           {
             "channel": "lexical",
             "rank": 3,
-            "score": 7.952055
+            "score": 8.116257
           },
           {
             "channel": "embedding",
-            "rank": 2,
+            "rank": 3,
             "score": 0.548965
           }
         ],
         "evidence": "E0",
         "kind": "conjecture",
         "name": "The converse of Lagrange's theorem",
-        "score": 0.021076,
+        "score": 0.021028,
         "tag": "ETCDHB"
       },
       {
         "channels": [
           {
             "channel": "lexical",
-            "rank": 2,
-            "score": 8.891931
+            "rank": 5,
+            "score": 6.857644
           },
           {
             "channel": "embedding",
-            "rank": 13,
-            "score": 0.383709
+            "rank": 2,
+            "score": 0.598153
           }
         ],
-        "evidence": "E1",
-        "kind": "proof",
-        "name": "Proof that a group of prime order is cyclic",
-        "score": 0.019512,
-        "tag": "7S3BEX"
+        "kind": "exercise",
+        "name": "The order of an element of a group of order 15",
+        "score": 0.01985,
+        "tag": "EX1A9Q"
       }
     ]
   },

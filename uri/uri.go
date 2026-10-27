@@ -31,8 +31,8 @@ var (
 	slugRE    = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 )
 
-// Kinds are the 11 node kinds. Each kind is also an alias namespace.
-var Kinds = []string{"concept", "definition", "statement", "conjecture", "problem", "example", "counterexample", "object", "proof", "computation", "topic"}
+// Kinds are the 12 node kinds. Each kind is also an alias namespace.
+var Kinds = []string{"concept", "definition", "statement", "conjecture", "problem", "example", "counterexample", "object", "proof", "computation", "topic", "exercise"}
 
 // Namespaces are the alias namespaces that are not kinds.
 var Namespaces = []string{"msc", "lean", "release", "ext"}

@@ -30,6 +30,10 @@
         "tag": "ENS73X"
       },
       {
+        "hash": "blake3:41f4bda5b92efcaa89d1f6e6d3aab59260b0331321d7d841ed46ad446a877095",
+        "tag": "EX1A9Q"
+      },
+      {
         "evidence": "E1",
         "hash": "blake3:aa0740687c2f650698976678a844eefbca2d54ba3335fc1b7d037be38148e64d",
         "tag": "FQAJ21"
@@ -59,6 +63,11 @@
     "method": "neighbours",
     "result": {
       "edges": [
+        {
+          "from": "EX1A9Q",
+          "to": "Q529ES",
+          "type": "about"
+        },
         {
           "from": "Subgroup.card_subgroup_dvd_card",
           "label": "exact",
@@ -144,6 +153,7 @@
         "DTT8HP",
         "E18G47",
         "ENS73X",
+        "EX1A9Q",
         "FQAJ21",
         "M8XBZ4",
         "N98ZA2",

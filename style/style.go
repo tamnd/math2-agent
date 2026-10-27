@@ -47,6 +47,7 @@ var Main = map[string]string{
 	"object":         "Description",
 	"computation":    "Description",
 	"topic":          "Summary",
+	"exercise":       "Exercise",
 }
 
 // The phrases of rule Y02. A space matches each run of white space.

@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/tamnd/math2-agent/schema"
 )
 
 // unzip writes the files of the archive to a new directory and returns it.
@@ -110,7 +112,7 @@ func TestArchiveFixtures(t *testing.T) {
 				continue
 			}
 			// The fixtures have no schema file, so a link to it is broken on the site too.
-			if st, err := os.Stat(filepath.Join(root, filepath.FromSlash(file))); (err != nil || st.IsDir()) && file != "schema/node.v1.json" {
+			if st, err := os.Stat(filepath.Join(root, filepath.FromSlash(file))); (err != nil || st.IsDir()) && file != schema.File {
 				t.Errorf("%s: the link %s names no file", rel, ref)
 			}
 		}

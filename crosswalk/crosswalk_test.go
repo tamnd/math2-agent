@@ -60,7 +60,7 @@ func TestCheck(t *testing.T) {
 
 // TestSchema checks that the systems are the keys of same_as in the schema, and that each pattern of the schema agrees with Check on the examples.
 func TestSchema(t *testing.T) {
-	data, err := os.ReadFile("../schema/node.v1.json")
+	data, err := os.ReadFile("../schema/node.v2.json")
 	if err != nil {
 		t.Fatal(err)
 	}

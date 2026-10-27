@@ -19,7 +19,7 @@
 <tr><td><a href="{{.Search}}"><code>api/search.json</code></a></td><td>The search index of this site.</td></tr>
 <tr><td><a href="{{url "api/reviewers.json"}}"><code>api/reviewers.json</code></a></td><td>The reviewers and the number of reviews of each one. The reviews of one reviewer are at <code>api/reviewers/&lt;SLUG&gt;.json</code>, where the slug is the id with a hyphen for the colon, for example <code>github-octocat</code>.</td></tr>
 <tr><td><a href="{{.Spec}}"><code>api/spec.json</code></a></td><td>The spec documents. Each one is also at <code>spec/&lt;slug&gt;.md</code>.</td></tr>
-<tr><td><a href="{{.Schema}}"><code>schema/node.v1.json</code></a></td><td>The JSON Schema 2020-12 for the front matter.</td></tr>
+<tr><td><a href="{{.Schema}}"><code>{{schemaFile}}</code></a></td><td>The JSON Schema 2020-12 for the front matter.</td></tr>
 <tr><td><a href="{{.Macros}}"><code>macros/m2.katex.json</code></a></td><td>The TeX macros of the node bodies, for KaTeX or MathJax.</td></tr>
 </tbody>
 </table>

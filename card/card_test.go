@@ -114,8 +114,8 @@ func TestLevelText(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	if got := Embedded().Kinds(); len(got) != 11 {
-		t.Errorf("the embedded cards have the kinds %v, and want 11", got)
+	if got := Embedded().Kinds(); len(got) != 12 {
+		t.Errorf("the embedded cards have the kinds %v, and want 12", got)
 	}
 	for name, text := range map[string]string{
 		"version":   "version: cards.v2\ncards: {}\n",

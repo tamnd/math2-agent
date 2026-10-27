@@ -27,7 +27,7 @@
           {
             "channel": "formula",
             "rank": 1,
-            "score": 1.000186
+            "score": 1.000182
           }
         ],
         "evidence": "E3",
@@ -41,7 +41,7 @@
           {
             "channel": "formula",
             "rank": 2,
-            "score": 0.334384
+            "score": 0.334378
           }
         ],
         "evidence": "E1",
@@ -55,7 +55,7 @@
           {
             "channel": "formula",
             "rank": 4,
-            "score": 0.333928
+            "score": 0.333922
           }
         ],
         "evidence": "E0",

@@ -1,6 +1,6 @@
 // Package exercise has the goal and the brief of the exercise role (corpus K7.3, K7.5 and K8.7).
 //
-// An exercise run writes exercises for one node: the task, a hint, the answer, a worked solution in steps and the way that a machine checks an answer. Exercises are not a kind in node.v1. Until node.v2, an exercise is an example node whose Remarks section opens with the line of the role, for example "Role: exercise. About: 3C53TD. Difficulty: 2. Group: B. Check: exact.", and has the headings Hint, Answer and Solution (corpus K2.3). [Parse] reads that form, and the migration to node.v2 can use it.
+// An exercise run writes exercises for one node: the task, a hint, the answer, a worked solution in steps and the way that a machine checks an answer. The role writes an exercise in the form of node.v1: an example node whose Remarks section opens with the line of the role, for example "Role: exercise. About: 3C53TD. Difficulty: 2. Group: B. Check: exact.", and has the headings Hint, Answer and Solution (corpus K2.3). m2 migrate node.v2 moves it to the kind exercise. [Parse] reads both forms.
 //
 // After the gates, a model of another family solves each exercise from the task alone. An exercise whose answer the solver does not reach, or reaches in a different form, goes to a person: the goal appends a referral to [Queue]. With no solver, each exercise goes to a person. The run never sees the answer of the solver, thus the writer cannot fit its answer to it.
 package exercise
@@ -22,9 +22,9 @@ import (
 	"github.com/tamnd/math2-agent/agent/tools"
 	"github.com/tamnd/math2-agent/agent/write"
 	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/exercise"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/node"
-	"github.com/tamnd/math2-agent/prov"
 	"github.com/tamnd/math2-agent/style"
 	"github.com/tamnd/math2-agent/workspace"
 )
@@ -36,96 +36,18 @@ const Agent = "m2-agent/exercise@"
 const Queue = agent.ExerciseQueue
 
 // Marker opens the Remarks section of an exercise in node.v1.
-const Marker = "Role: exercise."
+const Marker = exercise.Marker
 
 // Checks are the ways that a machine checks an answer (corpus K8.7).
-var Checks = []string{"exact", "numeric", "choice", "cas", "lean", "none"}
+var Checks = exercise.Checks
 
 // Exercise is one exercise, as the node of an exercise has it.
-type Exercise struct {
-	ID         string
-	About      []string // the nodes that the exercise practises
-	Difficulty int      // 1 to 5
-	Group      string   // A, B or C, from the MATH taxonomy
-	Check      string   // one of Checks
-	Task       string   // the Example section
-	Hint       string
-	Answer     string
-	Solution   string
-}
+type Exercise exercise.Exercise
 
-var (
-	itemRe    = regexp.MustCompile(`([A-Z][a-z]+): ([^.]*)\.`)
-	headingRe = regexp.MustCompile(`(?m)^### (Hint|Answer|Solution)[ \t]*$`)
-)
-
-// Parse reads the exercise of the node. It returns nil and no error when the node is not an exercise: a node that is not an example, or whose Remarks section does not open with [Marker]. It returns an error when the line of the role or the headings are not in the form of an exercise.
+// Parse reads the exercise of the node, in the form of node.v1 or node.v2. It returns nil and no error when the node is not an exercise, and an error when a node.v1 exercise is not in the form of an exercise.
 func Parse(n *node.Node) (*Exercise, error) {
-	fields := prov.Fields(n)
-	remarks := fields["body.remarks"]
-	if n.Kind() != "example" || !strings.HasPrefix(remarks, Marker) {
-		return nil, nil
-	}
-	e := &Exercise{ID: n.ID, Task: fields["body.example"]}
-	first, rest, _ := strings.Cut(remarks, "\n")
-	seen := map[string]bool{}
-	for _, m := range itemRe.FindAllStringSubmatch(strings.TrimPrefix(first, Marker), -1) {
-		key, v := m[1], strings.TrimSpace(m[2])
-		if seen[key] {
-			return nil, fmt.Errorf("the line of the role of %s has %s two times", n.ID, key)
-		}
-		seen[key] = true
-		switch key {
-		case "About":
-			for a := range strings.SplitSeq(v, ",") {
-				e.About = append(e.About, strings.TrimSpace(a))
-			}
-		case "Difficulty":
-			d, err := strconv.Atoi(v)
-			if err != nil {
-				return nil, fmt.Errorf("the difficulty of %s is %q, and it must be a number from 1 to 5", n.ID, v)
-			}
-			e.Difficulty = d
-		case "Group":
-			e.Group = v
-		case "Check":
-			e.Check = v
-		default:
-			return nil, fmt.Errorf("the line of the role of %s has %s, and it has only About, Difficulty, Group and Check", n.ID, key)
-		}
-	}
-	for _, key := range []string{"About", "Difficulty", "Group", "Check"} {
-		if !seen[key] {
-			return nil, fmt.Errorf("the line of the role of %s has no %s. Write it as %q", n.ID, key, Marker+" About: TAG. Difficulty: 2. Group: B. Check: exact.")
-		}
-	}
-	at := headingRe.FindAllStringSubmatchIndex(rest, -1)
-	head := rest
-	if len(at) > 0 {
-		head = rest[:at[0][0]]
-	}
-	if strings.TrimSpace(head) != "" {
-		return nil, fmt.Errorf("the Remarks section of %s has text between the line of the role and the heading Hint, Answer or Solution. Put it under one of them", n.ID)
-	}
-	for i, m := range at {
-		end := len(rest)
-		if i+1 < len(at) {
-			end = at[i+1][0]
-		}
-		name, text := rest[m[2]:m[3]], strings.TrimSpace(rest[m[1]:end])
-		switch {
-		case seen[name]:
-			return nil, fmt.Errorf("the Remarks section of %s has the heading %s two times", n.ID, name)
-		case name == "Hint":
-			e.Hint = text
-		case name == "Answer":
-			e.Answer = text
-		default:
-			e.Solution = text
-		}
-		seen[name] = true
-	}
-	return e, nil
+	e, err := exercise.Parse(n)
+	return (*Exercise)(e), err
 }
 
 // Problems returns what is not correct in the exercise for the target, or nil. The exercise is about the target, it has a task and a solution in numbered steps, its fields have their values, and it has an answer unless a person checks it.

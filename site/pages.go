@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/schema"
 )
 
 //go:embed assets templates
@@ -18,6 +19,7 @@ var files embed.FS
 func parseTemplates(b *builder) (*template.Template, error) {
 	funcs := template.FuncMap{
 		"url":          b.url,
+		"schemaFile":   b.schemaFile,
 		"join":         strings.Join,
 		"list":         list,
 		"repo":         func() string { return "https://github.com/" + b.opt.Repo },
@@ -273,7 +275,7 @@ func (b *builder) writeDocs() error {
 			return err
 		}
 	}
-	for _, f := range []string{"schema/node.v1.json", "schema/edges.md", "macros/m2.katex.json", "macros/m2.sty"} {
+	for _, f := range []string{schema.File, schema.Previous, "schema/edges.md", "macros/m2.katex.json", "macros/m2.sty"} {
 		data, err := os.ReadFile(filepath.Join(b.opt.Content, filepath.FromSlash(f)))
 		if os.IsNotExist(err) {
 			continue

@@ -9,14 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"go.yaml.in/yaml/v3"
-
 	"github.com/tamnd/math2-agent/node"
 )
 
 const image = "m2-sage@sha256:0000000000000000000000000000000000000000000000000000000000000000"
 
-// valid has a valid front matter for each of the 11 kinds. The test adds the tag line.
+// valid has a valid front matter for each of the 12 kinds. The test adds the tag line.
 var valid = map[string]string{
 	"concept":        "kind: concept\nname: A node\n",
 	"definition":     "kind: definition\nname: A node\ndefines: 1H8D2C\n",
@@ -29,6 +27,7 @@ var valid = map[string]string{
 	"proof":          "kind: proof\nname: A node\nproves: 1H8D2C\n",
 	"computation":    "kind: computation\nname: A node\nclaim: x\nengine:\n  image: " + image + "\n  entry: run.py\n",
 	"topic":          "kind: topic\nname: A node\n",
+	"exercise":       "kind: exercise\nname: A node\nabout: [1H8D2C]\ndifficulty: 1\nmath_group: A\ncheck: exact\n",
 }
 
 func parse(t *testing.T, front string) *node.Node {
@@ -42,8 +41,8 @@ func parse(t *testing.T, front string) *node.Node {
 
 func TestEmbedded(t *testing.T) {
 	s := Embedded()
-	if got := len(s.Kinds()); got != 11 {
-		t.Fatalf("the schema has sections for %d kinds, want 11", got)
+	if got := len(s.Kinds()); got != 12 {
+		t.Fatalf("the schema has sections for %d kinds, want 12", got)
 	}
 	sec, ok := s.Sections("statement")
 	if !ok || sec.Required[0] != "Statement" {
@@ -69,7 +68,7 @@ func TestEmbeddedIsCurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(data, embedded) {
-		t.Errorf("schema/node.v1.json in this module is not the same as %s. Copy the file again.", filepath.Join(root, File))
+		t.Errorf("%s in this module is not the same as %s. Copy the file again.", File, filepath.Join(root, File))
 	}
 }
 
@@ -158,20 +157,22 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func TestMigrate(t *testing.T) {
-	var front yaml.Node
-	if path, err := Migrate(&front, Version); err != nil || len(path) != 0 {
-		t.Errorf("Migrate from the current version = %v, %v", path, err)
+func TestLoadPrevious(t *testing.T) {
+	root := t.TempDir()
+	if s, err := Load(root); err != nil || s.Source != "embedded" || Path(root) != "" {
+		t.Errorf("a tree with no schema gives %v, %v", s, err)
 	}
-	if _, err := Migrate(&front, "node.v0"); err == nil {
-		t.Error("Migrate from node.v0 gives no error")
+	if err := os.MkdirAll(filepath.Join(root, "schema"), 0o750); err != nil {
+		t.Fatal(err)
 	}
-	saved := Migrations
-	defer func() { Migrations = saved }()
-	called := false
-	Migrations = []Migration{{From: "node.v0", To: Version, Apply: func(*yaml.Node) error { called = true; return nil }}}
-	if path, err := Migrate(&front, "node.v0"); err != nil || !called || len(path) != 1 {
-		t.Errorf("Migrate = %v, %v, called %v", path, err, called)
+	for _, f := range []string{Previous, File} {
+		if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(f)), embedded, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		s, err := Load(root)
+		if err != nil || !strings.HasSuffix(s.Source, f) || Path(root) != f {
+			t.Errorf("a tree with %s gives the schema of %v, %v", f, s.Source, err)
+		}
 	}
 }
 

@@ -208,7 +208,7 @@ func Propose(root, source string, opt Options) (*Result, error) {
 	return res, nil
 }
 
-// uriScheme matches the start of a URI, as the record of an aligned edge has in schema node.v1.
+// uriScheme matches the start of a URI, as the record of an aligned edge has in schema node.v2.
 var uriScheme = regexp.MustCompile(`^[a-z][a-z0-9+.-]*://`)
 
 // Target returns the target of an edge to the record: the id, or for an aligned edge the URI of the record, which is its locator or its URL. A record with no URI has no aligned edge, and Target returns "".

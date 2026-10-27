@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/tamnd/math2/blob/main/schema/node.v1.json",
-  "title": "math2 node, schema v1",
-  "description": "The front matter of a node file in nodes/. Spec 04.5 gives the form. Each kind has its own fields. The x-m2-sections keyword gives the body sections of each kind, in order. The x-m2-edges keyword lists the 25 edge types: the 23 of spec 05.2 and the two of corpus K8.9. The x-m2-order keyword gives the order of the top-level keys in the canonical form. Nested keys use the order of their properties in this file.",
+  "$id": "https://github.com/tamnd/math2/blob/main/schema/node.v2.json",
+  "title": "math2 node, schema v2",
+  "description": "The front matter of a node file in nodes/. Spec 04.5 gives the form. Schema v2 adds the kind exercise of corpus K8.7 and K8.9. Each kind has its own fields. The x-m2-sections keyword gives the body sections of each kind, in order. The x-m2-edges keyword lists the 25 edge types: the 23 of spec 05.2 and the two of corpus K8.9. The x-m2-order keyword gives the order of the top-level keys in the canonical form. Nested keys use the order of their properties in this file.",
   "type": "object",
   "required": [
     "tag",
@@ -25,7 +25,8 @@
         "object",
         "proof",
         "computation",
-        "topic"
+        "topic",
+        "exercise"
       ]
     },
     "name": {
@@ -149,6 +150,9 @@
     "instance_of",
     "not_instance_of",
     "illustrates",
+    "difficulty",
+    "math_group",
+    "check",
     "specializes",
     "conventions",
     "notation",
@@ -172,6 +176,7 @@
     "same_as",
     "close_to",
     "aligned",
+    "external",
     "inventory",
     "history",
     "retired"
@@ -630,6 +635,81 @@
       "if": {
         "properties": {
           "kind": {
+            "const": "exercise"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "about": {
+            "description": "The nodes that this exercise practises. This is the about edge.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true,
+            "minItems": 1
+          },
+          "difficulty": {
+            "description": "From 1 to 5. The writer sets it, and use corrects it.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "math_group": {
+            "description": "The group of the MATH taxonomy: A is facts and routine procedures, B is transfer and application, C is justification, conjecture and evaluation. The group gives the kind of task, not its difficulty.",
+            "enum": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          "check": {
+            "description": "How a machine checks an answer: exact (a value), numeric (a value with a tolerance), choice (multiple choice), cas (equal up to a CAS normal form), lean (a Lean statement with sorry that the answer fills) or none (people check it).",
+            "enum": [
+              "exact",
+              "numeric",
+              "choice",
+              "cas",
+              "lean",
+              "none"
+            ]
+          },
+          "external": {
+            "description": "Links to interactive versions of the exercise in other systems.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/external"
+            }
+          }
+        },
+        "required": [
+          "about",
+          "difficulty",
+          "math_group",
+          "check"
+        ],
+        "x-m2-sections": {
+          "required": [
+            "Exercise"
+          ],
+          "allowed": [
+            "Exercise",
+            "Hint",
+            "Answer",
+            "Solution",
+            "Remarks"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
             "const": "object"
           }
         },
@@ -935,8 +1015,8 @@
     {
       "name": "about",
       "group": "conceptual",
-      "from": "statement, conjecture or problem",
-      "to": "concept",
+      "from": "statement, conjecture, problem or exercise",
+      "to": "concept, or any node for an exercise",
       "field": "about"
     },
     {
@@ -1784,6 +1864,29 @@
         },
         "note": {
           "type": "string"
+        }
+      }
+    },
+    "external": {
+      "description": "A link to an interactive version of an exercise in another system, for example a WeBWorK OPL path or a MyOpenMath id (corpus K8.7). It is a link only, and math2 has no text of the other system.",
+      "type": "object",
+      "required": [
+        "system",
+        "id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "system": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://"
         }
       }
     }
