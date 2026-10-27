@@ -1,0 +1,14 @@
+role: understand
+version: 0.1.0
+tools: [classify_items, tag_concepts]
+ladder:
+  - model: claude-haiku-5-5
+    effort: low
+  - model: claude-sonnet-5-5
+    effort: medium
+budget:
+  usd: 0.1
+  wall: 10m0s
+max_tokens: 16000
+turns: 3
+stuck: 2

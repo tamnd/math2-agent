@@ -23,11 +23,11 @@ import (
 // The Lean directories that no role writes: the attribute and the adapters, the certificate checkers, and the named hypotheses, which are the only place where an axiom can be (spec 20).
 var leanFixed = []string{"lean/Math2/Meta/", "lean/Math2/Cert/", "lean/Math2/Hypotheses/"}
 
-// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of the eight roles of spec 12.1 and of enumerate, write, informalize and exercise (corpus K7.3).
+// Permit reports each change that the field permission set of the role does not allow (spec 12.1). The target is the target of the job. A change outside the set fails even if it is correct. Permit knows the sets of the eight roles of spec 12.1 and of enumerate, write, informalize and exercise (corpus K7.3) and understand (corpus arxiv AX07).
 //
-// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. Explore can add computation, conjecture and counterexample nodes with no formal field, no crosswalk edges, no fields of a retirement and no explanations, and add the files of the code of a computation in compute/SHARD/ID/. Explore writes no Lean and changes no file that exists. Enumerate can add mentions by enumerate to the shard files of records/mentions/model-FAMILY/, and keeps each line that is there. Enumerate writes no node and no Lean. Write can change the sections of the target other than Explanations, change its notation, and add nodes to its uses. It can add example nodes that are an instance, a non-example or an illustration of the target, and proof nodes that prove the target, with no formal field and no explanations. Write writes no Lean. The target of informalize is a declaration of Mathlib, in the form mathlib:DECL. Informalize can add statement and definition nodes with one exact Lean binding to the declaration, with no fidelity reviews, and concept nodes with no formal field, all with no crosswalk edges, no fields of a retirement and no explanations. It can change the sections other than Explanations, the name, the aliases, the notation and the uses (add only) of a node that binds the declaration. Informalize writes no Lean. Exercise can add exercises about the target: example nodes whose Remarks section opens with the line of the role, with the target in uses and no front matter other than the name, the aliases, the msc, the topics, the audience and the uses. It can change the sections other than Explanations, the name, the aliases and the uses of an exercise, and append referrals by exercise to queues/exercises.jsonl. Exercise writes no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
+// Formalize can append bindings with no fidelity reviews to the formal field of the target, add Lean files under lean/Math2/, and add import lines to lean/Math2.lean. Prove can add proof and statement nodes with bindings with no fidelity reviews, change formal[].decl of the target, add and change Lean files under lean/Math2/ except in Conjectures/, and add import lines to lean/Math2.lean. Explain can add and change the explanations of the target that are marked agent, and add example nodes with no formal field and no explanation marked human. Explain writes no Lean. Curate can add statement and concept nodes with no formal field, no crosswalk edges and no explanations, change the fields uses, about, msc, name and aliases of any node, and add duplicate proposals of the role to the dedup queue. Curate writes no Lean. Align can add, change and remove its own same_as, close_to and aligned proposals from the target in the queue files of queues/align, and append Mathlib bindings with no fidelity reviews to the formal field of the target. Align writes no Lean. Bump can change formal[].decl of the target, and writes no Lean. Review-assist can write only the review packet of the target, reports/review/TAG.md. Explore can add computation, conjecture and counterexample nodes with no formal field, no crosswalk edges, no fields of a retirement and no explanations, and add the files of the code of a computation in compute/SHARD/ID/. Explore writes no Lean and changes no file that exists. Enumerate can add mentions by enumerate to the shard files of records/mentions/model-FAMILY/, and keeps each line that is there. Enumerate writes no node and no Lean. Write can change the sections of the target other than Explanations, change its notation, and add nodes to its uses. It can add example nodes that are an instance, a non-example or an illustration of the target, and proof nodes that prove the target, with no formal field and no explanations. Write writes no Lean. The target of informalize is a declaration of Mathlib, in the form mathlib:DECL. Informalize can add statement and definition nodes with one exact Lean binding to the declaration, with no fidelity reviews, and concept nodes with no formal field, all with no crosswalk edges, no fields of a retirement and no explanations. It can change the sections other than Explanations, the name, the aliases, the notation and the uses (add only) of a node that binds the declaration. Informalize writes no Lean. Exercise can add exercises about the target: example nodes whose Remarks section opens with the line of the role, with the target in uses and no front matter other than the name, the aliases, the msc, the topics, the audience and the uses. It can change the sections other than Explanations, the name, the aliases and the uses of an exercise, and append referrals by exercise to queues/exercises.jsonl. Exercise writes no Lean. The target of understand is a pass on an arXiv paper, in the form arxiv:ID/PASS. Understand can write only the records of the pass by understand in the shard files of records/understand/arxiv/PASS/, sorted by id, and keeps each line of another paper. Understand writes no node and no Lean. No role writes in lean/Math2/Meta/, lean/Math2/Cert/ or lean/Math2/Hypotheses/, and no role deletes a file.
 func Permit(role, target string, changes []workspace.Change) error {
-	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist", "explore", "enumerate", "write", "informalize", "exercise"}, role) {
+	if !slices.Contains([]string{"formalize", "prove", "explain", "curate", "align", "bump", "review-assist", "explore", "enumerate", "write", "informalize", "exercise", "understand"}, role) {
 		return fmt.Errorf("agent: the field permission set of %s is not written yet", role)
 	}
 	var errs []error
@@ -54,6 +54,8 @@ func permit(role, target string, c workspace.Change) error {
 		return nil
 	case role == "enumerate":
 		return permitMentions(p, c)
+	case role == "understand":
+		return permitUnderstand(target, p, c)
 	case slices.Contains([]string{"explain", "curate", "align", "bump", "explore", "write", "informalize", "exercise"}, role) && strings.HasPrefix(p, "lean/"):
 		return fmt.Errorf("%s writes no Lean", role)
 	case role == "explore" && strings.HasPrefix(p, "compute/"):
@@ -590,6 +592,58 @@ func permitMentions(p string, c workspace.Change) error {
 	}
 	if len(old) > 0 {
 		return errors.New("enumerate adds mentions, and does not change or remove the lines that are there")
+	}
+	return nil
+}
+
+// UnderstandDir is the directory of the records of the understand role, with one directory for each pass.
+const UnderstandDir = "records/understand/arxiv"
+
+// permitUnderstand allows a change of a shard file of the records of the pass of the target, UnderstandDir/PASS/SHARD.jsonl. Each line is a record of the pass by understand, the records are sorted by id and are of the shard, and each line of another paper stays. A record of the paper of the target can replace the record of the same id.
+func permitUnderstand(target, p string, c workspace.Change) error {
+	rest, ok := strings.CutPrefix(target, "arxiv:")
+	i := strings.LastIndex(rest, "/")
+	if !ok || i < 0 {
+		return fmt.Errorf("the target %q of understand is not in the form arxiv:ID/PASS", target)
+	}
+	paper, pass := rest[:i], rest[i+1:]
+	dir, file := path.Split(p)
+	shard := strings.TrimSuffix(file, ".jsonl")
+	if path.Clean(dir) != path.Join(UnderstandDir, pass) || shard == file {
+		return fmt.Errorf("understand writes only the records of the pass, in %s/%s/SHARD.jsonl", UnderstandDir, pass)
+	}
+	own := "ax://paper/" + paper + "#"
+	old := map[string]bool{}
+	for line := range strings.Lines(string(c.Old)) {
+		var r struct{ ID string }
+		if json.Unmarshal([]byte(line), &r) == nil && !strings.HasPrefix(r.ID, own) {
+			old[line] = true
+		}
+	}
+	var prev string
+	for line := range strings.Lines(string(c.New)) {
+		var r struct{ ID, Pass, By string }
+		if err := json.Unmarshal([]byte(line), &r); err != nil {
+			return fmt.Errorf("a line of %s is not a record: %w", p, err)
+		}
+		switch {
+		case prev != "" && r.ID <= prev:
+			return fmt.Errorf("the records are not sorted by id, or two have the id %s", r.ID)
+		case old[line]:
+			delete(old, line)
+		case !strings.HasPrefix(r.ID, own):
+			return fmt.Errorf("the record %s is not of the paper %s, and understand changes only the records of the paper of the target", r.ID, paper)
+		case r.Pass != pass:
+			return fmt.Errorf("the record %s is of the pass %q, not %s", r.ID, r.Pass, pass)
+		case inventory.MentionShard(r.ID) != shard:
+			return fmt.Errorf("the record %s is of the shard %s, not %s", r.ID, inventory.MentionShard(r.ID), shard)
+		case !strings.HasPrefix(r.By, "agent:m2-agent/understand@"):
+			return fmt.Errorf("the record %s is by %q, and understand writes only its own records", r.ID, r.By)
+		}
+		prev = r.ID
+	}
+	if len(old) > 0 {
+		return errors.New("understand changes only the records of the paper of the target, and keeps the lines of the other papers")
 	}
 	return nil
 }

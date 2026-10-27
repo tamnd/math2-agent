@@ -30,7 +30,7 @@ import (
 )
 
 // The eight roles of spec 12.1, and the four roles of corpus K7.3 that write the corpus.
-var roles = []string{"formalize", "prove", "explore", "explain", "curate", "align", "bump", "review-assist", "enumerate", "write", "informalize", "exercise"}
+var roles = []string{"formalize", "prove", "explore", "explain", "curate", "align", "bump", "review-assist", "enumerate", "write", "informalize", "exercise", "understand"}
 
 // Roles returns the names of the eight roles of spec 12.1 and the four roles of corpus K7.3.
 func Roles() []string { return slices.Clone(roles) }

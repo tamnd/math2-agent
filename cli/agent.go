@@ -33,6 +33,7 @@ import (
 	"github.com/tamnd/math2-agent/agent/prove"
 	"github.com/tamnd/math2-agent/agent/reviewassist"
 	"github.com/tamnd/math2-agent/agent/tools"
+	"github.com/tamnd/math2-agent/agent/understand"
 	"github.com/tamnd/math2-agent/agent/write"
 	"github.com/tamnd/math2-agent/api"
 	"github.com/tamnd/math2-agent/build"
@@ -53,7 +54,7 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|enumerate|exercise|explain|explore|formalize|informalize|prove|review-assist|write"
+const agentUsage = "m2 agent run [-root DIR] [-out DIR] [-store DIR] [-work DIR] [-job FILE] [-target T] [-goal G] [-on-behalf-of ID] [-budget USD] [-rung N] [-native-decide] [-type-change] [-web] [-arxiv DIR] [-sandbox IMAGE | -no-sandbox] [-json] align|bump|curate|enumerate|exercise|explain|explore|formalize|informalize|prove|review-assist|understand|write"
 
 // goals are the goals of a job that gives none.
 var goals = map[string]string{
@@ -67,6 +68,7 @@ var goals = map[string]string{
 	"exercise":      "the node has an exercise with a task, an answer, a solution in steps and a check",
 	"informalize":   "the declaration has a node that states it in words, in the house style, with an exact binding to it",
 	"prove":         "the statement of the node has a Lean proof",
+	"understand":    "each item of the paper that the pass reads has a record of the pass",
 	"write":         "the node has each section, example and proof that its card asks for at the next writing level, in the house style",
 	"review-assist": "the node has a review packet in reports/review with the packet of the last build and the concerns of the critic",
 }
@@ -120,6 +122,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	native := flags.Bool("native-decide", false, "permit a proof that uses native_decide. Rule F04 records each use.")
 	typeChange := flags.Bool("type-change", false, "permit a bump rebind to a declaration with another type hash")
 	web := flags.Bool("web", false, "with explore, the novelty check also searches zbMATH Open, arXiv, MathOverflow and the OEIS on the web")
+	arxiv := flags.String("arxiv", os.Getenv("ARXIV_CORPUS"), "with understand, the checkout of tamnd/arxiv with the analysis plane. The default is $ARXIV_CORPUS.")
 	asJSON := flags.Bool("json", false, "write the summary of the run as JSON")
 	box := sandboxFlags(flags)
 	if err := flags.Parse(args[1:]); err != nil {
@@ -216,7 +219,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	if *work == "" {
 		*work = filepath.Join(os.TempDir(), "m2-agent", job.ID)
 	}
-	rs := &runSetup{root: *root, out: *out, store: *store, svc: svc, model: model, roles: map[string]*agent.Role{role: r}, box: b, web: *web}
+	rs := &runSetup{root: *root, out: *out, store: *store, svc: svc, model: model, roles: map[string]*agent.Role{role: r}, box: b, web: *web, arxiv: *arxiv}
 	rec, ws, changes, err := rs.run(context.Background(), job, *rung, *work)
 	if ws != nil {
 		defer func() { _ = ws.Close() }()
@@ -260,6 +263,7 @@ type runSetup struct {
 	box    *tools.Box // the sandbox of the Lean programs, or nil
 	shadow bool       // the runs are shadow runs of candidate role versions
 	web    bool       // the novelty check of explore searches the web
+	arxiv  string     // the checkout of tamnd/arxiv that understand reads
 }
 
 // run does one run of the job on the rung in a new work tree at dir, and writes the record of the run to the store. It returns the record, the work tree and its changes. A record with an error is a run that the model service stopped.
@@ -304,7 +308,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		extra []agent.Tool
 		nv    *explore.Novelty
 	)
-	if slices.Contains([]string{"align", "curate", "enumerate", "explain", "explore"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
+	if slices.Contains([]string{"align", "curate", "enumerate", "explain", "explore", "understand"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
 		return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
 	}
 	switch job.Role {
@@ -372,6 +376,22 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		brief = enumerate.Brief(job, cell)
 		check = enumerate.Goal(ws, job)
 		extra = []agent.Tool{enumerate.List(ws, cell, family, model, "agent:m2-agent/enumerate@"+r.Version)}
+	case "understand":
+		if rs.arxiv == "" {
+			return nil, ws, nil, errors.New("understand reads the analysis plane of tamnd/arxiv. Set -arxiv or $ARXIV_CORPUS to its checkout")
+		}
+		t, err := understand.ParseTarget(job.Target)
+		if err != nil {
+			return nil, ws, nil, err
+		}
+		p, err := understand.Load(rs.arxiv, t)
+		if err != nil {
+			return nil, ws, nil, err
+		}
+		by := "agent:m2-agent/understand@" + r.Version
+		brief = understand.Brief(job, p)
+		check = understand.Goal(ws, job, p, by)
+		extra = understand.Tools(ws, p, r.Ladder[rung].Model, by)
 	case "explore":
 		var runner *compute.Runner
 		var done func()
