@@ -290,6 +290,7 @@ func TestPermitInformalize(t *testing.T) {
 func TestPermitExercise(t *testing.T) {
 	const path = "nodes/~/~1a2b3c4d.md"
 	ex := "---\ntag: ~1a2b3c4d\nkind: example\nname: A large subgroup\nuses: [3C53TD]\n---\n\n## Example\n\nWhat is the order of $H$?\n\n## Remarks\n\nRole: exercise. About: 3C53TD. Difficulty: 2. Group: B. Check: exact.\n\n### Answer\n\n12\n"
+	v2 := "---\ntag: ~1a2b3c4d\nkind: exercise\nname: A large subgroup\nuses: [3C53TD]\nabout: [3C53TD]\ndifficulty: 2\nmath_group: B\ncheck: exact\n---\n\n## Exercise\n\nWhat is the order of $H$?\n\n## Answer\n\n12\n"
 	ref := `{"exercise":"~1a2b3c4d","about":["3C53TD"],"check":"exact","reason":"r","by":"m2-agent/exercise@0.1.0"}` + "\n"
 	for _, tc := range []struct {
 		name string
@@ -305,6 +306,12 @@ func TestPermitExercise(t *testing.T) {
 		{"the uses of an exercise", workspace.Change{Path: path, Old: []byte(ex), New: []byte(strings.Replace(ex, "[3C53TD]", "[3C53TD, G5S1M9]", 1))}, ""},
 		{"the msc of an exercise", workspace.Change{Path: path, Old: []byte(ex), New: []byte(strings.Replace(ex, "uses:", "msc: [20D60]\nuses:", 1))}, "changes the field msc"},
 		{"the target", workspace.Change{Path: "nodes/3C5/3C53TD.md", Old: []byte(target), New: []byte(target + "\nMore.\n")}, "writes only exercises"},
+		{"a new node.v2 exercise", workspace.Change{Path: path, New: []byte(v2)}, ""},
+		{"a node.v2 exercise with a link", workspace.Change{Path: path, New: []byte(strings.Replace(v2, "check: exact\n", "check: exact\nexternal: [{system: webwork, id: a}]\n", 1))}, "it has external"},
+		{"a node.v1 exercise with the fields of node.v2", workspace.Change{Path: path, New: []byte(strings.Replace(ex, "uses:", "difficulty: 2\nuses:", 1))}, "it has difficulty"},
+		{"the difficulty of a node.v2 exercise", workspace.Change{Path: path, Old: []byte(v2), New: []byte(strings.Replace(v2, "difficulty: 2", "difficulty: 3", 1))}, ""},
+		{"the msc of a node.v2 exercise", workspace.Change{Path: path, Old: []byte(v2), New: []byte(strings.Replace(v2, "uses:", "msc: [20D60]\nuses:", 1))}, "changes the field msc"},
+		{"a node.v1 exercise to node.v2", workspace.Change{Path: path, Old: []byte(ex), New: []byte(v2)}, "changes the field"},
 		{"a referral", workspace.Change{Path: agent.ExerciseQueue, New: []byte(ref)}, ""},
 		{"a second referral", workspace.Change{Path: agent.ExerciseQueue, Old: []byte(ref), New: []byte(ref + ref)}, ""},
 		{"a changed referral", workspace.Change{Path: agent.ExerciseQueue, Old: []byte(ref), New: []byte(strings.Replace(ref, `"r"`, `"s"`, 1))}, "changes a line"},

@@ -1,5 +1,5 @@
 role: exercise
-version: 0.1.0
+version: 0.2.0
 tools: [get, neighbours, path, search, resolve, read_file, write_file]
 ladder:
   - model: claude-sonnet-5-5

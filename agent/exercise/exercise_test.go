@@ -18,6 +18,7 @@ import (
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/prompts"
 	"github.com/tamnd/math2-agent/prov"
+	"github.com/tamnd/math2-agent/schema"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
@@ -30,6 +31,12 @@ const (
 	task         = "A group $G$ has order 12, and $H$ is a subgroup of $G$ whose order is greater than 6. What is the order of $H$?"
 	good         = "---\ntag: ~1a2b3c4d\nkind: example\nname: A large subgroup of a group of order 12\nuses: [3C53TD]\n---\n\n## Example\n\n" + task + "\n\n## Remarks\n\nRole: exercise. About: 3C53TD. Difficulty: 2. Group: B. Check: exact.\n\n### Hint\n\nUse [[Lagrange's theorem|3C53TD]].\n\n### Answer\n\n12\n\n### Solution\n\n1. The order of $H$ divides 12, by [[Lagrange's theorem|3C53TD]].\n2. The only divisor of 12 that is greater than 6 is 12. Thus the order of $H$ is 12.\n"
 )
+
+// goodV2 is good in the form of node.v2.
+const goodV2 = "---\ntag: ~1a2b3c4d\nkind: exercise\nname: A large subgroup of a group of order 12\nuses: [3C53TD]\nabout: [3C53TD]\ndifficulty: 2\nmath_group: B\ncheck: exact\n---\n\n## Exercise\n\n" + task + "\n\n## Hint\n\nUse [[Lagrange's theorem|3C53TD]].\n\n## Answer\n\n12\n\n## Solution\n\n1. The order of $H$ divides 12, by [[Lagrange's theorem|3C53TD]].\n2. The only divisor of 12 that is greater than 6 is 12. Thus the order of $H$ is 12.\n"
+
+// v1 is the file that puts a tree at node.v1. Its text is the schema of the toolchain, because only the name of the file tells the form.
+var v1 = map[string]string{schema.Previous: string(schema.Raw())}
 
 // tree makes a git repository with the files in one commit and opens it as a workspace.
 func tree(t *testing.T, files map[string]string) *workspace.Workspace {
@@ -130,6 +137,17 @@ func TestProblems(t *testing.T) {
 			t.Errorf("%s: the problems are %q, and they must say %q", name, p, c.want)
 		}
 	}
+	v2, err := exercise.Parse(parse(t, goodV2))
+	if err != nil || v2 == nil || v2.Old {
+		t.Fatalf("Parse of a node.v2 exercise gives %+v, %v", v2, err)
+	}
+	if p := v2.Problems("3C53TD"); len(p) > 0 {
+		t.Errorf("the node.v2 exercise has the problems %q", p)
+	}
+	v2.About, v2.Answer, v2.Solution = nil, "", "No steps."
+	if p := strings.Join(v2.Problems("3C53TD"), "; "); !strings.Contains(p, "give about: [3C53TD]") || !strings.Contains(p, "under ## Answer") || !strings.Contains(p, "under ## Solution") {
+		t.Errorf("the problems of a node.v2 exercise are %q", p)
+	}
 	e := *base
 	e.Check, e.Answer = "none", ""
 	if p := e.Problems("3C53TD"); len(p) > 0 {
@@ -182,7 +200,7 @@ func TestSolve(t *testing.T) {
 
 func TestBrief(t *testing.T) {
 	other := strings.NewReplacer("~1a2b3c4d", "~5e6f7a8b", "Group: B", "Group: A").Replace(good)
-	ws := tree(t, map[string]string{"nodes/~/~5e6f7a8b.md": other})
+	ws := tree(t, map[string]string{"nodes/~/~5e6f7a8b.md": other, schema.Previous: v1[schema.Previous]})
 	brief, err := exercise.Brief(ws, job("three exercises"))
 	if err != nil {
 		t.Fatal(err)
@@ -201,6 +219,26 @@ func TestBrief(t *testing.T) {
 	}
 	if _, err := exercise.Brief(ws, &agent.Job{Target: "nope"}); err == nil {
 		t.Error("a target that is not a node gives no error")
+	}
+	brief, err = exercise.Brief(tree(t, nil), job("an exercise"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "kind: exercise\nname: the name of the exercise in words\nuses: [3C53TD]\nabout: [3C53TD]\ndifficulty: 2\nmath_group: B\ncheck: exact\n---\n\n## Exercise\n"
+	if !strings.Contains(brief, want) || !strings.Contains(brief, "\n## Solution\n\n1. ") || strings.Contains(brief, exercise.Marker) {
+		t.Errorf("the brief of a tree at node.v2 has not the form of node.v2:\n%s", brief)
+	}
+}
+
+func TestV2(t *testing.T) {
+	if !exercise.V2(tree(t, nil).Dir) {
+		t.Error("a tree with no schema file is not at node.v2")
+	}
+	if !exercise.V2(tree(t, map[string]string{schema.File: "{}"}).Dir) {
+		t.Errorf("a tree with %s is not at node.v2", schema.File)
+	}
+	if exercise.V2(tree(t, v1).Dir) {
+		t.Errorf("a tree with %s is at node.v2", schema.Previous)
 	}
 }
 
@@ -270,8 +308,36 @@ func TestRun(t *testing.T) {
 			t.Errorf("after turn %d the goal says %q, and it must say %q", i+1, got, s.why)
 		}
 	}
-	if len(refs) != 1 || refs[0].Exercise != "~1a2b3c4d" || refs[0].Reason != "math2 has no solver of another family yet" || refs[0].By != "m2-agent/exercise@0.1.0" || refs[0].Answer != "12" {
+	if len(refs) != 1 || refs[0].Exercise != "~1a2b3c4d" || refs[0].Reason != "math2 has no solver of another family yet" || refs[0].By != "m2-agent/exercise@0.2.0" || refs[0].Answer != "12" {
 		t.Errorf("the referrals are %+v", refs)
+	}
+}
+
+func TestRunV2(t *testing.T) {
+	steps := []struct{ text, why string }{
+		{strings.Replace(goodV2, "math_group: B", "math_group: D", 1), "m2 check finds"},
+		{strings.Replace(goodV2, "1. The order", "The order", 1), "under ## Solution"},
+		{goodV2, ""},
+	}
+	var model []*llm.Response
+	for _, s := range steps {
+		model = append(model, call(exercisePath, s.text))
+	}
+	rec, refs := run(t, nil, "one exercise", nil, model...)
+	if rec.Outcome != agent.Success || len(rec.Turns) != len(steps) {
+		t.Fatalf("the run gives %s, %q after %d turns", rec.Outcome, rec.Reason, len(rec.Turns))
+	}
+	for i, s := range steps {
+		if got := rec.Turns[i].Why; s.why == "" && got != "" || !strings.Contains(got, s.why) {
+			t.Errorf("after turn %d the goal says %q, and it must say %q", i+1, got, s.why)
+		}
+	}
+	if len(refs) != 1 || refs[0].Exercise != "~1a2b3c4d" || refs[0].Answer != "12" {
+		t.Errorf("the referrals are %+v", refs)
+	}
+	// In a tree at node.v1, the goal still accepts an exercise of node.v1.
+	if rec, _ := run(t, v1, "one exercise", nil, call(exercisePath, good)); rec.Outcome != agent.Success {
+		t.Errorf("a node.v1 exercise in a tree at node.v1 gives %s, %q", rec.Outcome, rec.Reason)
 	}
 }
 
