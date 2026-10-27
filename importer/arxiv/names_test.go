@@ -21,14 +21,18 @@ func TestNamesFind(t *testing.T) {
 		// A concept, and a weak result word in a row of the kind unknown.
 		{ID: "r-hyp", Kind: "definition", Name: "Induction hypothesis theorem", Mentions: []string{"wikidata:Q1"}},
 		{ID: "r-mat", Kind: "unknown", Name: "Identity matrix", Mentions: []string{"wikidata:Q2"}},
+		// The longest name wins.
+		{ID: "r-lln", Kind: "statement", Name: "law of large numbers", Mentions: []string{"wikidata:Q3"}},
+		{ID: "r-slln", Kind: "statement", Name: "strong law of large numbers", Mentions: []string{"wikidata:Q4"}},
+		{ID: "r-exist", Kind: "statement", Name: "Existence theorem", Mentions: []string{"wikidata:Q5"}},
 		// A row in another area.
 		{ID: "r-far", Kind: "statement", Name: "Riemann mapping theorem", MSC: []string{"30C20"}, Mentions: []string{"wikipedia:Riemann_mapping_theorem"}},
 		{ID: "r-merged", Kind: "statement", Name: "Baire category theorem", Outcome: &inventory.Outcome{Value: inventory.OutcomeMerged}, Mentions: []string{"wikipedia:Baire"}},
 	}
 	n := arxiv.NewNames(rows)
-	text := "By the Hahn-Banach theorem and Zorn’s lemma, the extension theorem holds. The main theorem, the Kakeya estimate theorem, the Riemann mapping theorem and the Baire category theorem, the induction hypothesis theorem and the identity matrix do not count."
+	text := "By the Hahn-Banach theorem and Zorn’s lemma, the extension theorem holds. The main theorem, the Kakeya estimate theorem, the Riemann mapping theorem and the Baire category theorem, the induction hypothesis theorem and the identity matrix do not count. The existence theorem is not a name, and the strong law of large numbers is one."
 	got := n.Find(text, []string{"46B20"})
-	if want := []string{"r-hb", "r-zorn"}; !slices.Equal(got, want) {
+	if want := []string{"r-hb", "r-slln", "r-zorn"}; !slices.Equal(got, want) {
 		t.Errorf("Find gives %v, and it must give %v", got, want)
 	}
 	if got := n.Find("This is the Hahn–Banach theorem.", []string{"46A22"}, "Hahn-Banach theorem"); len(got) != 0 {
