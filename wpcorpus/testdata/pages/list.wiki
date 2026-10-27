@@ -1,0 +1,6 @@
+This is a list of made-up widgets.
+
+== Widgets ==
+* [[Red widget]], the first one
+* [[Blue widget#Size|Blue widget]]
+* a widget with no article

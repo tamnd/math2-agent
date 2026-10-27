@@ -1,0 +1,11 @@
+This is a glossary of made-up words.
+
+== A ==
+;alpha
+:The first word. See [[beta]].
+;aleph
+:Another first word.
+
+== B ==
+{{term|beta}}
+{{defn|The second word, with <math>b</math>.}}

@@ -1,0 +1,48 @@
+{{short description|A made-up structure for the tests}}
+A '''widget''' is a set <math>W</math> with a map {{mvar|f}}.<ref name="a">{{cite book |last=Doe |title=Widgets |year=2001}}</ref>{{anchor|widgets}}
+
+== Definition ==
+A widget is a pair {{math|(''W'', ''f'')}}.{{cn}}
+
+'''Theorem 1.''' Each widget has a fixed point.<ref name="a"/>
+: The fixed point is unique.
+
+'''Proof.''' Take the least element.
+
+=== Statement ===
+{{math theorem|Widget lemma|Each map {{mvar|f}} is injective.}}
+
+==== Proof ====
+It follows from the definition.{{sfn|Doe|2001|p=3}}
+
+== Equations ==
+{{NumBlk|:|<math>f(x) = x</math>|{{EquationRef|1}}}}
+
+{{collapse top|title=Proof of the widget lemma}}
+A long argument.
+{{collapse bottom}}
+
+{{math proof|title=A second proof|proof=Use <math>\frac{1}{2}</math>.}}
+
+== Example ==
+* [[Small widget]]
+
+== Gadget theorem ==
+A {{dfn|gadget}} is a widget with one element.
+
+== Odd heading ==
+Text with {{unknown thing|kept text}} and [[Category:Widgets]].
+
+{| class="wikitable"
+! Name !! Size
+|-
+| [[Tiny widget]] || 1
+|-
+| two || 2
+|}
+
+== See also ==
+* [[Gadget]]
+
+== References ==
+{{cite book |last=Roe |title=More widgets |year=2010}}
