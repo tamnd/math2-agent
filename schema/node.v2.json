@@ -1463,6 +1463,17 @@
             }
           ]
         },
+        "planetmath": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "lmfdb": {
           "anyOf": [
             {
@@ -1671,6 +1682,7 @@
             "nlab",
             "wikipedia",
             "proofwiki",
+            "planetmath",
             "lmfdb",
             "zbmath",
             "mr",

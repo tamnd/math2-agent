@@ -37,8 +37,9 @@ var sourceURL = map[string]func(id string) string{
 	"proofwiki": func(id string) string {
 		return "https://proofwiki.org/wiki/" + url.PathEscape(strings.ReplaceAll(id, " ", "_"))
 	},
-	"lmfdb":     func(id string) string { return "https://www.lmfdb.org/" + id },
-	"mathworld": func(id string) string { return "https://mathworld.wolfram.com/" + url.PathEscape(id) + ".html" },
+	"planetmath": func(id string) string { return "https://planetmath.org/" + url.PathEscape(strings.ToLower(id)) },
+	"lmfdb":      func(id string) string { return "https://www.lmfdb.org/" + id },
+	"mathworld":  func(id string) string { return "https://mathworld.wolfram.com/" + url.PathEscape(id) + ".html" },
 	"eom": func(id string) string {
 		return "https://encyclopediaofmath.org/wiki/" + url.PathEscape(strings.ReplaceAll(id, " ", "_"))
 	},
@@ -56,7 +57,7 @@ var sourceLabel = map[string]string{
 	"kerodon": "Kerodon", "mathoverflow": "MathOverflow", "mathse": "Math SE", "erdos": "Erdős problem",
 	"formal_conjectures": "formal-conjectures", "palomar": "Palomar", "hexagon": "Hexagon", "url": "Web",
 	"wikidata": "Wikidata", "mardi": "MaRDI", "oeis": "OEIS", "nlab": "nLab", "wikipedia": "Wikipedia",
-	"proofwiki": "ProofWiki", "lmfdb": "LMFDB", "mathworld": "MathWorld", "eom": "EoM", "msc": "MSC",
+	"proofwiki": "ProofWiki", "planetmath": "PlanetMath", "lmfdb": "LMFDB", "mathworld": "MathWorld", "eom": "EoM", "msc": "MSC",
 	"lmfdb_knowl": "LMFDB knowl", "house_of_graphs": "House of Graphs", "mathlib": "Mathlib",
 }
 
