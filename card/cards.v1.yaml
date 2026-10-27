@@ -75,3 +75,9 @@ cards:
     - {section: Description, level: R}
   topic:
     - {section: Summary, level: R}
+  exercise:
+    - {section: Exercise, level: R, note: the task, self-contained as a statement is}
+    - {edge: [about], dir: out, level: R, note: the nodes that the exercise practises}
+    - {section: Hint, level: o, note: one or two sentences}
+    - {section: Answer, level: o, note: the final answer, when the task has one}
+    - {section: Solution, level: W2, note: a worked solution in numbered steps}

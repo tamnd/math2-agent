@@ -52,3 +52,34 @@ func TestMigrateShard3Clash(t *testing.T) {
 		t.Errorf("a clash gives exit code %d, stderr %q", code, errOut)
 	}
 }
+
+func TestMigrateNodeV2(t *testing.T) {
+	root := t.TempDir()
+	files := map[string]string{
+		"schema/node.v1.json":   "{}",
+		"nodes/EX6/EX6H3W.md":   "---\ntag: EX6H3W\nkind: example\nname: A large subgroup\nuses: [3C53TD]\n---\n\n## Example\n\nFind the order of $H$.\n\n## Remarks\n\nRole: exercise. About: 3C53TD. Difficulty: 2. Group: B. Check: exact.\n\n### Answer\n\n12\n",
+		"prov/EX6/EX6H3W.jsonl": `{"field":"*","op":"add","agent":null,"human":"github:tamnd","at":"2026-10-01T09:00:00Z"}` + "\n",
+	}
+	for p, text := range files {
+		if err := os.MkdirAll(filepath.Join(root, filepath.Dir(p)), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, p), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	code, out, errOut := run("migrate", "node.v2", "-root", root)
+	if want := "nodes/EX6/EX6H3W.md 9 provenance lines\n1 node moved to node.v2\n"; code != ExitOK || out != want {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, out, errOut)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "nodes/EX6/EX6H3W.md"))
+	if err != nil || !strings.Contains(string(data), "kind: exercise\n") || !strings.Contains(string(data), "## Answer\n\n12\n") {
+		t.Errorf("the node is\n%s", data)
+	}
+	if _, err := os.Stat(filepath.Join(root, "schema/node.v2.json")); err != nil {
+		t.Error(err)
+	}
+	if code, out, _ := run("migrate", "node.v2", "-root", root, "-q"); code != ExitOK || out != "0 nodes moved to node.v2\n" {
+		t.Errorf("a second run gives exit code %d, stdout %q", code, out)
+	}
+}

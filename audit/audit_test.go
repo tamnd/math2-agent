@@ -10,11 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"go.yaml.in/yaml/v3"
-
 	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/models"
-	"github.com/tamnd/math2-agent/schema"
 )
 
 var update = flag.Bool("update", false, "write the want.txt file of each bad fixture")
@@ -120,20 +117,6 @@ var setup = map[string]func(t *testing.T){
 		reg := *models.Default()
 		reg.Models = append(slices.Clone(reg.Models), models.Model{ID: "judge-a", Family: "testfamily", Provider: "test"})
 		modelRegister = func() *models.Register { return &reg }
-	},
-	// S09 needs an open migration window. The test migration renames the field msc_codes to msc.
-	"S09": func(t *testing.T) {
-		saved := schema.Migrations
-		t.Cleanup(func() { schema.Migrations = saved })
-		schema.Migrations = []schema.Migration{{From: "node.v0", To: schema.Version, Apply: func(front *yaml.Node) error {
-			m := front.Content[0]
-			for i := 0; i+1 < len(m.Content); i += 2 {
-				if m.Content[i].Value == "msc_codes" {
-					m.Content[i].Value = "msc"
-				}
-			}
-			return nil
-		}}}
 	},
 }
 

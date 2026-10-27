@@ -10,7 +10,7 @@ import (
 )
 
 // slugKinds is the order in which nodes with the same name get a plain slug. The first kind keeps the slug of the name, and a later kind gets the kind as a suffix.
-var slugKinds = []string{"topic", "concept", "definition", "statement", "conjecture", "problem", "object", "example", "counterexample", "proof", "computation"}
+var slugKinds = []string{"topic", "concept", "definition", "statement", "conjecture", "problem", "object", "example", "counterexample", "proof", "computation", "exercise"}
 
 // Slug returns the part of a page URL for a node name, in lower case with hyphens, for example "lagranges-theorem" for "Lagrange's theorem". It removes accents and apostrophes, and it changes each other run of characters that are not letters or digits to one hyphen. A name with no letter or digit gives "".
 func Slug(name string) string {

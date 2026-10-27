@@ -625,7 +625,7 @@ func union[V any](a, b map[string]V) map[string]V {
 // ExerciseQueue is the file of the exercises that go to a person. The package agent/exercise appends to it.
 const ExerciseQueue = "queues/exercises.jsonl"
 
-// exerciseMarker opens the Remarks section of an exercise in node.v1 (corpus K2.3), as in the package agent/exercise.
+// exerciseMarker opens the Remarks section of an exercise in node.v1 (corpus K2.3), as in the package exercise.
 const exerciseMarker = "Role: exercise."
 
 // exerciseFields are the fields of the front matter of a new exercise.

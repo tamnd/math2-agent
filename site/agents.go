@@ -5,7 +5,17 @@ import (
 	"encoding/xml"
 	"fmt"
 	"strings"
+
+	"github.com/tamnd/math2-agent/schema"
 )
+
+// schemaFile returns the path of the node schema of the content tree: schema.File, or schema.Previous for a tree that has not moved to schema.Version.
+func (b *builder) schemaFile() string {
+	if p := schema.Path(b.opt.Content); p != "" {
+		return p
+	}
+	return schema.File
+}
 
 // abs returns the absolute URL for the site path p.
 func (b *builder) abs(p string) string {
@@ -91,7 +101,7 @@ func (b *builder) writeAgents() error {
 		"name":    "Math 2.0",
 		"version": b.opt.Version,
 		"commit":  b.opt.Commit,
-		"schema":  b.abs("schema/node.v1.json"),
+		"schema":  b.abs(b.schemaFile()),
 		"count":   len(entries),
 		"nodes":   entries,
 	}
@@ -144,7 +154,7 @@ func (b *builder) writeAgents() error {
 	}
 	d := agentsData{
 		URL: b.abs(""), Nodes: b.abs("api/nodes.json"), Search: b.abs("api/search.json"), Spec: b.abs("api/spec.json"),
-		Schema: b.abs("schema/node.v1.json"), Macros: b.abs("macros/m2.katex.json"), LLMs: b.abs("llms.txt"),
+		Schema: b.abs(b.schemaFile()), Macros: b.abs("macros/m2.katex.json"), LLMs: b.abs("llms.txt"),
 		LLMsFull: b.abs("llms-full.txt"), Example: example, Count: len(b.order),
 	}
 	if err := b.writePage("agents", "agents", d, page{Title: "For agents", Description: "How a program reads Math 2.0: JSON, Markdown, llms.txt and m2 URIs.", Section: "agents", MarkdownURL: b.url("llms.txt")}); err != nil {
@@ -159,12 +169,12 @@ func (b *builder) writeAgents() error {
 // llms writes llms.txt in the form of llmstxt.org. The full form adds the text of each spec document and each node.
 func (b *builder) llms(full bool) []byte {
 	var w bytes.Buffer
-	w.WriteString("# Math 2.0\n\n> Math 2.0 is a versioned knowledge graph of mathematics. Each node is a concept, a definition, a statement, a conjecture, a problem, an example, a counterexample, an object, a proof, a computation or a topic. Each node has a permanent tag, sources, typed links to other nodes and a status that the build computes from the evidence.\n\n")
-	fmt.Fprintf(&w, "Each node page has a Markdown copy at node/<TAG>.md and a JSON copy at api/node/<TAG>.json. The URI of a node is m2://<TAG>. The front matter follows the JSON Schema at %s. The site has %d nodes now.\n\n", b.abs("schema/node.v1.json"), len(b.order))
+	w.WriteString("# Math 2.0\n\n> Math 2.0 is a versioned knowledge graph of mathematics. Each node is a concept, a definition, a statement, a conjecture, a problem, an example, a counterexample, an object, a proof, a computation, a topic or an exercise. Each node has a permanent tag, sources, typed links to other nodes and a status that the build computes from the evidence.\n\n")
+	fmt.Fprintf(&w, "Each node page has a Markdown copy at node/<TAG>.md and a JSON copy at api/node/<TAG>.json. The URI of a node is m2://<TAG>. The front matter follows the JSON Schema at %s. The site has %d nodes now.\n\n", b.abs(b.schemaFile()), len(b.order))
 	w.WriteString("## Data\n\n")
 	fmt.Fprintf(&w, "- [All nodes](%s): the tag, kind, name, aliases and MSC classes of each node\n", b.abs("api/nodes.json"))
 	fmt.Fprintf(&w, "- [Reviewers](%s): the reviewers and their fidelity reviews\n", b.abs("api/reviewers.json"))
-	fmt.Fprintf(&w, "- [Node schema](%s): JSON Schema 2020-12 for the front matter\n", b.abs("schema/node.v1.json"))
+	fmt.Fprintf(&w, "- [Node schema](%s): JSON Schema 2020-12 for the front matter\n", b.abs(b.schemaFile()))
 	fmt.Fprintf(&w, "- [Edges](%s): the 25 link types between nodes\n", b.abs("schema/edges.md"))
 	fmt.Fprintf(&w, "- [Macros](%s): the TeX macros that node bodies use\n", b.abs("macros/m2.katex.json"))
 	fmt.Fprintf(&w, "- [Contribute](%s): how to add a node\n", b.abs("contribute.md"))

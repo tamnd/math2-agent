@@ -12,7 +12,7 @@ import (
 
 // Kinds returns the kinds of spec 04.2 that a mention or a row can have, and Unknown.
 func Kinds() []string {
-	return []string{"concept", "definition", "statement", "conjecture", "problem", "example", "counterexample", "object", "proof", "computation", "topic", Unknown}
+	return []string{"concept", "definition", "statement", "conjecture", "problem", "example", "counterexample", "object", "proof", "computation", "topic", "exercise", Unknown}
 }
 
 // Options controls one run of Cluster.

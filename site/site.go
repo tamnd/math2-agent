@@ -58,7 +58,7 @@ type Options struct {
 	Cloudflare bool        // build for Cloudflare Pages: a worker sends node/TAG/ to the page of the node, so the site has no page for each short link
 }
 
-// kinds are the 11 node kinds with a short description, in schema order.
+// kinds are the 12 node kinds with a short description, in schema order.
 var kinds = []struct{ Name, Plural, Text string }{
 	{"concept", "Concepts", "A mathematical idea. It can have more than one definition."},
 	{"definition", "Definitions", "One definition of a concept."},
@@ -71,6 +71,7 @@ var kinds = []struct{ Name, Plural, Text string }{
 	{"proof", "Proofs", "An argument that proves one statement."},
 	{"computation", "Computations", "A computation that anybody can run again, with its output and its certificate."},
 	{"topic", "Topics", "A group of nodes for navigation."},
+	{"exercise", "Exercises", "A task with a hint, an answer and a worked solution."},
 }
 
 // refFields are the front matter fields that refer to other nodes, with the label for each. The order is the order on the page.

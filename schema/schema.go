@@ -1,4 +1,6 @@
-// Package schema checks node front matter against the node schema, schema/node.v1.json in tamnd/math2 (spec 04.5 and 04.9).
+// Package schema checks node front matter against the node schema, schema/node.v2.json in tamnd/math2 (spec 04.5 and 04.9).
+//
+// Schema node.v2 adds the kind exercise to node.v1 (corpus K8.9). Each node.v1 node is also a node.v2 node, thus this release accepts both: a tree that has only schema/node.v1.json is still a valid tree, and m2 migrate node.v2 moves it to node.v2.
 //
 // Load reads the schema from a math2 working tree. Outside a working tree, Embedded gives the copy in this package. Validate gives every error in a node, each with a rule id from spec 15.3, a line and a column.
 package schema
@@ -28,13 +30,19 @@ import (
 )
 
 // File is the path of the schema in a math2 working tree.
-const File = "schema/node.v1.json"
+const File = "schema/node.v2.json"
 
-// Version is the schema version that this toolchain reads.
-const Version = "node.v1"
+// Version is the schema version that this toolchain reads and writes.
+const Version = "node.v2"
 
-//go:embed node.v1.json
+// Previous is the path of the schema of the version before Version. A tree that has not moved to Version has this file and not File.
+const Previous = "schema/node.v1.json"
+
+//go:embed node.v2.json
 var embedded []byte
+
+// Raw returns the bytes of the copy of the schema in this package, which m2 migrate writes to File.
+func Raw() []byte { return slices.Clone(embedded) }
 
 // Schema is a compiled node schema.
 type Schema struct {
@@ -72,9 +80,23 @@ func Embedded() *Schema {
 	return embeddedSchema
 }
 
-// Load reads the schema from the working tree at root. When the tree has no schema file, Load returns the embedded copy.
+// Path returns the path of the schema file of the working tree at root: File, or Previous when the tree has not moved to Version. It returns "" when the tree has neither file.
+func Path(root string) string {
+	for _, f := range []string{File, Previous} {
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(f))); err == nil {
+			return f
+		}
+	}
+	return ""
+}
+
+// Load reads the schema from the working tree at root, from the file that [Path] gives. When the tree has no schema file, Load returns the embedded copy.
 func Load(root string) (*Schema, error) {
-	path := filepath.Join(root, File)
+	f := Path(root)
+	if f == "" {
+		return Embedded(), nil
+	}
+	path := filepath.Join(root, filepath.FromSlash(f))
 	data, err := os.ReadFile(path) // #nosec G304 -- the path is in the working tree, which the caller owns.
 	if errors.Is(err, fs.ErrNotExist) {
 		return Embedded(), nil

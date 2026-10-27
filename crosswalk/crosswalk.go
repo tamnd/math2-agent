@@ -54,7 +54,7 @@ var systems = map[string]system{
 	"atlas":              {form: "an ATLAS id"},
 }
 
-// Systems returns the names of the external systems, in order of name. They are the keys of same_as in schema node.v1.
+// Systems returns the names of the external systems, in order of name. They are the keys of same_as in schema node.v2.
 func Systems() []string {
 	out := make([]string, 0, len(systems))
 	for k := range systems {

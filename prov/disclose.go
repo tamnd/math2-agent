@@ -55,7 +55,7 @@ type sourceItem struct {
 	key, value, locator, note string
 }
 
-// sourceKeys are the identifier keys of a source item (schema/node.v1.json).
+// sourceKeys are the identifier keys of a source item (schema/node.v2.json).
 var sourceKeys = []string{"zbmath", "arxiv", "doi", "book", "mr", "stacks", "kerodon", "mathoverflow", "mathse", "erdos", "formal_conjectures", "palomar", "hexagon", "url"}
 
 func formalItems(n *node.Node) []formalItem {
