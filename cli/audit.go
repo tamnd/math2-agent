@@ -26,6 +26,7 @@ func runAudit(args []string, stdout, stderr io.Writer) int {
 	rel := fs.String("release", "", "run the full audit before the release R, for example 2027.03, and write reports/releases/R.txt")
 	asJSON := fs.Bool("json", false, "write the report as JSON")
 	quiet := fs.Bool("q", false, "do not write the findings, only the table of rule states")
+	arxiv := fs.String("arxiv", "", "a checkout of tamnd/arxiv, for rule D05. Empty means that rule D05 skips.")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -33,7 +34,7 @@ func runAudit(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "m2 audit: the command has no arguments, and it got %q\n", fs.Args())
 		return ExitUsage
 	}
-	opt := audit.Options{Plane: *plane}
+	opt := audit.Options{Plane: *plane, Arxiv: *arxiv}
 	if *plane != "" && !slices.Contains(audit.Planes(), *plane) {
 		fmt.Fprintf(stderr, "m2 audit: %q is not a plane. The planes are %s\n", *plane, strings.Join(audit.Planes(), ", "))
 		return ExitUsage

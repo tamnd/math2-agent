@@ -18,6 +18,7 @@ const objectsV = `{"tag":"S1C1","kind":"section","paper":"2401.00001","version":
 {"tag":"PRF1","kind":"proof","paper":"2401.00001","version":"VER","local":"proof-1","path":"source","item":"proof","scope":"paper","proves":"thm-1","hash":"sha256:cc"}
 {"tag":"CLM1","kind":"statement","subkind":"claim","paper":"2401.00001","version":"VER","local":"claim-1","path":"source","item":"statement/claim","scope":"local","parent":"proof-1","hash":"sha256:dd"}
 {"tag":"RMK1","kind":"remark","paper":"2401.00001","version":"VER","local":"remark-1","path":"source","item":"remark","scope":"paper"}
+{"tag":"PRF2","kind":"proof","paper":"2401.00001","version":"VER","local":"proof-2","path":"source","item":"proof","scope":"paper","proves":"remark-1"}
 {"tag":"THM2","kind":"statement","subkind":"theorem","paper":"2401.00001","version":"VER","local":"thm-2","number":"2.1","title":"Theorem","path":"source","item":"statement/theorem","scope":"paper","origin":"restated","restates":"thm-1","hash":"sha256:bb"}
 {"tag":"PRB1","kind":"problem","paper":"2401.00001","version":"VER","local":"problem-1","body_md":"Is every such space compact?","path":"source","item":"problem","scope":"paper"}
 `
@@ -77,8 +78,12 @@ func TestEachItemGetsAMention(t *testing.T) {
 	}
 	slices.Sort(got)
 	// The section and the remark get no mention, and the restated theorem is one mention.
-	if want := []string{"CLM1", "LEM1", "PRB1", "PRF1", "THM1"}; !slices.Equal(got, want) {
+	if want := []string{"CLM1", "LEM1", "PRB1", "PRF1", "PRF2", "THM1"}; !slices.Equal(got, want) {
 		t.Fatalf("mentions %v, want %v", got, want)
+	}
+	// A proof of a remark has no target that is a mention.
+	if p := ms["PRF2"]; p.AttachedTo != "unknown" || !slices.Equal(p.Hints, []string{"target-not-an-item"}) {
+		t.Errorf("proof of the remark: attached_to %q, hints %v", p.AttachedTo, p.Hints)
 	}
 	lem := ms["LEM1"]
 	if lem.Kind != "statement" || lem.Role != "lemma" || lem.Version != 2 || lem.Class != "open" || lem.Name != "Key estimate" || lem.Census != "normal" {
@@ -110,7 +115,7 @@ func TestEachItemGetsAMention(t *testing.T) {
 	if prb := ms["PRB1"]; prb.Retired != 2 || prb.Version != 1 || !slices.Contains(prb.Hints, "conjecture-candidate") {
 		t.Errorf("problem %+v", prb)
 	}
-	if res.Attached != 2 || res.Retired != 1 || res.Restated != 1 || len(res.Untagged) != 0 {
+	if res.Attached != 3 || res.Retired != 1 || res.Restated != 1 || len(res.Untagged) != 0 {
 		t.Errorf("result %+v", res)
 	}
 }
@@ -140,7 +145,7 @@ func TestAttachedMentionsGoInTheRowOfTheirTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(out.Rows) != 3 || out.Orphans != 0 {
+	if len(out.Rows) != 3 || out.Orphans != 1 {
 		t.Fatalf("%d rows, %d orphans", len(out.Rows), out.Orphans)
 	}
 	for _, r := range out.Rows {

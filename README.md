@@ -459,6 +459,12 @@ The mention id is `ax://paper/<id>#<tag>`, with the tag of the object in the ana
 
 The importer copies no text of a paper. The field `text_ref` names the object record, and `hash` is its content hash. A version of the class `record` gives no name and no `text_ref`. Run `ax tags analysis -all` on the checkout first, because an object with no tag gets no mention.
 
+Two rules check the arXiv mentions. D05 reads the checkout again and checks that each object of an item kind in the latest version of each paper has a mention, that each proof has `attached_to`, and that each attached mention names a mention that exists. It needs the checkout, so it skips when `-arxiv` is not given. D06 checks that a mention of the class `record` holds no text: it has no name, text, `text_ref`, aliases or cites, its locators have the form `<id>v<n>#<local>`, its label, number, environment and head are short tokens, its hash is a sha256 hash, and the locator of each cited result is a short reference. Both rules are hard.
+
+```
+$ m2 audit -rule D05,D06 -arxiv ../arxiv
+```
+
 ## Alignment
 
 `m2 align <source>` compares each node with the records of a source and proposes edges. Run `m2 ingest <source>` first. The aligner does not change a node. It writes the proposals to `queues/align/<system>.jsonl`, and a person decides on each one.

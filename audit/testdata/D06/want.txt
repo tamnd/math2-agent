@@ -1,0 +1,9 @@
+records/mentions/arxiv/AAA.jsonl:1:1: D06: the mention ax://paper/2601.00001#T7K2 has the class record, and its name is not empty
+records/mentions/arxiv/AAA.jsonl:1:1: D06: the mention ax://paper/2601.00001#T7K2 has the class record, and its text_ref is not empty
+records/mentions/arxiv/AAA.jsonl:1:1: D06: the mention ax://paper/2601.00001#T7K2 has the class record, and its locator is not of the form <id>v<n>#<local>
+records/mentions/arxiv/AAA.jsonl:2:1: D06: the mention ax://paper/2601.00001#L2B2 has the class record, and its text is not empty
+records/mentions/arxiv/AAA.jsonl:2:1: D06: the mention ax://paper/2601.00001#L2B2 has the class record, and its also has a locator that is not of the form <id>v<n>#<local>
+records/mentions/arxiv/AAA.jsonl:2:1: D06: the mention ax://paper/2601.00001#L2B2 has the class record, and its label is not a short token
+records/mentions/arxiv/AAA.jsonl:2:1: D06: the mention ax://paper/2601.00001#L2B2 has the class record, and its head is not a short token
+records/mentions/arxiv/AAA.jsonl:2:1: D06: the mention ax://paper/2601.00001#L2B2 has the class record, and its hash is not a sha256 hash
+records/mentions/arxiv/AAA.jsonl:2:1: D06: the mention ax://paper/2601.00001#L2B2 has the class record, and its cites_result has a locator that is not a short reference

@@ -324,6 +324,18 @@ func (vp *versionIn) target(local string) string {
 	return MentionID(vp.id, o.Tag)
 }
 
+// attach returns the mention that an attached mention goes to: the mention of the object with the local name, or "unknown". An object that gets no mention, as a remark with a proof, gives "unknown" and the hint target-not-an-item.
+func (vp *versionIn) attach(local string, m *inventory.Mention) string {
+	if o := vp.byLocal[local]; o != nil && !Wanted(o.Item) {
+		m.Hints = append(m.Hints, "target-not-an-item")
+		return "unknown"
+	}
+	if t := vp.target(local); t != "" {
+		return t
+	}
+	return "unknown"
+}
+
 // localOf returns the local name of an end of an edge, or the end itself when it is not in the paper, as bib:<key>.
 func localOf(id string) string {
 	if _, l, ok := strings.Cut(id, "#"); ok {
@@ -382,15 +394,9 @@ func (vp *versionIn) mention(o Object) inventory.Mention {
 	}
 	switch {
 	case kind == "proof":
-		m.AttachedTo = "unknown"
-		if t := vp.target(o.Proves); t != "" {
-			m.AttachedTo = t
-		}
+		m.AttachedTo = vp.attach(o.Proves, &m)
 	case o.Scope == "local":
-		m.AttachedTo = "unknown"
-		if t := vp.target(o.Parent); t != "" {
-			m.AttachedTo = t
-		}
+		m.AttachedTo = vp.attach(o.Parent, &m)
 	}
 	s := &inventory.Structure{}
 	for _, e := range vp.edges {
@@ -507,4 +513,56 @@ func MSC(text string) []string {
 		}
 	}
 	return out
+}
+
+// Want is one object of the latest version of a paper that must have a mention (rule D05).
+type Want struct {
+	Ref     string // the object, as <id>v<n>#<local>
+	File    string // the objects file, relative to the checkout
+	Mention string // the mention that must hold it, or "" when the object has no tag
+}
+
+// Expect returns the objects of an item kind in the latest version of each paper of the checkout at root, with the mention that must hold each one. A restated print is held by the mention of its first print.
+func Expect(root string) ([]Want, error) {
+	files, err := filepath.Glob(filepath.Join(root, "analysis", "objects", "*", "*.jsonl"))
+	if err != nil {
+		return nil, err
+	}
+	slices.Sort(files)
+	var out []Want
+	for _, f := range files {
+		objs, err := readLines[Object](f)
+		if err != nil {
+			return nil, err
+		}
+		latest := 0
+		for _, o := range objs {
+			if v, _ := strconv.Atoi(o.Version); o.Path == "source" && v > latest {
+				latest = v
+			}
+		}
+		if len(objs) == 0 {
+			continue
+		}
+		vp := &versionIn{paperIn: &paperIn{id: objs[0].Paper}, byLocal: map[string]*Object{}}
+		var in []Object
+		for i := range objs {
+			if v, _ := strconv.Atoi(objs[i].Version); objs[i].Path == "source" && v == latest {
+				vp.byLocal[objs[i].Local] = &objs[i]
+				in = append(in, objs[i])
+			}
+		}
+		rel, _ := filepath.Rel(root, f)
+		for _, o := range in {
+			if !Wanted(o.Item) {
+				continue
+			}
+			w := Want{Ref: fmt.Sprintf("%sv%d#%s", o.Paper, latest, o.Local), File: filepath.ToSlash(rel)}
+			if o.Tag != "" {
+				w.Mention = vp.target(o.Local)
+			}
+			out = append(out, w)
+		}
+	}
+	return out, nil
 }

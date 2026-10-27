@@ -1,0 +1,4 @@
+analysis/objects/2601/2601.00001.jsonl:0:0: D05: the object 2601.00001v1#lemma-1 has no tag, so it has no mention. Run ax tags analysis on the checkout
+analysis/objects/2601/2601.00001.jsonl:0:0: D05: the object 2601.00001v1#definition-1 has no mention: ax://paper/2601.00001#D4Q8 is not in records/mentions
+records/mentions/arxiv/AAA.jsonl:1:1: D05: the mention ax://paper/2601.00001#P3M9 is attached to ax://paper/2601.00001#X0X0, and that mention does not exist
+records/mentions/arxiv/AAA.jsonl:2:1: D05: the proof ax://paper/2601.00001#P5N1 has no attached_to
