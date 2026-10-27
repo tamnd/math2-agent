@@ -61,7 +61,7 @@ var commands = []command{
 	{name: "status", usage: "m2 status [-root DIR] [-out DIR] [-json] <tag|alias|uri>", summary: "Show the computed status of a node and the evidence for it.", run: runStatus},
 	{name: "graph", usage: graphUsage, summary: "Run a graph query.", run: runGraph},
 	{name: "ingest", usage: ingestUsage, summary: "Get a pinned snapshot of an external source and write its records.", run: runIngest},
-	{name: "corpus", usage: corpusUsage, summary: "Run the importers of a plan, change the records of the sources to inventory mentions and rows, cluster the mentions again, measure the clustering on the gold set, estimate the recall of each area, show the counts of the inventory, show the standing queues and their plans, and measure the cost and the review hours of each stage.", run: runCorpus},
+	{name: "corpus", usage: corpusUsage, summary: "Run the importers of a plan, change the records of the sources to inventory mentions and rows, cluster the mentions again, measure the clustering on the gold set, estimate the recall of each area, match the index terms of the books with the rows, show the counts of the inventory, show the standing queues and their plans, and measure the cost and the review hours of each stage.", run: runCorpus},
 	{name: "align", usage: alignUsage, summary: "Propose crosswalk edges to an external source, and decide on them.", run: runAlign},
 	{name: "bump", usage: bumpUsage, summary: "Make a branch that moves Lean and Mathlib to the next release.", run: runBump},
 	{name: "coverage", usage: coverageUsage, summary: "Write the coverage report of each MSC2020 code to reports/coverage/.", run: runCoverage},

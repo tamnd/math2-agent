@@ -234,3 +234,46 @@ func TestCorpusClusterOfArxiv(t *testing.T) {
 		t.Errorf("the tier T0 gave %d", code)
 	}
 }
+
+func TestCorpusIndex(t *testing.T) {
+	root := t.TempDir()
+	if code, _, stderr := run("corpus", "index", "-root", root); code != ExitFailure || !strings.Contains(stderr, "no index terms") {
+		t.Fatalf("a tree with no index gave %d, %q", code, stderr)
+	}
+	ms := []inventory.Mention{{ID: inventory.MentionID("words", "w1", 1), Source: "words", Kind: "definition", Name: "Abelian groups", Class: "open"}}
+	if err := inventory.WriteMentions(root, "words", ms); err != nil {
+		t.Fatal(err)
+	}
+	if err := inventory.WriteRows(root, []inventory.Row{{ID: "R00001", Mentions: []string{ms[0].ID}, Kind: "definition", Layer: "textbook"}}); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(root, filepath.FromSlash(inventory.IndexDir))
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	index := `{"term":"group, abelian","locator":"p. 3"}` + "\n" + `{"term":"ring","locator":"p. 40"}` + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "fixture_book.jsonl"), []byte(index), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := run("corpus", "index", "-root", root, "-missing")
+	if code != ExitOK || stdout != "book          terms  matched  rate\nfixture_book  2      1        50%\nfixture_book\tring\n" {
+		t.Fatalf("m2 corpus index gave %d, %q, %q", code, stdout, stderr)
+	}
+	code, stdout, stderr = run("corpus", "index", "-root", root, "-json", "-write")
+	var report struct{ Books []inventory.IndexMatch }
+	if code != ExitOK || json.Unmarshal([]byte(stdout), &report) != nil || len(report.Books) != 1 || report.Books[0].Matched != 1 || report.Books[0].Missing[0] != "ring" {
+		t.Fatalf("m2 corpus index -json gave %d, %q, %q", code, stdout, stderr)
+	}
+	if data, err := os.ReadFile(filepath.Join(root, "reports", "inventory", "index.json")); err != nil || string(data) != stdout {
+		t.Fatalf("the report is %q, %v", data, err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "fixture_book.jsonl"), []byte(`{"term":""}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, stderr := run("corpus", "index", "-root", root); code != ExitFailure || !strings.Contains(stderr, "the term is empty") {
+		t.Fatalf("an empty term gave %d, %q", code, stderr)
+	}
+	if code, _, _ := run("corpus", "index", "extra"); code != ExitUsage {
+		t.Fatalf("an argument gave %d", code)
+	}
+}

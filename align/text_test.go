@@ -14,8 +14,8 @@ func TestKey(t *testing.T) {
 		{"Triangular numbers", "triangular number"},
 		{"Gauss sums", "Gauss sum"},
 	} {
-		if key(tc.a) != key(tc.b) {
-			t.Errorf("the keys of %q and %q are %q and %q, want one key", tc.a, tc.b, key(tc.a), key(tc.b))
+		if Key(tc.a) != Key(tc.b) {
+			t.Errorf("the keys of %q and %q are %q and %q, want one key", tc.a, tc.b, Key(tc.a), Key(tc.b))
 		}
 	}
 	for _, tc := range []struct{ a, b string }{
@@ -24,8 +24,8 @@ func TestKey(t *testing.T) {
 		{"Gauss", "Gaus"},
 		{"torus", "toru"},
 	} {
-		if key(tc.a) == key(tc.b) {
-			t.Errorf("%q and %q have the key %q", tc.a, tc.b, key(tc.a))
+		if Key(tc.a) == Key(tc.b) {
+			t.Errorf("%q and %q have the key %q", tc.a, tc.b, Key(tc.a))
 		}
 	}
 }

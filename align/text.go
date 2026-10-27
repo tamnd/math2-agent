@@ -55,15 +55,15 @@ func fold(s string) string {
 	return b.String()
 }
 
-// key returns the normal form of a name: its words with one space between them. Two names with the same key are the same name.
-func key(name string) string { return strings.Join(words(name), " ") }
+// Key returns the normal form of a name: its words with one space between them. Two names with the same key are the same name. The inventory uses it to match the index terms of a book with the rows (corpus K4.7).
+func Key(name string) string { return strings.Join(words(name), " ") }
 
 // names returns the keys of the names, and of the part of each name before a colon, for a title such as "Lagrange's theorem: the order of a subgroup". It drops empty keys and keys that are there two times.
 func names(list ...string) []string {
 	var out []string
 	seen := map[string]bool{}
 	add := func(s string) {
-		if k := key(s); k != "" && !seen[k] {
+		if k := Key(s); k != "" && !seen[k] {
 			seen[k] = true
 			out = append(out, k)
 		}

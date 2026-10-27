@@ -23,7 +23,7 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -39,6 +39,8 @@ func runCorpus(args []string, stdout, stderr io.Writer) int {
 		return runCorpusGold(args[1:], stdout, stderr)
 	case "recall":
 		return runCorpusRecall(args[1:], stdout, stderr)
+	case "index":
+		return runCorpusIndex(args[1:], stdout, stderr)
 	case "status":
 		return runCorpusStatus(args[1:], stdout, stderr)
 	case "queue", "plan":
@@ -501,6 +503,83 @@ func runCorpusRecall(args []string, stdout, stderr io.Writer) int {
 	}
 	if err := tw.Flush(); err != nil {
 		return ExitFailure
+	}
+	return ExitOK
+}
+
+// indexReport is the file that m2 corpus index -write writes, relative to the root of the tree.
+const indexReport = "reports/inventory/index.json"
+
+// runCorpusIndex prints the match rate of the index terms of each book of records/index/ with the rows (corpus K4.7).
+func runCorpusIndex(args []string, stdout, stderr io.Writer) int {
+	const name = "m2 corpus index"
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	root := fs.String("root", ".", "the math2 working tree")
+	asJSON := fs.Bool("json", false, "print JSON")
+	write := fs.Bool("write", false, "also write the match rates to "+indexReport)
+	missing := fs.Bool("missing", false, "also print the terms with no row, one on each line after its book")
+	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "usage: "+corpusUsage)
+		return ExitUsage
+	}
+	idx, err := inventory.ReadIndexes(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	if len(idx) == 0 {
+		fmt.Fprintf(stderr, "%s: the tree has no index terms. Add a file %s/<book>.jsonl for each book.\n", name, inventory.IndexDir)
+		return ExitFailure
+	}
+	ms, err := inventory.ReadMentions(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	rows, err := inventory.ReadRows(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	books := inventory.MatchIndexes(rows, ms, idx)
+	data, err := json.MarshalIndent(struct {
+		Books []inventory.IndexMatch `json:"books"`
+	}{books}, "", "  ")
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	data = append(data, '\n')
+	if *write {
+		if err := writeReport(filepath.Join(*root, filepath.FromSlash(indexReport)), data); err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+	}
+	if *asJSON {
+		if _, err := stdout.Write(data); err != nil {
+			return ExitFailure
+		}
+		return ExitOK
+	}
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "book\tterms\tmatched\trate")
+	for _, b := range books {
+		fmt.Fprintf(tw, "%s\t%d\t%d\t%.0f%%\n", b.Book, b.Terms, b.Matched, 100*b.Rate)
+	}
+	if err := tw.Flush(); err != nil {
+		return ExitFailure
+	}
+	if *missing {
+		for _, b := range books {
+			for _, t := range b.Missing {
+				fmt.Fprintf(stdout, "%s\t%s\n", b.Book, t)
+			}
+		}
 	}
 	return ExitOK
 }
