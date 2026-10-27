@@ -204,3 +204,31 @@ func writeFile(path string, data []byte) error {
 	}
 	return os.WriteFile(path, data, 0o644) // #nosec G306 -- the corpus is a public repository
 }
+
+// RemoveStale removes the objects files and the census files of the other
+// revisions of a page, so that the analysis plane holds only the revision of
+// the content plane.
+func RemoveStale(root string, page, rev int) error {
+	keep := map[string]bool{ObjectsPath(page, rev): true, CensusPath(page, rev): true}
+	for _, dir := range []string{ObjectsDir, CensusDir} {
+		d := filepath.Join(dir, Shard(page))
+		ents, err := os.ReadDir(filepath.Join(root, d))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		prefix := strconv.Itoa(page) + "-r"
+		for _, e := range ents {
+			p := filepath.Join(d, e.Name())
+			if e.IsDir() || !strings.HasPrefix(e.Name(), prefix) || keep[p] {
+				continue
+			}
+			if err := os.Remove(filepath.Join(root, p)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
