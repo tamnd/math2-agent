@@ -1,6 +1,7 @@
 package arxiv
 
 import (
+	"regexp"
 	"slices"
 	"strings"
 	"unicode"
@@ -160,4 +161,58 @@ func nameWords(s string) []string {
 	}
 	flush()
 	return slices.DeleteFunc(ws, func(w string) bool { return w == "" })
+}
+
+var (
+	emptyGroup = regexp.MustCompile(`\{\s*\}`)
+	headRef    = regexp.MustCompile(`\\(ref|eqref|cref|Cref|autoref|pageref|hyperref)\b`)
+	controlIn  = regexp.MustCompile(`\\[a-zA-Z]+\*?`)
+	// locator is a head that only points to an item of another text, as "Theorem 1" or "Lemma 2.3 and 2.4".
+	locator = regexp.MustCompile(`(?i)^(theorem|thm|lemma|lem|proposition|prop|corollary|cor|definition|def|remark|example|conjecture|claim|section|sec|chapter|ch|equation|eq|page|p|pp)s?\.?\s*[0-9a-z]+([.\-–][0-9a-z]+)*(\s*(,|and|&)\s*[0-9a-z]+([.\-–][0-9a-z]+)*)*$`)
+)
+
+// connectives are the words that joined a citation to the head, as in "see [12]" or "cf. [3]". When ax removed the citation, they stay at the start or at the end of the name.
+var connectives = map[string]bool{
+	"see": true, "cf": true, "cf.": true, "e.g.": true, "e.g": true, "eg": true, "compare": true, "also": true,
+	"and": true, "in": true, "of": true, "from": true, "by": true, "after": true, "following": true,
+	"with": true, "on": true, "i.e.": true, "resp.": true, "for": true, "to": true,
+}
+
+// HeadName gives the name of a mention from the name of an object record. Before ax v0.5.16, the name of an object was the head text with the citations and the labels removed, even when the rest was not a name. A rest that is only a cross-reference, a locator as "Theorem 1", the words that joined a citation, or one letter, as the "A" of "Theorem A", gives no name. It is the rule of ax v0.5.16, so the records of the older versions of ax give the same names.
+func HeadName(s string) string {
+	for {
+		t := emptyGroup.ReplaceAllString(s, "")
+		if t == s {
+			break
+		}
+		s = t
+	}
+	s = strings.Join(strings.Fields(strings.ReplaceAll(s, "~", " ")), " ")
+	if headRef.MatchString(s) {
+		return ""
+	}
+	for {
+		ws := strings.Fields(strings.TrimSpace(strings.Trim(s, ",;:()[]{} ")))
+		if len(ws) > 0 && connectives[strings.ToLower(ws[0])] {
+			ws = ws[1:]
+		}
+		if len(ws) > 0 && connectives[strings.ToLower(ws[len(ws)-1])] {
+			ws = ws[:len(ws)-1]
+		}
+		t := strings.Join(ws, " ")
+		if t == s {
+			break
+		}
+		s = t
+	}
+	letters := 0
+	for _, r := range controlIn.ReplaceAllString(s, "") {
+		if unicode.IsLetter(r) {
+			letters++
+		}
+	}
+	if letters < 2 || locator.MatchString(s) {
+		return ""
+	}
+	return s
 }

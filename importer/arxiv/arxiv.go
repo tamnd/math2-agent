@@ -392,7 +392,7 @@ func (vp *versionIn) mention(o Object) inventory.Mention {
 		Extractor:   o.Extractor,
 	}
 	if vp.class != "record" {
-		m.Name = strings.Join(strings.Fields(o.Name), " ")
+		m.Name = HeadName(o.Name)
 		m.TextRef = vp.file + "#" + o.Local + "@v" + strconv.Itoa(vp.v)
 	}
 	if kind == "problem" && yesNo(o.BodyMD) {
