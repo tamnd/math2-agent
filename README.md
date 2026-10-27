@@ -72,7 +72,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 site check` | Test the wiki against the size, MathML, no-JavaScript, figure and offline targets. | written |
 | `m2 site serve` | Preview the wiki with gzip, as GitHub Pages serves it. | written |
 | `m2 site archive` | Write the wiki as a zip file that works offline. | written |
-| `m2 pack <volume>` | Assemble a volume of `volumes/` into an edition: the order of the nodes, the numbers, the glue, the HTML page and the lock file. `-check` runs the pack checks PC1 to PC10 and writes no file. | written |
+| `m2 pack <volume>` | Assemble a volume of `volumes/` into an edition: the order of the nodes, the numbers, the glue, the HTML page, the LaTeX and PreTeXt files and the lock file. `-check` runs the pack checks PC1 to PC10 and writes no file. | written |
 | `m2 build` | Build the derived data: Lean, extraction, replay, the fidelity battery, status, graph, store and the search index. | written |
 | `m2 audit` | Run the audit rules and write the report to `reports/`. | written |
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
@@ -143,6 +143,8 @@ Spec 13.7 sets these targets for each page of the wiki:
 A volume is a book that `m2 pack` assembles from the nodes of the tree (corpus K11). Its file `volumes/<id>.yaml` gives the targets, the levels that each node must have, the choice of a definition for a concept with two or more, the conventions, the glue and the formats. `m2 pack <volume>` takes the closure of the targets, puts the nodes in an order where no node comes before a node that it uses, groups them into chapters and sections by their MSC codes and the curricula, and numbers the items. It writes the edition to `build/volumes/<id>/` and the lock file to `volumes/<id>.lock`. The lock file pins each node to a release and to the hash of its file, so the same lock builds the same edition again.
 
 The HTML edition is one page with KaTeX and no JavaScript. Each item has its tag as its anchor. A link to a node in the volume goes to its item, and a link to a node outside the volume is a citation to its page on the wiki. The page has the conventions, the table of notation, the cited nodes and the attribution of each node and each glue text. A statement below evidence level E2 shows as a claim.
+
+The formats `latex` and `pretext` write more files next to the page (corpus K11.4). `latex/` has `main.tex`, a copy of `macros/m2.sty` and `main.bib` with the sources of the nodes. Each item is an amsthm environment, the book kinds use the class `book` or `report`, and an article or a survey uses the class `article`. For an article, `latex/` is an arXiv tree with a `00README.json` that names pdflatex and TeX Live 2025. `pretext/main.ptx` is one PreTeXt file, where each kind of node is the nearest PreTeXt element and the table of notation is a `<notation-list/>`. Each edition has a list of sources and an attribution page that gives the licence CC BY-SA 4.0 of the prose, then the people, then the agent runs (corpus K11.7). The other formats, such as `jats` and `typst`, have no back end yet, and PC9 fails for them.
 
 | Check | What it checks |
 |---|---|

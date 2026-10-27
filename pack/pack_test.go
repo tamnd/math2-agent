@@ -3,7 +3,11 @@ package pack
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
+	"errors"
 	"fmt"
+	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -328,6 +332,159 @@ func TestPackHTML(t *testing.T) {
 	}
 }
 
+func TestPackLaTeX(t *testing.T) {
+	d := packed(t, fixtures, "kind: book\ntargets: [Q529ES]\nchoose: {DSG7KN: GY1XDB}\n")
+	files, err := d.LaTeX()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if files[MacroSty] == nil || files[MainBib] == nil || files[ArxivReadme] != nil {
+		t.Errorf("a book has the files %v", slices.Sorted(maps.Keys(files)))
+	}
+	tex := string(files[MainTeX])
+	for _, want := range []string{
+		`\documentclass[11pt]{book}`,
+		`\usepackage{m2}`,
+		`\phantomsection\label{Q529ES}`,
+		`\begin{proof}\phantomsection\label{ENS73X}`,
+		`\cite[Section 3.2, Theorem 8]{src-book-isbn-9780471433347}`,
+		`\bibitem{src-book-isbn-9780471433347}`,
+		`\href{https://math2.tamnd.com/node/2J2QXT/}`,
+		`\end{document}`,
+	} {
+		if !strings.Contains(tex, want) {
+			t.Errorf("main.tex has no %s", want)
+		}
+	}
+	again, _ := d.LaTeX()
+	if !sameFiles(files, again) {
+		t.Error("two builds of the LaTeX are not the same")
+	}
+}
+
+func TestPackArxiv(t *testing.T) {
+	d := packed(t, fixtures, "kind: article\ntargets: [Q529ES]\nchoose: {DSG7KN: GY1XDB}\n")
+	files, err := d.LaTeX()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(files[MainTeX]), `\documentclass[11pt]{article}`) {
+		t.Error("an article does not use the class article")
+	}
+	var readme struct {
+		Process struct {
+			Compiler string `json:"compiler"`
+		} `json:"process"`
+		Sources []struct {
+			Filename string `json:"filename"`
+			Usage    string `json:"usage"`
+		} `json:"sources"`
+		SpecVersion    int `json:"spec_version"`
+		TeXLiveVersion int `json:"texlive_version"`
+	}
+	if err := json.Unmarshal(files[ArxivReadme], &readme); err != nil {
+		t.Fatal(err)
+	}
+	if readme.Process.Compiler != "pdflatex" || readme.SpecVersion != 1 || readme.TeXLiveVersion != TeXLive {
+		t.Errorf("00README.json is %s", files[ArxivReadme])
+	}
+	for _, s := range readme.Sources {
+		if files[s.Filename] == nil {
+			t.Errorf("00README.json names %s, which is not in the tree", s.Filename)
+		}
+		if s.Filename == MainTeX && s.Usage != "toplevel" {
+			t.Errorf("main.tex has the usage %s", s.Usage)
+		}
+	}
+}
+
+func TestPackPreTeXt(t *testing.T) {
+	d := packed(t, fixtures, "kind: book\ntargets: [Q529ES]\nchoose: {DSG7KN: GY1XDB}\n")
+	files, err := d.PreTeXt()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ptx := files[MainPTX]
+	dec := xml.NewDecoder(bytes.NewReader(ptx))
+	ids := map[string]bool{}
+	for {
+		tok, err := dec.Token()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatalf("main.ptx is not well-formed XML: %v", err)
+		}
+		if e, ok := tok.(xml.StartElement); ok {
+			for _, a := range e.Attr {
+				if a.Name.Local == "id" {
+					if ids[a.Value] {
+						t.Errorf("main.ptx has the id %s two times", a.Value)
+					}
+					ids[a.Value] = true
+				}
+			}
+		}
+	}
+	for _, id := range []string{"Q529ES", "GY1XDB", "m2-7SW3MR", "src-book-isbn-9780471433347"} {
+		if !ids[id] {
+			t.Errorf("main.ptx has no element with the id %s", id)
+		}
+	}
+	for _, want := range []string{`<pretext xml:lang="en-US">`, `<book `, `<definition xml:id="GY1XDB"`, `<xref ref="src-book-isbn-9780471433347" detail="Section 3.2, Theorem 8"/>`} {
+		if !bytes.Contains(ptx, []byte(want)) {
+			t.Errorf("main.ptx has no %s", want)
+		}
+	}
+	again, _ := d.PreTeXt()
+	if !sameFiles(files, again) {
+		t.Error("two builds of the PreTeXt are not the same")
+	}
+}
+
+func TestPackOutput(t *testing.T) {
+	d := packed(t, fixtures, "kind: book\ntargets: [Q529ES]\nchoose: {DSG7KN: GY1XDB}\n")
+	for _, f := range Backends {
+		if files, err := d.Output(f); err != nil || len(files) == 0 {
+			t.Errorf("Output(%s) gives %d files, %v", f, len(files), err)
+		}
+	}
+	if _, err := d.Output("jats"); err == nil {
+		t.Error("Output(jats) gives no error")
+	}
+}
+
+func TestPackSources(t *testing.T) {
+	d := packed(t, fixtures, "kind: book\ntargets: [Q529ES]\nchoose: {DSG7KN: GY1XDB}\n")
+	if len(d.Sources) != 1 {
+		t.Fatalf("the sources are %+v", d.Sources)
+	}
+	s := d.Sources[0]
+	if s.Number != 1 || s.Key != "src-book-isbn-9780471433347" || s.Title != "ISBN 9780471433347" {
+		t.Errorf("the source is %+v", s)
+	}
+	for _, it := range d.Items() {
+		if it.Tag == "Q529ES" && (len(it.Sources) != 1 || it.Sources[0].Locator != "Section 3.2, Theorem 8") {
+			t.Errorf("the citations of Q529ES are %+v", it.Sources)
+		}
+	}
+}
+
+func TestCreditString(t *testing.T) {
+	for _, c := range []struct {
+		c    Credit
+		want string
+	}{
+		{Credit{Person: "github:ada", Edited: true, Nodes: 3, Glue: 1}, "github:ada, editor, 3 nodes, 1 part of the editorial text"},
+		{Credit{Person: "github:bob", Nodes: 1, Reviews: 2}, "github:bob, 1 node, 2 reviews"},
+		{Credit{Person: "github:eve"}, "github:eve"},
+	} {
+		if got := c.c.String(); got != c.want {
+			t.Errorf("the credit is %q, not %q", got, c.want)
+		}
+	}
+}
+
 func TestPackCites(t *testing.T) {
 	// The statement of Lagrange's theorem links to 2J2QXT, which is not in the volume. ENS73X links to DTT8HP in its section Idea, which the volume does not show.
 	d := packed(t, fixtures, "kind: book\ntargets: [Q529ES]\nchoose: {DSG7KN: GY1XDB}\n")
@@ -368,8 +525,8 @@ func TestPackLock(t *testing.T) {
 }
 
 func TestPackUnknownFormat(t *testing.T) {
-	r := packed(t, fixtures, "kind: book\ntargets: [Q529ES]\nchoose: {DSG7KN: GY1XDB}\nformats: [html, latex]\n").Check()
-	if got := findings(r, "PC9"); len(got) != 1 || !strings.Contains(got[0], "latex has no back end") {
+	r := packed(t, fixtures, "kind: book\ntargets: [Q529ES]\nchoose: {DSG7KN: GY1XDB}\nformats: [html, latex, jats]\n").Check()
+	if got := findings(r, "PC9"); len(got) != 1 || !strings.Contains(got[0], "jats has no back end") {
 		t.Errorf("PC9 is %v", got)
 	}
 }

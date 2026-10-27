@@ -170,17 +170,57 @@ func takeDisplayMath(src string) (string, []string) {
 	return out.String(), blocks
 }
 
-// mathKind is the AST kind of inline math.
-var mathKind = ast.NewNodeKind("Math")
+// KindMath is the AST kind of a formula.
+var KindMath = ast.NewNodeKind("Math")
 
-type mathNode struct {
+// Math is a formula in a tree that Parse returns. A block of display math is a paragraph with one Math in it.
+type Math struct {
 	ast.BaseInline
 	TeX     []byte
 	Display bool
 }
 
-func (n *mathNode) Kind() ast.NodeKind            { return mathKind }
-func (n *mathNode) Dump(source []byte, level int) { ast.DumpHelper(n, source, level, nil, nil) }
+// Kind returns KindMath.
+func (n *Math) Kind() ast.NodeKind { return KindMath }
+
+// Dump writes the formula for debugging.
+func (n *Math) Dump(source []byte, level int) {
+	ast.DumpHelper(n, source, level, map[string]string{"TeX": string(n.TeX)}, nil)
+}
+
+// body parses a node body for Parse.
+var body = goldmark.New(
+	goldmark.WithExtensions(extension.Table, extension.Strikethrough, extension.Footnote),
+	goldmark.WithParserOptions(parser.WithInlineParsers(util.Prioritized(mathParser{}, 50))),
+)
+
+// Parse parses src as a node body, for a back end that does not write HTML. It returns the tree and the source that the text of the tree points into. The math is Math, and each wiki link is a link with the destination NodeScheme and the id. The tree has the nodes of goldmark and of its extensions Table, Strikethrough and Footnote.
+func Parse(src string) (ast.Node, []byte) {
+	src, blocks := takeDisplayMath(src)
+	source := []byte(wikiLinks(src))
+	doc := body.Parser().Parse(text.NewReader(source))
+	var marks []*ast.Paragraph
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if p, ok := n.(*ast.Paragraph); ok && entering {
+			marks = append(marks, p)
+			return ast.WalkSkipChildren, nil
+		}
+		return ast.WalkContinue, nil
+	})
+	for _, p := range marks {
+		t, ok := p.FirstChild().(*ast.Text)
+		if !ok || p.ChildCount() != 1 {
+			continue
+		}
+		var i int
+		if _, err := fmt.Sscanf(string(t.Segment.Value(source)), displayMarker+"%d", &i); err != nil || i >= len(blocks) || string(t.Segment.Value(source)) != fmt.Sprintf("%s%d", displayMarker, i) {
+			continue
+		}
+		p.RemoveChildren(p)
+		p.AppendChild(p, &Math{TeX: []byte(blocks[i]), Display: true})
+	}
+	return doc, source
+}
 
 // mathParser reads $...$ and $$...$$ on one line. A backslash escapes the next character.
 type mathParser struct{}
@@ -208,7 +248,7 @@ func (mathParser) Parse(_ ast.Node, block text.Reader, _ parser.Context) ast.Nod
 	if end <= open {
 		return nil
 	}
-	n := &mathNode{TeX: append([]byte(nil), line[open:end]...), Display: open == 2}
+	n := &Math{TeX: append([]byte(nil), line[open:end]...), Display: open == 2}
 	block.Advance(end + open)
 	return n
 }
@@ -216,11 +256,11 @@ func (mathParser) Parse(_ ast.Node, block text.Reader, _ parser.Context) ast.Nod
 type mathRenderer struct{ tex TeX }
 
 func (r mathRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
-	reg.Register(mathKind, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
+	reg.Register(KindMath, func(w util.BufWriter, _ []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
-		m := n.(*mathNode)
+		m := n.(*Math)
 		class := "math"
 		if m.Display {
 			class = "math display"

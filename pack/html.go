@@ -8,6 +8,7 @@ import (
 	"html"
 	"html/template"
 	"io/fs"
+	"maps"
 	"path"
 	"strings"
 
@@ -46,6 +47,19 @@ func (d *Document) HTML() (map[string][]byte, error) {
 	return files, err
 }
 
+// Output returns the files of the output of a format, by slash path. A format with no back end is an error.
+func (d *Document) Output(format string) (map[string][]byte, error) {
+	switch format {
+	case HTML:
+		return d.HTML()
+	case LaTeX:
+		return d.LaTeX()
+	case PreTeXt:
+		return d.PreTeXt()
+	}
+	return nil, fmt.Errorf("pack: the format %s has no back end yet", format)
+}
+
 // htmlRenderer renders one document.
 type htmlRenderer struct {
 	d     *Document
@@ -55,7 +69,7 @@ type htmlRenderer struct {
 }
 
 func newHTMLRenderer(d *Document) (*htmlRenderer, error) {
-	k, err := katex.New(d.tree.macros)
+	k, err := katex.New(d.macros())
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +108,20 @@ func (r *htmlRenderer) link(dest string) (markup.Target, bool) {
 		return markup.Target{Dest: ref.URL, Title: ref.Name + ", " + ref.URI, Class: "cite"}, true
 	}
 	return markup.Target{Dest: "#" + t}, false
+}
+
+// macros returns the KaTeX macros, with the variants of the notation that the volume chooses.
+func (d *Document) macros() map[string]string {
+	out := maps.Clone(d.tree.macros)
+	for _, u := range d.Notation {
+		if u.Variant != "" {
+			if out == nil {
+				out = map[string]string{}
+			}
+			out[u.Macro] = u.LaTeX
+		}
+	}
+	return out
 }
 
 // ref returns the reference to a node.
@@ -188,9 +216,10 @@ func (r *htmlRenderer) page() ([]byte, error) {
 	var buf bytes.Buffer
 	if err := t.Execute(&buf, struct {
 		*Document
-		LD    template.HTML
-		Style string
-	}{r.d, ld, Style}); err != nil {
+		LD      template.HTML
+		Style   string
+		Licence string
+	}{r.d, ld, Style, licence}); err != nil {
 		return nil, err
 	}
 	if r.err != nil {

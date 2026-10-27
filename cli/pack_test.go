@@ -68,6 +68,19 @@ func TestPackWrite(t *testing.T) {
 	}
 }
 
+func TestPackWriteFormats(t *testing.T) {
+	root := packTree(t, "choose: {DSG7KN: GY1XDB}\nformats: [html, latex, pretext]\n")
+	out := t.TempDir()
+	if code, _, stderr := run("pack", "-root", root, "-out", out, "lagrange"); code != ExitOK {
+		t.Fatalf("m2 pack exits with code %d: %s", code, stderr)
+	}
+	for _, f := range []string{"index.html", "latex/" + pack.MainTeX, "latex/" + pack.MacroSty, "pretext/" + pack.MainPTX} {
+		if _, err := os.Stat(filepath.Join(out, filepath.FromSlash(f))); err != nil {
+			t.Error(err)
+		}
+	}
+}
+
 func TestPackFails(t *testing.T) {
 	root := packTree(t, "")
 	code, stdout, stderr := run("pack", "-root", root, "-check", "lagrange")
