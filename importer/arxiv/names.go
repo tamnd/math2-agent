@@ -8,11 +8,11 @@ import (
 	"github.com/tamnd/math2-agent/inventory"
 )
 
-// resultWords are the words of which a name of a result has one, as in "Hahn-Banach theorem" or "Zorn's lemma". A row name with none of them, as "Compactness", is too common in text to name a result.
+// resultWords are the words of which a name of a result has one, as in "Hahn-Banach theorem" or "Zorn's lemma". A row name with none of them, as "Compactness", is too common in text to name a result. The value is true for a strong word, which names a result also in a row of the kind topic or unknown. A weak word, as in "identity matrix" or "universal property", names a result only in a row of the kind statement or problem.
 var resultWords = map[string]bool{
-	"theorem": true, "lemma": true, "inequality": true, "conjecture": true, "principle": true, "formula": true,
-	"criterion": true, "identity": true, "law": true, "hypothesis": true,
-	"theorems": true, "inequalities": true, "paradox": true, "property": true, "construction": true, "trick": true,
+	"theorem": true, "theorems": true, "lemma": true, "inequality": true, "inequalities": true, "conjecture": true,
+	"principle": true, "criterion": true, "law": true, "paradox": true,
+	"formula": false, "identity": false, "property": false, "construction": false, "hypothesis": false, "trick": false,
 }
 
 // plainWords are the words that do not make a name specific, as in "Main theorem" or "Key lemma". A name needs a word that is not one of them and not a result word.
@@ -23,7 +23,7 @@ var plainWords = map[string]bool{
 	"above": true, "below": true, "same": true, "fundamental": true, "structure": true, "of": true, "for": true, "on": true, "in": true,
 }
 
-// Names is the index of the named results of the inventory, for the name method of AX6.2. It holds each row that has a name of two or more words with a result word and a specific word, that has a mention from a source other than arXiv, and that is not merged into another row. A row with only arXiv mentions has the name that one paper gives, which is not a known name.
+// Names is the index of the named results of the inventory, for the name method of AX6.2. It holds each row of the kind statement, problem, topic or unknown that has a name of two or more words with a result word and a specific word, that has a mention from a source other than arXiv, and that is not merged into another row. A row with only arXiv mentions has the name that one paper gives, which is not a known name.
 type Names struct {
 	byFirst map[string][]namedRow
 }
@@ -45,8 +45,24 @@ func NewNames(rows []inventory.Row) *Names {
 		if !slices.ContainsFunc(r.Mentions, func(m string) bool { return !strings.HasPrefix(m, "ax://") }) {
 			continue
 		}
-		ws := nameWords(r.Name)
-		if len(ws) < 2 || !slices.ContainsFunc(ws, func(w string) bool { return resultWords[w] }) || !slices.ContainsFunc(ws, func(w string) bool { return !resultWords[w] && !plainWords[w] }) {
+		weak := false
+		switch r.Kind {
+		case "statement", "problem":
+			weak = true
+		case "topic", "unknown":
+		default:
+			continue
+		}
+		ws := trimArticles(nameWords(r.Name))
+		result := slices.ContainsFunc(ws, func(w string) bool {
+			strong, ok := resultWords[w]
+			return ok && (strong || weak)
+		})
+		specific := slices.ContainsFunc(ws, func(w string) bool {
+			_, ok := resultWords[w]
+			return !ok && !plainWords[w]
+		})
+		if len(ws) < 2 || !result || !specific {
 			continue
 		}
 		var areas []string
@@ -71,7 +87,7 @@ func (n *Names) Find(text string, msc []string, skip ...string) []string {
 	}
 	skipped := map[string]bool{}
 	for _, s := range skip {
-		skipped[strings.Join(nameWords(s), " ")] = true
+		skipped[strings.Join(trimArticles(nameWords(s)), " ")] = true
 	}
 	ws := nameWords(text)
 	var out []string
@@ -105,6 +121,14 @@ func (n *Names) Find(text string, msc []string, skip ...string) []string {
 	}
 	slices.Sort(out)
 	return out
+}
+
+// trimArticles removes a leading article, which is not part of a name: "The Triangle Inequality" is "triangle inequality".
+func trimArticles(ws []string) []string {
+	for len(ws) > 0 && (ws[0] == "the" || ws[0] == "a" || ws[0] == "an") {
+		ws = ws[1:]
+	}
+	return ws
 }
 
 // nameWords splits a name or a text into lower-case words. A hyphen or a dash joins two words of a name, as in "Hahn-Banach" and "Hahn–Banach", so both give the same word. A possessive stays on its word, as "zorn's".
