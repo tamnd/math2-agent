@@ -24,6 +24,7 @@ var Estimates = map[string]Estimate{
 	Confirm:   {ReviewLow: 1, ReviewHigh: 2, ReviewKnown: true},
 	Sanity:    {},
 	Source:    {ReviewLow: 2, ReviewHigh: 2, ReviewKnown: true},
+	Align:     {},
 }
 
 // Plan is the estimate for the first jobs of a queue. It is a plan only: no model run starts without a budget that a person approved (K12.6).

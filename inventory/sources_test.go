@@ -6,22 +6,25 @@ import (
 
 	"github.com/tamnd/math2-agent/crosswalk"
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/ingest/afp"
 	"github.com/tamnd/math2-agent/ingest/arxiv"
 	"github.com/tamnd/math2-agent/ingest/arxivresults"
 	"github.com/tamnd/math2-agent/ingest/curricula"
 	"github.com/tamnd/math2-agent/ingest/erdosproblems"
 	"github.com/tamnd/math2-agent/ingest/formalconjectures"
 	"github.com/tamnd/math2-agent/ingest/lmfdb"
+	"github.com/tamnd/math2-agent/ingest/mathcomp"
 	"github.com/tamnd/math2-agent/ingest/mathlib"
 	"github.com/tamnd/math2-agent/ingest/oeis"
 	"github.com/tamnd/math2-agent/ingest/palomar"
+	"github.com/tamnd/math2-agent/ingest/setmm"
 	"github.com/tamnd/math2-agent/ingest/zbmath"
 	"github.com/tamnd/math2-agent/inventory"
 )
 
 // The inventory names sources by their ids. The ids must be the ids of the adapters, or the layer, the kind and the system of a mention are wrong.
 func TestSourceIDs(t *testing.T) {
-	for _, a := range []ingest.Adapter{mathlib.Adapter{}, formalconjectures.Adapter{}} {
+	for _, a := range []ingest.Adapter{mathlib.Adapter{}, formalconjectures.Adapter{}, afp.Adapter{}, setmm.Adapter{}, mathcomp.Adapter{}} {
 		if id := a.Source().ID; !inventory.IsFormal(id) {
 			t.Errorf("the source %s is not formal", id)
 		}

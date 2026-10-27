@@ -90,3 +90,40 @@ func TestPlan(t *testing.T) {
 		t.Errorf("the plan is %+v", p)
 	}
 }
+
+func TestAlign(t *testing.T) {
+	node := func(tags ...string) *inventory.Outcome {
+		return &inventory.Outcome{Value: inventory.OutcomeNode, Target: tags}
+	}
+	in := Input{Day: day, Rows: []inventory.Row{
+		{ID: "201A1A1A10", Layer: inventory.Textbook, MSC: []string{"11A41"}, Spread: 3, Outcome: node("PRIME0000A")},
+		{ID: "202A1A1A11", Layer: inventory.Textbook, MSC: []string{"11N05", "05A15"}, Spread: 1, Outcome: node("PNT000000A", "PRIME0000A")},
+		{ID: "203A1A1A12", Layer: inventory.Textbook, MSC: []string{"05A15"}, Spread: 5, Outcome: node("CATALAN00A")},
+		{ID: "204A1A1A13", Layer: inventory.Textbook, MSC: []string{"14H52"}, Spread: 5, Outcome: node("ELLIPTIC0A")},
+		{ID: "205A1A1A14", Layer: inventory.Research, MSC: []string{"11N05"}, Outcome: &inventory.Outcome{Value: inventory.OutcomeRecord}},
+		{ID: "206A1A1A15", Layer: inventory.Research, MSC: []string{"05A15"}},
+		{ID: "207A1A1A16", Layer: inventory.Research, MSC: []string{"14H52"}, Outcome: &inventory.Outcome{Value: inventory.OutcomeAligned}},
+	}}
+	q, err := Compute(Align, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(q.Items) != 0 || q.Reason == "" {
+		t.Errorf("with no area asked, the queue is %+v", q)
+	}
+	// Area 11 has a record and area 05 has an open result. Area 14 has only an aligned result, so its node waits for nothing.
+	in.Asked = []string{"11", "14H52", "05"}
+	if q, err = Compute(Align, in); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"CATALAN00A", "PRIME0000A", "PNT000000A"}; !slices.Equal(targets(q), want) {
+		t.Errorf("the queue is %v, and it must be %v", targets(q), want)
+	}
+	if q.Items[1].Priority != 3 || q.Items[1].Goal != "node PRIME0000A has an aligned edge to each research result that states it" || q.Reason != "" {
+		t.Errorf("the queue is %+v", q)
+	}
+	in.Asked = []string{"05"}
+	if q, _ = Compute(Align, in); !slices.Equal(targets(q), []string{"CATALAN00A", "PNT000000A", "PRIME0000A"}) {
+		t.Errorf("with area 05 asked, the queue is %v", targets(q))
+	}
+}

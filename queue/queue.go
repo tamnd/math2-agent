@@ -23,11 +23,12 @@ const (
 	Confirm   = "confirm"
 	Sanity    = "sanity"
 	Source    = "source"
+	Align     = "align"
 )
 
-// Names returns the names of the queues in the order of corpus spec K12.2.
+// Names returns the names of the queues in the order of corpus spec K12.2, then the queue align of corpus spec K14.7.
 func Names() []string {
-	return []string{Enumerate, Cluster, Decide, State, Complete, Confirm, Sanity, Source}
+	return []string{Enumerate, Cluster, Decide, State, Complete, Confirm, Sanity, Source, Align}
 }
 
 // PriorityVersion is the version of the priority formula. A change of the weights or the terms needs a new version (corpus spec K12.3).
@@ -57,6 +58,8 @@ type Input struct {
 	Rows     []inventory.Row
 	Mentions []inventory.Mention
 	Day      time.Time // the day of the open count
+	// Asked are the MSC codes at two digits of the areas that a project or a campaign asks for (spec 18.5). Only the queue align reads them.
+	Asked []string
 }
 
 type def struct {
@@ -74,6 +77,7 @@ var defs = map[string]def{
 	Confirm:   {role: "review-assist, then people", goal: "rule P04 is clean", reason: "no agent-written section is in the tree yet"},
 	Sanity:    {role: "explore", goal: "rule X05 is clean", reason: "no agent-written statement is in the tree yet"},
 	Source:    {role: "review-assist, then people", goal: "rule P06 is clean", reason: "no source has the mark locator_unconfirmed yet"},
+	Align:     {role: "align", goal: "each result of the research layer that a node states has an aligned edge", reason: "no project or campaign asks for an area with open results, so spec 18.5 builds no research core yet", items: alignItems},
 }
 
 // Compute returns the queue name, with its items in priority order: the highest priority first, then the target in byte order.
@@ -88,6 +92,9 @@ func Compute(name string, in Input) (*Queue, error) {
 		return q, nil
 	}
 	q.Items = d.items(in)
+	if len(q.Items) == 0 {
+		q.Reason = d.reason
+	}
 	slices.SortFunc(q.Items, func(a, b Item) int {
 		return cmp.Or(cmp.Compare(b.Priority, a.Priority), cmp.Compare(a.Target, b.Target))
 	})
@@ -106,6 +113,54 @@ func decideItems(in Input) []Item {
 			continue
 		}
 		out = append(out, Item{Target: r.ID, Name: r.Name, Kind: r.Kind, Goal: "row " + r.ID + " has an outcome", Priority: priority(r.Spread)})
+	}
+	return out
+}
+
+// alignItems gives each node of an area that a project or a campaign asks for, when the area has results of the research layer that no node states yet (corpus spec K14.7). Spec 18.5 builds the research core of an area on demand only, so the queue has no items when no one asks for an area. The rule research-results keeps the other results as records.
+func alignItems(in Input) []Item {
+	asked := map[string]bool{}
+	for _, c := range in.Asked {
+		if len(c) >= 2 {
+			asked[c[:2]] = true
+		}
+	}
+	waiting := map[string]bool{} // the asked areas with a result that is open or a record
+	for i := range in.Rows {
+		r := &in.Rows[i]
+		if r.Layer == inventory.Research && (r.IsOpen(in.Day) || r.Outcome.Value == inventory.OutcomeRecord) {
+			for _, a := range areas(r) {
+				waiting[a] = waiting[a] || asked[a]
+			}
+		}
+	}
+	best := map[string]Item{}
+	for i := range in.Rows {
+		r := &in.Rows[i]
+		if r.Outcome == nil || r.Outcome.Value != inventory.OutcomeNode && r.Outcome.Value != inventory.OutcomeMember || !slices.ContainsFunc(areas(r), func(a string) bool { return waiting[a] }) {
+			continue
+		}
+		for _, t := range r.Outcome.Target {
+			it := Item{Target: t, Name: r.Name, Kind: r.Kind, Goal: "node " + t + " has an aligned edge to each research result that states it", Priority: priority(r.Spread)}
+			if old, ok := best[t]; !ok || it.Priority > old.Priority {
+				best[t] = it
+			}
+		}
+	}
+	out := []Item{}
+	for _, it := range best {
+		out = append(out, it)
+	}
+	return out
+}
+
+// areas returns the MSC codes at two digits of a row.
+func areas(r *inventory.Row) []string {
+	var out []string
+	for _, c := range r.MSC {
+		if len(c) >= 2 && !slices.Contains(out, c[:2]) {
+			out = append(out, c[:2])
+		}
 	}
 	return out
 }

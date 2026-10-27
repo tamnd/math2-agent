@@ -8,6 +8,7 @@ type Summary struct {
 	Open     int            `json:"open"`     // the open count (corpus spec K2.1)
 	Mentions int            `json:"mentions"` // the number of mentions
 	Layers   map[string]int `json:"layers"`   // the rows of each layer
+	OpenBy   map[string]int `json:"open_by"`  // the open count of each layer. Corpus spec K14.7 asks that the count of the research layer goes down each month.
 	Kinds    map[string]int `json:"kinds"`    // the rows of each kind
 	Outcomes map[string]int `json:"outcomes"` // the rows of each outcome, and open
 	Sources  map[string]int `json:"sources"`  // the mentions of each source
@@ -16,7 +17,7 @@ type Summary struct {
 
 // Summarize counts the rows and the mentions on the day. A merged row is not counted, because its mentions are in another row.
 func Summarize(rows []Row, ms []Mention, day time.Time) *Summary {
-	s := &Summary{Mentions: len(ms), Layers: map[string]int{}, Kinds: map[string]int{}, Outcomes: map[string]int{}, Sources: map[string]int{}, MSC: map[string]int{}}
+	s := &Summary{Mentions: len(ms), Layers: map[string]int{}, OpenBy: map[string]int{}, Kinds: map[string]int{}, Outcomes: map[string]int{}, Sources: map[string]int{}, MSC: map[string]int{}}
 	for i := range rows {
 		r := &rows[i]
 		if r.Outcome != nil && r.Outcome.Value == OutcomeMerged {
@@ -27,6 +28,7 @@ func Summarize(rows []Row, ms []Mention, day time.Time) *Summary {
 		if r.IsOpen(day) {
 			s.Open++
 			s.Outcomes["open"]++
+			s.OpenBy[r.Layer]++
 		} else {
 			s.Outcomes[r.Outcome.Value]++
 		}
