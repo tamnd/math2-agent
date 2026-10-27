@@ -16,13 +16,14 @@ import (
 	"text/tabwriter"
 	"time"
 
+	axImport "github.com/tamnd/math2-agent/importer/arxiv"
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/queue"
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -74,7 +75,20 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 	plan := fs.String("plan", "", "run the importers of this plan, for example "+ingest.PlanFile+", before the mentions")
 	cache := fs.String("cache", "", "with -plan, the directory of the downloaded snapshots. Empty means m2 in the user cache directory.")
 	summary := fs.String("summary", "", "with -plan, also write the summary in Markdown to this file, for the body of a pull request")
+	source := fs.String("source", "", "a source with its own importer, which reads a checkout and not build/records/. The one such source is arxiv.")
+	corpus := fs.String("corpus", "", "with -source, the checkout that the importer reads, for example a checkout of tamnd/arxiv")
 	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	switch *source {
+	case "":
+	case axImport.Source:
+		if *corpus == "" || *plan != "" || fs.NArg() != 0 {
+			fmt.Fprintln(stderr, name+": -source arxiv needs -corpus, the checkout of tamnd/arxiv, and takes no -plan and no source names")
+			return ExitUsage
+		}
+	default:
+		fmt.Fprintf(stderr, "%s: %s has no importer of its own. Give it with no -source.\n", name, *source)
 		return ExitUsage
 	}
 	if *plan == "" && (*cache != "" || *summary != "") || *plan != "" && fs.NArg() != 0 {
@@ -86,6 +100,26 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 	}
 	if *plan != "" {
 		if err := importPlan(*root, *commit, *plan, *cache, *summary, stdout); err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		return ExitOK
+	}
+	if *source != "" {
+		res, err := axImport.Import(*corpus)
+		if err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		if err := inventory.WriteMentions(*root, *source, res.Mentions); err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		fmt.Fprintf(stdout, "%s: %d mentions from %d papers, %d attached, %d retired, %d restated prints, %d objects with no tag\n", *source, len(res.Mentions), res.Papers, res.Attached, res.Retired, res.Restated, len(res.Untagged))
+		if len(res.Untagged) > 0 {
+			fmt.Fprintf(stderr, "%s: %d objects of %s have no tag, so they have no mention. Run ax tags analysis -all on the checkout.\n", name, len(res.Untagged), *corpus)
+		}
+		if _, err := cluster(*root, *commit, stdout); err != nil {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
 		}
@@ -288,7 +322,7 @@ func cluster(root, commit string, stdout io.Writer) (*inventory.Result, error) {
 	if err := inventory.AppendRegister(root, res.Added, commit); err != nil {
 		return nil, err
 	}
-	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal formal statements %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Equivalent)
+	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal formal statements %d, attached with no row %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Equivalent, res.Orphans)
 	return res, nil
 }
 

@@ -192,3 +192,13 @@ func TestCorpusStatusEmpty(t *testing.T) {
 		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
 	}
 }
+
+func TestCorpusImportOfArxivNeedsTheCheckout(t *testing.T) {
+	root := t.TempDir()
+	if code, _, stderr := run("corpus", "import", "-root", root, "-commit", "c", "-source", "arxiv"); code != ExitUsage || !strings.Contains(stderr, "-corpus") {
+		t.Fatalf("code %d, stderr %q", code, stderr)
+	}
+	if code, _, stderr := run("corpus", "import", "-root", root, "-commit", "c", "-source", "stacks", "-corpus", root); code != ExitUsage || !strings.Contains(stderr, "no importer") {
+		t.Fatalf("code %d, stderr %q", code, stderr)
+	}
+}

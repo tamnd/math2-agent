@@ -444,6 +444,20 @@ Each source has an access class: `open`, `share-alike-nc`, `verbatim`, `gfdl` or
 
 L02 to L04 need the records in `build/records/`. When they do not exist, the rules skip. L05 needs the run summaries in `build/runs/`. The package `copycheck` is the copy check of corpus K9.4. It compares a body with a reference corpus, not only with the sources of the node: stage 1 finds the exact runs of 50 normalized characters or more, and stage 2 finds the near copies of each paragraph with MinHash on word 5-grams. The check masks each formula and each standard phrase of a list that a curator keeps. Each source has an adapter in the package `ingest/<source>`. An adapter whose bulk channel has more than one file also implements `ingest.Fetcher`. To add a source, write the adapter, register it with `ingest.Register`, import its package in `cmd/m2`, and write the source document in `manifests/sources.yaml`. Read the licence at the source itself, not at a catalogue, and record where, when and by whom in `licence_read`. A maintainer approves the entry and names themself in `approved_by`.
 
+### The items of arXiv papers
+
+The arXiv importer (corpus arxiv AX05) does not use `build/records/`. It reads the analysis plane of a checkout of tamnd/arxiv and writes the mentions directly:
+
+```
+$ m2 corpus import -source arxiv -corpus ../arxiv
+arxiv: 14519 mentions from 406 papers, 4745 attached, 0 retired, 41 restated prints, 0 objects with no tag
+rows: 9774, new 9774, with new mentions 0, merged 0, waiting for a source 0, joined by equal formal statements 0, attached with no row 522
+```
+
+The mention id is `ax://paper/<id>#<tag>`, with the tag of the object in the analysis plane. A statement, a definition, an example, a counterexample, a conjecture, a problem, an exercise and an object of the kind unknown each get a mention. A remark, a hypothesis and the other objects do not. A proof is attached to what it proves, and a claim inside a proof is attached to the proof. An attached mention is not a row. It is in the field `proofs` or `local` of the row of its target. A proof with no target has `attached_to: unknown`. A restated item is one mention, and the other prints are in its field `also`. A mention whose object is gone in the latest version gets `retired`.
+
+The importer copies no text of a paper. The field `text_ref` names the object record, and `hash` is its content hash. A version of the class `record` gives no name and no `text_ref`. Run `ax tags analysis -all` on the checkout first, because an object with no tag gets no mention.
+
 ## Alignment
 
 `m2 align <source>` compares each node with the records of a source and proposes edges. Run `m2 ingest <source>` first. The aligner does not change a node. It writes the proposals to `queues/align/<system>.jsonl`, and a person decides on each one.
