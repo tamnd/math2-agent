@@ -395,9 +395,9 @@ func TestClusterJoinsByCitedResult(t *testing.T) {
 		ax("1701.00517#R1", "statement"),
 		ax("1701.00518#R1", "statement", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"}),
 		ax("1701.00519#R1", "conjecture", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"}),
-		ax("1701.00520#R1", "statement", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "1", Confidence: "medium"}), // not high
+		ax("1701.00520#R1", "statement", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "1", Confidence: "medium"}),        // not high
 		ax("1701.00521#R1", "definition", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"}), // another kind
-		ax("1701.00522#R1", "statement", CitedResult{To: "doi:10.1/x", Locator: "Theorem 2", Confidence: "high"}), // a work, not a mention
+		ax("1701.00522#R1", "statement", CitedResult{To: "doi:10.1/x", Locator: "Theorem 2", Confidence: "high"}),                // a work, not a mention
 	}
 	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
 	if err != nil {

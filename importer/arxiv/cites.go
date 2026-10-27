@@ -57,7 +57,7 @@ var locatorIn = regexp.MustCompile(`^(?:([A-Za-z]+)\.?\s*)?((?:[A-Z]\.?)?\d+(?:\
 var kindWords = map[string][2]string{
 	"theorem": {"statement", "theorem"}, "thm": {"statement", "theorem"}, "th": {"statement", "theorem"},
 	"lemma": {"statement", "lemma"}, "lem": {"statement", "lemma"}, "lm": {"statement", "lemma"},
-	"claim": {"statement", "lemma"},
+	"claim":       {"statement", "lemma"},
 	"proposition": {"statement", "proposition"}, "prop": {"statement", "proposition"},
 	"corollary": {"statement", "corollary"}, "cor": {"statement", "corollary"}, "coro": {"statement", "corollary"},
 	"fact": {"statement", "fact"}, "axiom": {"statement", "axiom"},
