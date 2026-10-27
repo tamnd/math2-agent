@@ -37,7 +37,7 @@ func TestParseDefaults(t *testing.T) {
 		}
 	}
 	v := volume(t, "kind: book\ntargets: [Q529ES]\n")
-	if f := v.formats(); len(f) != 1 || f[0] != HTML {
+	if f := v.Outputs(); len(f) != 1 || f[0] != HTML {
 		t.Errorf("the formats are %v", f)
 	}
 	if v.Line["kind"] != 4 {

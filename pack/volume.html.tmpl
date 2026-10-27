@@ -31,6 +31,9 @@
 {{- if .Notation}}
 <li><a href="#notation">Notation</a></li>
 {{- end}}
+{{- if .Sources}}
+<li><a href="#sources">Sources</a></li>
+{{- end}}
 <li><a href="#attribution">Attribution</a></li>
 </ol>
 </nav>
@@ -79,6 +82,9 @@
 {{- range .Proofs}}
 <div class="proof" id="{{.Tag}}"><p class="sub">Proof</p>{{md .Main}}<p class="qed" aria-hidden="true">∎</p></div>
 {{- end}}
+{{- with .Sources}}
+<p class="sources">Sources: {{range $i, $c := .}}{{if $i}}; {{end}}<a href="#{{$c.Key}}">[{{$c.Number}}{{with $c.Locator}}, {{.}}{{end}}]</a>{{end}}.</p>
+{{- end}}
 <p class="uri"><a href="m2://{{.Tag}}">m2://{{.Tag}}</a></p>
 </article>
 {{- end}}
@@ -120,13 +126,24 @@
 </ul>
 </section>
 {{- end}}
+{{- if .Sources}}
+<section class="back" id="sources">
+<h2>Sources</h2>
+<ol>
+{{- range .Sources}}
+<li id="{{.Key}}">{{if .URL}}<a href="{{.URL}}">{{.Title}}</a>{{else}}{{.Title}}{{end}}</li>
+{{- end}}
+</ol>
+</section>
+{{- end}}
 <section class="back" id="attribution">
 <h2>Attribution</h2>
+<p>{{.Licence}}</p>
 {{- with .Attribution}}
 {{- if .People}}
 <ul>
 {{- range .People}}
-<li>{{.Person}}{{if .Edited}}, editor{{end}}{{if .Nodes}}, {{.Nodes}} nodes{{end}}{{if .Reviews}}, {{.Reviews}} reviews{{end}}{{if .Glue}}, {{.Glue}} parts of the editorial text{{end}}</li>
+<li>{{.}}</li>
 {{- end}}
 </ul>
 {{- end}}

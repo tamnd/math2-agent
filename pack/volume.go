@@ -30,11 +30,14 @@ const (
 	NoProofs   = "none" // no proofs
 )
 
-// HTML is the only output format with a back end now (corpus K14.2).
+// HTML is the format of the HTML output (corpus K11.4).
 const HTML = "html"
 
 // Formats are the output formats of corpus K11.4.
-var Formats = []string{HTML, "latex", "pretext", "jats", "cartridge", "blueprint", "myst", "typst", "slides"}
+var Formats = []string{HTML, LaTeX, PreTeXt, "jats", "cartridge", "blueprint", "myst", "typst", "slides"}
+
+// Backends are the formats that have a back end now (corpus K14.2).
+var Backends = []string{HTML, LaTeX, PreTeXt}
 
 // Preface is the place of the glue that comes before the first chapter.
 const Preface = "preface"
@@ -315,8 +318,8 @@ func (v *Volume) proofs() string {
 	return AllProofs
 }
 
-// formats returns the output formats.
-func (v *Volume) formats() []string {
+// Outputs returns the output formats of the volume.
+func (v *Volume) Outputs() []string {
 	if len(v.Formats) == 0 {
 		return []string{HTML}
 	}

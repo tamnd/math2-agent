@@ -319,20 +319,20 @@ func (c *checker) provenance() {
 // reproducible is PC9: each format builds the same bytes two times, and the lock file of a pinned release is up to date.
 func (c *checker) reproducible() {
 	d := c.d
-	for _, f := range d.Volume.formats() {
+	for _, f := range d.Volume.Outputs() {
 		c.checked["PC9"]++
-		if f != HTML {
+		if !slices.Contains(Backends, f) {
 			c.atKey("PC9", "formats", "the format %s has no back end yet", f)
 			continue
 		}
-		a, err := d.HTML()
+		a, err := d.Output(f)
 		if err != nil {
-			c.atKey("PC9", "formats", "the HTML does not build: %v", err)
+			c.atKey("PC9", "formats", "the %s output does not build: %v", f, err)
 			continue
 		}
-		b, err := d.HTML()
+		b, err := d.Output(f)
 		if err != nil || !sameFiles(a, b) {
-			c.atKey("PC9", "formats", "two builds of the HTML are not the same")
+			c.atKey("PC9", "formats", "two builds of the %s output are not the same", f)
 		}
 	}
 	if d.Volume.Release == "" {

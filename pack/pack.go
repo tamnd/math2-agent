@@ -4,7 +4,7 @@
 //
 // Pack makes the sequence in the steps of corpus K11.2. It takes the closure of the targets over the uses edges, and stops at the nodes that the volume assumes. A concept goes in with the definition that the volume chooses, and the other definitions come after it as equivalent characterizations. When the volume has no outline, Pack orders the nodes so that each node comes after its prerequisites. Among the orders with no forward reference, it keeps the nodes of one section and of one chapter together. The chapters come from the topics of the nodes, or from their MSC areas when they have no topic. The sections come from the concepts. The ties go to the order of the curricula, then to the MSC code, then to the tag. Pack never moves a node of an outline: [Document.Check] reports each forward reference.
 //
-// [Document.Lock] gives the lock file, volumes/<id>.lock, and [Document.HTML] gives the HTML output. [Document.Check] runs the pack checks PC1 to PC10 of corpus K11.6, with no model and no network.
+// [Document.Lock] gives the lock file, volumes/<id>.lock. [Document.HTML], [Document.LaTeX] and [Document.PreTeXt] give the outputs, and [Document.Output] gives the output of one format. [Document.Check] runs the pack checks PC1 to PC10 of corpus K11.6, with no model and no network.
 package pack
 
 import (
@@ -55,6 +55,7 @@ type Document struct {
 
 	Assumed     []Ref           // the nodes that the reader knows, in the order of the volume file
 	Cited       []Ref           // the nodes outside the volume that a body links to, in tag order
+	Sources     []Source        // the works that the items cite, in the order of the first citation
 	Conventions []ConventionUse // the conventions of the nodes in the volume, in the order of the register
 	Notation    []NotationUse   // the macros that the nodes use, in reading order (corpus K10.4)
 	Attribution Attribution
@@ -104,6 +105,7 @@ type Item struct {
 	Claim   string
 	Main    string // the Markdown of the main section
 	Remarks string // the Markdown of the section Remarks, or ""
+	Sources []Citation
 	Proofs  []*Item
 	Proof   bool // the item is a proof, in the Proofs of its statement
 
@@ -161,6 +163,33 @@ type Credit struct {
 	Glue    int  // the parts of the glue that the person wrote or confirmed
 }
 
+// String returns the credit in words, for example github:ada, editor, 3 nodes.
+func (c Credit) String() string {
+	parts := []string{c.Person}
+	if c.Edited {
+		parts = append(parts, "editor")
+	}
+	for _, n := range []struct {
+		n         int
+		one, many string
+	}{
+		{c.Nodes, "node", "nodes"},
+		{c.Reviews, "review", "reviews"},
+		{c.Glue, "part of the editorial text", "parts of the editorial text"},
+	} {
+		switch {
+		case n.n == 1:
+			parts = append(parts, "1 "+n.one)
+		case n.n > 1:
+			parts = append(parts, fmt.Sprintf("%d %s", n.n, n.many))
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
+// licence is the first sentence of the attribution page (corpus K11.7).
+const licence = "The prose of this volume is under the licence CC BY-SA 4.0, as the prose of math2 is."
+
 // problem is a finding of Pack for a check.
 type problem struct {
 	check string
@@ -190,6 +219,7 @@ type tree struct {
 	curPos  map[string]int      // the first place of each tag in a curriculum
 	logs    map[string][]prov.Line
 	macros  map[string]string   // the KaTeX macros of macros/m2.katex.json
+	sty     []byte              // macros/m2.sty, or nil
 	reviews map[string][]string // the reviewers of the bindings of each node
 }
 
@@ -223,6 +253,12 @@ func readTree(root string, opt Options) (*tree, error) {
 		return nil, err
 	}
 	if t.logs, err = prov.ReadAll(root); err != nil {
+		return nil, err
+	}
+	switch data, err := os.ReadFile(filepath.Join(root, "macros", "m2.sty")); { // #nosec G304 -- the file is in the working tree.
+	case err == nil:
+		t.sty = data
+	case !errors.Is(err, fs.ErrNotExist):
 		return nil, err
 	}
 	switch data, err := os.ReadFile(filepath.Join(root, "macros", "m2.katex.json")); { // #nosec G304 -- the file is in the working tree.
@@ -380,6 +416,7 @@ func (t *tree) pack(v *Volume, opt Options) (*Document, error) {
 	p.number()
 	p.glue()
 	p.references()
+	p.sources()
 	p.notation()
 	p.conventions()
 	p.attribution()

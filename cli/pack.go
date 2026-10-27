@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -68,7 +69,7 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 	if dir == "" {
 		dir = filepath.Join(*root, "build", pack.Dir, v.ID)
 	}
-	if err := writePack(d, *root, dir); err != nil {
+	if err := writePack(d, *root, dir, v.Outputs()); err != nil {
 		fmt.Fprintf(stderr, "m2 pack: %v\n", err)
 		return ExitFailure
 	}
@@ -81,24 +82,28 @@ func runPack(args []string, stdout, stderr io.Writer) int {
 	return ExitOK
 }
 
-// writePack writes the HTML of the document to dir and the lock file to the tree.
-func writePack(d *pack.Document, root, dir string) error {
-	files, err := d.HTML()
-	if err != nil {
-		return err
-	}
-	names := make([]string, 0, len(files))
-	for name := range files {
-		names = append(names, name)
-	}
-	slices.Sort(names)
-	for _, name := range names {
-		p := filepath.Join(dir, filepath.FromSlash(name))
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil { // #nosec G301 -- the volume is public.
+// writePack writes the outputs of the document to dir and the lock file to the tree. The HTML is at the top of dir, and each other format is in a directory with the name of the format.
+func writePack(d *pack.Document, root, dir string, formats []string) error {
+	for _, f := range formats {
+		if !slices.Contains(pack.Backends, f) {
+			continue // PC9 reports the format
+		}
+		files, err := d.Output(f)
+		if err != nil {
 			return err
 		}
-		if err := os.WriteFile(p, files[name], 0o644); err != nil { // #nosec G306 -- the volume is public.
-			return err
+		sub := dir
+		if f != pack.HTML {
+			sub = filepath.Join(dir, f)
+		}
+		for _, name := range slices.Sorted(maps.Keys(files)) {
+			p := filepath.Join(sub, filepath.FromSlash(name))
+			if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil { // #nosec G301 -- the volume is public.
+				return err
+			}
+			if err := os.WriteFile(p, files[name], 0o644); err != nil { // #nosec G306 -- the volume is public.
+				return err
+			}
 		}
 	}
 	lock, err := d.Lock().Marshal()
