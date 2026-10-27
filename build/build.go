@@ -53,11 +53,12 @@ const (
 	Search    = "search"
 	Inventory = "inventory"
 	Writing   = "writing"
+	Formal    = "formal"
 )
 
 // Steps returns the names of the steps in order.
 func Steps() []string {
-	return []string{Lean, Extract, Replay, Battery, Status, Graph, Store, Search, Inventory, Writing}
+	return []string{Lean, Extract, Replay, Battery, Status, Graph, Store, Search, Inventory, Writing, Formal}
 }
 
 // The files of the build, from the output directory.
@@ -72,6 +73,7 @@ const (
 	SearchFile    = "search.db"
 	InventoryFile = "inventory.json"
 	WritingFile   = "writing.json"
+	FormalFile    = "formal.json"
 	ComputeDir    = "compute" // the runs of m2 compute, in TAG/ARCH/
 )
 
@@ -192,6 +194,7 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 		{Search, false, b.search},
 		{Inventory, false, b.inventory},
 		{Writing, false, b.writing},
+		{Formal, false, b.formal},
 	}
 	for _, s := range steps {
 		if opt.Only != "" && s.name != opt.Only {
@@ -1011,6 +1014,57 @@ func WritingLevels(root string, cards *card.Cards, nodes []*node.Node) (*Levels,
 	}
 	slices.SortFunc(w.Nodes, func(x, y card.Result) int { return strings.Compare(x.Tag, y.Tag) })
 	return w, nil
+}
+
+// formalRules is the version of the rules of the formal step. A change to the rules changes it, so that the step runs again.
+const formalRules = "1"
+
+// formal computes the formal outcome of each node of a formal kind from status.json and registers/formal.reg, and writes formal.json (corpus spec K2.5, corpus arxiv AX10.4). The input is the version of the rules, the output of the status step and the register.
+func (b *builder) formal(_ context.Context, _ []*node.Node) (Step, error) {
+	reg, err := os.ReadFile(filepath.Join(b.opt.Root, "registers", "formal.reg")) // #nosec G304 -- the path is in the tree.
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return Step{}, err
+	}
+	input := hashString(strings.Join([]string{"rules " + formalRules, "status " + b.output(Status), "formal.reg " + hashString(string(reg))}, "\n"))
+	if out, err := hashFiles(b.opt.Out, []string{FormalFile}); err == nil {
+		if s, ok := b.cached(Formal, input, out); ok {
+			return s, nil
+		}
+	}
+	sts, err := ReadStatus(b.opt.Out)
+	if err != nil {
+		return Step{}, err
+	}
+	decisions, err := status.LoadFormal(b.opt.Root)
+	if err != nil {
+		return Step{}, fmt.Errorf("registers/formal.reg: %w", err)
+	}
+	f := status.ComputeFormal(sts, decisions)
+	for _, p := range f.Problems {
+		b.logf("%s: %s", Formal, p)
+	}
+	data, err := json.MarshalIndent(f, "", "  ")
+	if err != nil {
+		return Step{}, err
+	}
+	if err := write(filepath.Join(b.opt.Out, FormalFile), append(data, '\n')); err != nil {
+		return Step{}, err
+	}
+	out, err := hashFiles(b.opt.Out, []string{FormalFile})
+	return Step{Input: input, Output: out}, err
+}
+
+// ReadFormal reads formal.json of the build in the output directory out.
+func ReadFormal(out string) (*status.Formal, error) {
+	data, err := os.ReadFile(filepath.Join(out, FormalFile)) // #nosec G304 -- the caller names the output directory.
+	if err != nil {
+		return nil, err
+	}
+	var f status.Formal
+	if err := json.Unmarshal(data, &f); err != nil {
+		return nil, fmt.Errorf("%s: %w", FormalFile, err)
+	}
+	return &f, nil
 }
 
 // rowNodes returns the tags of the nodes that a row of the inventory accounts for.
