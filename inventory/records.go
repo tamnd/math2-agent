@@ -86,6 +86,15 @@ func kindOf(source string, r *ingest.Record) string {
 		case "def", "inductive", "opaque":
 			return "definition"
 		}
+	case "planetmath":
+		switch r.Kind {
+		case "definition":
+			return "definition"
+		case "theorem", "corollary", "result", "derivation", "axiom":
+			return "statement"
+		case "conjecture", "example", "proof", "topic":
+			return r.Kind
+		}
 	case "oeis", "lmfdb", "house_of_graphs":
 		return "object"
 	case "erdosproblems":

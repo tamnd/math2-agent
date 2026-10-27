@@ -26,6 +26,7 @@ func TestCheck(t *testing.T) {
 		"findstat":        {"St000001", "Mp00001"},
 		"house_of_graphs": {"660"},
 		"palomar":         {"PALOMAR-2026-10-23-000018"},
+		"planetmath":      {"Centralizer", "AlternatingGroupHasIndex2InTheSymmetricGroupThe"},
 	}
 	for sys, ids := range good {
 		for _, id := range ids {

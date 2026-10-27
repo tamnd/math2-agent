@@ -45,6 +45,7 @@ var systems = map[string]system{
 	"nlab":               {form: "an nLab page name", title: true},
 	"wikipedia":          {form: "a Wikipedia page title", title: true},
 	"proofwiki":          {form: "a ProofWiki page title", title: true},
+	"planetmath":         pattern("a PlanetMath canonical name such as Centralizer", `[A-Za-z0-9]+`),
 	"formal_conjectures": {form: "a formal-conjectures declaration name such as Erdos1.erdos_1"},
 	"palomar":            pattern("a Palomar entry id such as PALOMAR-2026-10-23-000018", `PALOMAR-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}`),
 	"theoremsearch":      {form: "a TheoremSearch statement id"},

@@ -17,6 +17,7 @@ import (
 	_ "github.com/tamnd/math2-agent/ingest/nlab"
 	_ "github.com/tamnd/math2-agent/ingest/oeis"
 	_ "github.com/tamnd/math2-agent/ingest/palomar"
+	_ "github.com/tamnd/math2-agent/ingest/planetmath"
 	_ "github.com/tamnd/math2-agent/ingest/stacks"
 	_ "github.com/tamnd/math2-agent/ingest/wikidata"
 	_ "github.com/tamnd/math2-agent/ingest/zbmath"
