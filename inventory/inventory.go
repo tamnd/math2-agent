@@ -254,7 +254,7 @@ func layerOf(sources []string) string {
 }
 
 var (
-	formalSources   = map[string]bool{"mathlib": true, "formal_conjectures": true, "afp": true, "mizar": true, "metamath": true, "coq": true, "rocq": true, "hol-light": true, "agda": true}
+	formalSources   = map[string]bool{"mathlib": true, "formal_conjectures": true, "afp": true, "setmm": true, "mathcomp": true, "mizar": true, "metamath": true, "coq": true, "rocq": true, "hol-light": true, "agda": true}
 	researchSources = map[string]bool{"arxiv": true, "arxiv_results": true, "zbmath": true, "palomar": true, "theoremsearch": true}
 )
 

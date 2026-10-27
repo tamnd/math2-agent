@@ -366,7 +366,7 @@ func cluster(root, commit string, stdout io.Writer) (*inventory.Result, error) {
 	if err := inventory.AppendRegister(root, res.Added, commit); err != nil {
 		return nil, err
 	}
-	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal hashes %d, joined by equal formal statements %d, attached with no row %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Hashed, res.Equivalent, res.Orphans)
+	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal hashes %d, joined by equal formal statements %d, attached with no row %d, changed by the formal rules %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Hashed, res.Equivalent, res.Orphans, res.Formal)
 	return res, nil
 }
 

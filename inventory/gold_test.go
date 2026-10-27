@@ -76,7 +76,7 @@ func TestClusterMergeNamesThePass(t *testing.T) {
 		t.Fatalf("merged %d rows, want 1", again.Merged)
 	}
 	for _, r := range again.Rows {
-		if r.Outcome != nil && (r.Outcome.Rule != "equivalence" || !strings.Contains(r.History[len(r.History)-1].Note, "an equal formal statement")) {
+		if r.Outcome != nil && r.Outcome.Value == OutcomeMerged && (r.Outcome.Rule != "equivalence" || !strings.Contains(r.History[len(r.History)-1].Note, "an equal formal statement")) {
 			t.Errorf("the merged row has the outcome %+v and the history %+v", r.Outcome, r.History)
 		}
 	}
