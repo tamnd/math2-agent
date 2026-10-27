@@ -95,6 +95,15 @@ func kindOf(source string, r *ingest.Record) string {
 		case "conjecture", "example", "proof", "topic":
 			return r.Kind
 		}
+	case "proofwiki":
+		switch r.Kind {
+		case "definition", "problem", "proof":
+			return r.Kind
+		case "theorem", "proposition", "lemma", "corollary", "axiom":
+			return "statement"
+		case "conjecture", "open question":
+			return "conjecture"
+		}
 	case "oeis", "lmfdb", "house_of_graphs":
 		return "object"
 	case "erdosproblems":
