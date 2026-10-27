@@ -23,7 +23,7 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -42,6 +42,9 @@ func runCorpus(args []string, stdout, stderr io.Writer) int {
 	case "status":
 		return runCorpusStatus(args[1:], stdout, stderr)
 	case "queue", "plan":
+		if args[0] == "plan" && len(args) > 1 && args[1] == "understand" {
+			return runCorpusPlanUnderstand(args[2:], stdout, stderr)
+		}
 		return runCorpusQueue(args[0], args[1:], stdout, stderr)
 	}
 	fmt.Fprintln(stderr, "usage: "+corpusUsage)
@@ -622,16 +625,7 @@ func runCorpusQueue(cmd string, args []string, stdout, stderr io.Writer) int {
 	}
 	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
 	if cmd == "plan" {
-		p := out.(queue.Plan)
-		fmt.Fprintf(tw, "queue\t%s\n", p.Queue)
-		fmt.Fprintf(tw, "jobs\t%d of %d\n", p.Jobs, total)
-		fmt.Fprintf(tw, "tokens\t%d in, %d out\n", p.TokensIn, p.TokensOut)
-		fmt.Fprintf(tw, "model cost\t$%.2f to $%.2f\n", p.CostLow, p.CostHigh)
-		fmt.Fprintf(tw, "review\t%.1f to %.1f hours\n", p.ReviewLow, p.ReviewHigh)
-		for _, note := range p.Notes {
-			fmt.Fprintf(tw, "note\t%s\n", note)
-		}
-		fmt.Fprintln(tw, "This is a plan. No model run starts without a budget that a person approved.")
+		printPlan(tw, out.(queue.Plan), total)
 	} else {
 		fmt.Fprintf(tw, "%s: %d items, role %s, goal: %s\n", q.Name, total, q.Role, q.Goal)
 		if q.Reason != "" {
@@ -641,6 +635,69 @@ func runCorpusQueue(cmd string, args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(tw, "%g\t%s\t%s\t%s\n", it.Priority, it.Target, it.Kind, it.Name)
 		}
 	}
+	if err := tw.Flush(); err != nil {
+		return ExitFailure
+	}
+	return ExitOK
+}
+
+// printPlan prints a plan of total jobs.
+func printPlan(tw io.Writer, p queue.Plan, total int) {
+	fmt.Fprintf(tw, "queue\t%s\n", p.Queue)
+	fmt.Fprintf(tw, "jobs\t%d of %d\n", p.Jobs, total)
+	fmt.Fprintf(tw, "tokens\t%d in, %d out\n", p.TokensIn, p.TokensOut)
+	fmt.Fprintf(tw, "model cost\t$%.2f to $%.2f\n", p.CostLow, p.CostHigh)
+	if p.Per.ReviewKnown {
+		fmt.Fprintf(tw, "review\t%.1f to %.1f hours\n", p.ReviewLow, p.ReviewHigh)
+	}
+	for _, note := range p.Notes {
+		fmt.Fprintf(tw, "note\t%s\n", note)
+	}
+	fmt.Fprintln(tw, "This is a plan. No model run starts without a budget that a person approved.")
+}
+
+// runCorpusPlanUnderstand prints the cost estimate of one tier of the passes on the arXiv mentions (AX7.8). It calls no model.
+func runCorpusPlanUnderstand(args []string, stdout, stderr io.Writer) int {
+	name := "m2 corpus plan understand"
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	root := fs.String("root", ".", "the math2 working tree")
+	tier := fs.String("tier", "", "the tier: "+strings.Join(axImport.TierNames(), ", "))
+	msc := fs.String("msc", "", "count only the mentions of this MSC code at two digits")
+	asJSON := fs.Bool("json", false, "print JSON")
+	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if fs.NArg() != 0 || *tier == "" {
+		fmt.Fprintf(stderr, "usage: %s -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n", name)
+		return ExitUsage
+	}
+	ms, err := inventory.ReadMentions(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	rows, err := inventory.ReadRows(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	p, err := axImport.PlanUnderstand(*tier, rows, ms, *msc)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitUsage
+	}
+	if *asJSON {
+		enc := json.NewEncoder(stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(p); err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		return ExitOK
+	}
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	printPlan(tw, p, p.Jobs)
 	if err := tw.Flush(); err != nil {
 		return ExitFailure
 	}
