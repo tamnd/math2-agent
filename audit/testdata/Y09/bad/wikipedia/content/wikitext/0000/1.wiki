@@ -1,0 +1,15 @@
+<!-- wikipedia: en
+     page: 1
+     title: Gadget 1
+     revision: 10
+     timestamp: 2026-10-01T00:00:00Z
+     history: https://en.wikipedia.org/w/index.php?curid=1&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=10 -->
+A '''gadget 1''' is a widget.
+
+== Frobnications ==
+Text.
+
+== Widgetry ==
+More text.

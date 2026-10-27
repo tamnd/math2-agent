@@ -1,0 +1,12 @@
+# A small heading table for the tests of wpcorpus.
+version: 2
+roles:
+  item/definition: [definition, formal definition]
+  item/statement: [statement]
+  item/proof: [proof]
+  item/example: [example]
+  section/history: [history]
+  section/back: [see also, references]
+patterns:
+  - match: '^[a-z]$'
+    role: section/index

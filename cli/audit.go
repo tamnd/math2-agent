@@ -27,6 +27,9 @@ func runAudit(args []string, stdout, stderr io.Writer) int {
 	asJSON := fs.Bool("json", false, "write the report as JSON")
 	quiet := fs.Bool("q", false, "do not write the findings, only the table of rule states")
 	arxiv := fs.String("arxiv", "", "a checkout of tamnd/arxiv, for rule D05. Empty means that rule D05 skips.")
+	wikipedia := fs.String("wikipedia", "", "a checkout of tamnd/wikipedia-math, for the Y rules. Empty means that the Y rules skip.")
+	group := fs.String("group", "", "run only the rules whose id starts with one of these letters, for example Y")
+	hard := fs.Bool("hard", false, "run only the hard rules")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -34,7 +37,13 @@ func runAudit(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "m2 audit: the command has no arguments, and it got %q\n", fs.Args())
 		return ExitUsage
 	}
-	opt := audit.Options{Plane: *plane, Arxiv: *arxiv}
+	opt := audit.Options{Plane: *plane, Group: strings.ToUpper(*group), Hard: *hard, Arxiv: *arxiv, Wikipedia: *wikipedia}
+	for _, c := range opt.Group {
+		if !slices.ContainsFunc(audit.Rules(), func(x audit.Rule) bool { return rune(x.ID[0]) == c }) {
+			fmt.Fprintf(stderr, "m2 audit: no rule of the audit starts with the letter %q\n", c)
+			return ExitUsage
+		}
+	}
 	if *plane != "" && !slices.Contains(audit.Planes(), *plane) {
 		fmt.Fprintf(stderr, "m2 audit: %q is not a plane. The planes are %s\n", *plane, strings.Join(audit.Planes(), ", "))
 		return ExitUsage
@@ -57,8 +66,8 @@ func runAudit(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "m2 audit: %q is not a release. A release has the form YYYY.MM or YYYY.MM.N\n", *rel)
 			return ExitUsage
 		}
-		if *changed || *plane != "" || *only != "" {
-			fmt.Fprintln(stderr, "m2 audit: -release runs all the rules on the whole tree, and it cannot have -changed, -plane or -rule")
+		if *changed || *plane != "" || *only != "" || *group != "" || *hard {
+			fmt.Fprintln(stderr, "m2 audit: -release runs all the rules on the whole tree, and it cannot have -changed, -plane, -rule, -group or -hard")
 			return ExitUsage
 		}
 	}
@@ -114,7 +123,13 @@ func scope(opt audit.Options) string {
 	if opt.Plane != "" {
 		parts = append(parts, opt.Plane)
 	}
+	if opt.Group != "" {
+		parts = append(parts, opt.Group)
+	}
 	parts = append(parts, opt.Rules...)
+	if opt.Hard {
+		parts = append(parts, "hard")
+	}
 	if opt.Base != "" {
 		parts = append(parts, "changed")
 	}

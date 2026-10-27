@@ -2,7 +2,7 @@
 //
 // The audit is the contract of the content. Each rule has an id, a plane and a hardness. A hard rule that finds a problem fails, and a failed rule blocks a merge or a release. A soft rule that finds a problem reports it and does not block. Each rule in the report has one of the five states of spec 15.2. A rule that had nothing to look at has the state n/a, and never the state pass.
 //
-// The catalogue has the 65 rules of spec 15.3, the 3 rules of the tags (corpus spec K3.7), the 6 rules of the inventory (corpus spec K4.9), the 7 rules of the notation (corpus spec K10.7), the 6 rules of the quality gates (corpus spec K9.9) and the 2 rules of the arXiv mentions (corpus arxiv AX5.8). A rule that is not written yet has the state skip with the reason "not written yet". The letter of a rule gives its plane:
+// The catalogue has the 65 rules of spec 15.3, the 3 rules of the tags (corpus spec K3.7), the 6 rules of the inventory (corpus spec K4.9), the 7 rules of the notation (corpus spec K10.7), the 6 rules of the quality gates (corpus spec K9.9) the 2 rules of the arXiv mentions (corpus arxiv AX5.8) and the 18 rules of the Wikipedia corpus (corpus wikipedia, README). A rule that is not written yet has the state skip with the reason "not written yet". The letter of a rule gives its plane:
 //
 //	T, S, B  nodes
 //	G        graph
@@ -15,6 +15,7 @@
 //	X        agents
 //	I        inventory
 //	N        notation
+//	Y        wikipedia
 //
 // A full audit reads the whole working tree. An audit with a base revision is the audit of a pull request. It reads only the node shards and the other content files that changed since the merge base, and it lets the pull request use the provisional ids of its own new nodes (rule T03). The rules on the registers and on the git history always read the whole tree.
 package audit
@@ -47,11 +48,12 @@ const (
 	Agents    = "agents"
 	Inventory = "inventory"
 	Notation  = "notation"
+	Wikipedia = "wikipedia"
 )
 
 // Planes returns the planes in report order.
 func Planes() []string {
-	return []string{Nodes, Graph, Formal, Compute, Align, Licence, Prov, Release, Agents, Inventory, Notation}
+	return []string{Nodes, Graph, Formal, Compute, Align, Licence, Prov, Release, Agents, Inventory, Notation, Wikipedia}
 }
 
 // Rule is one rule of the catalogue.
@@ -79,8 +81,17 @@ type Options struct {
 	// Base is the git revision that a pull request starts from, for example origin/main. When Base is not empty, the audit reads only the changes since the merge base of Base and HEAD, the changes in the working tree and the untracked files.
 	Base string
 
+	// Group runs only the rules whose id starts with one of these letters, for example Y. Empty means all the letters.
+	Group string
+
+	// Hard runs only the hard rules.
+	Hard bool
+
 	// Arxiv is a checkout of tamnd/arxiv. Rule D05 reads its analysis plane. Empty means that rule D05 skips.
 	Arxiv string
+
+	// Wikipedia is a checkout of tamnd/wikipedia-math. The Y rules read its manifests, its content plane and its analysis plane. Empty means that the Y rules skip.
+	Wikipedia string
 }
 
 // Run audits the math2 working tree at root. The report has one result for each selected rule, in catalogue order. An error means that the audit could not run, for example because a register does not exist or Base is not a revision. A problem in the content is a finding and not an error.
@@ -144,12 +155,13 @@ func selectRules(opt Options) ([]entry, error) {
 	}
 	var out []entry
 	for _, e := range catalogue {
-		if (opt.Plane == "" || e.Plane == opt.Plane) && (len(opt.Rules) == 0 || slices.Contains(opt.Rules, e.ID)) {
+		if (opt.Plane == "" || e.Plane == opt.Plane) && (len(opt.Rules) == 0 || slices.Contains(opt.Rules, e.ID)) &&
+			(opt.Group == "" || strings.ContainsRune(opt.Group, rune(e.ID[0]))) && (!opt.Hard || e.Hard) {
 			out = append(out, e)
 		}
 	}
 	if len(out) == 0 {
-		return nil, fmt.Errorf("audit: no rule of the plane %s is in the list %s", opt.Plane, strings.Join(opt.Rules, ","))
+		return nil, fmt.Errorf("audit: no rule has the plane %q, the ids %q, the group %q and the hardness that the options select", opt.Plane, strings.Join(opt.Rules, ","), opt.Group)
 	}
 	return out, nil
 }
@@ -167,33 +179,35 @@ func (o *outcome) add(path string, line, col int, format string, args ...any) {
 
 // auditor holds the tree that a run reads.
 type auditor struct {
-	root     string
-	pr       bool            // the audit is of a pull request
-	base     string          // the revision that the pull request starts from, when pr is true
-	touched  map[string]bool // the shards and the files that changed, when pr is true
-	schema   *schema.Schema  // the schema of the tree
-	macros   check.Macros    // the macros of the tree
-	all      []check.File    // every node file in the tree
-	scope    []check.File    // the node files in scope
-	nodes    []*node.Node    // every node file that parses
-	ix       check.Index     // every node file that parses
-	checkRun *check.Report   // the run of m2 check on the scope, made when a rule needs it
-	graph    *graph.Graph    // the graph of every node file that parses, made when a rule needs it
-	last     *built          // the files of the last m2 build, read when a rule needs them
-	imp      *imports        // the catalogue, the import manifests and the records, read when a rule needs them
-	comp     *computations   // the computation records, the image manifest and the runs, read when a rule needs them
-	inv      *invTree        // the inventory, read when a rule needs it
-	arxiv    string          // the checkout of tamnd/arxiv for rule D05, or ""
-	not      *notTree        // the notation register and the register of conventions, read when a rule needs them
-	cat      *catFile        // the reader of the files of revisions, started when a rule needs it
-	noCat    bool            // the reader failed, thus blob runs git show
+	root      string
+	pr        bool            // the audit is of a pull request
+	base      string          // the revision that the pull request starts from, when pr is true
+	touched   map[string]bool // the shards and the files that changed, when pr is true
+	schema    *schema.Schema  // the schema of the tree
+	macros    check.Macros    // the macros of the tree
+	all       []check.File    // every node file in the tree
+	scope     []check.File    // the node files in scope
+	nodes     []*node.Node    // every node file that parses
+	ix        check.Index     // every node file that parses
+	checkRun  *check.Report   // the run of m2 check on the scope, made when a rule needs it
+	graph     *graph.Graph    // the graph of every node file that parses, made when a rule needs it
+	last      *built          // the files of the last m2 build, read when a rule needs them
+	imp       *imports        // the catalogue, the import manifests and the records, read when a rule needs them
+	comp      *computations   // the computation records, the image manifest and the runs, read when a rule needs them
+	inv       *invTree        // the inventory, read when a rule needs it
+	arxiv     string          // the checkout of tamnd/arxiv for rule D05, or ""
+	wikipedia string          // the checkout of tamnd/wikipedia-math for the Y rules, or ""
+	wpt       *wpTree         // the Wikipedia corpus, read when a rule needs it
+	not       *notTree        // the notation register and the register of conventions, read when a rule needs them
+	cat       *catFile        // the reader of the files of revisions, started when a rule needs it
+	noCat     bool            // the reader failed, thus blob runs git show
 }
 
 func load(root string, opt Options) (*auditor, error) {
 	if _, err := os.Stat(root); err != nil {
 		return nil, err
 	}
-	a := &auditor{root: root, ix: check.Index{}, arxiv: opt.Arxiv}
+	a := &auditor{root: root, ix: check.Index{}, arxiv: opt.Arxiv, wikipedia: opt.Wikipedia}
 	var err error
 	if a.schema, err = schema.Load(root); err != nil {
 		return nil, err

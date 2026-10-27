@@ -1,0 +1,259 @@
+package audit
+
+import (
+	"errors"
+	"fmt"
+	"maps"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+
+	"github.com/tamnd/math2-agent/wpcorpus"
+)
+
+// wpTree is the Wikipedia corpus that the Y rules read: the manifests, and
+// for each page of the content plane its census and its objects.
+type wpTree struct {
+	m     *wpcorpus.Manifests
+	pages []wpPage
+	err   error
+}
+
+type wpPage struct {
+	page    *wpcorpus.Page
+	census  *wpcorpus.Census // nil when the census file does not exist or does not parse
+	cerr    error
+	objects []wpcorpus.Object
+	oerr    error
+}
+
+// wp reads the corpus that Options.Wikipedia names, the first time that a
+// rule needs it.
+func (a *auditor) wp() *wpTree {
+	if a.wpt != nil {
+		return a.wpt
+	}
+	t := &wpTree{}
+	a.wpt = t
+	if t.m, t.err = wpcorpus.Load(a.wikipedia); t.err != nil {
+		return t
+	}
+	ids, err := wpcorpus.Pages(a.wikipedia)
+	if err != nil {
+		t.err = err
+		return t
+	}
+	for _, id := range ids {
+		p, err := wpcorpus.ReadContent(a.wikipedia, id)
+		if err != nil {
+			t.err = err
+			return t
+		}
+		wp := wpPage{page: p}
+		wp.census, wp.cerr = wpcorpus.ReadCensus(a.wikipedia, p.ID, p.Revision)
+		wp.objects, wp.oerr = wpcorpus.ReadObjects(a.wikipedia, p.ID, p.Revision)
+		t.pages = append(t.pages, wp)
+	}
+	return t
+}
+
+// wpStart gives the corpus to a Y rule, or sets the reason why the rule
+// skips, or adds the error that stopped the read.
+func (a *auditor) wpStart(o *outcome) *wpTree {
+	if a.wikipedia == "" {
+		o.reason = "no checkout of tamnd/wikipedia-math is given, so set -wikipedia to run the rule"
+		return nil
+	}
+	t := a.wp()
+	if t.err != nil {
+		o.add(a.wikipedia, 0, 0, "%v", t.err)
+		return nil
+	}
+	return t
+}
+
+// y02 checks that each revision of the content plane has a census record and
+// an objects file, and that the census names the extractor and the revision
+// (WP4.5).
+func y02(a *auditor) outcome {
+	var o outcome
+	t := a.wpStart(&o)
+	if t == nil {
+		return o
+	}
+	for _, p := range t.pages {
+		o.checked++
+		id, rev := p.page.ID, p.page.Revision
+		cpath := wpcorpus.CensusPath(id, rev)
+		switch c := p.census; {
+		case errors.Is(p.cerr, os.ErrNotExist):
+			o.add(cpath, 0, 0, "the revision %d of %q has no census record. Run m2 wp extract -page %d", rev, p.page.Title, id)
+		case p.cerr != nil:
+			o.add(cpath, 0, 0, "the census record does not parse: %v", p.cerr)
+		case c.Page != id || c.Revision != rev:
+			o.add(cpath, 0, 0, "the census names the page %d and the revision %d, and the file is of the page %d and the revision %d", c.Page, c.Revision, id, rev)
+		case c.Extractor == "":
+			o.add(cpath, 0, 0, "the census does not name the extractor version")
+		}
+		switch opath := wpcorpus.ObjectsPath(id, rev); {
+		case errors.Is(p.oerr, os.ErrNotExist):
+			o.add(opath, 0, 0, "the revision %d of %q has no objects file", rev, p.page.Title)
+		case p.oerr != nil:
+			o.add(opath, 0, 0, "the objects file does not parse: %v", p.oerr)
+		}
+	}
+	if o.checked == 0 && len(o.findings) == 0 {
+		o.reason = "the content plane of the checkout has no page"
+	}
+	return o
+}
+
+// y03 checks that each counted cue of each census has an object of the
+// objects file, or a waiver of waivers.yaml (WP4.4, WP4.8).
+func y03(a *auditor) outcome {
+	var o outcome
+	t := a.wpStart(&o)
+	if t == nil {
+		return o
+	}
+	waivers := map[string]bool{}
+	for _, w := range t.m.Waivers {
+		waivers[w.ID] = true
+	}
+	for _, p := range t.pages {
+		if p.census == nil || p.oerr != nil {
+			continue // Y02 reports it
+		}
+		refs := map[string]bool{}
+		for _, ob := range p.objects {
+			refs[ob.Ref] = true
+		}
+		path := wpcorpus.CensusPath(p.page.ID, p.page.Revision)
+		for _, q := range p.census.Cues {
+			o.checked++
+			switch {
+			case q.Object == "" && q.Waiver == "":
+				o.add(path, 0, 0, "the cue %s (%s) at the bytes %d to %d of %q has no object and no waiver", q.Cue, q.Kind, q.Span[0], q.Span[1], p.page.Title)
+			case q.Object != "" && !refs[q.Object]:
+				o.add(path, 0, 0, "the cue %s at the bytes %d to %d names the object %s, and the objects file has no such object", q.Cue, q.Span[0], q.Span[1], q.Object)
+			case q.Waiver != "" && !waivers[q.Waiver]:
+				o.add(path, 0, 0, "the cue %s at the bytes %d to %d names the waiver %s, and waivers.yaml has no such waiver", q.Cue, q.Span[0], q.Span[1], q.Waiver)
+			case q.Waiver != "" && q.Reason == "":
+				o.add(path, 0, 0, "the cue %s at the bytes %d to %d has the waiver %s with no reason", q.Cue, q.Span[0], q.Span[1], q.Waiver)
+			}
+		}
+	}
+	if o.checked == 0 && len(o.findings) == 0 {
+		o.reason = "no census of the checkout has a counted cue"
+	}
+	return o
+}
+
+// y08 reports each template that a page uses and that the template table
+// does not map (WP3.2). The current table decides, so a template that was
+// mapped after the extraction is not reported.
+func y08(a *auditor) outcome {
+	var o outcome
+	t := a.wpStart(&o)
+	if t == nil {
+		return o
+	}
+	uses, pages := map[string]int{}, map[string]int{}
+	for _, p := range t.pages {
+		if p.census == nil {
+			continue
+		}
+		o.checked++
+		for k, n := range p.census.Unmapped {
+			if t.m.Template(k) == nil {
+				uses[k] += n
+				pages[k]++
+			}
+		}
+	}
+	path := filepath.Join(wpcorpus.ManifestDir, "templates.yaml")
+	for _, k := range slices.Sorted(maps.Keys(uses)) {
+		o.add(path, 0, 0, "the template {{%s}} has %s in %s, and the table does not map it", k, count(uses[k], "use"), count(pages[k], "article"))
+	}
+	if o.checked == 0 && len(o.findings) == 0 {
+		o.reason = "the checkout has no census"
+	}
+	return o
+}
+
+// wpHeadingArticles is the number of articles from which rule Y09 reports
+// an unmapped heading (WP3.5).
+const wpHeadingArticles = 5
+
+// y09 reports each heading that 5 or more articles use and that the heading
+// table does not map (WP3.5).
+func y09(a *auditor) outcome {
+	var o outcome
+	t := a.wpStart(&o)
+	if t == nil {
+		return o
+	}
+	pages := map[string]int{}
+	for _, p := range t.pages {
+		if p.census == nil {
+			continue
+		}
+		o.checked++
+		seen := map[string]bool{}
+		for _, h := range p.census.UnmappedHeadings {
+			k := strings.ToLower(strings.Join(strings.Fields(h), " "))
+			if !seen[k] && t.m.HeadingRole(h, p.page.Title) == "" {
+				seen[k] = true
+				pages[k]++
+			}
+		}
+	}
+	path := filepath.Join(wpcorpus.ManifestDir, "headings.yaml")
+	for _, k := range slices.Sorted(maps.Keys(pages)) {
+		if pages[k] >= wpHeadingArticles {
+			o.add(path, 0, 0, "the heading %q is in %s, and the table does not map it", k, count(pages[k], "article"))
+		}
+	}
+	if o.checked == 0 && len(o.findings) == 0 {
+		o.reason = "the checkout has no census"
+	}
+	return o
+}
+
+// y10 reports each formula that wiki/texvc did not convert to TeX (WP3.3).
+func y10(a *auditor) outcome {
+	var o outcome
+	t := a.wpStart(&o)
+	if t == nil {
+		return o
+	}
+	for _, p := range t.pages {
+		path := wpcorpus.ObjectsPath(p.page.ID, p.page.Revision)
+		seen := map[[2]int]bool{}
+		for i, ob := range p.objects {
+			for _, m := range ob.Math {
+				if seen[m.Span] {
+					continue // an object that contains another object has its formulas too
+				}
+				seen[m.Span] = true
+				o.checked++
+				if len(m.Errors) > 0 {
+					o.add(path, i+1, 1, "the formula %q of the object %s does not convert: %s", m.Source, ob.Ref, strings.Join(m.Errors, "; "))
+				}
+			}
+		}
+	}
+	if o.checked == 0 && len(o.findings) == 0 {
+		o.reason = "no object of the checkout has a formula"
+	}
+	return o
+}
+
+// count gives "1 use" or "3 uses".
+func count(n int, noun string) string {
+	if n == 1 {
+		return "1 " + noun
+	}
+	return fmt.Sprintf("%d %ss", n, noun)
+}

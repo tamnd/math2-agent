@@ -1,0 +1,1 @@
+manifests/wikipedia/headings.yaml:0:0: Y09: the heading "frobnications" is in 5 articles, and the table does not map it

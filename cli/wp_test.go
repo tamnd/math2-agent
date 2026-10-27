@@ -182,3 +182,27 @@ func TestWPUsage(t *testing.T) {
 		}
 	}
 }
+
+func TestAuditWikipedia(t *testing.T) {
+	wpDelay = 0
+	corpus := wpCorpus(t)
+	rev := 678
+	srv := wpAPI(t, &rev)
+	if code, _, stderr := run("wp", "extract", "-corpus", corpus, "-api", srv.URL, "Widget"); code != ExitOK {
+		t.Fatalf("exit code %d, stderr %q", code, stderr)
+	}
+	root := t.TempDir()
+	code, stdout, stderr := run("audit", "-root", root, "-wikipedia", corpus, "-group", "y", "-hard", "-q")
+	if code != ExitOK {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "Y02   pass") || !strings.Contains(stdout, "Y03   pass") || strings.Contains(stdout, "Y08") {
+		t.Errorf("stdout is:\n%s", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(root, "reports", "audit", "Y-hard.txt")); err != nil {
+		t.Error(err)
+	}
+	if code, _, stderr := run("audit", "-root", root, "-group", "Q"); code != ExitUsage || !strings.Contains(stderr, "no rule of the audit starts with the letter") {
+		t.Errorf("-group Q: exit code %d, stderr %q", code, stderr)
+	}
+}
