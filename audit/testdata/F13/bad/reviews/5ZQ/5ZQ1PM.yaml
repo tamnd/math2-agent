@@ -1,0 +1,9 @@
+reviews:
+  - id: r-5ZQ1PM-01
+    reviewer: github:alice
+    date: 2026-10-01
+    decl: TLib.Order.cofinal_iff
+    statement_hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    type_hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    verdict: faithful
+    covers: [TLib.Order.Cofinal]

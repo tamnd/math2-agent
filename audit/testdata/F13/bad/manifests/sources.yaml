@@ -1,0 +1,24 @@
+# The external sources of math2 and each snapshot that math2 used (spec 09.2). m2 ingest writes this file. A maintainer approves the class of each new source.
+sources:
+  - id: tlib
+    name: A test Lean library that a model wrote
+    kind: library
+    home: https://example.org/tlib
+    licence: Apache-2.0
+    class: open
+    licence_read:
+      at: https://example.org/tlib/LICENSE
+      on: "2026-10-01"
+      by: a-reader
+    authored: ai
+    intake: bind
+    intake_reason: a Lean 4 library under Apache-2.0
+    modules: [TLib]
+    channel: git
+    attribution: A test Lean library, https://example.org/tlib, Apache-2.0
+    approved_by: a-maintainer
+    snapshots:
+      - url: https://example.org/tlib.tar.gz
+        hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        date: "2026-10-01"
+        commit: 0123456789abcdef0123456789abcdef01234567

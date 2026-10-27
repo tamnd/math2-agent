@@ -1,0 +1,2 @@
+nodes/3C5/3C53TD.md:7:5: F13: TLib.Graph.ramsey_bound is from tlib, which has authored: ai, and its statement uses the definitions TLib.Graph.ramseyNumber of the same library. No review of the binding covers them. Read them and list them in covers of a review
+nodes/5ZQ/5ZQ1PM.md:7:5: F13: TLib.Order.cofinal_iff is from tlib, which has authored: ai, and its statement uses the definitions TLib.Order.IsDirected of the same library. No review of the binding covers them. Read them and list them in covers of a review

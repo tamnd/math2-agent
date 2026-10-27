@@ -1,0 +1,114 @@
+{
+  "lean": {
+    "lean": "4.35.0",
+    "githash": ""
+  },
+  "bindings": [],
+  "records": [
+    {
+      "decl": "TLib.Graph.ramsey_bound",
+      "kind": "theorem",
+      "module": "TLib.Graph.Ramsey",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext"
+      ],
+      "native_decide_axioms": [],
+      "uses_bound": [],
+      "uses_constants_in_statement": [
+        "TLib.Graph.ramseyNumber",
+        "SimpleGraph",
+        "Nat",
+        "TLib.Graph.ramsey_aux"
+      ]
+    },
+    {
+      "decl": "TLib.Graph.ramseyNumber",
+      "kind": "def",
+      "module": "TLib.Graph.Ramsey",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext"
+      ],
+      "native_decide_axioms": [],
+      "uses_bound": [],
+      "uses_constants_in_statement": []
+    },
+    {
+      "decl": "TLib.Graph.ramsey_aux",
+      "kind": "theorem",
+      "module": "TLib.Graph.Ramsey",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext"
+      ],
+      "native_decide_axioms": [],
+      "uses_bound": [],
+      "uses_constants_in_statement": []
+    },
+    {
+      "decl": "SimpleGraph",
+      "kind": "inductive",
+      "module": "Mathlib.Combinatorics.SimpleGraph.Basic",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext"
+      ],
+      "native_decide_axioms": [],
+      "uses_bound": [],
+      "uses_constants_in_statement": []
+    },
+    {
+      "decl": "TLib.Order.cofinal_iff",
+      "kind": "theorem",
+      "module": "TLib.Order.Cofinal",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext"
+      ],
+      "native_decide_axioms": [],
+      "uses_bound": [],
+      "uses_constants_in_statement": [
+        "TLib.Order.Cofinal",
+        "TLib.Order.IsDirected",
+        "Set"
+      ]
+    },
+    {
+      "decl": "TLib.Order.Cofinal",
+      "kind": "def",
+      "module": "TLib.Order.Cofinal",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext"
+      ],
+      "native_decide_axioms": [],
+      "uses_bound": [],
+      "uses_constants_in_statement": []
+    },
+    {
+      "decl": "TLib.Order.IsDirected",
+      "kind": "inductive",
+      "module": "TLib.Order.Cofinal",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext"
+      ],
+      "native_decide_axioms": [],
+      "uses_bound": [],
+      "uses_constants_in_statement": []
+    },
+    {
+      "decl": "Nat.add_comm",
+      "kind": "theorem",
+      "module": "Mathlib.Algebra.Group.Nat",
+      "type_hash": "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "axioms": [
+        "propext"
+      ],
+      "native_decide_axioms": [],
+      "uses_bound": [],
+      "uses_constants_in_statement": []
+    }
+  ]
+}

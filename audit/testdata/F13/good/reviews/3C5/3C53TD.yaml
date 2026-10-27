@@ -1,0 +1,9 @@
+reviews:
+  - id: r-3C53TD-01
+    reviewer: github:alice
+    date: 2026-10-01
+    decl: TLib.Graph.ramsey_bound
+    statement_hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    type_hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    verdict: faithful
+    covers: [TLib.Graph.ramseyNumber]

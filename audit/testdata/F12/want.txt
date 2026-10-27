@@ -1,0 +1,4 @@
+manifests/sources.yaml:24:1: F12: blib: the library has no field authored. Give one of [human ai mixed]
+manifests/sources.yaml:44:1: F12: clib: authored is "robot", which is not one of [human ai mixed]
+records/mentions/alib/AAA.jsonl:2:1: F12: the mention m2://rec/alib/Nat.three_le#1 has no field authored, and the source document of alib has ai. Import the library again
+records/mentions/alib/AAA.jsonl:3:1: F12: the mention m2://rec/alib/Nat.four_le#1 has authored "human", and the source document of alib has ai. Import the library again

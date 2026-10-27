@@ -60,6 +60,11 @@ type Mention struct {
 	Class    string              `json:"class"`               // the licence class (spec 9.3)
 	By       string              `json:"by"`                  // the importer and its version, or the run
 
+	// The fields below are for the mentions of the declarations of formal libraries (corpus K6.3 and K6.5). The other sources leave them empty.
+	Pin      string `json:"pin,omitempty"`      // the commit of the library that the importer read
+	Intake   string `json:"intake,omitempty"`   // the intake class of the library (corpus K6.2)
+	Authored string `json:"authored,omitempty"` // human, ai or mixed, from the source document of the library
+
 	// The fields below are for the mentions of the items of research papers (corpus arxiv AX5.3). The other sources leave them empty.
 	Role        string        `json:"role,omitempty"`         // the role of a statement in spec 04.2, for example lemma
 	Label       string        `json:"label,omitempty"`        // the label of the item in the paper, for example lem:key

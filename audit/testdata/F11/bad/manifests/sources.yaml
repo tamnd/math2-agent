@@ -1,0 +1,45 @@
+# The external sources of math2 and each snapshot that math2 used (spec 09.2). m2 ingest writes this file. A maintainer approves the class of each new source.
+sources:
+  - id: afp
+    name: A test proof archive
+    kind: library
+    home: https://example.org/afp
+    licence: BSD-3-Clause
+    per_item_licence: true
+    class: open
+    licence_read:
+      at: https://example.org/afp/LICENSE
+      on: "2026-10-01"
+      by: a-reader
+    authored: human
+    intake: crosswalk
+    intake_reason: a library in Isabelle, whose entries have their own licences
+    channel: git
+    attribution: A test proof archive, https://example.org/afp, BSD-3-Clause
+    approved_by: a-maintainer
+    snapshots:
+      - url: https://example.org/afp.tar.gz
+        hash: blake3:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+        date: "2026-10-01"
+        commit: 0123456789abcdef0123456789abcdef01234567
+  - id: onelab
+    name: A test library with a strong copyleft
+    kind: library
+    home: https://example.org/onelab
+    licence: AGPL-3.0-only
+    class: record
+    licence_read:
+      at: https://example.org/onelab/LICENSE
+      on: "2026-10-01"
+      by: a-reader
+    authored: human
+    intake: link
+    intake_reason: the licence is for software, and math2 does not put its text into prose
+    channel: git
+    attribution: A test library with a strong copyleft, https://example.org/onelab, AGPL-3.0-only
+    approved_by: a-maintainer
+    snapshots:
+      - url: https://example.org/onelab.tar.gz
+        hash: blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        date: "2026-10-01"
+        commit: 89abcdef0123456789abcdef0123456789abcdef

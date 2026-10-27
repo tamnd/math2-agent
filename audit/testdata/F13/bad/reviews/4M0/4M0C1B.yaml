@@ -1,0 +1,8 @@
+reviews:
+  - id: r-4M0C1B-01
+    reviewer: github:alice
+    date: 2026-10-01
+    decl: Nat.add_comm
+    statement_hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    type_hash: blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    verdict: faithful
