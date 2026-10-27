@@ -19,8 +19,8 @@ type Tier struct {
 // Tiers are the model tiers of AX7.8. T0 calls no model, so it has no plan.
 var Tiers = map[string]Tier{
 	"T1": {Name: "T1", Passes: "classify, concepts", Unit: "paper", Est: queue.Estimate{Tier: 1, TokensIn: 25000, TokensOut: 2000, CostLow: 0.002, CostHigh: 0.003, CostKnown: true}},
-	"T2": {Name: "T2", Passes: "prose and its check", Unit: "paper", Est: queue.Estimate{Tier: 2, TokensIn: 35000, TokensOut: 4000, CostLow: 0.05, CostHigh: 0.06, CostKnown: true}},
-	"T3": {Name: "T3", Passes: "unfold and its check", Unit: "item", Est: queue.Estimate{Tier: 2, TokensIn: 17000, TokensOut: 900, CostLow: 0.03, CostHigh: 0.03, CostKnown: true}},
+	"T2": {Name: "T2", Passes: "prose and its check", Unit: "paper", Est: queue.Estimate{Tier: 2, TokensIn: 35000, TokensOut: 4000, CostLow: 0.05, CostHigh: 0.06, CostKnown: true}}, // #nosec G101 -- Passes names the passes of a tier, not a password
+	"T3": {Name: "T3", Passes: "unfold and its check", Unit: "item", Est: queue.Estimate{Tier: 2, TokensIn: 17000, TokensOut: 900, CostLow: 0.03, CostHigh: 0.03, CostKnown: true}},  // #nosec G101 -- Passes names the passes of a tier, not a password
 	"T4": {Name: "T4", Passes: "proof, summary", Unit: "proof", Est: queue.Estimate{Tier: 2, TokensIn: 15000, TokensOut: 3000, CostLow: 0.05, CostHigh: 0.1, CostKnown: true}},
 }
 

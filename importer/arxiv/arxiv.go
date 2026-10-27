@@ -475,7 +475,7 @@ func yesNo(body string) bool {
 
 // readStrength reads the census strength of a version, or "" when the version has no census.
 func readStrength(file string) string {
-	b, err := os.ReadFile(file)
+	b, err := os.ReadFile(file) // #nosec G304 -- the file is in the checkout that the user names
 	if err != nil {
 		return ""
 	}
@@ -507,7 +507,7 @@ func readMetadata(root string, months map[string]bool) (map[string]*Paper, error
 }
 
 func readLines[T any](file string) ([]T, error) {
-	b, err := os.ReadFile(file)
+	b, err := os.ReadFile(file) // #nosec G304 -- the file is in the checkout that the user names
 	if err != nil {
 		return nil, err
 	}
@@ -530,7 +530,7 @@ func readLines[T any](file string) ([]T, error) {
 
 // commit returns the HEAD commit of the checkout, which is the snapshot of the mentions.
 func commit(root string) (string, error) {
-	out, err := exec.Command("git", "-C", root, "rev-parse", "HEAD").Output()
+	out, err := exec.Command("git", "-C", root, "rev-parse", "HEAD").Output() // #nosec G204 -- the command is git, and root is the checkout that the user names
 	if err != nil {
 		return "", fmt.Errorf("importer/arxiv: %s is not a git checkout of tamnd/arxiv: %w", root, err)
 	}
