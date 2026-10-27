@@ -842,6 +842,20 @@ go test ./bench/agents/exercise -v
 go test ./bench/agents/exercise -live -rung 0 -v -report exercise.md
 ```
 
+`bench/agents/write` is the suite of the write role, and it needs no Lean. Each item is a work tree with a target node, the goal of the job, and the reference writes that take the target to the level of the goal. These writes are the sections, examples, non-examples and proofs that the card of the kind of the target asks for. Without flags, a scripted model makes each reference write. The last write first has the wrong form of the item, such as a proof that is not in steps or a definition with no term in bold, and the goal must refuse it with the reason of the item. Then the last write is as it is, and the goal must hold. With `-live`, the report gives the level of each job, the outcome, the turns, the files that the run wrote, and the spend.
+
+```sh
+go test ./bench/agents/write -v
+go test ./bench/agents/write -live -rung 0 -v -report write.md
+```
+
+`bench/agents/informalize` is the suite of the informalize role. It needs no Lean, because a fake Lean environment gives the record of the declaration of each item. Each item is a Mathlib declaration with a short form of its type that we wrote, a work tree with the nodes that bind the constants of the type, and the reference writes that give the declaration its node. Without flags, a scripted model makes each reference write. The last write first has the wrong form of the item, such as a Lean name as the name of the node, a definition with no term in bold, or a node whose uses do not have the node of a constant, and the goal must refuse it with the reason of the item. Then the last write is as it is, and the goal must hold. With `-live`, the report gives the outcome, the turns, the nodes that the run added with their kinds and names, and the spend.
+
+```sh
+go test ./bench/agents/informalize -v
+go test ./bench/agents/informalize -live -rung 0 -v -report informalize.md
+```
+
 `bench/agents/reviewassist` is the suite of the review-assist role, and it needs no Lean either. Each item is a node with one Lean binding, a Lean record that we wrote by hand, and the verdict of a review. A not-faithful item has the class of spec 10.5 that the critic must name. Without flags, a scripted model writes the packet with the reference concern, and the goal must hold. Then the goal or the tool must refuse each wrong attempt: no packet, a concern of a binding that the packet does not have, a class that spec 10.5 does not have, too many concerns, and a write of the node. With `-live`, the report gives the recall of the critic, which is the share of the not-faithful items whose packet names the class of the review, the concerns on the faithful items, and the length of the packets.
 
 ```sh

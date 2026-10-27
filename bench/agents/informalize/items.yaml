@@ -1,0 +1,162 @@
+# The public items of the suite of the informalize role (corpus K7.3, K8.3). Each item is a Mathlib declaration with the record that the fake Lean environment gives for it, a work tree, and the reference writes that give the declaration its node. The types are short forms that we wrote for the suite, not the output of Lean. The last reference write has a wrong form, and the goal must refuse that form. The nodes are in our own words. The held-out items are in a private repository, and -items reads them from a file of the same form.
+items:
+  - decl: Subgroup.card_subgroup_dvd_card
+    kind: theorem
+    module: Mathlib.GroupTheory.Coset.Card
+    type: "∀ {G : Type u_1} [Group G] [Fintype G] (H : Subgroup G) [Fintype H], Fintype.card H ∣ Fintype.card G"
+    constants: [Dvd.dvd, Fintype.card, Group, Subgroup]
+    files:
+      nodes/G5S/G5S1M9.md: |
+        ---
+        tag: G5S1M9
+        kind: definition
+        name: Group
+        formal:
+          - system: lean4
+            library: mathlib
+            decl: Group
+            match: exact
+        ---
+
+        ## Definition
+
+        A **group** is a set with an associative operation, an identity and inverses.
+      notation/conventions.yaml: |
+        - id: group-law
+          concept: G5S1M9
+          default: multiplicative
+          options:
+            - option: multiplicative
+            - option: additive
+    writes:
+      - path: nodes/~/~1a2b3c4d.md
+        text: |
+          ---
+          tag: ~1a2b3c4d
+          kind: statement
+          role: theorem
+          name: Lagrange's theorem
+          uses: [G5S1M9]
+          formal:
+            - system: lean4
+              library: mathlib
+              decl: Subgroup.card_subgroup_dvd_card
+              match: exact
+          ---
+
+          ## Statement
+
+          Let $G$ be a finite [[group|G5S1M9]] and let $H$ be a subgroup of $G$. Then the order of $H$ divides the order of $G$.
+    wrong: {from: "name: Lagrange's theorem", to: "name: card_subgroup_dvd_card"}
+    refuse: is a Lean name
+  - decl: IsCyclic
+    kind: inductive
+    module: Mathlib.GroupTheory.SpecificGroups.Cyclic
+    type: "(G : Type u_1) → [Group G] → Prop"
+    constants: [Group]
+    files:
+      nodes/G5S/G5S1M9.md: |
+        ---
+        tag: G5S1M9
+        kind: definition
+        name: Group
+        formal:
+          - system: lean4
+            library: mathlib
+            decl: Group
+            match: exact
+        ---
+
+        ## Definition
+
+        A **group** is a set with an associative operation, an identity and inverses.
+    writes:
+      - path: nodes/~/~2b3c4d5e.md
+        text: |
+          ---
+          tag: ~2b3c4d5e
+          kind: concept
+          name: Cyclic group
+          ---
+
+          ## Summary
+
+          A cyclic group is a group that one of its elements generates.
+      - path: nodes/~/~1a2b3c4d.md
+        text: |
+          ---
+          tag: ~1a2b3c4d
+          kind: definition
+          name: Cyclic group (definition)
+          aliases: [cyclic-group]
+          defines: ~2b3c4d5e
+          uses: [G5S1M9]
+          formal:
+            - system: lean4
+              library: mathlib
+              decl: IsCyclic
+              match: exact
+          ---
+
+          ## Definition
+
+          A [[group|G5S1M9]] $G$ is a **cyclic group** when there is an element $g$ of $G$ such that each element of $G$ is a power $g^n$ for some integer $n$.
+    wrong: {from: "**cyclic group**", to: "cyclic group"}
+    refuse: does not name the defined term in bold
+  - decl: Nat.Prime.two_le
+    kind: theorem
+    module: Mathlib.Data.Nat.Prime.Defs
+    type: "∀ {p : ℕ}, Nat.Prime p → 2 ≤ p"
+    constants: [LE.le, Nat, Nat.Prime, OfNat.ofNat]
+    files:
+      nodes/P7M/P7MDF4.md: |
+        ---
+        tag: P7MDF4
+        kind: definition
+        name: Prime number (definition)
+        aliases: [prime-number]
+        defines: P1RM3S
+        formal:
+          - system: lean4
+            library: mathlib
+            decl: Nat.Prime
+            match: exact
+        ---
+
+        ## Definition
+
+        A **prime number** is a natural number $p$ with these properties:
+
+        1. $p$ is greater than 1.
+        2. The only positive divisors of $p$ are 1 and $p$.
+      nodes/P1R/P1RM3S.md: |
+        ---
+        tag: P1RM3S
+        kind: concept
+        name: Prime number
+        ---
+
+        ## Summary
+
+        A prime number is a natural number greater than one whose only positive divisors are one and the number itself.
+    writes:
+      - path: nodes/~/~1a2b3c4d.md
+        text: |
+          ---
+          tag: ~1a2b3c4d
+          kind: statement
+          role: proposition
+          name: A prime number is at least two
+          uses: [P7MDF4]
+          formal:
+            - system: lean4
+              library: mathlib
+              decl: Nat.Prime.two_le
+              match: exact
+          ---
+
+          ## Statement
+
+          Let $p$ be a [[prime number|P7MDF4]]. Then $2 \le p$.
+    wrong: {from: "uses: [P7MDF4]\n", to: ""}
+    refuse: Add P7MDF4 to uses

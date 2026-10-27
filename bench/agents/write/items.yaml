@@ -1,0 +1,162 @@
+# The public items of the suite of the write role (corpus K7.3, K7.5). Each item is a work tree with a target node, the goal of the job, and the reference writes that take the target to the level of the goal. The last reference write has a wrong form, and the goal must refuse that form. The nodes are in our own words. The held-out items are in a private repository, and -items reads them from a file of the same form.
+items:
+  - tag: 3C53TD
+    goal: the node has each section, example and proof that its card asks for at W2
+    files:
+      nodes/3C5/3C53TD.md: |
+        ---
+        tag: 3C53TD
+        kind: statement
+        role: theorem
+        name: Lagrange's theorem
+        uses: [G5S1M9]
+        ---
+
+        ## Statement
+
+        Let $G$ be a finite [[group|G5S1M9]] and let $H$ be a subgroup of $G$. Then the order of $H$ divides the order of $G$.
+      nodes/G5S/G5S1M9.md: |
+        ---
+        tag: G5S1M9
+        kind: definition
+        name: Group
+        ---
+
+        ## Definition
+
+        A **group** is a set with an associative operation, an identity and inverses.
+    writes:
+      - path: nodes/~/~2b3c4d5e.md
+        text: |
+          ---
+          tag: ~2b3c4d5e
+          kind: example
+          name: The subgroups of the cyclic group of order 6
+          illustrates: [3C53TD]
+          ---
+
+          ## Example
+
+          The cyclic group of order 6 has subgroups of the orders 1, 2, 3 and 6, and each one divides 6.
+      - path: nodes/~/~1a2b3c4d.md
+        text: |
+          ---
+          tag: ~1a2b3c4d
+          kind: proof
+          name: Proof of Lagrange's theorem by cosets
+          proves: 3C53TD
+          uses: [G5S1M9]
+          ---
+
+          ## Proof
+
+          1. The left cosets of $H$ partition $G$, because two cosets are equal or have no common element.
+          2. The map $h \mapsto gh$ is a bijection from $H$ to $gH$, thus each coset has as many elements as $H$.
+          3. Thus the order of $G$ is the number of cosets times the order of $H$, by steps 1 and 2, and the order of $H$ divides the order of $G$.
+    wrong: {from: "\n1. ", to: "\n"}
+    refuse: is not a list of numbered steps
+  - tag: A8EGR7
+    goal: the W1 sections
+    files:
+      nodes/A8E/A8EGR7.md: |
+        ---
+        tag: A8EGR7
+        kind: definition
+        name: Abelian group (definition)
+        aliases: [abelian-group]
+        defines: A8ECN2
+        uses: [G5S1M9]
+        ---
+      nodes/A8E/A8ECN2.md: |
+        ---
+        tag: A8ECN2
+        kind: concept
+        name: Abelian group
+        ---
+
+        ## Summary
+
+        An abelian group is a group in which the order of the two elements of a product does not change the product.
+      nodes/G5S/G5S1M9.md: |
+        ---
+        tag: G5S1M9
+        kind: definition
+        name: Group
+        ---
+
+        ## Definition
+
+        A **group** is a set with an associative operation, an identity and inverses.
+    writes:
+      - path: nodes/A8E/A8EGR7.md
+        text: |
+          ---
+          tag: A8EGR7
+          kind: definition
+          name: Abelian group (definition)
+          aliases: [abelian-group]
+          defines: A8ECN2
+          uses: [G5S1M9]
+          ---
+
+          ## Definition
+
+          An **abelian group** is a [[group|G5S1M9]] $G$ in which $ab = ba$ for all $a$ and $b$ in $G$.
+    wrong: {from: "**abelian group**", to: "abelian group"}
+    refuse: does not name the defined term in bold
+  - tag: P7MDF4
+    goal: the W2 examples
+    files:
+      nodes/P7M/P7MDF4.md: |
+        ---
+        tag: P7MDF4
+        kind: definition
+        name: Prime number (definition)
+        aliases: [prime-number]
+        defines: P1RM3S
+        ---
+
+        ## Definition
+
+        A **prime number** is a natural number $p$ with these properties:
+
+        1. $p$ is greater than 1.
+        2. The only positive divisors of $p$ are 1 and $p$.
+      nodes/P1R/P1RM3S.md: |
+        ---
+        tag: P1RM3S
+        kind: concept
+        name: Prime number
+        ---
+
+        ## Summary
+
+        A prime number is a natural number greater than one whose only positive divisors are one and the number itself.
+    writes:
+      - path: nodes/~/~3c4d5e6f.md
+        text: |
+          ---
+          tag: ~3c4d5e6f
+          kind: example
+          name: The number 7 is prime
+          instance_of: [P7MDF4]
+          ---
+
+          ## Example
+
+          The number 7 is greater than 1, and its only positive divisors are 1 and 7. Thus 7 is a prime number.
+      - path: nodes/~/~4d5e6f7a.md
+        text: |
+          ---
+          tag: ~4d5e6f7a
+          kind: example
+          name: The number 1 is not prime
+          not_instance_of:
+            - {target: P7MDF4, fails: [1]}
+          ---
+
+          ## Example
+
+          The only positive divisor of 1 is 1, but 1 is not greater than 1. Thus 1 is not a prime number, because it fails the first property.
+    wrong: {from: "## Example", to: "## Statement"}
+    refuse: m2 check finds
