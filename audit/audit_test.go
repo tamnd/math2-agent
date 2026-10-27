@@ -120,6 +120,20 @@ var setup = map[string]func(t *testing.T){
 	},
 }
 
+// options gives the options of a rule that needs more than the tree.
+var options = map[string]func(opt *Options, root string){
+	// D05 reads the analysis plane of a checkout of tamnd/arxiv, which the fixture has in checkout/.
+	"D05": func(opt *Options, root string) { opt.Arxiv = filepath.Join(root, "checkout") },
+}
+
+func ruleOptions(id, root string) Options {
+	opt := Options{Rules: []string{id}}
+	if f := options[id]; f != nil {
+		f(&opt, root)
+	}
+	return opt
+}
+
 func TestFixtures(t *testing.T) {
 	for _, e := range catalogue {
 		dir := filepath.Join("testdata", e.ID)
@@ -138,7 +152,8 @@ func TestFixtures(t *testing.T) {
 			if f := setup[e.ID]; f != nil {
 				f(t)
 			}
-			good, err := Run(tree(t, filepath.Join(dir, "good")), Options{Rules: []string{e.ID}})
+			root := tree(t, filepath.Join(dir, "good"))
+			good, err := Run(root, ruleOptions(e.ID, root))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -148,7 +163,8 @@ func TestFixtures(t *testing.T) {
 			for _, f := range good.Findings {
 				t.Errorf("good: %s", f)
 			}
-			bad, err := Run(tree(t, filepath.Join(dir, "bad")), Options{Rules: []string{e.ID}})
+			root = tree(t, filepath.Join(dir, "bad"))
+			bad, err := Run(root, ruleOptions(e.ID, root))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -182,10 +198,10 @@ func TestFixtures(t *testing.T) {
 
 func TestCatalogue(t *testing.T) {
 	rules := Rules()
-	if len(rules) != 95 {
-		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K5.14, K7.10, K9.9, K10.7 and K13.9 have 95", len(rules))
+	if len(rules) != 97 {
+		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K5.14, K7.10, K9.9, K10.7 and K13.9 and corpus arxiv AX5.8 have 97", len(rules))
 	}
-	planes := map[byte]string{'T': Nodes, 'S': Nodes, 'B': Nodes, 'G': Graph, 'F': Formal, 'V': Formal, 'C': Compute, 'A': Align, 'L': Licence, 'P': Prov, 'R': Release, 'X': Agents, 'I': Inventory, 'N': Notation}
+	planes := map[byte]string{'T': Nodes, 'S': Nodes, 'B': Nodes, 'G': Graph, 'F': Formal, 'V': Formal, 'C': Compute, 'A': Align, 'L': Licence, 'P': Prov, 'R': Release, 'X': Agents, 'I': Inventory, 'D': Inventory, 'N': Notation}
 	id := regexp.MustCompile(`^[A-Z][0-9]{2}$`)
 	seen := map[string]bool{}
 	for _, r := range rules {

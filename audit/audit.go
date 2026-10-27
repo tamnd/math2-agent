@@ -2,7 +2,7 @@
 //
 // The audit is the contract of the content. Each rule has an id, a plane and a hardness. A hard rule that finds a problem fails, and a failed rule blocks a merge or a release. A soft rule that finds a problem reports it and does not block. Each rule in the report has one of the five states of spec 15.2. A rule that had nothing to look at has the state n/a, and never the state pass.
 //
-// The catalogue has the 65 rules of spec 15.3, the 3 rules of the tags (corpus spec K3.7), the 6 rules of the inventory (corpus spec K4.9), the 7 rules of the notation (corpus spec K10.7) and the 6 rules of the quality gates (corpus spec K9.9). A rule that is not written yet has the state skip with the reason "not written yet". The letter of a rule gives its plane:
+// The catalogue has the 65 rules of spec 15.3, the 3 rules of the tags (corpus spec K3.7), the 6 rules of the inventory (corpus spec K4.9), the 7 rules of the notation (corpus spec K10.7), the 6 rules of the quality gates (corpus spec K9.9) and the 2 rules of the arXiv mentions (corpus arxiv AX5.8). A rule that is not written yet has the state skip with the reason "not written yet". The letter of a rule gives its plane:
 //
 //	T, S, B  nodes
 //	G        graph
@@ -78,6 +78,9 @@ type Options struct {
 
 	// Base is the git revision that a pull request starts from, for example origin/main. When Base is not empty, the audit reads only the changes since the merge base of Base and HEAD, the changes in the working tree and the untracked files.
 	Base string
+
+	// Arxiv is a checkout of tamnd/arxiv. Rule D05 reads its analysis plane. Empty means that rule D05 skips.
+	Arxiv string
 }
 
 // Run audits the math2 working tree at root. The report has one result for each selected rule, in catalogue order. An error means that the audit could not run, for example because a register does not exist or Base is not a revision. A problem in the content is a finding and not an error.
@@ -175,6 +178,7 @@ type auditor struct {
 	imp      *imports        // the catalogue, the import manifests and the records, read when a rule needs them
 	comp     *computations   // the computation records, the image manifest and the runs, read when a rule needs them
 	inv      *invTree        // the inventory, read when a rule needs it
+	arxiv    string          // the checkout of tamnd/arxiv for rule D05, or ""
 	not      *notTree        // the notation register and the register of conventions, read when a rule needs them
 }
 
@@ -182,7 +186,7 @@ func load(root string, opt Options) (*auditor, error) {
 	if _, err := os.Stat(root); err != nil {
 		return nil, err
 	}
-	a := &auditor{root: root, ix: check.Index{}}
+	a := &auditor{root: root, ix: check.Index{}, arxiv: opt.Arxiv}
 	var err error
 	if a.schema, err = schema.Load(root); err != nil {
 		return nil, err
