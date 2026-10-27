@@ -1,0 +1,125 @@
+<mediawiki xmlns="http://www.mediawiki.org/xml/export-0.11/" version="0.11" xml:lang="en">
+  <!-- A test fixture of math2. The words of the pages are our own. -->
+  <siteinfo>
+    <sitename>ProofWiki</sitename>
+    <base>https://proofwiki.org/wiki/Main_Page</base>
+    <namespaces>
+      <namespace key="0" case="first-letter" />
+      <namespace key="1" case="first-letter">Talk</namespace>
+      <namespace key="14" case="first-letter">Category</namespace>
+      <namespace key="100" case="first-letter">Axiom</namespace>
+      <namespace key="102" case="first-letter">Definition</namespace>
+    </namespaces>
+  </siteinfo>
+  <page>
+    <title>Main Page</title>
+    <ns>0</ns>
+    <id>1</id>
+    <revision><id>10</id><timestamp>2026-01-01T00:00:00Z</timestamp><contributor><username>Admin</username><id>1</id></contributor><text bytes="20">Welcome to the wiki.</text></revision>
+  </page>
+  <page>
+    <title>Order of Subgroup Divides Order of Group</title>
+    <ns>0</ns>
+    <id>2</id>
+    <revision>
+      <id>20</id>
+      <timestamp>2025-05-27T10:00:00Z</timestamp>
+      <contributor><username>Alice</username><id>2</id></contributor>
+      <text bytes="400">{{about|the finite case}}
+== Theorem ==
+&lt;onlyinclude&gt;
+Let $G$ be a [[Definition:Finite Group|finite group]] and let $H$ be a [[Definition:Subgroup|subgroup]] of $G$.
+
+Then the '''order''' of $H$ is a [[Definition:Divisor of Integer|divisor]] of the order of $G$.&lt;ref&gt;A note.&lt;/ref&gt;
+&lt;/onlyinclude&gt;
+
+== [[Order of Subgroup Divides Order of Group/Proof 1|Proof 1]] ==
+{{:Order of Subgroup Divides Order of Group/Proof 1}}
+
+== Sources ==
+* {{BookReference|A Book|1965|An Author}}: Theorem 25.6
+
+[[Category:Subgroups]]
+[[Category:Order of Groups|Order]]
+[[Category:Subgroups]]</text>
+    </revision>
+  </page>
+  <page>
+    <title>Order of Subgroup Divides Order of Group/Proof 1</title>
+    <ns>0</ns>
+    <id>3</id>
+    <revision>
+      <id>30</id>
+      <timestamp>2025-12-23T08:00:00Z</timestamp>
+      <contributor><ip>192.0.2.7</ip></contributor>
+      <text bytes="300">== Theorem ==
+{{:Order of Subgroup Divides Order of Group}}
+
+== Proof ==
+&lt;onlyinclude&gt;
+The left cosets of $H$ in $G$ split $G$ into parts, and each part has as many elements as $H$ has. So the order of $G$ is the number of cosets times the order of $H$.
+{{qed}}
+&lt;/onlyinclude&gt;
+
+[[Category:Order of Subgroup Divides Order of Group]]</text>
+    </revision>
+  </page>
+  <page>
+    <title>Definition:Centre of Group</title>
+    <ns>102</ns>
+    <id>4</id>
+    <revision>
+      <id>40</id>
+      <timestamp>2025-05-28T09:00:00Z</timestamp>
+      <contributor><username>Bob</username><id>3</id></contributor>
+      <text bytes="200">== Definition ==
+The '''centre''' of a [[Definition:Group|group]] $G$ is the set of the elements of $G$ that commute with all the elements of $G$: $\set {x \in G: \forall g \in G: x g = g x}$
+&lt;!-- a comment that is not text --&gt;
+== Sources ==
+* A book that has the definition, in its third chapter, on its first page.
+
+[[Category:Definitions/Group Theory]]</text>
+    </revision>
+  </page>
+  <page>
+    <title>Axiom:Closure Axiom</title>
+    <ns>100</ns>
+    <id>5</id>
+    <revision><id>50</id><timestamp>2026-01-11T00:00:00Z</timestamp><contributor><username>Bob</username><id>3</id></contributor><text bytes="100">== Axiom ==
+&lt;onlyinclude&gt;The product of two elements of the structure is again an element of the structure.&lt;/onlyinclude&gt;
+[[Category:Axioms/Group Theory]]</text></revision>
+  </page>
+  <page>
+    <title>A Puzzle With Groups</title>
+    <ns>0</ns>
+    <id>6</id>
+    <revision><id>60</id><timestamp>2026-02-02T00:00:00Z</timestamp><contributor><username>Carol</username><id>4</id></contributor><text bytes="100">== Puzzle ==
+Find all the groups of order four up to isomorphism, and show that there are two of them.</text></revision>
+  </page>
+  <page>
+    <title>Centre</title>
+    <ns>0</ns>
+    <id>7</id>
+    <redirect title="Definition:Centre of Group" />
+    <revision><id>70</id><timestamp>2026-02-02T00:00:00Z</timestamp><contributor><username>Carol</username><id>4</id></contributor><text bytes="30">#REDIRECT [[Definition:Centre of Group]]</text></revision>
+  </page>
+  <page>
+    <title>Order Theorem</title>
+    <ns>0</ns>
+    <id>8</id>
+    <revision><id>80</id><timestamp>2026-02-02T00:00:00Z</timestamp><contributor><username>Carol</username><id>4</id></contributor><text bytes="60">{{Disambiguation}}
+* [[Order of Subgroup Divides Order of Group]]</text></revision>
+  </page>
+  <page>
+    <title>Category:Subgroups</title>
+    <ns>14</ns>
+    <id>9</id>
+    <revision><id>90</id><timestamp>2026-02-02T00:00:00Z</timestamp><contributor><username>Carol</username><id>4</id></contributor><text bytes="30">[[Category:Group Theory]]</text></revision>
+  </page>
+  <page>
+    <title>Talk:Order of Subgroup Divides Order of Group</title>
+    <ns>1</ns>
+    <id>10</id>
+    <revision><id>100</id><timestamp>2026-02-02T00:00:00Z</timestamp><contributor><username>Carol</username><id>4</id></contributor><text bytes="30">A question about the proof.</text></revision>
+  </page>
+</mediawiki>
