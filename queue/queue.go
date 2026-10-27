@@ -26,9 +26,9 @@ const (
 	Align     = "align"
 )
 
-// Names returns the names of the queues in the order of corpus spec K12.2, then the queue align of corpus spec K14.7.
+// Names returns the names of the queues in the order of corpus spec K12.2, then the queue align of corpus spec K14.7 and the queue write-research of corpus arxiv AX9.1.
 func Names() []string {
-	return []string{Enumerate, Cluster, Decide, State, Complete, Confirm, Sanity, Source, Align}
+	return []string{Enumerate, Cluster, Decide, State, Complete, Confirm, Sanity, Source, Align, WriteResearch}
 }
 
 // PriorityVersion is the version of the priority formula. A change of the weights or the terms needs a new version (corpus spec K12.3).
@@ -58,7 +58,7 @@ type Input struct {
 	Rows     []inventory.Row
 	Mentions []inventory.Mention
 	Day      time.Time // the day of the open count
-	// Asked are the MSC codes at two digits of the areas that a project or a campaign asks for (spec 18.5). Only the queue align reads them.
+	// Asked are the MSC codes at two digits of the areas that a project or a campaign asks for (spec 18.5). Only the queues align and write-research read them.
 	Asked []string
 }
 
@@ -69,15 +69,16 @@ type def struct {
 }
 
 var defs = map[string]def{
-	Enumerate: {role: "enumerate", goal: "the model lists each item of the area that it knows, with a source for each one", reason: "the inventory has no recall estimates yet (corpus spec K4.7)"},
-	Cluster:   {role: "dedup judge, then curators", goal: "each mention belongs to one row", items: clusterItems},
-	Decide:    {role: "curate", goal: "the open count goes down", items: decideItems},
-	State:     {role: "write, informalize", goal: "W1", reason: "the build does not compute the writing levels yet (corpus spec K08)"},
-	Complete:  {role: "write, explain, exercise", goal: "the next writing level", reason: "the build does not compute the writing levels yet (corpus spec K08)"},
-	Confirm:   {role: "review-assist, then people", goal: "rule P04 is clean", reason: "no agent-written section is in the tree yet"},
-	Sanity:    {role: "explore", goal: "rule X05 is clean", reason: "no agent-written statement is in the tree yet"},
-	Source:    {role: "review-assist, then people", goal: "rule P06 is clean", reason: "no source has the mark locator_unconfirmed yet"},
-	Align:     {role: "align", goal: "each result of the research layer that a node states has an aligned edge", reason: "no project or campaign asks for an area with open results, so spec 18.5 builds no research core yet", items: alignItems},
+	Enumerate:     {role: "enumerate", goal: "the model lists each item of the area that it knows, with a source for each one", reason: "the inventory has no recall estimates yet (corpus spec K4.7)"},
+	Cluster:       {role: "dedup judge, then curators", goal: "each mention belongs to one row", items: clusterItems},
+	Decide:        {role: "curate", goal: "the open count goes down", items: decideItems},
+	State:         {role: "write, informalize", goal: "W1", reason: "the build does not compute the writing levels yet (corpus spec K08)"},
+	Complete:      {role: "write, explain, exercise", goal: "the next writing level", reason: "the build does not compute the writing levels yet (corpus spec K08)"},
+	Confirm:       {role: "review-assist, then people", goal: "rule P04 is clean", reason: "no agent-written section is in the tree yet"},
+	Sanity:        {role: "explore", goal: "rule X05 is clean", reason: "no agent-written statement is in the tree yet"},
+	Source:        {role: "review-assist, then people", goal: "rule P06 is clean", reason: "no source has the mark locator_unconfirmed yet"},
+	WriteResearch: {role: "write", goal: "each row of the research layer that AX9.1 selects is a node at W1", reason: "no row of the research layer has a reason of AX9.1 yet", items: writeResearchItems},
+	Align:         {role: "align", goal: "each result of the research layer that a node states has an aligned edge", reason: "no project or campaign asks for an area with open results, so spec 18.5 builds no research core yet", items: alignItems},
 }
 
 // Compute returns the queue name, with its items in priority order: the highest priority first, then the target in byte order.
