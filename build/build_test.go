@@ -33,10 +33,10 @@ func TestGraph(t *testing.T) {
 			t.Errorf("the first build has the cached step %s", s.Name)
 		}
 	}
-	if want := []string{build.Status, build.Graph, build.Store, build.Search, build.Writing}; !slices.Equal(names, want) {
+	if want := []string{build.Status, build.Graph, build.Store, build.Search, build.Writing, build.Formal}; !slices.Equal(names, want) {
 		t.Fatalf("the steps are %+v, and only the steps %v must run", m.Steps, want)
 	}
-	for _, f := range []string{build.StoreFile, build.SearchFile, build.WritingFile} {
+	for _, f := range []string{build.StoreFile, build.SearchFile, build.WritingFile, build.FormalFile} {
 		if _, err := os.Stat(filepath.Join(out, f)); err != nil {
 			t.Error(err)
 		}

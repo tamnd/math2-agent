@@ -28,4 +28,5 @@ func ExampleRun() {
 	// store false
 	// search false
 	// writing false
+	// formal false
 }
