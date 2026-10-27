@@ -501,6 +501,13 @@ $ m2 wp extract -corpus ../wikipedia-math -list pilot.txt
 $ m2 wp extract -corpus ../wikipedia-math            # extract the content plane again
 ```
 
+`m2 wp scope` builds the scope list of WP1.2 from one dump. It reads a SQLite store that `wiki dump load` of tamnd/wikipedia-cli writes, and the output of `wiki assess -o tsv` for the projects of the signals S1 to S3. `-cited FILE` gives the titles that math2 cites (S4), and `-wikidata FILE` gives the titles with a Wikidata class or identifier of mathematics (S5). The command walks the category tree of `manifests/wikipedia/categories.yaml` for S6, and it counts the links from the articles of S1 for S8 and S9. A rule classifier gives each candidate a verdict and a confidence. The command writes `manifests/wikipedia/candidates.tsv`, `manifests/wikipedia/scope.tsv` and `reports/scope.md`. The store keeps only the rows that the scope needs, and some of those rows depend on the tables before them. So when a table is missing, the command writes the id file for the filter into `-work` and stops with the `wiki dump load` command that loads the table. Run that command, and then run `m2 wp scope` again.
+
+```
+$ wiki assess Mathematics Statistics "Philosophy/Logic" Cryptography "Computer science" Physics Systems -o tsv > assess.tsv
+$ m2 wp scope -corpus ../wikipedia-math -store scope.sqlite -dump 20261001 -assess assess.tsv -cited cited.txt
+```
+
 The Y rules check the corpus. They read the checkout that `-wikipedia` names, and they skip when it is not given. Y02 checks that each revision of the content plane has a census record that names the extractor version and the revision, and an objects file. Y03 checks that each cue of each census has an object, or a waiver of `waivers.yaml` with a reason. These two rules are hard. Y08 lists the templates that the template table does not map, Y09 lists the headings in 5 or more articles that the heading table does not map, and Y10 lists the formulas that `wiki/texvc` does not convert. These three rules are soft. The other Y rules come in the later milestones of the Wikipedia roadmap. `-group Y` runs only the Y rules, and `-hard` runs only the hard rules.
 
 ```
