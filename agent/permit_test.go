@@ -322,3 +322,54 @@ func TestPermitExercise(t *testing.T) {
 		})
 	}
 }
+
+func TestPermitUnderstand(t *testing.T) {
+	const target = "arxiv:2401.00001/classify"
+	rec := func(paper, tag, pass, by string) string {
+		return `{"id":"ax://paper/` + paper + `#` + tag + `","pass":"` + pass + `","by":"agent:m2-agent/` + by + `@0.1.0"}` + "\n"
+	}
+	own := rec("2401.00001", "UNK1", "classify", "understand")
+	path := agent.UnderstandDir + "/classify/" + inventory.MentionShard("ax://paper/2401.00001#UNK1") + ".jsonl"
+	other := ""
+	for i := range 100000 {
+		tag := fmt.Sprintf("T%d", i)
+		if inventory.MentionShard("ax://paper/2401.00002#"+tag) == inventory.MentionShard("ax://paper/2401.00001#UNK1") {
+			other = rec("2401.00002", tag, "classify", "understand")
+			break
+		}
+	}
+	if other == "" {
+		t.Fatal("no tag of 2401.00002 is in the shard of UNK1")
+	}
+	both := own + other
+	if strings.Compare(own, other) > 0 {
+		both = other + own
+	}
+	for _, tc := range []struct {
+		name string
+		c    workspace.Change
+		err  string
+	}{
+		{"a record", workspace.Change{Path: path, New: []byte(own)}, ""},
+		{"a record next to another paper", workspace.Change{Path: path, Old: []byte(other), New: []byte(both)}, ""},
+		{"a replaced record", workspace.Change{Path: path, Old: []byte(own), New: []byte(strings.Replace(own, "}", `,"kind":"remark"}`, 1))}, ""},
+		{"another paper removed", workspace.Change{Path: path, Old: []byte(other), New: []byte(own)}, "keeps the lines of the other papers"},
+		{"a record of another paper", workspace.Change{Path: path, Old: []byte(""), New: []byte(other)}, "is not of the paper 2401.00001"},
+		{"another pass", workspace.Change{Path: path, New: []byte(rec("2401.00001", "UNK1", "concepts", "understand"))}, "is of the pass"},
+		{"another role", workspace.Change{Path: path, New: []byte(rec("2401.00001", "UNK1", "classify", "curate"))}, "writes only its own records"},
+		{"another shard", workspace.Change{Path: agent.UnderstandDir + "/classify/zz.jsonl", New: []byte(own)}, "is of the shard"},
+		{"another directory", workspace.Change{Path: agent.UnderstandDir + "/concepts/" + inventory.MentionShard("ax://paper/2401.00001#UNK1") + ".jsonl", New: []byte(own)}, "writes only the records of the pass"},
+		{"not sorted", workspace.Change{Path: path, New: []byte(own + own)}, "not sorted"},
+		{"a node", workspace.Change{Path: "nodes/3C5/3C53TD.md", New: []byte("a")}, "writes only the records of the pass"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := agent.Permit("understand", target, []workspace.Change{tc.c})
+			switch {
+			case tc.err == "" && err != nil:
+				t.Errorf("error %v", err)
+			case tc.err != "" && (err == nil || !strings.Contains(err.Error(), tc.err)):
+				t.Errorf("error %v, want %q", err, tc.err)
+			}
+		})
+	}
+}

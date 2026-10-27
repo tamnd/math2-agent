@@ -83,6 +83,7 @@ type Edge struct {
 // Paper is the part of a metadata record of tamnd/arxiv that the importer reads.
 type Paper struct {
 	ID         string   `json:"id"`
+	Title      string   `json:"title"`
 	Categories []string `json:"categories"`
 	MSCClass   string   `json:"msc_class"`
 	Versions   []struct {
@@ -565,4 +566,54 @@ func Expect(root string) ([]Want, error) {
 		}
 	}
 	return out, nil
+}
+
+// Month returns the month directory of a paper id: the first four digits of its number, as 2401 for 2401.00001 and 9802 for math/9802134.
+func Month(id string) string {
+	n := id
+	if _, after, ok := strings.Cut(id, "/"); ok {
+		n = after
+	}
+	if len(n) < 4 {
+		return ""
+	}
+	return n[:4]
+}
+
+// PathForm returns the form of a paper id in a file name, as math-9802134 for math/9802134.
+func PathForm(id string) string { return strings.ReplaceAll(id, "/", "-") }
+
+// ObjectsFile returns the objects file of a paper, relative to the checkout.
+func ObjectsFile(id string) string {
+	return filepath.ToSlash(filepath.Join("analysis", "objects", Month(id), PathForm(id)+".jsonl"))
+}
+
+// ReadPaper reads the metadata record and the object records of one paper from the checkout at root. A paper with no metadata record gives a nil Paper.
+func ReadPaper(root, id string) (*Paper, []Object, error) {
+	objs, err := readLines[Object](filepath.Join(root, filepath.FromSlash(ObjectsFile(id))))
+	if err != nil {
+		return nil, nil, err
+	}
+	meta, err := readMetadata(root, map[string]bool{Month(id): true})
+	if err != nil {
+		return nil, nil, err
+	}
+	return meta[id], objs, nil
+}
+
+// Latest returns the objects of the source path in the latest version of the objects, and that version.
+func Latest(objs []Object) ([]Object, int) {
+	latest := 0
+	for _, o := range objs {
+		if v, _ := strconv.Atoi(o.Version); o.Path == "source" && v > latest {
+			latest = v
+		}
+	}
+	var out []Object
+	for _, o := range objs {
+		if v, _ := strconv.Atoi(o.Version); o.Path == "source" && v == latest {
+			out = append(out, o)
+		}
+	}
+	return out, latest
 }
