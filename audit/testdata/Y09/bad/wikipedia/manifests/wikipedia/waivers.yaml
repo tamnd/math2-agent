@@ -1,0 +1,8 @@
+# The waivers for the tests of wpcorpus.
+version: 1
+waivers:
+  - id: example-in-test
+    pattern: {heading: item/example}
+    reason: The examples of the test page are links only.
+    author: tamnd
+    date: 2026-10-27

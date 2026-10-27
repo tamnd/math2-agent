@@ -1,0 +1,19 @@
+<!-- wikipedia: en
+     page: 2
+     title: Glossary of widgets
+     revision: 20
+     timestamp: 2026-10-01T00:00:00Z
+     history: https://en.wikipedia.org/w/index.php?curid=2&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=20 -->
+This is a glossary of made-up words.
+
+== A ==
+;alpha
+:The first word. See [[beta]].
+;aleph
+:Another first word.
+
+== B ==
+{{term|beta}}
+{{defn|The second word, with <math>b</math>.}}

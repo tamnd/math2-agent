@@ -1,0 +1,2 @@
+{"page":5,"revision":50,"ref":"o1","kind":"subject","cue":"lead","strength":"normal","name":"Gadget 5","span":[0,29],"text":"A gadget 5 is a widget.","hash":"sha256:bae2ca5132f2810fe22911e1d41da5812924bcba6f1400959369a7e6e6ba9255","flags":["informal"],"extractor":"m2/dev"}
+{"page":5,"revision":50,"ref":"o2","kind":"section","cue":"section","strength":"strong","name":"Frobnications","section":"Frobnications","section_anchor":"Frobnications","span":[31,70],"hash":"sha256:b706432f61e5e455b38d06141a827c89654651741cb34e249639ff8369fbe40f","extractor":"m2/dev"}

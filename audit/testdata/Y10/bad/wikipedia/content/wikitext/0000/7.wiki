@@ -1,0 +1,9 @@
+<!-- wikipedia: en
+     page: 7
+     title: Doohickey
+     revision: 70
+     timestamp: 2026-10-01T00:00:00Z
+     history: https://en.wikipedia.org/w/index.php?curid=7&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=70 -->
+A '''doohickey''' is a widget with {{math|{{frobnicate|''x''}} + 1}} parts.

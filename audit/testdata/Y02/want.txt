@@ -1,0 +1,3 @@
+analysis/census/0000/2-r20.json:0:0: Y02: the revision 20 of "Glossary of widgets" has no census record. Run m2 wp extract -page 2
+analysis/census/0001/12345-r123450.json:0:0: Y02: the census does not name the extractor version
+analysis/objects/0000/2-r20.jsonl:0:0: Y02: the revision 20 of "Glossary of widgets" has no objects file

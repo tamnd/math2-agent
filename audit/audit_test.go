@@ -124,7 +124,15 @@ var setup = map[string]func(t *testing.T){
 var options = map[string]func(opt *Options, root string){
 	// D05 reads the analysis plane of a checkout of tamnd/arxiv, which the fixture has in checkout/.
 	"D05": func(opt *Options, root string) { opt.Arxiv = filepath.Join(root, "checkout") },
+	// The Y rules read a checkout of tamnd/wikipedia-math, which the fixture has in wikipedia/.
+	"Y02": wikipediaCheckout,
+	"Y03": wikipediaCheckout,
+	"Y08": wikipediaCheckout,
+	"Y09": wikipediaCheckout,
+	"Y10": wikipediaCheckout,
 }
+
+func wikipediaCheckout(opt *Options, root string) { opt.Wikipedia = filepath.Join(root, "wikipedia") }
 
 func ruleOptions(id, root string) Options {
 	opt := Options{Rules: []string{id}}
@@ -198,10 +206,10 @@ func TestFixtures(t *testing.T) {
 
 func TestCatalogue(t *testing.T) {
 	rules := Rules()
-	if len(rules) != 101 {
-		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K5.14, K6.12, K7.10, K9.9, K10.7 and K13.9 and corpus arxiv AX5.8 have 101", len(rules))
+	if len(rules) != 119 {
+		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K5.14, K6.12, K7.10, K9.9, K10.7 and K13.9 and corpus arxiv AX5.8 and corpus wikipedia have 119", len(rules))
 	}
-	planes := map[byte]string{'T': Nodes, 'S': Nodes, 'B': Nodes, 'G': Graph, 'F': Formal, 'V': Formal, 'C': Compute, 'A': Align, 'L': Licence, 'P': Prov, 'R': Release, 'X': Agents, 'I': Inventory, 'D': Inventory, 'N': Notation}
+	planes := map[byte]string{'T': Nodes, 'S': Nodes, 'B': Nodes, 'G': Graph, 'F': Formal, 'V': Formal, 'C': Compute, 'A': Align, 'L': Licence, 'P': Prov, 'R': Release, 'X': Agents, 'I': Inventory, 'D': Inventory, 'N': Notation, 'Y': Wikipedia}
 	id := regexp.MustCompile(`^[A-Z][0-9]{2}$`)
 	seen := map[string]bool{}
 	for _, r := range rules {
@@ -309,5 +317,30 @@ func TestPullRequest(t *testing.T) {
 
 	if _, err := Run(root, Options{Base: "--help"}); err == nil {
 		t.Error("Run accepted a base revision that starts with -")
+	}
+}
+
+func TestGroupAndHard(t *testing.T) {
+	root := filepath.Join("testdata", "T05", "good")
+	rep, err := Run(root, Options{Group: "Y", Hard: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, r := range rep.Results {
+		ids = append(ids, r.Rule)
+		reason := "not written yet"
+		if r.Rule == "Y02" || r.Rule == "Y03" {
+			reason = "no checkout of tamnd/wikipedia-math is given, so set -wikipedia to run the rule"
+		}
+		if r.State != check.Skip || r.Reason != reason {
+			t.Errorf("%s: the state is %s %q, and it must be skip with the reason %q", r.Rule, r.State, r.Reason, reason)
+		}
+	}
+	if !slices.Equal(ids, []string{"Y01", "Y02", "Y03", "Y04", "Y05", "Y06", "Y11", "Y15", "Y18"}) {
+		t.Errorf("the hard rules of the group Y are %v", ids)
+	}
+	if _, err := Run(root, Options{Group: "Y", Plane: Graph}); err == nil {
+		t.Error("the group Y and the plane graph select no rule, and Run gave no error")
 	}
 }

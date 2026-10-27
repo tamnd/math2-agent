@@ -489,6 +489,24 @@ Two rules check the arXiv mentions. D05 reads the checkout again and checks that
 $ m2 audit -rule D05,D06 -arxiv ../arxiv
 ```
 
+## The Wikipedia corpus
+
+The Wikipedia corpus is the repository tamnd/wikipedia-math. It has the manifests in `manifests/wikipedia/` (the template table, the heading table and the waivers), the content plane in `content/wikitext/` (one wikitext file for each article, with a header that gives the revision, the history link and the licence) and the analysis plane in `analysis/` (the objects and the census of each revision). The `wpcorpus` package reads and writes these files, and it extracts the objects with the parser and the math converter of tamnd/wikipedia-cli.
+
+`m2 wp extract` fetches the current revision of each article that it names, writes the content file, and writes the objects file and the census file. `-list FILE` gives one title on each line. With no title, the command extracts again each page of the content plane, and it does not use the network. `-page ID` and `-type T` select the pages. The census counts each cue of an item: an item template, an item heading, a heading that names a result, an inline head, a proof block, a glossary entry, a list entry and a table row. Each cue must give an object, or match a waiver with a reason.
+
+```
+$ m2 wp extract -corpus ../wikipedia-math "Sylow theorems" "Coset"
+$ m2 wp extract -corpus ../wikipedia-math -list pilot.txt
+$ m2 wp extract -corpus ../wikipedia-math            # extract the content plane again
+```
+
+The Y rules check the corpus. They read the checkout that `-wikipedia` names, and they skip when it is not given. Y02 checks that each revision of the content plane has a census record that names the extractor version and the revision, and an objects file. Y03 checks that each cue of each census has an object, or a waiver of `waivers.yaml` with a reason. These two rules are hard. Y08 lists the templates that the template table does not map, Y09 lists the headings in 5 or more articles that the heading table does not map, and Y10 lists the formulas that `wiki/texvc` does not convert. These three rules are soft. The other Y rules come in the later milestones of the Wikipedia roadmap. `-group Y` runs only the Y rules, and `-hard` runs only the hard rules.
+
+```
+$ m2 audit -wikipedia ../wikipedia-math -group Y -hard
+```
+
 ## Alignment
 
 `m2 align <source>` compares each node with the records of a source and proposes edges. Run `m2 ingest <source>` first. The aligner does not change a node. It writes the proposals to `queues/align/<system>.jsonl`, and a person decides on each one.
