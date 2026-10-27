@@ -2,9 +2,9 @@
 //
 // Each item of items.yaml is a target node and reference exercises for it, each with the answer that a solver must reach. The nodes and the exercises are in our own words. These are the public items. The held-out items are in a private repository, and -items reads them from a file of the same form.
 //
-// The test runs the role on each item in a new work tree. With no flags, the writer and the solver are scripted, and no test calls a model service. For each item, the script first writes an exercise with no solution in steps, and the goal must refuse it. Then it writes the reference exercises, and the goal must hold. The solver gives the reference answer of the first exercise and a wrong answer of the others, thus only the first one does not go to a person. A reference exercise that a person checks always goes to a person. Thus the suite checks the goal of the role, the solver and the queue, and that each reference exercise is valid.
+// The test runs the role on each item in a new work tree, once in a tree at node.v1 and once in a tree at node.v2, and the script writes the exercises in the form of the tree. With no flags, the writer and the solver are scripted, and no test calls a model service. For each item, the script first writes an exercise with no solution in steps, and the goal must refuse it. Then it writes the reference exercises, and the goal must hold. The solver gives the reference answer of the first exercise and a wrong answer of the others, thus only the first one does not go to a person. A reference exercise that a person checks always goes to a person. Thus the suite checks the goal of the role, the solver and the queue, and that each reference exercise is valid.
 //
-// With -live, the test runs the role on each item with the Claude model of the rung -rung of the ladder. The model register has no model of another family, thus each exercise goes to a person. The report gives, for each item, the outcome, the exercises with their groups and checks, and the spend. It needs ANTHROPIC_API_KEY, and it spends money. Give -report FILE to write the report.
+// With -live, the test runs the role on each item, in a tree at node.v2, with the Claude model of the rung -rung of the ladder. The model register has no model of another family, thus each exercise goes to a person. The report gives, for each item, the outcome, the exercises with their groups and checks, and the spend. It needs ANTHROPIC_API_KEY, and it spends money. Give -report FILE to write the report.
 package exercise_test
 
 import (
@@ -31,6 +31,7 @@ import (
 	"github.com/tamnd/math2-agent/llm/llmtest"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/prompts"
+	"github.com/tamnd/math2-agent/schema"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
@@ -81,10 +82,19 @@ func readItems(t *testing.T) []item {
 	return f.Items
 }
 
-// file returns the path and the text of the exercise node of the reference, with the provisional id of its number.
-func (r reference) file(target string, i int) (string, string) {
+// file returns the path and the text of the exercise node of the reference, with the provisional id of its number, in the form of node.v2 or node.v1.
+func (r reference) file(target string, i int, v2 bool) (string, string) {
 	id := fmt.Sprintf("~%08x", 0x1a2b3c00+i)
 	var b strings.Builder
+	if v2 {
+		fmt.Fprintf(&b, "---\ntag: %s\nkind: exercise\nname: %s\nuses: [%s]\nabout: [%s]\ndifficulty: %d\nmath_group: %s\ncheck: %s\n---\n\n## Exercise\n\n%s\n", id, r.Name, target, target, r.Difficulty, r.Group, r.Check, strings.TrimSpace(r.Task))
+		for _, s := range [][2]string{{"Hint", r.Hint}, {"Answer", r.Answer}, {"Solution", r.Solution}} {
+			if s[1] != "" {
+				fmt.Fprintf(&b, "\n## %s\n\n%s\n", s[0], strings.TrimSpace(s[1]))
+			}
+		}
+		return "nodes/~/" + id + ".md", b.String()
+	}
 	fmt.Fprintf(&b, "---\ntag: %s\nkind: example\nname: %s\nuses: [%s]\n---\n\n## Example\n\n%s\n\n## Remarks\n\n%s About: %s. Difficulty: %d. Group: %s. Check: %s.\n", id, r.Name, target, strings.TrimSpace(r.Task), exercise.Marker, target, r.Difficulty, r.Group, r.Check)
 	for _, s := range [][2]string{{"Hint", r.Hint}, {"Answer", r.Answer}, {"Solution", r.Solution}} {
 		if s[1] != "" {
@@ -94,16 +104,22 @@ func (r reference) file(target string, i int) (string, string) {
 	return "nodes/~/" + id + ".md", b.String()
 }
 
-// tree makes a git repository with the target node and opens it as a workspace.
-func tree(t *testing.T, it item) *workspace.Workspace {
+// tree makes a git repository with the target node and opens it as a workspace. A tree that is not at node.v2 has the file of the schema of node.v1. Its text is the schema of the toolchain, because only the name of the file tells the form.
+func tree(t *testing.T, it item, v2 bool) *workspace.Workspace {
 	t.Helper()
 	dir := t.TempDir()
-	p := filepath.Join(dir, filepath.FromSlash(tools.NodePath(it.Tag)))
-	if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
-		t.Fatal(err)
+	files := map[string]string{tools.NodePath(it.Tag): it.Text}
+	if !v2 {
+		files[schema.Previous] = string(schema.Raw())
 	}
-	if err := os.WriteFile(p, []byte(it.Text), 0o600); err != nil {
-		t.Fatal(err)
+	for name, text := range files {
+		p := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for _, args := range [][]string{
 		{"init", "-q", "-b", "main"},
@@ -122,10 +138,10 @@ func tree(t *testing.T, it item) *workspace.Workspace {
 	return w
 }
 
-// run runs the role on the item in a new work tree with the model on the rung and the solver, and returns the record, the exercises of the tree and the referrals.
-func run(t *testing.T, it item, m llm.Model, r int, solve exercise.Solver) (*agent.Record, []*exercise.Exercise, []exercise.Referral) {
+// run runs the role on the item in a new work tree of the form with the model on the rung and the solver, and returns the record, the exercises of the tree and the referrals.
+func run(t *testing.T, it item, v2 bool, m llm.Model, r int, solve exercise.Solver) (*agent.Record, []*exercise.Exercise, []exercise.Referral) {
 	t.Helper()
-	ws := tree(t, it)
+	ws := tree(t, it, v2)
 	role, err := agent.LoadRole(prompts.FS, "exercise")
 	if err != nil {
 		t.Fatal(err)
@@ -134,6 +150,9 @@ func run(t *testing.T, it item, m llm.Model, r int, solve exercise.Solver) (*age
 	brief, err := exercise.Brief(ws, j)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if v2 != strings.Contains(brief, "kind: exercise\n") {
+		t.Errorf("the brief of a tree with node.v2 %v does not give the form of the tree:\n%s", v2, brief)
 	}
 	ts, err := tools.Profile(role, nil, ws, nil)
 	if err != nil {
@@ -182,40 +201,45 @@ func TestSuite(t *testing.T) {
 		return
 	}
 	for _, it := range items {
-		t.Run(it.Tag, func(t *testing.T) {
-			first, firstText := it.Exercises[0].file(it.Tag, 0)
-			script := []*llm.Response{llmtest.Call("write_file", map[string]string{"path": first, "text": strings.Replace(firstText, "\n1. ", "\n", 1)}, u)}
-			for i, r := range it.Exercises {
-				p, text := r.file(it.Tag, i)
-				script = append(script, llmtest.Call("write_file", map[string]string{"path": p, "text": text}, u))
-			}
-			answers := map[string]string{}
-			for i, r := range it.Exercises {
-				answers[strings.TrimSpace(r.Task)] = "a wrong answer"
-				if i == 0 {
-					answers[strings.TrimSpace(r.Task)] = r.Answer
-				}
-			}
-			solve := func(_ context.Context, task string) (string, error) { return answers[task], nil }
-			rec, exs, refs := run(t, it, llmtest.New(script...), 0, solve)
-			if rec.Outcome != agent.Success || len(rec.Turns) != len(script) {
-				t.Fatalf("the run gives %s, %q after %d turns", rec.Outcome, rec.Reason, len(rec.Turns))
-			}
-			if got := rec.Turns[0].Why; !strings.Contains(got, "numbered steps") {
-				t.Errorf("an exercise with no steps gives %q", got)
-			}
-			if len(exs) != len(it.Exercises) {
-				t.Errorf("the tree has %d exercises of %s, and the item has %d", len(exs), it.Tag, len(it.Exercises))
-			}
-			if len(refs) != len(it.Exercises)-1 {
-				t.Errorf("%d exercises go to a person, and %d must go: %+v", len(refs), len(it.Exercises)-1, refs)
-			}
-			for _, x := range refs {
-				if x.By != "m2-agent/exercise@0.1.0" || x.Reason == "" {
-					t.Errorf("the referral is %+v", x)
-				}
-			}
-		})
+		for _, v2 := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/node.v2=%v", it.Tag, v2), func(t *testing.T) { suite(t, it, v2) })
+		}
+	}
+}
+
+// suite runs the scripted writer and solver on the item in a tree of the form.
+func suite(t *testing.T, it item, v2 bool) {
+	first, firstText := it.Exercises[0].file(it.Tag, 0, v2)
+	script := []*llm.Response{llmtest.Call("write_file", map[string]string{"path": first, "text": strings.Replace(firstText, "\n1. ", "\n", 1)}, u)}
+	for i, r := range it.Exercises {
+		p, text := r.file(it.Tag, i, v2)
+		script = append(script, llmtest.Call("write_file", map[string]string{"path": p, "text": text}, u))
+	}
+	answers := map[string]string{}
+	for i, r := range it.Exercises {
+		answers[strings.TrimSpace(r.Task)] = "a wrong answer"
+		if i == 0 {
+			answers[strings.TrimSpace(r.Task)] = r.Answer
+		}
+	}
+	solve := func(_ context.Context, task string) (string, error) { return answers[task], nil }
+	rec, exs, refs := run(t, it, v2, llmtest.New(script...), 0, solve)
+	if rec.Outcome != agent.Success || len(rec.Turns) != len(script) {
+		t.Fatalf("the run gives %s, %q after %d turns", rec.Outcome, rec.Reason, len(rec.Turns))
+	}
+	if got := rec.Turns[0].Why; !strings.Contains(got, "numbered steps") {
+		t.Errorf("an exercise with no steps gives %q", got)
+	}
+	if len(exs) != len(it.Exercises) {
+		t.Errorf("the tree has %d exercises of %s, and the item has %d", len(exs), it.Tag, len(it.Exercises))
+	}
+	if len(refs) != len(it.Exercises)-1 {
+		t.Errorf("%d exercises go to a person, and %d must go: %+v", len(refs), len(it.Exercises)-1, refs)
+	}
+	for _, x := range refs {
+		if x.By != "m2-agent/exercise@0.2.0" || x.Reason == "" {
+			t.Errorf("the referral is %+v", x)
+		}
 	}
 }
 
@@ -228,7 +252,7 @@ func liveRun(t *testing.T, items []item) {
 	var rows, lists []string
 	usd := 0.0
 	for _, it := range items {
-		rec, exs, refs := run(t, it, m, *rung, nil)
+		rec, exs, refs := run(t, it, true, m, *rung, nil)
 		usd += rec.Spend.USD
 		groups := map[string]int{}
 		for _, e := range exs {

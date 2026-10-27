@@ -1,6 +1,6 @@
 // Package exercise has the goal and the brief of the exercise role (corpus K7.3, K7.5 and K8.7).
 //
-// An exercise run writes exercises for one node: the task, a hint, the answer, a worked solution in steps and the way that a machine checks an answer. The role writes an exercise in the form of node.v1: an example node whose Remarks section opens with the line of the role, for example "Role: exercise. About: 3C53TD. Difficulty: 2. Group: B. Check: exact.", and has the headings Hint, Answer and Solution (corpus K2.3). m2 migrate node.v2 moves it to the kind exercise. [Parse] reads both forms.
+// An exercise run writes exercises for one node: the task, a hint, the answer, a worked solution in steps and the way that a machine checks an answer. In a tree at node.v2, the role writes an exercise as a node of the kind exercise, with the fields about, difficulty, math_group and check and the sections Exercise, Hint, Answer and Solution (corpus K8.7). In a tree at node.v1, it writes an example node whose Remarks section opens with the line of the role, for example "Role: exercise. About: 3C53TD. Difficulty: 2. Group: B. Check: exact.", and has the headings Hint, Answer and Solution (corpus K2.3), and m2 migrate node.v2 later moves it to the kind exercise. [V2] tells the form of the tree, and the goal accepts both forms.
 //
 // After the gates, a model of another family solves each exercise from the task alone. An exercise whose answer the solver does not reach, or reaches in a different form, goes to a person: the goal appends a referral to [Queue]. With no solver, each exercise goes to a person. The run never sees the answer of the solver, thus the writer cannot fit its answer to it.
 package exercise
@@ -25,6 +25,7 @@ import (
 	"github.com/tamnd/math2-agent/exercise"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/schema"
 	"github.com/tamnd/math2-agent/style"
 	"github.com/tamnd/math2-agent/workspace"
 )
@@ -44,6 +45,9 @@ var Checks = exercise.Checks
 // Exercise is one exercise, as the node of an exercise has it.
 type Exercise exercise.Exercise
 
+// V2 reports whether the role writes the node.v2 form of an exercise in the tree at dir. It does when the tree has moved to node.v2, or when it has no schema file and thus m2 check uses the schema of the toolchain. It does not when the tree has the schema of node.v1, because that schema has no kind exercise.
+func V2(dir string) bool { return schema.Path(dir) != schema.Previous }
+
 // Parse reads the exercise of the node, in the form of node.v1 or node.v2. It returns nil and no error when the node is not an exercise, and an error when a node.v1 exercise is not in the form of an exercise.
 func Parse(n *node.Node) (*Exercise, error) {
 	e, err := exercise.Parse(n)
@@ -53,8 +57,12 @@ func Parse(n *node.Node) (*Exercise, error) {
 // Problems returns what is not correct in the exercise for the target, or nil. The exercise is about the target, it has a task and a solution in numbered steps, its fields have their values, and it has an answer unless a person checks it.
 func (e *Exercise) Problems(target string) []string {
 	var out []string
+	about, task, answer, solution := "give About: "+target+" in the line of the role", "the Example section", "### Answer", "### Solution"
+	if !e.Old {
+		about, task, answer, solution = "give about: ["+target+"]", "the Exercise section", "## Answer", "## Solution"
+	}
 	if !slices.Contains(e.About, target) {
-		out = append(out, fmt.Sprintf("the exercise %s is not about the target: give About: %s in the line of the role", e.ID, target))
+		out = append(out, fmt.Sprintf("the exercise %s is not about the target: %s", e.ID, about))
 	}
 	if e.Difficulty < 1 || e.Difficulty > 5 {
 		out = append(out, fmt.Sprintf("the difficulty of %s is %d, and it must be from 1 to 5", e.ID, e.Difficulty))
@@ -68,15 +76,15 @@ func (e *Exercise) Problems(target string) []string {
 	case e.Check == "lean":
 		out = append(out, fmt.Sprintf("the check of %s is lean, and the exercise role writes no Lean yet. Give the check exact, numeric, choice, cas or none", e.ID))
 	case e.Check != "none" && e.Answer == "":
-		out = append(out, fmt.Sprintf("the exercise %s has the check %s and no Answer. Give the final answer under ### Answer", e.ID, e.Check))
+		out = append(out, fmt.Sprintf("the exercise %s has the check %s and no Answer. Give the final answer under %s", e.ID, e.Check, answer))
 	case e.Check == "numeric" && !numeric(e.Answer):
 		out = append(out, fmt.Sprintf("the answer of %s is %q, and the check numeric needs a number such as 0.25", e.ID, e.Answer))
 	}
 	if strings.TrimSpace(e.Task) == "" {
-		out = append(out, fmt.Sprintf("the exercise %s has no task. Write it in the Example section", e.ID))
+		out = append(out, fmt.Sprintf("the exercise %s has no task. Write it in %s", e.ID, task))
 	}
 	if !write.Steps(e.Solution) {
-		out = append(out, fmt.Sprintf("the Solution of %s is not a list of numbered steps. Write each step as \"1. claim, by reason\" under ### Solution", e.ID))
+		out = append(out, fmt.Sprintf("the Solution of %s is not a list of numbered steps. Write each step as \"1. claim, by reason\" under %s", e.ID, solution))
 	}
 	return out
 }
@@ -277,7 +285,10 @@ func Goal(ws *workspace.Workspace, job *agent.Job, solve Solver, solver, by stri
 			if err != nil {
 				return false, err.Error(), nil
 			}
-			if e == nil {
+			switch {
+			case e == nil && V2(ws.Dir):
+				return false, fmt.Sprintf("the node %s is not an exercise: give it the kind %s and the fields about, difficulty, math_group and check", n.ID, exercise.Kind), nil
+			case e == nil:
 				return false, fmt.Sprintf("the node %s is not an exercise: its Remarks section must open with the line %q", n.ID, Marker+" About: "+job.Target+". Difficulty: 2. Group: B. Check: exact."), nil
 			}
 			if p := e.Problems(job.Target); len(p) > 0 {
@@ -327,7 +338,7 @@ func list(fs []check.Finding) string {
 	return strings.Join(lines, "; ")
 }
 
-// Brief returns the first message of an exercise run: the job, the target node in a data block, the exercises about the target that the tree has, and the form of an exercise.
+// Brief returns the first message of an exercise run: the job, the target node in a data block, the exercises about the target that the tree has, and the form of an exercise. The form is the form of node.v2 when [V2] holds for the tree, and the form of node.v1 when it does not.
 func Brief(ws *workspace.Workspace, job *agent.Job) (string, error) {
 	p := tools.NodePath(job.Target)
 	if p == "" {
@@ -360,7 +371,12 @@ func Brief(ws *workspace.Workspace, job *agent.Job) (string, error) {
 	if want >= 3 {
 		b.WriteString("Write at least one exercise of group C: a proof, a conjecture or an evaluation.\n\n")
 	}
-	fmt.Fprintf(&b, "Add each exercise in nodes/~/ID.md, where ID is a new provisional id such as ~1a2b3c4d, in this form:\n\n---\ntag: ~ID\nkind: example\nname: the name of the exercise in words\nuses: [%s]\n---\n\n## Example\n\nThe task, which a reader can do with no other text.\n\n## Remarks\n\n%s About: %s. Difficulty: 2. Group: B. Check: exact.\n\n### Hint\n\nOne or two sentences.\n\n### Answer\n\nThe final answer.\n\n### Solution\n\n1. The first step, by its reason.\n2. The next step.\n", job.Target, Marker, job.Target)
+	b.WriteString("Add each exercise in nodes/~/ID.md, where ID is a new provisional id such as ~1a2b3c4d, in this form:\n\n")
+	if V2(ws.Dir) {
+		fmt.Fprintf(&b, "---\ntag: ~ID\nkind: %s\nname: the name of the exercise in words\nuses: [%s]\nabout: [%s]\ndifficulty: 2\nmath_group: B\ncheck: exact\n---\n\n## Exercise\n\nThe task, which a reader can do with no other text.\n\n## Hint\n\nOne or two sentences.\n\n## Answer\n\nThe final answer.\n\n## Solution\n\n1. The first step, by its reason.\n2. The next step.\n", exercise.Kind, job.Target, job.Target)
+		return b.String(), nil
+	}
+	fmt.Fprintf(&b, "---\ntag: ~ID\nkind: example\nname: the name of the exercise in words\nuses: [%s]\n---\n\n## Example\n\nThe task, which a reader can do with no other text.\n\n## Remarks\n\n%s About: %s. Difficulty: 2. Group: B. Check: exact.\n\n### Hint\n\nOne or two sentences.\n\n### Answer\n\nThe final answer.\n\n### Solution\n\n1. The first step, by its reason.\n2. The next step.\n", job.Target, Marker, job.Target)
 	return b.String(), nil
 }
 

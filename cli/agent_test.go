@@ -265,7 +265,7 @@ func TestAgentRunExercise(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 	}
-	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/exercise@0.1.0, 1 turns") {
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/exercise@0.2.0, 1 turns") {
 		t.Errorf("the output is\n%s", stdout)
 	}
 	if b, err := os.ReadFile(filepath.Join(work, "queues", "exercises.jsonl")); err != nil || !strings.Contains(string(b), `"reason":"math2 has no solver of another family yet"`) {
