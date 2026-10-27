@@ -6,7 +6,7 @@
 //
 // With no flags, the model is a scripted model, and no test calls a model service. For each item, the script first writes the reference, and the goal of the role must hold. Then for each item it writes some wrong attempts, and the goal must not hold, with the reason that the attempt must give. A prove attempt that uses sorry, that changes the statement, or that proves another statement fails. A formalize attempt that states a false statement fails. Thus the suite checks the goal predicates and the items on real Lean, and each item has a solution.
 //
-// With -live, the test runs the role on each item with the Claude model of the rung -rung of the ladder of the role. It needs ANTHROPIC_API_KEY, and it spends money. The report gives the outcome, the turns and the dollars of each item, and the share of the items that the role solved within the budget. Give -report FILE to write it. A live run is not a release gate yet, because the baseline needs the runs of the first versions of the roles.
+// With -live, the test runs the role on each item with the Claude model of the rung -rung of the ladder of the role. It needs ANTHROPIC_API_KEY, and it spends money. With M2_LLM_COMMAND, for example codex,claude, it runs the command-line clients of the subscriptions instead (package llm/command), and the dollars are the prices of the Claude API for the same tokens. The report gives the outcome, the turns and the dollars of each item, and the share of the items that the role solved within the budget. Give -report FILE to write it. A live run is not a release gate yet, because the baseline needs the runs of the first versions of the roles.
 //
 // The test skips with -short, and when lake is not on the PATH.
 package agents_test
@@ -30,6 +30,7 @@ import (
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/claude"
+	"github.com/tamnd/math2-agent/llm/command"
 	"github.com/tamnd/math2-agent/llm/llmtest"
 	"github.com/tamnd/math2-agent/prompts"
 	"github.com/tamnd/math2-agent/workspace"
@@ -37,7 +38,7 @@ import (
 
 var (
 	itemsFile = flag.String("items", "items.tsv", "the file of the items")
-	live      = flag.Bool("live", false, "run the roles with the Claude models. This needs ANTHROPIC_API_KEY and spends money.")
+	live      = flag.Bool("live", false, "run the roles with the Claude models. This needs ANTHROPIC_API_KEY and spends money, or M2_LLM_COMMAND for the clients of the subscriptions.")
 	rung      = flag.Int("rung", 0, "the rung of the ladder of each role, with -live")
 	report    = flag.String("report", "", "write the report of the run to this file")
 	cache     = flag.String("cache", "", "the directory where M2Extract is built. Empty means m2 in the user cache directory.")
@@ -275,6 +276,22 @@ func attempts(it item, root string) []attempt {
 	}
 }
 
+// liveModel returns the model of a live run: the clients in M2_LLM_COMMAND when it is set, and the Claude API otherwise.
+func liveModel(t *testing.T) llm.Model {
+	t.Helper()
+	if s := os.Getenv(command.Env); s != "" {
+		backends, err := command.Parse(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return command.New(backends...)
+	}
+	if os.Getenv("ANTHROPIC_API_KEY") == "" {
+		t.Fatal("-live needs ANTHROPIC_API_KEY or " + command.Env)
+	}
+	return claude.New()
+}
+
 func TestSuite(t *testing.T) {
 	if testing.Short() {
 		t.Skip("the suite runs Lean")
@@ -286,12 +303,13 @@ func TestSuite(t *testing.T) {
 	s := setup(t, items)
 	var rows []string
 	solved, usd := 0, 0.0
+	var model llm.Model // one model for all items, thus a client that hit its usage limit does not run again
+	if *live {
+		model = liveModel(t)
+	}
 	for _, it := range items {
 		if *live {
-			if os.Getenv("ANTHROPIC_API_KEY") == "" {
-				t.Fatal("-live needs ANTHROPIC_API_KEY")
-			}
-			rec := s.run(t, it, claude.New(), *rung)
+			rec := s.run(t, it, model, *rung)
 			if rec.Outcome == agent.Success {
 				solved++
 			}
