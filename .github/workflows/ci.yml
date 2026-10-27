@@ -171,7 +171,7 @@ jobs:
           code=0
           "$RUNNER_TEMP/m2" audit -root "$tree-bad" -rule T05 > findings.txt || code=$?
           test "$code" = 1
-          test "$(grep -c ': T05: ' findings.txt)" = 2
+          test "$(grep -c ': T05: ' findings.txt)" = "$(wc -l < audit/testdata/T05/want.txt)"
       - name: an unknown command exits with code 2
         run: |
           code=0

@@ -101,7 +101,7 @@ func TestAutoform(t *testing.T) {
 	autoformModel(t, "∀ n : Nat, n = n", "∀ n : Nat, n = n", "∀ n : Nat, n + 0 = n")
 	var pulls []string
 	oldPull := openPull
-	openPull = func(_ context.Context, dir, branch, title, body string) (string, error) {
+	openPull = func(_ context.Context, _, branch, title, _ string) (string, error) {
 		pulls = append(pulls, branch+" "+title)
 		return "https://example.com/pull/1", nil
 	}

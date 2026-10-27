@@ -283,7 +283,7 @@ func FormatRecords(rs []Record) ([]byte, error) {
 	slices.SortFunc(rs, func(a, b Record) int { return strings.Compare(a.ID, b.ID) })
 	var b strings.Builder
 	for _, r := range rs {
-		data, err := json.Marshal(r)
+		data, err := json.Marshal(r) // #nosec G117 -- Pass is the name of a pass of the run, not a password
 		if err != nil {
 			return nil, err
 		}
