@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -141,28 +142,50 @@ func cached(cache, hash string) (string, error) {
 
 // getter returns the Getter of the options. It sends the User-Agent of the options and fails on a status other than 200 OK.
 func getter(opt Options) Getter {
+	return func(ctx context.Context, url string) (io.ReadCloser, error) {
+		return fetch(ctx, opt, url, "", http.StatusOK)
+	}
+}
+
+// rangeGetter returns the RangeGetter of the options. It sends the User-Agent of the options and fails on a status other than 206 Partial Content.
+func rangeGetter(opt Options) RangeGetter {
+	return func(ctx context.Context, url string, start, end int64) (io.ReadCloser, error) {
+		if start < 0 || (end >= 0 && end < start) {
+			return nil, fmt.Errorf("GET %s: the range %d-%d is not valid", url, start, end)
+		}
+		r := fmt.Sprintf("bytes=%d-", start)
+		if end >= 0 {
+			r += strconv.FormatInt(end, 10)
+		}
+		return fetch(ctx, opt, url, r, http.StatusPartialContent)
+	}
+}
+
+// fetch gets one URL with the Range header r when r is not empty, and fails when the status is not want.
+func fetch(ctx context.Context, opt Options, url, r string, want int) (io.ReadCloser, error) {
 	client := opt.Client
 	if client == nil {
 		client = http.DefaultClient
 	}
-	return func(ctx context.Context, url string) (io.ReadCloser, error) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return nil, err
-		}
-		if opt.UserAgent != "" {
-			req.Header.Set("User-Agent", opt.UserAgent)
-		}
-		resp, err := client.Do(req) // #nosec G107 -- the URL is the bulk channel of the source, from the adapter, the catalogue or the user.
-		if err != nil {
-			return nil, err
-		}
-		if resp.StatusCode != http.StatusOK {
-			_ = resp.Body.Close()
-			return nil, &StatusError{URL: url, Code: resp.StatusCode, Status: resp.Status}
-		}
-		return resp.Body, nil
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
 	}
+	if opt.UserAgent != "" {
+		req.Header.Set("User-Agent", opt.UserAgent)
+	}
+	if r != "" {
+		req.Header.Set("Range", r)
+	}
+	resp, err := client.Do(req) // #nosec G107 -- the URL is the bulk channel of the source, from the adapter, the catalogue or the user.
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != want {
+		_ = resp.Body.Close()
+		return nil, &StatusError{URL: url, Code: resp.StatusCode, Status: resp.Status}
+	}
+	return resp.Body, nil
 }
 
 // download gets the bulk channel at url into the cache and returns the path, the hash of the bytes and the commit of the source when the adapter gives one. When the adapter is a Fetcher, Fetch makes the snapshot, and base is the m2 cache directory of the request. When want is not empty, the hash must be want.
@@ -179,7 +202,7 @@ func download(ctx context.Context, opt Options, base string, a Adapter, url, wan
 	w := io.MultiWriter(tmp, h)
 	get := getter(opt)
 	if f, ok := a.(Fetcher); ok {
-		req := &Request{URL: url, Root: opt.Root, Cache: base, Get: get}
+		req := &Request{URL: url, Root: opt.Root, Cache: base, Get: get, GetRange: rangeGetter(opt)}
 		err = f.Fetch(ctx, req, w)
 		commit = req.Commit
 	} else {

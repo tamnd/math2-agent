@@ -37,12 +37,18 @@ type Request struct {
 	Cache string // the m2 cache directory, for the programs that a fetch builds
 	Get   Getter // gets one URL
 
+	// GetRange gets a range of the bytes of one URL, for a source that gives one large file and an index of it, such as the multistream dumps of Wikipedia.
+	GetRange RangeGetter
+
 	// Commit is the commit of the source that the snapshot comes from. Fetch sets it when the source has commits, and Pull records it in the catalogue.
 	Commit string
 }
 
 // Getter gets the body of one URL. The body is nil when the error is not nil, and the caller closes it. The Getter of Pull gives a [*StatusError] when the server answers with a status other than 200 OK.
 type Getter func(ctx context.Context, url string) (io.ReadCloser, error)
+
+// RangeGetter gets the bytes from start to end of one URL, both included. An end below 0 means the end of the body. The body is nil when the error is not nil, and the caller closes it. The RangeGetter of Pull gives a [*StatusError] when the server answers with a status other than 206 Partial Content.
+type RangeGetter func(ctx context.Context, url string, start, end int64) (io.ReadCloser, error)
 
 // StatusError is the error of a Getter when the server answers with a status other than 200 OK. An adapter uses errors.As to act on the status, for example to start again when an API answers 409 Conflict.
 type StatusError struct {
