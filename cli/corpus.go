@@ -24,7 +24,7 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -624,10 +624,12 @@ func runCorpusStatus(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	root := fs.String("root", ".", "the math2 working tree")
 	asJSON := fs.Bool("json", false, "print JSON")
+	layer := fs.String("layer", "", "the layer. research gives the three numbers of corpus arxiv AX1.5, the outcomes and the writing levels.")
+	corpus := fs.String("corpus", "", "the checkout of tamnd/arxiv, for -layer research")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
-	if fs.NArg() != 0 {
+	if fs.NArg() != 0 || (*layer != "" && *layer != inventory.Research) {
 		fmt.Fprintln(stderr, "usage: "+corpusUsage)
 		return ExitUsage
 	}
@@ -640,6 +642,9 @@ func runCorpusStatus(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		fmt.Fprintf(stderr, "m2 corpus status: %v\n", err)
 		return ExitFailure
+	}
+	if *layer == inventory.Research {
+		return researchStatus(*root, *corpus, rows, *asJSON, stdout, stderr)
 	}
 	s := inventory.Summarize(rows, ms, time.Now())
 	if *asJSON {
