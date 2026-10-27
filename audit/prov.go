@@ -199,7 +199,26 @@ func (a *auditor) blob(rev, path string) []byte {
 		data, _ := a.readFile(path)
 		return data
 	}
-	out, err := git(a.root, "show", rev+":"+path)
+	obj := rev + ":" + path
+	// The batch reader reads one name on each line, thus a path with a newline goes to git show.
+	if a.cat == nil && !a.noCat {
+		var err error
+		if a.cat, err = startCatFile(a.root); err != nil {
+			a.noCat = true
+		}
+	}
+	if a.cat != nil && !strings.Contains(obj, "\n") {
+		data, ok, err := a.cat.read(obj)
+		if err == nil {
+			if !ok {
+				return nil
+			}
+			return data
+		}
+		a.cat.close()
+		a.cat, a.noCat = nil, true
+	}
+	out, err := git(a.root, "show", obj)
 	if err != nil {
 		return nil
 	}

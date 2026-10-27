@@ -36,27 +36,30 @@ func (a *auditor) agentMerge() (pr *agentPR, reason string) {
 	if err != nil {
 		return nil, err.Error()
 	}
-	pr = &agentPR{from: from, to: to}
+	// The logs come first. A merge with no agent run returns before the other files are read.
 	ids := map[string]bool{}
+	isLog := func(p string) bool { return strings.HasPrefix(p, prov.Dir+"/") && strings.HasSuffix(p, ".jsonl") }
 	for _, p := range paths {
-		if strings.HasPrefix(p, prov.Dir+"/") && strings.HasSuffix(p, ".jsonl") {
-			old, now := readLog(a.blob(from, p)), readLog(a.blob(to, p))
-			for _, l := range now[min(len(old), len(now)):] {
-				if l.err == nil && l.line.Agent != "" && l.line.Human == "" && l.line.Run != "" {
-					ids[l.line.Run] = true
-				}
+		if !isLog(p) {
+			continue
+		}
+		old, now := readLog(a.blob(from, p)), readLog(a.blob(to, p))
+		for _, l := range now[min(len(old), len(now)):] {
+			if l.err == nil && l.line.Agent != "" && l.line.Human == "" && l.line.Run != "" {
+				ids[l.line.Run] = true
 			}
-			continue
 		}
-		if strings.HasPrefix(p, "build/") {
-			continue
-		}
-		pr.changes = append(pr.changes, workspace.Change{Path: p, Old: a.blob(from, p), New: a.blob(to, p)})
 	}
 	if len(ids) == 0 {
 		return nil, ""
 	}
-	pr.runs = slices.Sorted(maps.Keys(ids))
+	pr = &agentPR{from: from, to: to, runs: slices.Sorted(maps.Keys(ids))}
+	for _, p := range paths {
+		if isLog(p) || strings.HasPrefix(p, "build/") {
+			continue
+		}
+		pr.changes = append(pr.changes, workspace.Change{Path: p, Old: a.blob(from, p), New: a.blob(to, p)})
+	}
 	return pr, ""
 }
 
