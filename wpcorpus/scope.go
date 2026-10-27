@@ -88,10 +88,13 @@ type CategoryRoot struct {
 
 // CategoryTree is the content of categories.yaml.
 type CategoryTree struct {
-	Version  int            `yaml:"version"`
-	Roots    []CategoryRoot `yaml:"roots"`
-	Exclude  []string       `yaml:"exclude"`
-	Keywords []string       `yaml:"keywords"`
+	Version int            `yaml:"version"`
+	Roots   []CategoryRoot `yaml:"roots"`
+	Exclude []string       `yaml:"exclude"`
+	// ExcludeWords removes each category whose title has one of the words,
+	// for example "mathematicians" for the categories of people.
+	ExcludeWords []string `yaml:"exclude_words"`
+	Keywords     []string `yaml:"keywords"`
 }
 
 // LoadCategoryTree reads manifests/wikipedia/categories.yaml of the corpus.
@@ -112,10 +115,27 @@ func LoadCategoryTree(root string) (*CategoryTree, error) {
 	for i, e := range t.Exclude {
 		t.Exclude[i] = catTitle(e)
 	}
+	for i, w := range t.ExcludeWords {
+		t.ExcludeWords[i] = strings.ToLower(catTitle(w))
+	}
 	for i, k := range t.Keywords {
 		t.Keywords[i] = strings.ToLower(catTitle(k))
 	}
 	return &t, nil
+}
+
+// Excluded tells if the walk of the tree must not go into the category.
+func (t *CategoryTree) Excluded(title string) bool {
+	if slices.Contains(t.Exclude, title) {
+		return true
+	}
+	l := strings.ToLower(title)
+	for _, w := range t.ExcludeWords {
+		if strings.Contains(l, w) {
+			return true
+		}
+	}
+	return false
 }
 
 // MathKeyword tells if a category title has one of the keywords.
@@ -190,13 +210,9 @@ type TreeCategory struct {
 }
 
 // Tree walks the subcategory links from the roots, breadth first, to the
-// depth of each root. It does not walk into an excluded category. A
+// depth of each root. It does not walk into a category that Excluded names. A
 // category that two roots reach keeps the lower depth.
 func (s *Store) Tree(t *CategoryTree) ([]TreeCategory, error) {
-	excluded := map[string]bool{}
-	for _, e := range t.Exclude {
-		excluded[e] = true
-	}
 	depth := map[string]int{}
 	for _, r := range t.Roots {
 		if d, ok := depth[r.Title]; !ok || d > 0 {
@@ -210,7 +226,7 @@ func (s *Store) Tree(t *CategoryTree) ([]TreeCategory, error) {
 			}
 			frontier = frontier[:0]
 			for _, c := range subs {
-				if excluded[c] {
+				if t.Excluded(c) {
 					continue
 				}
 				if old, ok := depth[c]; ok && old <= d {

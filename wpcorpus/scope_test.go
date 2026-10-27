@@ -34,6 +34,8 @@ roots:
   - {title: Group theory, depth: 1}
 exclude:
   - Mathematics education
+exclude_words:
+  - cuisine
 keywords:
   - mathemat
   - group
@@ -79,6 +81,9 @@ func TestTree(t *testing.T) {
 	}
 	if !tree.MathKeyword("Finite_groups") || tree.MathKeyword("French_cuisine") {
 		t.Error("MathKeyword")
+	}
+	if !tree.Excluded("Mathematics_education") || !tree.Excluded("French_cuisine") || tree.Excluded("Algebra") {
+		t.Error("Excluded")
 	}
 }
 
