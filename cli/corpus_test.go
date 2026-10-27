@@ -222,4 +222,15 @@ func TestCorpusClusterOfArxiv(t *testing.T) {
 	if code, _, _ := run("corpus", "cluster", "-root", root, "-commit", "c", "-msc", "47"); code != ExitUsage {
 		t.Errorf("-msc with no -source gave %d", code)
 	}
+	code, stdout, stderr := run("corpus", "plan", "understand", "-root", root, "-tier", "T3", "-json")
+	var p queue.Plan
+	if err := json.Unmarshal([]byte(stdout), &p); code != ExitOK || err != nil || p.Jobs != 2 || p.Queue != "understand T3" {
+		t.Fatalf("m2 corpus plan understand gave %d, %+v, %v, %q", code, p, err, stderr)
+	}
+	if code, stdout, _ := run("corpus", "plan", "understand", "-root", root, "-tier", "T1", "-msc", "47"); code != ExitOK || !strings.Contains(stdout, "jobs        2 of 2") || !strings.Contains(stdout, "No model run starts") {
+		t.Errorf("the plan of T1 gave %d, %q", code, stdout)
+	}
+	if code, _, _ := run("corpus", "plan", "understand", "-root", root, "-tier", "T0"); code != ExitUsage {
+		t.Errorf("the tier T0 gave %d", code)
+	}
 }

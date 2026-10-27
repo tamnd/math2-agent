@@ -1,6 +1,7 @@
 package arxiv_test
 
 import (
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -204,5 +205,34 @@ func TestCandidatesAndReport(t *testing.T) {
 		if !strings.Contains(r, want) {
 			t.Errorf("the report has no %q:\n%s", want, r)
 		}
+	}
+}
+
+func TestPlanUnderstand(t *testing.T) {
+	ms := []inventory.Mention{
+		{ID: "ax://paper/2401.00001#T1", Source: "arxiv", Kind: "statement", Class: "open", MSC: []string{"47H10"}},
+		{ID: "ax://paper/2401.00001#P1", Source: "arxiv", Kind: "proof", Class: "open", MSC: []string{"47H10"}, AttachedTo: "ax://paper/2401.00001#T1"},
+		{ID: "ax://paper/2401.00002#T1", Source: "arxiv", Kind: "statement", Class: "record", MSC: []string{"54E50"}},
+		{ID: "ax://paper/2401.00003#D1", Source: "arxiv", Kind: "definition", Class: "record", MSC: []string{"47H09"}},
+	}
+	rows := []inventory.Row{
+		{ID: "R1", Mentions: []string{ms[0].ID, ms[2].ID}, Kind: "statement", Spread: 1},
+		{ID: "R2", Mentions: []string{ms[3].ID}, Kind: "definition", Spread: 1},
+	}
+	for _, c := range []struct {
+		tier, msc string
+		jobs      int
+	}{{"T1", "", 3}, {"T1", "47", 2}, {"T2", "", 1}, {"T3", "", 2}, {"T3", "54", 1}, {"T4", "", 1}} {
+		p, err := arxiv.PlanUnderstand(c.tier, rows, ms, c.msc)
+		if err != nil || p.Jobs != c.jobs {
+			t.Errorf("tier %s, msc %q: %d jobs, %v; want %d", c.tier, c.msc, p.Jobs, err, c.jobs)
+		}
+	}
+	p, _ := arxiv.PlanUnderstand("T1", rows, ms, "")
+	if p.TokensIn != 75000 || math.Abs(p.CostLow-0.006) > 1e-9 || math.Abs(p.CostHigh-0.018) > 1e-9 {
+		t.Errorf("the plan of T1 is %+v", p)
+	}
+	if _, err := arxiv.PlanUnderstand("T0", rows, ms, ""); err == nil {
+		t.Error("T0 has a plan")
 	}
 }
