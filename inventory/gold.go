@@ -17,7 +17,7 @@ import (
 const GoldFile = "records/gold/clustering.jsonl"
 
 // PassNames are the names of the passes of Cluster, in order. They are also the rules that a merge by each pass names.
-var PassNames = []string{"identifiers", "equivalence"}
+var PassNames = []string{"identifiers", "hash", "equivalence"}
 
 // Pair is one decision of a curator in the gold set: whether two mentions are one item.
 type Pair struct {
@@ -99,7 +99,7 @@ type Score struct {
 	Recall    *float64 `json:"recall"`
 }
 
-// Measure gives the precision and the recall of the passes of Cluster on the gold set: one score for each pass and each layer of the gold set, and one score for each pass over all layers. The passes are cumulative, so the score of equivalence is the score of passes 1 and 2 together. Measure runs the passes on the mentions alone, without the rows, so a merge by a curator does not change it.
+// Measure gives the precision and the recall of the passes of Cluster on the gold set: one score for each pass and each layer of the gold set, and one score for each pass over all layers. The passes are cumulative, so the score of hash is the score of the identifiers and the hashes together, and the score of equivalence is the score of all three. Measure runs the passes on the mentions alone, without the rows, so a merge by a curator does not change it.
 func Measure(ms []Mention, gold []Pair) []Score {
 	passes := Passes(ms)
 	var layers []string

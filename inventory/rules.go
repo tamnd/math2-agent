@@ -21,6 +21,14 @@ var rules = []Rule{
 	{ID: "book", Outcome: OutcomeOutOfScope, Reason: "a book or a journal, not an item of mathematics", match: each(proofWiki("Book:"), wikidataClass("Q47461344", "Q7725634", "Q5633421"))},
 	{ID: "symbol", Outcome: OutcomeOutOfScope, Reason: "a notation: the notation register holds it (corpus spec K10.4)", match: each(proofWiki("Symbols:"))},
 	{ID: "place", Outcome: OutcomeOutOfScope, Reason: "a country, not an item of mathematics", match: each(wikidataClass("Q6256", "Q3624078"))},
+	{ID: "research-exercise", Outcome: OutcomeRecord, Reason: "an exercise of a paper, which becomes a node only when a node, a project or a curriculum asks for it (corpus arxiv AX8.6)", match: each(arxivKind("exercise"))},
+	{ID: "research-context", Outcome: OutcomeOutOfScope, Reason: "a context item of a paper, such as a standing hypothesis, which is not an item of mathematics by itself (corpus arxiv AX8.6)", match: each(arxivKind("context"))},
+	{ID: "research-default", Outcome: OutcomeRecord, Reason: "an item of a paper that no node asks for yet. The record keeps its edges in the record plane (corpus arxiv AX8.6)", match: each(arxivKind("statement", "definition", "example", "counterexample", "conjecture", "problem", "exercise"))},
+}
+
+// arxivKind reports whether a mention is of the source arxiv and of one of the kinds. A mention of the kind unknown waits for the pass classify (corpus arxiv AX7.2).
+func arxivKind(kinds ...string) func(m *Mention) bool {
+	return func(m *Mention) bool { return m.Source == "arxiv" && slices.Contains(kinds, m.Kind) }
 }
 
 // each matches a row when each of its mentions passes one of the tests.

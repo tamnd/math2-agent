@@ -23,7 +23,7 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -252,28 +252,65 @@ func importPlan(root, commit, path, cache, summary string, stdout io.Writer) err
 	return os.WriteFile(summary, []byte(b.String()), 0o644) // #nosec G306 -- the summary is the public body of a pull request.
 }
 
-// runCorpusCluster groups the mentions of the tree into rows again, with the passes 1 and 2 of corpus K4.3. It reads no records.
+// runCorpusCluster groups the mentions of the tree into rows again, with the passes 1 and 2 of corpus K4.3. It reads no records. With -source arxiv, it also runs the name pass of corpus arxiv AX8.2, writes its candidates for the dedup judge to reports/inventory/arxiv-names.jsonl, and writes the report of AX8.7 to reports/inventory-arxiv.md.
 func runCorpusCluster(args []string, stdout, stderr io.Writer) int {
 	const name = "m2 corpus cluster"
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	root := fs.String("root", ".", "the math2 working tree")
 	commit := fs.String("commit", "", "the commit that goes into registers/inventory/. Empty means the HEAD commit of the working tree.")
+	source := fs.String("source", "", "arxiv runs the name pass and writes the report of the arXiv layer")
+	msc := fs.String("msc", "", "with -source arxiv, the name pass reads only the block of this MSC code at two digits")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
-	if fs.NArg() != 0 {
+	if fs.NArg() != 0 || *source != "" && *source != axImport.Source || *msc != "" && *source == "" {
 		fmt.Fprintln(stderr, "usage: "+corpusUsage)
 		return ExitUsage
 	}
 	if !headCommit(name, *root, commit, stderr) {
 		return ExitFailure
 	}
-	if _, err := cluster(*root, *commit, stdout); err != nil {
+	res, err := cluster(*root, *commit, stdout)
+	if err == nil && *source == axImport.Source {
+		err = arxivReport(*root, res, *msc, stdout)
+	}
+	if err != nil {
 		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
 	}
 	return ExitOK
+}
+
+// The files that m2 corpus cluster -source arxiv writes, relative to the root of the tree.
+const (
+	arxivNames     = "reports/inventory/arxiv-names.jsonl"
+	arxivInventory = "reports/inventory-arxiv.md"
+)
+
+// arxivReport runs the name pass on the rows of the cluster and writes its candidates and the report of the arXiv layer.
+func arxivReport(root string, res *inventory.Result, msc string, stdout io.Writer) error {
+	ms, err := inventory.ReadMentions(root)
+	if err != nil {
+		return err
+	}
+	cands := axImport.Candidates(res.Rows, ms, msc)
+	data, err := axImport.FormatCandidates(cands)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(root, "reports", "inventory"), 0o750); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(arxivNames)), data, 0o644); err != nil { // #nosec G306 -- the report is public.
+		return err
+	}
+	report := axImport.Report(res.Rows, ms, cands, time.Now())
+	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(arxivInventory)), []byte(report), 0o644); err != nil { // #nosec G306 -- the report is public.
+		return err
+	}
+	fmt.Fprintf(stdout, "arxiv: joined by hash %d, name candidates %d, wrote %s and %s\n", res.Hashed, len(cands), arxivNames, arxivInventory)
+	return nil
 }
 
 // headCommit sets an empty commit to the HEAD commit of the working tree at root. It reports whether it has a commit.
@@ -322,7 +359,7 @@ func cluster(root, commit string, stdout io.Writer) (*inventory.Result, error) {
 	if err := inventory.AppendRegister(root, res.Added, commit); err != nil {
 		return nil, err
 	}
-	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal formal statements %d, attached with no row %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Equivalent, res.Orphans)
+	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal hashes %d, joined by equal formal statements %d, attached with no row %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Hashed, res.Equivalent, res.Orphans)
 	return res, nil
 }
 
