@@ -1,0 +1,66 @@
+# A small template table for the tests of wpcorpus.
+version: 3
+templates:
+  math theorem:
+    class: item
+    kind: statement/theorem
+    cue: strong
+    params: {name: name, math_statement: text, note: text, 1: text, 2: text}
+    aliases: [thm]
+  math proof:
+    class: item
+    kind: proof
+    cue: strong
+    params: {title: title, proof: text, 1: text}
+  numblk:
+    class: item
+    kind: equation
+    cue: normal
+    params: {1: text, 2: math, 3: label}
+  term:
+    class: term
+    kind: definition
+    cue: normal
+    params: {1: name, term: name, content: text}
+  defn:
+    class: term
+    kind: definition
+    cue: normal
+    params: {1: text, defn: text}
+  dfn:
+    class: term
+    kind: definition
+    cue: normal
+    params: {1: name}
+  anchor:
+    class: anchor
+    params: {1: name}
+  math:
+    class: math
+    params: {1: math}
+  mvar:
+    class: math
+    params: {1: math}
+  equationref:
+    class: math
+    params: {1: label, 2: number}
+  citation needed:
+    class: maintenance
+    aliases: [cn]
+  collapse top:
+    class: layout
+    params: {title: title, 1: title}
+  collapse bottom:
+    class: layout
+  sfn:
+    class: citation
+  main:
+    class: hatnote
+    params: {1: link}
+  short description:
+    class: meta
+patterns:
+  - prefix: "cite "
+    class: citation
+  - prefix: "infobox "
+    class: meta
