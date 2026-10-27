@@ -114,7 +114,13 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 		return ExitOK
 	}
 	if *source != "" {
-		res, err := axImport.Import(*corpus)
+		// The rows of the last clustering give the named results of the name method (AX6.2).
+		rows, err := inventory.ReadRows(*root)
+		if err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		res, err := axImport.ImportNames(*corpus, axImport.NewNames(rows))
 		if err != nil {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
