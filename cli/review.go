@@ -55,6 +55,7 @@ func runReview(args []string, stdout, stderr io.Writer) int {
 	class := flags.String("class", "", "the class of the fault, for the verdict not-faithful, for example M-junk")
 	notes := flags.String("notes", "", "free text")
 	date := flags.String("date", "", "the date of the review, YYYY-MM-DD. Empty means today in UTC.")
+	minutes := flags.Float64("minutes", 0, "the minutes that the review took, for the review hours of m2 corpus report. 0 means that the review does not record its time.")
 	dryRun := flags.Bool("dry-run", false, "check the review and show it, and change no file")
 	commit := flags.Bool("commit", false, "commit the two files with git commit -S, which signs the commit with your key")
 	if err := flags.Parse(args); err != nil {
@@ -124,7 +125,11 @@ func runReview(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	r := status.Review{Reviewer: *reviewer, Date: *date, Verdict: *verdict, Conventions: conventions, Class: *class, Notes: *notes}
+	if *minutes < 0 {
+		fmt.Fprintln(stderr, "m2 review: -minutes is below 0")
+		return ExitUsage
+	}
+	r := status.Review{Reviewer: *reviewer, Date: *date, Verdict: *verdict, Conventions: conventions, Class: *class, Notes: *notes, Minutes: *minutes}
 	var paths []string
 	if *dryRun {
 		r, err = review.Fill(p, b, r)
