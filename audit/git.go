@@ -1,9 +1,12 @@
 package audit
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -59,4 +62,56 @@ func headDate(root string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return time.Parse(time.DateOnly, strings.TrimSpace(head))
+}
+
+// catFile reads the files of revisions through one git cat-file --batch process. A pull request with many changed files then starts one process and not one for each file.
+type catFile struct {
+	cmd *exec.Cmd
+	in  io.WriteCloser
+	out *bufio.Reader
+}
+
+func startCatFile(root string) (*catFile, error) {
+	cmd := exec.Command("git", "-C", root, "cat-file", "--batch") // #nosec G204 -- the arguments are constant.
+	in, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return &catFile{cmd: cmd, in: in, out: bufio.NewReader(out)}, nil
+}
+
+// read returns the blob of the object name rev:path. ok is false when the object is not there or is not a blob. An error means that the process failed, and the caller must not use it again.
+func (c *catFile) read(obj string) (data []byte, ok bool, err error) {
+	if _, err := io.WriteString(c.in, obj+"\n"); err != nil {
+		return nil, false, err
+	}
+	head, err := c.out.ReadString('\n')
+	if err != nil {
+		return nil, false, err
+	}
+	f := strings.Fields(head)
+	if len(f) != 3 {
+		return nil, false, nil // missing or ambiguous
+	}
+	size, err := strconv.Atoi(f[2])
+	if err != nil {
+		return nil, false, fmt.Errorf("git cat-file: %q: %w", strings.TrimSpace(head), err)
+	}
+	data = make([]byte, size+1) // the content and a newline
+	if _, err := io.ReadFull(c.out, data); err != nil {
+		return nil, false, err
+	}
+	return data[:size], f[1] == "blob", nil
+}
+
+func (c *catFile) close() {
+	_ = c.in.Close()
+	_ = c.cmd.Wait()
 }

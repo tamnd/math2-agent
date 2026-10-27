@@ -93,6 +93,11 @@ func Run(root string, opt Options) (*check.Report, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if a.cat != nil {
+			a.cat.close()
+		}
+	}()
 	rep := &check.Report{Files: len(a.scope)}
 	for _, e := range selected {
 		res := check.Result{Rule: e.ID}
@@ -180,6 +185,8 @@ type auditor struct {
 	inv      *invTree        // the inventory, read when a rule needs it
 	arxiv    string          // the checkout of tamnd/arxiv for rule D05, or ""
 	not      *notTree        // the notation register and the register of conventions, read when a rule needs them
+	cat      *catFile        // the reader of the files of revisions, started when a rule needs it
+	noCat    bool            // the reader failed, thus blob runs git show
 }
 
 func load(root string, opt Options) (*auditor, error) {
