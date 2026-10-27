@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section xml:id="sec-linear-eqns" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <title>What can we expect?</title>
+  <exploration label="exploration-lines">
+    <introduction><p>Two lines in the plane meet in a point, in no point, or in a whole line.</p></introduction>
+    <task><statement><p>Draw two lines that meet in one point.</p></statement></task>
+    <task><statement><p>Draw two lines that do not meet.</p></statement></task>
+  </exploration>
+  <definition label="definition-linear-system">
+    <statement><p>A <term>linear system</term><idx>linear system</idx> is a set of linear equations in the same unknowns.</p></statement>
+  </definition>
+  <figure xml:id="figure-lines">
+    <caption>Two lines that meet.</caption>
+    <image><xi:include href="prefigure/lines.xml"/></image>
+  </figure>
+  <observation>
+    <p>An observation is not an item.</p>
+  </observation>
+  <proposition label="proposition-solutions">
+    <statement><p>A linear system has no solution, exactly one, or infinitely many (<xref ref="definition-linear-system"/>).</p></statement>
+  </proposition>
+  <activity label="activity-planes">
+    <statement><p>Describe how three planes in space can meet.</p></statement>
+    <solution><p>The solution is not part of the text.</p></solution>
+  </activity>
+</section>

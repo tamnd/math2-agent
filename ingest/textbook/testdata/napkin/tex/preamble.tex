@@ -1,0 +1,9 @@
+% The theorem environments of the fixture.
+\declaretheorem[style=thmtheorem,name=Theorem,numberwithin=section]{theorem}
+\declaretheorem[style=thmtheorem,name=Lemma,sibling=theorem]{lemma}
+\declaretheorem[style=thmexample,name=Example,sibling=theorem]{example}
+\declaretheorem[name=Question,sibling=theorem,style=thmques]{ques}
+\declaretheorem[name=Remark,sibling=theorem,style=thmremark]{remark}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{problem}{Problem}[chapter]
+\newtheorem{dproblem}[problem]{Problem}

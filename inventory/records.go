@@ -20,7 +20,7 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 			Snapshot: snapshot,
 			Locator:  cmp.Or(r.URL, r.Locator),
 			NativeID: r.ID,
-			Kind:     kindOf(src.ID, &r),
+			Kind:     kindOf(src, &r),
 			Name:     clean(r.Title),
 			Class:    string(r.Class),
 			By:       by,
@@ -57,9 +57,12 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 	return out
 }
 
-// kindOf reads the kind of a record of the source. It returns Unknown when the record does not show its kind.
-func kindOf(source string, r *ingest.Record) string {
-	switch source {
+// kindOf reads the kind of a record of the source. A record of a textbook has a kind of the inventory. It returns Unknown when the record does not show its kind.
+func kindOf(src *ingest.Source, r *ingest.Record) string {
+	if src.Kind == "textbook" && slices.Contains(Kinds(), r.Kind) {
+		return r.Kind
+	}
+	switch src.ID {
 	case "wikidata":
 		if r.Meta["msc"] != "" {
 			return "topic"

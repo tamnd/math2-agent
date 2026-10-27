@@ -1,0 +1,41 @@
+% Part: first-order-logic
+% Chapter: syntax-and-semantics
+
+\documentclass[../../../include/open-logic-section]{subfiles}
+
+\begin{document}
+
+\olfileid{fol}{syn}{ext}
+
+\olsection{Extensionality}
+
+Two structures that agree on the symbols of a sentence give it the same
+truth value. % \begin{defn} in a comment is not an item. \end{defn}
+
+\begin{defn}[Agreement]
+\ollabel{defn:agree}
+Structures $M_1$ and $M_2$ \emph{agree} on a set of symbols when they have
+the same domain and the same interpretation of each symbol in the set.
+\end{defn}
+
+\begin{prop}[Extensionality]
+\ollabel{prop:extensionality}
+If $M_1$ and $M_2$ agree on the symbols of a sentence $A$
+(\olref{defn:agree}), then $A$ is true in $M_1$ iff it is true in $M_2$.
+\end{prop}
+
+\begin{proof}
+By induction on the formation of $A$, with \olref[fol][syn][ext]{prop:extensionality}
+for the subformulas. The cost is 100\% routine.
+\end{proof}
+
+\begin{rem}
+A remark is not an item.
+\end{rem}
+
+\begin{probtag}{prfAX}
+Write out the step for $\forall$ in the proof of
+\olref{prop:extensionality}.
+\end{probtag}
+
+\end{document}

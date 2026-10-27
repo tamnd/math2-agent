@@ -1,0 +1,19 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{open-logic-envs}
+
+% The environments of the fixture. Each one takes its name from the locale.
+\declaretheorem[
+  style=plain,
+  name=\theoremname,
+  numberwithin=chapter]{thm}
+
+\declaretheorem[style=plain, name=\propositionname, sibling=thm]{prop}
+
+\declaretheorem[style=definition, name=\definitionname, sibling=thm]{defn}
+
+\declaretheorem[style=definition, name=\problemname, numberwithin=chapter]{prob}
+
+\declaretheorem[style=remark, name=\remarkname]{rem}
+
+% A problem with tags: \begin{probtag}{tags}
+\newenvironment{probtag}[1]{\begin{prob}}{\end{prob}}

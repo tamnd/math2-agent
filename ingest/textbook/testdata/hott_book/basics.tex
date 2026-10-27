@@ -1,0 +1,35 @@
+\chapter{Type theory, the fixture}
+
+\section{Homotopies}
+\label{sec:homotopy}
+
+\begin{defn}\label{defn:homotopy}
+For functions $f,g:\prd{x:A}P(x)$, a \emph{homotopy} from $f$ to $g$ is a
+function of the type $\prd{x:A}(f(x)=g(x))$.
+\end{defn}
+
+\begin{lem}\label{lem:homotopy-refl}
+Each function has a homotopy to itself, in the sense of \cref{defn:homotopy}.
+\end{lem}
+\begin{proof}
+Take the reflexivity path at each point.
+\end{proof}
+
+\begin{eg}
+The identity function on $\nat$ has a homotopy to itself.
+\end{eg}
+
+\begin{rmk}
+A remark is not an item.
+\end{rmk}
+
+\section*{Exercises}
+
+\begin{ex}\label{ex:homotopy-sym}
+Show that a homotopy from $f$ to $g$ gives one from $g$ to $f$, and use
+\cref{lem:homotopy-refl,defn:homotopy}.
+\end{ex}
+
+% An example that the author did not write yet.
+\begin{example}\label{eg:later}
+\end{example}

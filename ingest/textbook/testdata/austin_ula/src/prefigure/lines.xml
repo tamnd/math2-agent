@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<diagram dimensions="(300,300)" margins="5">
+  <definition>f(x)=2*x+1</definition>
+  <definition>g(x)=1-x</definition>
+  <coordinates bbox="(-2,-2,2,2)">
+    <graph function="f"/>
+    <graph function="g"/>
+  </coordinates>
+</diagram>

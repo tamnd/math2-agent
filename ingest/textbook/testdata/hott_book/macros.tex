@@ -1,0 +1,13 @@
+% The theorem environments of the fixture.
+\def\defthm#1#2#3{%
+  \newtheorem{#1}[thm]{#2}
+  \crefname{#1}{#2}{#3}%
+}
+\newtheorem{thm}{Theorem}[section]
+\crefname{thm}{Theorem}{Theorems}
+\defthm{lem}{Lemma}{Lemmas}
+\defthm{defn}{Definition}{Definitions}
+\defthm{rmk}{Remark}{Remarks}
+\defthm{eg}{Example}{Examples}
+\newtheorem{ex}{Exercise}[chapter]
+\crefname{ex}{Exercise}{Exercises}
