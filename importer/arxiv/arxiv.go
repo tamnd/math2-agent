@@ -131,7 +131,10 @@ type Result struct {
 }
 
 // Import reads the checkout of tamnd/arxiv at root.
-func Import(root string) (*Result, error) {
+func Import(root string) (*Result, error) { return ImportNames(root, nil) }
+
+// ImportNames reads the checkout of tamnd/arxiv at root, and gives each mention the rows of the named results that its text names (AX6.2, the name method). With no names, it is Import.
+func ImportNames(root string, names *Names) (*Result, error) {
 	snapshot, err := commit(root)
 	if err != nil {
 		return nil, err
@@ -164,7 +167,7 @@ func Import(root string) (*Result, error) {
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return nil, err
 		}
-		p := paperIn{root: root, month: month, id: id, file: filepath.ToSlash(filepath.Join("analysis", "objects", month, filepath.Base(f))), snapshot: snapshot, meta: meta[id]}
+		p := paperIn{root: root, month: month, id: id, file: filepath.ToSlash(filepath.Join("analysis", "objects", month, filepath.Base(f))), snapshot: snapshot, meta: meta[id], names: names}
 		p.add(res, objs, es)
 		res.Papers++
 	}
@@ -206,6 +209,7 @@ func MentionID(paper, tag string) string { return "ax://paper/" + paper + "#" + 
 type paperIn struct {
 	root, month, id, file, snapshot string
 	meta                            *Paper
+	names                           *Names
 }
 
 func (p *paperIn) add(res *Result, objs []Object, es []Edge) {
@@ -417,9 +421,10 @@ func (vp *versionIn) mention(o Object) inventory.Mention {
 		}
 	}
 	s.In = vp.target(o.Section)
+	s.Names = vp.names.Find(o.BodyMD, vp.msc, o.Name)
 	slices.Sort(s.Uses)
 	slices.Sort(s.ProvedBy)
-	if len(s.Uses) > 0 || len(s.ProvedBy) > 0 || s.In != "" {
+	if len(s.Uses) > 0 || len(s.ProvedBy) > 0 || s.In != "" || len(s.Names) > 0 {
 		m.Structure = s
 	}
 	return m

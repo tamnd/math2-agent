@@ -113,6 +113,7 @@ type Structure struct {
 	Uses     []string `json:"uses,omitempty"`      // what the item uses
 	ProvedBy []string `json:"proved_by,omitempty"` // the proofs of the item
 	In       string   `json:"in,omitempty"`        // the section that the item is in
+	Names    []string `json:"names,omitempty"`     // the rows of the named results that the text names, unique in the MSC area of the paper (corpus arxiv AX6.2, the name method)
 }
 
 // Attached reports whether the mention is attached to another mention and is not a row by itself (corpus arxiv AX5.2).
