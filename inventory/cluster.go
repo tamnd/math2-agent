@@ -21,7 +21,7 @@ type Options struct {
 	By   string                                       // the run or the person, for the history of the rows
 	Used func(id string) bool                         // reports whether an identifier is a node tag or is in the register. A new row never gets one.
 	Mint func(used func(string) bool) (string, error) // gives a new row identifier. Nil means tag.Mint with crypto/rand.
-	// Signals are the facts outside the mentions for the formal rules of corpus K4.5. The zero value means that only the mentions of a row select it.
+	// Signals are the facts outside the mentions for the formal rules of corpus K4.5 and the rule research-aligned. The zero value means that only the mentions of a row decide.
 	Signals Signals
 }
 
@@ -39,11 +39,13 @@ type Result struct {
 	Orphans    int // the number of attached mentions whose target has no row
 	// Formal is the number of rows whose outcome the formal rules changed: a new outcome formal_only, or formal_only open again because a test of corpus K4.5 now selects the row.
 	Formal int
+	// Aligned is the number of rows of the research layer that got the outcome aligned, or lost it, because of the aligned edges of the nodes.
+	Aligned int
 }
 
 // Cluster runs the first two passes of corpus spec K4.3 on the mentions. Pass 1 joins two mentions with the same identifier, or with identifiers that a crosswalk links. It also joins two mentions of one kind and one block with the same content hash, which is the same item copied from paper to paper (corpus arxiv AX8.2). The block of a mention is its MSC codes at two digits (AX8.1), and two mentions with no code are in one block. Pass 2 joins two statements of formal libraries with the same canonical type hash: Lean then proves each from the other with the identity, so they are one statement. Pass 2 never joins definitions, because two definitions with one type, such as two functions from ℕ to ℕ, are not one item. A row that a pass merged names the pass as its rule: identifiers, hash or equivalence. Mentions that a row holds stay in one row, so Cluster never splits a row. Only a curator splits a row. When one group of mentions touches more than one row, Cluster keeps one row and gives the others the outcome merged.
 //
-// Cluster gives each new row the outcome of the first rule of Rules that matches it. Then it applies the formal rules of corpus K4.5 to each row of a formal declaration, old or new, that is open or formal_only: such a row stays open while a test selects it for a node, and gets the outcome formal_only when no test does. A group of mentions that only models give gets no row (rule I03). The mentions of the group wait until a source confirms them.
+// Cluster gives each new row the outcome of the first rule of Rules that matches it. Then it applies the formal rules of corpus K4.5 to each row of a formal declaration, old or new, that is open or formal_only: such a row stays open while a test selects it for a node, and gets the outcome formal_only when no test does. Last, a row of the research layer that is open or a record by a rule gets the outcome aligned when a node has an aligned edge to one of its mentions (the rule research-aligned). A group of mentions that only models give gets no row (rule I03). The mentions of the group wait until a source confirms them.
 func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 	mint := opt.Mint
 	if mint == nil {
@@ -154,6 +156,9 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 	for i := range rows {
 		if applyFormal(&rows[i], byID, opt.Signals, day, opt.By) {
 			res.Formal++
+		}
+		if applyAligned(&rows[i], byID, opt.Signals, day, opt.By) {
+			res.Aligned++
 		}
 	}
 	sortRows(rows)

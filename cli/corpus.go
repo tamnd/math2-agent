@@ -19,11 +19,12 @@ import (
 	axImport "github.com/tamnd/math2-agent/importer/arxiv"
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/queue"
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -352,10 +353,15 @@ func cluster(root, commit string, stdout io.Writer) (*inventory.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	nodes, err := node.Load(root)
+	if err != nil {
+		return nil, err
+	}
 	res, err := inventory.Cluster(rows, ms, inventory.Options{
-		Day:  time.Now(),
-		By:   "m2/" + version,
-		Used: func(id string) bool { return reg[id] || tags[id] },
+		Day:     time.Now(),
+		By:      "m2/" + version,
+		Used:    func(id string) bool { return reg[id] || tags[id] },
+		Signals: inventory.Signals{Aligned: inventory.AlignedEdges(nodes)},
 	})
 	if err != nil {
 		return nil, err
@@ -366,7 +372,7 @@ func cluster(root, commit string, stdout io.Writer) (*inventory.Result, error) {
 	if err := inventory.AppendRegister(root, res.Added, commit); err != nil {
 		return nil, err
 	}
-	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal hashes %d, joined by equal formal statements %d, attached with no row %d, changed by the formal rules %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Hashed, res.Equivalent, res.Orphans, res.Formal)
+	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by equal hashes %d, joined by equal formal statements %d, attached with no row %d, changed by the formal rules %d, changed by aligned edges %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Hashed, res.Equivalent, res.Orphans, res.Formal, res.Aligned)
 	return res, nil
 }
 
@@ -646,7 +652,7 @@ func runCorpusStatus(args []string, stdout, stderr io.Writer) int {
 	for _, part := range []struct {
 		name string
 		m    map[string]int
-	}{{"layer", s.Layers}, {"kind", s.Kinds}, {"outcome", s.Outcomes}, {"source", s.Sources}} {
+	}{{"layer", s.Layers}, {"open layer", s.OpenBy}, {"kind", s.Kinds}, {"outcome", s.Outcomes}, {"source", s.Sources}} {
 		for _, k := range slices.Sorted(maps.Keys(part.m)) {
 			fmt.Fprintf(tw, "%s %s\t%d\n", part.name, k, part.m[k])
 		}
@@ -665,6 +671,7 @@ func runCorpusQueue(cmd string, args []string, stdout, stderr io.Writer) int {
 	root := fs.String("root", ".", "the math2 working tree")
 	n := fs.Int("n", 20, "the number of jobs. -1 means each job of the queue.")
 	asJSON := fs.Bool("json", false, "print JSON")
+	asked := fs.String("asked", "", "the MSC codes at two digits, with commas between them, of the areas that a project or a campaign asks for, for the queue align")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -682,7 +689,7 @@ func runCorpusQueue(cmd string, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
 	}
-	q, err := queue.Compute(fs.Arg(0), queue.Input{Rows: rows, Mentions: ms, Day: time.Now().UTC()})
+	q, err := queue.Compute(fs.Arg(0), queue.Input{Rows: rows, Mentions: ms, Day: time.Now().UTC(), Asked: strings.FieldsFunc(*asked, func(r rune) bool { return r == ',' || r == ' ' })})
 	if err != nil {
 		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitUsage

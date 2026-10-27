@@ -124,6 +124,14 @@ func kindOf(src *ingest.Source, r *ingest.Record) string {
 		return "conjecture"
 	case "mathlib_100", "mathlib_1000", "thousand_plus":
 		return "statement"
+	case "arxiv_results":
+		if slices.Contains(Kinds(), r.Kind) {
+			return r.Kind
+		}
+	case "palomar":
+		if r.Kind == "result" {
+			return "statement"
+		}
 	}
 	return Unknown
 }
