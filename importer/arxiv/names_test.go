@@ -43,3 +43,27 @@ func TestNamesFind(t *testing.T) {
 		t.Errorf("no index gives %v", got)
 	}
 }
+
+func TestHeadName(t *testing.T) {
+	for _, c := range []struct{ in, want string }{
+		{`Key estimate`, `Key estimate`},
+		{`The Hahn--Banach theorem`, `The Hahn--Banach theorem`},
+		{`Friedman`, `Friedman`},
+		{`{}`, ``},
+		{`See`, ``},
+		{`cf.~`, ``},
+		{`{see }`, ``},
+		{`Sketch of {}`, `Sketch`},
+		{`Theorem 1`, ``},
+		{`, Lemma 2.3 and 2.4`, ``},
+		{`Proof of Theorem~\ref{thm:main}`, ``},
+		{`A`, ``},
+		{`\app`, ``},
+		{`Zorn's lemma, see`, `Zorn's lemma`},
+		{`Main  Theorem`, `Main Theorem`},
+	} {
+		if got := arxiv.HeadName(c.in); got != c.want {
+			t.Errorf("HeadName(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
