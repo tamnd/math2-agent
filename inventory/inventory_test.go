@@ -386,3 +386,29 @@ func TestClusterJoinsByHash(t *testing.T) {
 		t.Errorf("the second run gives %+v", again.Rows)
 	}
 }
+
+func TestClusterJoinsByCitedResult(t *testing.T) {
+	ax := func(id, kind string, cites ...CitedResult) Mention {
+		return Mention{ID: "ax://paper/" + id, Source: "arxiv", NativeID: id, Kind: kind, MSC: []string{"14J60"}, Class: "record", By: "m2/arxiv", CitesResult: cites}
+	}
+	ms := []Mention{
+		ax("1701.00517#R1", "statement"),
+		ax("1701.00518#R1", "statement", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"}),
+		ax("1701.00519#R1", "conjecture", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"}),
+		ax("1701.00520#R1", "statement", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "1", Confidence: "medium"}),        // not high
+		ax("1701.00521#R1", "definition", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"}), // another kind
+		ax("1701.00522#R1", "statement", CitedResult{To: "doi:10.1/x", Locator: "Theorem 2", Confidence: "high"}),                // a work, not a mention
+	}
+	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Cited != 2 || len(res.Rows) != 4 {
+		t.Fatalf("got %d joins by cited result and %d rows, want 2 and 4", res.Cited, len(res.Rows))
+	}
+	for _, r := range res.Rows {
+		if r.Mentions[0] == ms[0].ID && !slices.Equal(r.Mentions, []string{ms[0].ID, ms[1].ID, ms[2].ID}) {
+			t.Errorf("the row of the cited theorem has %v", r.Mentions)
+		}
+	}
+}
