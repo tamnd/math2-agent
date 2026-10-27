@@ -44,6 +44,7 @@ import (
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/claude"
+	llmcmd "github.com/tamnd/math2-agent/llm/command"
 	"github.com/tamnd/math2-agent/models"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/novelty"
@@ -78,8 +79,15 @@ var leanRoles = []string{"bump", "formalize", "informalize", "prove"}
 
 // newModel makes the client of the model service. The tests replace it with a scripted model.
 var newModel = func() (llm.Model, error) {
+	if s := os.Getenv(llmcmd.Env); s != "" {
+		backends, err := llmcmd.Parse(s)
+		if err != nil {
+			return nil, err
+		}
+		return llmcmd.New(backends...), nil
+	}
 	if os.Getenv("ANTHROPIC_API_KEY") == "" {
-		return nil, errors.New("set ANTHROPIC_API_KEY to the key of the Claude API")
+		return nil, errors.New("set ANTHROPIC_API_KEY to the key of the Claude API, or " + llmcmd.Env + " to the clients of your subscriptions, for example codex,claude")
 	}
 	return claude.New(), nil
 }
