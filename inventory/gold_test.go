@@ -105,11 +105,12 @@ func TestMeasure(t *testing.T) {
 	for _, s := range Measure(ms, gold) {
 		got[s.Pass+" "+s.Layer] = s
 	}
-	if len(got) != 6 {
+	if len(got) != 9 {
 		t.Fatalf("got the scores %v", got)
 	}
 	for k, want := range map[string][5]int{
 		"identifiers formal":   {1, 0, 2, 0, 1},
+		"hash formal":          {1, 0, 2, 0, 1},
 		"equivalence formal":   {2, 0, 1, 0, 1},
 		"identifiers textbook": {0, 1, 0, 1, 0},
 		"equivalence all":      {2, 1, 1, 1, 1},

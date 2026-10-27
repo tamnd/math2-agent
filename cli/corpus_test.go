@@ -151,7 +151,7 @@ func TestCorpusImport(t *testing.T) {
 		Gold   int
 		Scores []inventory.Score
 	}
-	if err != nil || json.Unmarshal(data, &report) != nil || report.Gold != 1 || len(report.Scores) != 4 || report.Scores[3].TrueNeg != 1 {
+	if err != nil || json.Unmarshal(data, &report) != nil || report.Gold != 1 || len(report.Scores) != 6 || report.Scores[5].TrueNeg != 1 {
 		t.Fatalf("the report is %s, %v", data, err)
 	}
 	// The words have no MSC codes, so no area has an estimate.
@@ -200,5 +200,26 @@ func TestCorpusImportOfArxivNeedsTheCheckout(t *testing.T) {
 	}
 	if code, _, stderr := run("corpus", "import", "-root", root, "-commit", "c", "-source", "stacks", "-corpus", root); code != ExitUsage || !strings.Contains(stderr, "no importer") {
 		t.Fatalf("code %d, stderr %q", code, stderr)
+	}
+}
+
+func TestCorpusClusterOfArxiv(t *testing.T) {
+	root := t.TempDir()
+	body := []inventory.Mention{
+		{ID: "ax://paper/2401.00001#T1", Source: "arxiv", NativeID: "2401.00001#T1", Kind: "statement", Hash: "sha256:aa", MSC: []string{"47H10"}, Class: "record", By: "m2/arxiv"},
+		{ID: "ax://paper/2401.00002#T1", Source: "arxiv", NativeID: "2401.00002#T1", Kind: "statement", Hash: "sha256:aa", MSC: []string{"47H09"}, Class: "record", By: "m2/arxiv"},
+	}
+	if err := inventory.WriteMentions(root, "arxiv", body); err != nil {
+		t.Fatal(err)
+	}
+	if code, stdout, stderr := run("corpus", "cluster", "-root", root, "-commit", "c", "-source", "arxiv", "-msc", "47"); code != ExitOK || !strings.Contains(stdout, "joined by equal hashes 1") || !strings.Contains(stdout, "name candidates 0") {
+		t.Fatalf("m2 corpus cluster gave %d, %q, %q", code, stdout, stderr)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "reports", "inventory-arxiv.md"))
+	if err != nil || !strings.Contains(string(data), "2 arXiv mentions that are not attached to another item, in 1 row. 1 row holds the mentions of more than one paper") {
+		t.Fatalf("the report is %s, %v", data, err)
+	}
+	if code, _, _ := run("corpus", "cluster", "-root", root, "-commit", "c", "-msc", "47"); code != ExitUsage {
+		t.Errorf("-msc with no -source gave %d", code)
 	}
 }

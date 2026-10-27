@@ -7,13 +7,14 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tamnd/math2-agent/importer/arxiv"
 	"github.com/tamnd/math2-agent/inventory"
 )
 
 const objectsV = `{"tag":"S1C1","kind":"section","paper":"2401.00001","version":"VER","local":"sec-1","number":"1","path":"source"}
-{"tag":"LEM1","kind":"statement","subkind":"lemma","paper":"2401.00001","version":"VER","local":"lem-1","label":"lem:a","number":"1.1","section":"sec-1","title":"Lemma","name":"Key estimate","path":"source","item":"statement/lemma","scope":"paper","env":"lemma","head":"environment","proof_status":"proved","origin":"own","hash":"sha256:aa"}
+{"tag":"LEM1","kind":"statement","subkind":"lemma","paper":"2401.00001","version":"VER","local":"lem-1","label":"lem:a","number":"1.1","section":"sec-1","title":"Lemma","name":"Key estimate","path":"source","item":"statement/lemma","scope":"paper","env":"lemma","head":"environment","proof_status":"proved","origin":"own","body_md":"For each $\\varepsilon > 0$ there is a constant $C$ with $|f| \\le C$.","hash":"sha256:aa"}
 {"tag":"THM1","kind":"statement","subkind":"theorem","paper":"2401.00001","version":"VER","local":"thm-1","number":"1.2","section":"sec-1","title":"Theorem","path":"source","item":"statement/theorem","scope":"paper","hash":"sha256:bb"}
 {"tag":"PRF1","kind":"proof","paper":"2401.00001","version":"VER","local":"proof-1","path":"source","item":"proof","scope":"paper","proves":"thm-1","hash":"sha256:cc"}
 {"tag":"CLM1","kind":"statement","subkind":"claim","paper":"2401.00001","version":"VER","local":"claim-1","path":"source","item":"statement/claim","scope":"local","parent":"proof-1","hash":"sha256:dd"}
@@ -153,6 +154,55 @@ func TestAttachedMentionsGoInTheRowOfTheirTarget(t *testing.T) {
 			if !slices.Equal(r.Proofs, []string{"ax://paper/2401.00001#PRF1"}) || !slices.Equal(r.Local, []string{"ax://paper/2401.00001#CLM1"}) {
 				t.Errorf("row of the theorem: proofs %v, local %v", r.Proofs, r.Local)
 			}
+		}
+	}
+}
+
+func TestAShortBodyGivesNoHash(t *testing.T) {
+	res, err := arxiv.Import(checkout(t, "cc-by"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms := byID(res)
+	if ms["LEM1"].Hash != "sha256:aa" || ms["THM1"].Hash != "" {
+		t.Errorf("the hashes are %q and %q, want sha256:aa and none", ms["LEM1"].Hash, ms["THM1"].Hash)
+	}
+}
+
+func TestYear(t *testing.T) {
+	for id, want := range map[string]string{"2401.00001": "2024", "0704.0001": "2007", "math/9802134": "1998", "math/0301148": "2003"} {
+		if got := arxiv.Year(id); got != want {
+			t.Errorf("Year(%q) is %q, want %q", id, got, want)
+		}
+	}
+}
+
+func TestCandidatesAndReport(t *testing.T) {
+	ms := []inventory.Mention{
+		{ID: "ax://paper/2401.00001#T1", Source: "arxiv", Kind: "statement", Name: "Banach fixed point theorem", MSC: []string{"47H10"}},
+		{ID: "ax://paper/2401.00002#T1", Source: "arxiv", Kind: "statement", Name: "The Banach fixed-point theorem", MSC: []string{"54E50"}},
+		{ID: "ax://paper/2401.00003#T1", Source: "arxiv", Kind: "statement", Name: "Key lemma", MSC: []string{"47H10"}},
+		{ID: "ax://paper/2401.00004#T1", Source: "arxiv", Kind: "unknown", MSC: []string{"47H10"}},
+		{ID: "ax://paper/2401.00004#P1", Source: "arxiv", Kind: "proof", AttachedTo: "ax://paper/2401.00004#T1"},
+		{ID: "m2://rec/wikipedia/Banach fixed-point theorem#1", Source: "wikipedia", Kind: "statement", Name: "Banach fixed-point theorem", Aliases: []string{"Contraction mapping theorem"}},
+	}
+	rows := []inventory.Row{
+		{ID: "R1", Mentions: []string{ms[0].ID}, Kind: "statement", MSC: []string{"47H10"}, Spread: 1, Outcome: &inventory.Outcome{Value: "record"}},
+		{ID: "R2", Mentions: []string{ms[1].ID}, Kind: "statement", MSC: []string{"54E50"}, Spread: 1, Outcome: &inventory.Outcome{Value: "record"}},
+		{ID: "R3", Mentions: []string{ms[2].ID}, Kind: "statement", MSC: []string{"47H10"}, Spread: 1, Outcome: &inventory.Outcome{Value: "record"}},
+		{ID: "W1", Mentions: []string{ms[5].ID}, Kind: "statement", MSC: []string{"47H10", "54E50"}, Spread: 1},
+	}
+	cands := arxiv.Candidates(rows, ms, "")
+	if len(cands) != 2 || cands[0].Target != "W1" || cands[0].Row != "R1" || cands[1].Mention != ms[1].ID {
+		t.Fatalf("the candidates are %+v", cands)
+	}
+	if got := arxiv.Candidates(rows, ms, "54E35"); len(got) != 1 || got[0].Mention != ms[1].ID {
+		t.Errorf("the candidates of the block 54 are %+v", got)
+	}
+	r := arxiv.Report(rows, ms, cands, time.Date(2026, 10, 27, 0, 0, 0, 0, time.UTC))
+	for _, want := range []string{"4 arXiv mentions that are not attached to another item, in 3 rows", "1 mention waits for a row", "found 2 candidates", "| record | 3 |", "| 47 | 3 | 2 | 2 | 0 | 0 | 1.00 | 0 | 0 | 1 | 1 |", "| 2024 | 4 | 3 | 3 |"} {
+		if !strings.Contains(r, want) {
+			t.Errorf("the report has no %q:\n%s", want, r)
 		}
 	}
 }

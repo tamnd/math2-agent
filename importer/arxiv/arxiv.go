@@ -28,6 +28,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/tamnd/math2-agent/inventory"
 )
@@ -375,7 +376,7 @@ func (vp *versionIn) mention(o Object) inventory.Mention {
 		MSC:         vp.msc,
 		Class:       vp.class,
 		By:          Version,
-		Hash:        o.Hash,
+		Hash:        hashOf(o),
 		Version:     vp.v,
 		Number:      o.Number,
 		Env:         o.Env,
@@ -422,6 +423,20 @@ func (vp *versionIn) mention(o Object) inventory.Mention {
 		m.Structure = s
 	}
 	return m
+}
+
+// MinHashText is the shortest text of a body, with no labels and no space, that gives the mention its content hash. A short body, such as an empty one or one label, has the same hash in many papers, and the hash pass of AX8.2 must not join these items.
+const MinHashText = 40
+
+var labelCmd = regexp.MustCompile(`\\label\{[^}]*\}`)
+
+// hashOf returns the content hash of the object, or "" when its body is too short to tell one item from another.
+func hashOf(o Object) string {
+	text := strings.Join(strings.Fields(labelCmd.ReplaceAllString(o.BodyMD, "")), "")
+	if utf8.RuneCountInString(text) < MinHashText {
+		return ""
+	}
+	return o.Hash
 }
 
 // yesNo reports whether the text of a problem is a yes or no question: it ends with a question mark and starts with a verb that asks one.

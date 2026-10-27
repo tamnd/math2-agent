@@ -30,12 +30,14 @@ type Result struct {
 	Merged  int      // the number of rows that the run merged into other rows
 	Touched int      // the number of old rows that got new mentions
 	Waiting int      // the number of groups of mentions that wait, because only models give them (rule I03)
+	// Hashed is the number of joins of the hash pass: each join puts two groups into one group, because they have items of one kind and one block with the same content hash (corpus arxiv AX8.2).
+	Hashed int
 	// Equivalent is the number of joins of pass 2: each join puts two groups of pass 1 into one group, because they have statements with the same canonical type.
 	Equivalent int
 	Orphans    int // the number of attached mentions whose target has no row
 }
 
-// Cluster runs the first two passes of corpus spec K4.3 on the mentions. Pass 1 joins two mentions with the same identifier, or with identifiers that a crosswalk links. Pass 2 joins two statements of formal libraries with the same canonical type hash: Lean then proves each from the other with the identity, so they are one statement. Pass 2 never joins definitions, because two definitions with one type, such as two functions from ℕ to ℕ, are not one item. A row that a pass merged names the pass as its rule: identifiers or equivalence. Mentions that a row holds stay in one row, so Cluster never splits a row. Only a curator splits a row. When one group of mentions touches more than one row, Cluster keeps one row and gives the others the outcome merged.
+// Cluster runs the first two passes of corpus spec K4.3 on the mentions. Pass 1 joins two mentions with the same identifier, or with identifiers that a crosswalk links. It also joins two mentions of one kind and one block with the same content hash, which is the same item copied from paper to paper (corpus arxiv AX8.2). The block of a mention is its MSC codes at two digits (AX8.1), and two mentions with no code are in one block. Pass 2 joins two statements of formal libraries with the same canonical type hash: Lean then proves each from the other with the identity, so they are one statement. Pass 2 never joins definitions, because two definitions with one type, such as two functions from ℕ to ℕ, are not one item. A row that a pass merged names the pass as its rule: identifiers, hash or equivalence. Mentions that a row holds stay in one row, so Cluster never splits a row. Only a curator splits a row. When one group of mentions touches more than one row, Cluster keeps one row and gives the others the outcome merged.
 //
 // Cluster gives each new row the outcome of the first rule of Rules that matches it. A group of mentions that only models give gets no row (rule I03). The mentions of the group wait until a source confirms them.
 func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
@@ -71,7 +73,9 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 	}
 	joinIdentifiers(u, ms)
 	pass1 := u.roots(ms)
-	res := &Result{Equivalent: joinEquivalent(u, ms)}
+	res := &Result{Hashed: joinHash(u, ms)}
+	hashed := u.roots(ms)
+	res.Equivalent = joinEquivalent(u, ms)
 	groups := map[string][]string{}
 	for i := range ms {
 		if ms[i].Attached() {
@@ -113,9 +117,13 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 		before := slices.Clone(keep.Mentions)
 		for _, i := range touched[1:] {
 			r := &rows[i]
+			a, b := firstIn(r, byID), firstIn(keep, byID)
 			rule, why := "identifiers", "a shared identifier"
-			if pass1[firstIn(r, byID)] != pass1[firstIn(keep, byID)] {
+			switch {
+			case hashed[a] != hashed[b]:
 				rule, why = "equivalence", "an equal formal statement"
+			case pass1[a] != pass1[b]:
+				rule, why = "hash", "an equal content hash"
 			}
 			r.Mentions = nil
 			r.Outcome = &Outcome{Value: OutcomeMerged, Target: []string{keep.ID}, Rule: rule, By: opt.By}
@@ -207,6 +215,41 @@ func joinIdentifiers(u unionFind, ms []Mention) {
 	}
 }
 
+// joinHash joins the mentions of one kind and one block with the same content hash. It returns the number of joins.
+func joinHash(u unionFind, ms []Mention) int {
+	n := 0
+	owner := map[string]string{}
+	for i := range ms {
+		m := &ms[i]
+		if m.Hash == "" || m.Attached() {
+			continue
+		}
+		for _, b := range Blocks(m) {
+			k := m.Kind + " " + b + " " + m.Hash
+			if o, ok := owner[k]; !ok {
+				owner[k] = m.ID
+			} else if u.union(o, m.ID) {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// Blocks returns the blocks of a mention: its MSC codes at two digits, or "" when it has no code (corpus arxiv AX8.1).
+func Blocks(m *Mention) []string {
+	var out []string
+	for _, c := range m.MSC {
+		if len(c) >= 2 && !slices.Contains(out, c[:2]) {
+			out = append(out, c[:2])
+		}
+	}
+	if len(out) == 0 {
+		return []string{""}
+	}
+	return out
+}
+
 // joinEquivalent is pass 2: it joins the statements with the same canonical type hash. It returns the number of joins.
 func joinEquivalent(u unionFind, ms []Mention) int {
 	n := 0
@@ -225,13 +268,15 @@ func joinEquivalent(u unionFind, ms []Mention) int {
 	return n
 }
 
-// Passes returns the group of each mention after each pass of Cluster, with no rows: the first map after pass 1, and the second after passes 1 and 2. A group is named by its smallest mention.
+// Passes returns the group of each mention after each pass of Cluster, with no rows, in the order of PassNames: after the identifiers, after the hashes too, and after the formal statements too. A group is named by its smallest mention.
 func Passes(ms []Mention) []map[string]string {
 	u := unionFind{}
 	joinIdentifiers(u, ms)
 	p1 := u.roots(ms)
+	joinHash(u, ms)
+	p2 := u.roots(ms)
 	joinEquivalent(u, ms)
-	return []map[string]string{p1, u.roots(ms)}
+	return []map[string]string{p1, p2, u.roots(ms)}
 }
 
 // keepFirst orders the rows of one group: the row to keep comes first. A row with an outcome other than merged comes first, then the row with more mentions, then the row with the smaller identifier.

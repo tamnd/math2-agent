@@ -322,3 +322,53 @@ func TestClusterJoinsNLab(t *testing.T) {
 		t.Fatalf("the rows are %+v, want one row with the two mentions", res.Rows)
 	}
 }
+
+func TestClusterJoinsByHash(t *testing.T) {
+	ax := func(id, kind, hash string, msc ...string) Mention {
+		return Mention{ID: "ax://paper/" + id, Source: "arxiv", NativeID: id, Kind: kind, Hash: hash, MSC: msc, Class: "record", By: "m2/arxiv"}
+	}
+	ms := []Mention{
+		ax("1701.00517#R1", "statement", "sha256:aa", "54E35"),
+		ax("1701.00518#R1", "statement", "sha256:aa", "54E99", "47H10"),
+		ax("1701.00519#R1", "statement", "sha256:aa", "11A41"),  // another block
+		ax("1701.00520#R1", "definition", "sha256:aa", "54E35"), // another kind
+		ax("1701.00521#R1", "exercise", "", "54E35"),            // no hash
+		ax("1701.00522#R1", "unknown", "sha256:bb"),             // no code and no class yet
+		ax("1701.00523#R1", "context", "sha256:cc", "54E35"),    // a context item
+		ax("1701.00524#P1", "proof", "sha256:aa", "54E35"),      // attached, below
+	}
+	ms[7].AttachedTo = ms[0].ID
+	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Hashed != 1 || len(res.Rows) != 6 {
+		t.Fatalf("got %d joins by hash and %d rows, want 1 and 6", res.Hashed, len(res.Rows))
+	}
+	rules := map[string]string{}
+	for _, r := range res.Rows {
+		rule := "open"
+		if r.Outcome != nil {
+			rule = r.Outcome.Rule
+		}
+		rules[r.Mentions[0]] = rule
+		if r.Mentions[0] == ms[0].ID && (len(r.Mentions) != 2 || r.Mentions[1] != ms[1].ID || len(r.Proofs) != 1) {
+			t.Errorf("the row of the copied statement is %+v", r)
+		}
+	}
+	want := map[string]string{ms[0].ID: "research-default", ms[2].ID: "research-default", ms[3].ID: "research-default", ms[4].ID: "research-exercise", ms[5].ID: "open", ms[6].ID: "research-context"}
+	if !maps.Equal(rules, want) {
+		t.Errorf("the rules are %v, want %v", rules, want)
+	}
+	// Two rows of the same copied item that a run before kept apart are merged by the rule hash.
+	split := []Row{{ID: "AB00000017", Mentions: []string{ms[0].ID}}, {ID: "AB00000025", Mentions: []string{ms[1].ID}}}
+	again, err := Cluster(split, ms[:2], Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.Merged != 1 || !slices.ContainsFunc(again.Rows, func(r Row) bool {
+		return r.Outcome != nil && r.Outcome.Value == OutcomeMerged && r.Outcome.Rule == "hash"
+	}) {
+		t.Errorf("the second run gives %+v", again.Rows)
+	}
+}
