@@ -1,0 +1,47 @@
+\chapter{The derivative}
+
+\section{Mean value theorem}
+\label{sec:mvt}
+
+\begin{defn}
+A function $f$ has a \emph{relative maximum} at $c$ when some interval
+around $c$ has no point $x$ with $f(x) > f(c)$.
+\end{defn}
+
+\begin{lemma} \label{lemma:relmaxdzero}
+If $f$ is differentiable at a relative maximum $c$, then $f'(c) = 0$.
+\end{lemma}
+
+\begin{proof}
+The difference quotients on the two sides of $c$ have opposite signs.
+\end{proof}
+
+\begin{thm}[Rolle]
+\label{thm:rolle}
+If $f$ is continuous on $[a,b]$, differentiable on $(a,b)$ and $f(a) = f(b)$,
+then $f'(c) = 0$ for some $c$ in $(a,b)$.
+\end{thm}
+
+\begin{proof}
+The function has an extreme value inside the interval, and
+\lemmaref{lemma:relmaxdzero} applies there:
+\begin{equation}
+\label{eq:rolle-zero}
+f'(c) = 0 .
+\end{equation}
+\end{proof}
+
+\begin{example}
+The function $x^2$ on $[-1,1]$ shows the theorem with $c = 0$.
+\end{example}
+
+\subsection{Exercises}
+
+\begin{exercise}
+Find a function where the hypothesis of \ref{thm:rolle} fails and the
+conclusion fails too.
+\end{exercise}
+
+\begin{exercise}
+Prove \hyperref[thm:rolle]{Rolle's theorem} again with a different extreme value.
+\end{exercise}

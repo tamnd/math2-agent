@@ -1,0 +1,19 @@
+<!-- A fixture in the layout of Active Calculus. -->
+<section xmlns:xi="http://www.w3.org/2001/XInclude" xml:id="sec-1-1-vel">
+  <title>How do we measure velocity?</title>
+  <introduction>
+    <xi:include href="./previews/PA-1-1-WW.xml" />
+    <xi:include href="./previews/PA-1-1.xml" />
+  </introduction>
+  <subsection>
+    <title>Position and average velocity</title>
+    <definition xml:id="def-avg-vel">
+      <statement>
+        <p>The <term>average velocity</term> of a position function <m>s</m> on <m>[a,b]</m> is</p>
+        <me>\frac{s(b)-s(a)}{b-a}</me>
+      </statement>
+    </definition>
+    <xi:include href="./activities/act-1-1-1.xml"/>
+  </subsection>
+  <xi:include href="./exercises/ez-1-1.xml"/>
+</section>

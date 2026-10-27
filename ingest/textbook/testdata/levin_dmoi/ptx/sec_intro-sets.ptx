@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section xml:id="sec_intro-sets">
+  <title>Sets</title>
+  <definition xml:id="def_subset">
+    <title>Subset</title>
+    <statement>
+      <p>
+        A set <m>A</m> is a <term>subset</term> of a set <m>B</m> when
+        each element of <m>A</m> is an element of <m>B</m>.
+      </p>
+    </statement>
+  </definition>
+  <theorem xml:id="thm_subset-trans">
+    <statement>
+      <p>If <m>A \subseteq B</m> and <m>B \subseteq C</m>, then <m>A \subseteq C</m>, by <xref ref="def_subset"/>.</p>
+    </statement>
+    <proof>
+      <p>Follow one element of <m>A</m> through <m>B</m> to <m>C</m>.</p>
+    </proof>
+  </theorem>
+  <example>
+    <p>The set <m>\{1,2\}</m> is a subset of <m>\{1,2,3\}</m>.</p>
+  </example>
+  <exercises>
+    <title>Exercises</title>
+    <exercise>
+      <statement><p>List the subsets of <m>\{a,b\}</m>.</p></statement>
+      <answer><p>There are four.</p></answer>
+    </exercise>
+  </exercises>
+</section>

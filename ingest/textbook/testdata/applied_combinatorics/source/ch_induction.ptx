@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter xml:id="ch_induction">
+  <title>Induction</title>
+  <section xml:id="s_induction_principle">
+    <title>The principle of induction</title>
+    <theorem xml:id="thm_strong-ind">
+      <title>Strong induction</title>
+      <statement>
+        <p>If a statement holds for <m>1</m>, and it holds for <m>n+1</m>
+        whenever it holds for <m>1,\dots,n</m>, then it holds for all
+        positive integers.</p>
+      </statement>
+      <proof>
+        <p>It follows from the ordinary principle, applied to the statement
+        that the claim holds up to <m>n</m>.</p>
+      </proof>
+    </theorem>
+    <example xml:id="ex_sum-odd">
+      <p>The sum of the first <m>n</m> odd numbers is <m>n^2</m>, by
+      <xref ref="thm_strong-ind"/>.</p>
+      <me>1 + 3 + \cdots + (2n-1) = n^2</me>
+    </example>
+  </section>
+  <exercises xml:id="exercises_induction">
+    <title>Exercises</title>
+    <exercise>
+      <p>Prove that <m>2^n \ge n+1</m> for each positive integer <m>n</m>.</p>
+      <hint><p>Use <xref ref="ex_sum-odd"/> as a model.</p></hint>
+    </exercise>
+  </exercises>
+</chapter>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pretext xmlns:xi="http://www.w3.org/2001/XInclude">
+  <book xml:id="appcomb">
+    <title>Applied Combinatorics, the fixture</title>
+    <xi:include href="ch_induction.ptx"/>
+    <xi:include href="ch_missing.ptx"/>
+  </book>
+</pretext>

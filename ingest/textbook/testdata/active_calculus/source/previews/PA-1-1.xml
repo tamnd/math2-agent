@@ -1,0 +1,4 @@
+<exploration xml:id="PA-1-1">
+  <introduction><p>A ball goes up and comes down. Its height is <m>s(t)</m>.</p></introduction>
+  <task><statement><p>Find the average velocity on <m>[0,1]</m>.</p></statement></task>
+</exploration>

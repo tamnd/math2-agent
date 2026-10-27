@@ -1,0 +1,41 @@
+\chapter{Sylow theorems, the fixture}
+\section{Definitions}
+
+\begin{definition}
+Let $p$ be a prime. A \vocab{$p$-group} is a group whose order is a power
+of $p$.
+\end{definition}
+
+\begin{example}
+The cyclic group of order $8$ is a $2$-group.
+\end{example}
+
+\section{Statement}
+
+\begin{theorem}[Sylow]
+	\label{thm:sylow}
+	A finite group whose order has $p^n$ as its largest power of $p$ has a
+	subgroup of order $p^n$.
+\end{theorem}
+\begin{proof}
+	Let the group act on the subsets of size $p^n$, and count the orbits.
+	\begin{lemma}
+		\label{lem:orbit-count}
+		Some orbit has a size that $p$ does not divide.
+	\end{lemma}
+	Then \Cref{lem:orbit-count} gives a stabilizer of order $p^n$.
+\end{proof}
+
+\begin{ques}
+Why does \Cref{thm:sylow} need the group to be finite?
+\end{ques}
+
+\begin{remark}
+A remark is not an item.
+\end{remark}
+
+\section{\problemhead}
+
+\begin{dproblem}
+Show that a group of order $15$ is cyclic, with \Cref{thm:sylow}.
+\end{dproblem}
