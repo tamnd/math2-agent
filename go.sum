@@ -131,6 +131,8 @@ github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWD
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/tamnd/wikipedia-cli v0.3.4 h1:1ZhqDOaymdDDz5dtXQPQYoiaT3Yw5FOWOn7ExJ0HY6M=
 github.com/tamnd/wikipedia-cli v0.3.4/go.mod h1:z/NANoL92P7N4R7tze27fnDP5qu1ir5xN3VRyoG8V4A=
+github.com/tamnd/wikipedia-cli v0.4.2 h1:EvoJI29NjaiYpeh5DweGKgxS466VX0PNWAi7tjsmGqE=
+github.com/tamnd/wikipedia-cli v0.4.2/go.mod h1:LbpjgU+Tg5T4Sh5SbExUHZSWeTaUlQRATMM0WbxQ8Sc=
 github.com/tidwall/gjson v1.14.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/gjson v1.20.0 h1:+agJ3rEzKcCXKDKo0ml26UROcpcAlnZyjq+TjbY5Fto=
 github.com/tidwall/gjson v1.20.0/go.mod h1:V37/opeE/JbLUOfH0QTXiNez2l0RUjYUhpT4szFQAfc=

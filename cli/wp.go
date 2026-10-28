@@ -14,12 +14,11 @@ import (
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-const wpUsage = "m2 wp extract [-corpus DIR] [-list FILE] [-page ID] [-type T] [-api URL] [title...]\n       m2 wp scope -store DB -dump DATE -assess FILE [-cited FILE] [-wikidata FILE] [-corpus DIR] [-work DIR]\n       m2 wp gold draw|measure [-corpus DIR] [-seed N]\n       m2 wp fetch|census|refresh"
+const wpUsage = "m2 wp extract [-corpus DIR] [-list FILE] [-page ID] [-type T] [-api URL] [title...]\n       m2 wp scope -store DB -dump DATE -assess FILE [-cited FILE] [-wikidata FILE] [-corpus DIR] [-work DIR]\n       m2 wp gold draw|measure [-corpus DIR] [-seed N]\n       m2 wp fetch -dump FILE -store DB [-index FILE] [-date DATE] [-corpus DIR] [-workers N] [-check=false] [-page ID] [-limit N]\n       m2 wp census|refresh"
 
 // wpLater holds the wp subcommands that are not written yet, with the
 // milestone of the Wikipedia roadmap (WP14) that delivers each of them.
 var wpLater = map[string]string{
-	"fetch":   "WP-M2, the content plane",
 	"census":  "WP-M3, extraction and the census",
 	"refresh": "WP-M7, all of the scope",
 }
@@ -37,6 +36,8 @@ func runWP(args []string, stdout, stderr io.Writer) int {
 		return runWPExtract(args[1:], stdout, stderr)
 	case sub == "scope":
 		return runWPScope(args[1:], stdout, stderr)
+	case sub == "fetch":
+		return runWPFetch(args[1:], stdout, stderr)
 	case sub == "gold":
 		return runWPGold(args[1:], stdout, stderr)
 	case wpLater[sub] != "":

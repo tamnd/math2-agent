@@ -168,7 +168,6 @@ func TestWPUsage(t *testing.T) {
 		{[]string{"wp", "frob"}, ExitUsage, "unknown subcommand"},
 		{[]string{"wp", "scope"}, ExitUsage, "usage: m2 wp scope -store DB"},
 		{[]string{"wp", "gold"}, ExitUsage, "usage: m2 wp gold draw"},
-		{[]string{"wp", "fetch"}, ExitNotWritten, "It arrives in WP-M2, the content plane."},
 		{[]string{"wp", "census", "report"}, ExitNotWritten, "It arrives in WP-M3, extraction and the census."},
 		{[]string{"wp", "refresh"}, ExitNotWritten, "It arrives in WP-M7, all of the scope."},
 		{[]string{"wp", "extract", "-corpus", root, "-page", "1", "Widget"}, ExitUsage, "give titles or -page, not both"},
