@@ -255,3 +255,7 @@ func normTitle(t string) string {
 func WriteMarkdown(root string, page int, data []byte) error {
 	return writeFile(filepath.Join(root, MarkdownPath(page)), data)
 }
+
+// NormTitle gives the form of a title that the resolvers compare: spaces for
+// underscores, and the first letter in upper case.
+func NormTitle(t string) string { return normTitle(t) }

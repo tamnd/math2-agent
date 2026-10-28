@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -101,4 +102,28 @@ func ReadScopeFile(root, rel string) ([]*Candidate, error) {
 		return nil, fmt.Errorf("%s: %w", rel, err)
 	}
 	return cs, nil
+}
+
+// WriteStops writes stopped.tsv of the corpus. The rows are sorted by page
+// id. A corpus with no stopped article has no such file.
+func WriteStops(root string, stops []Stop) error {
+	path := filepath.Join(root, StoppedPath)
+	if len(stops) == 0 {
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
+	}
+	rows := slices.Clone(stops)
+	slices.SortStableFunc(rows, func(a, b Stop) int { return cmpID(a.PageID, b.PageID) })
+	var b strings.Builder
+	b.WriteString(stoppedHeader + "\n")
+	for _, s := range rows {
+		into := ""
+		if s.Into != 0 {
+			into = strconv.FormatInt(s.Into, 10)
+		}
+		fmt.Fprintf(&b, "%d\t%s\t%s\t%s\n", s.PageID, s.Reason, into, strings.ReplaceAll(s.Note, "\t", " "))
+	}
+	return writeFile(path, []byte(b.String()))
 }
