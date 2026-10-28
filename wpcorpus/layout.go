@@ -1,9 +1,6 @@
 package wpcorpus
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -32,12 +29,12 @@ func WikitextPath(page int) string {
 
 // ObjectsPath gives the path of the objects file of a page revision.
 func ObjectsPath(page, rev int) string {
-	return filepath.Join(ObjectsDir, Shard(page), fmt.Sprintf("%d-r%d.jsonl", page, rev))
+	return filepath.Join(ObjectsDir, Shard(page), fmt.Sprintf("%d-r%d.md", page, rev))
 }
 
 // CensusPath gives the path of the census file of a page revision.
 func CensusPath(page, rev int) string {
-	return filepath.Join(CensusDir, Shard(page), fmt.Sprintf("%d-r%d.json", page, rev))
+	return filepath.Join(CensusDir, Shard(page), fmt.Sprintf("%d-r%d.md", page, rev))
 }
 
 // Page is one page of the content plane.
@@ -118,46 +115,30 @@ func WriteContent(root string, p *Page) error {
 // WriteResult writes the objects file and the census file of a result.
 func WriteResult(root string, r *Result) error {
 	c := &r.Census
-	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
-	enc.SetEscapeHTML(false)
-	for i := range r.Objects {
-		if err := enc.Encode(&r.Objects[i]); err != nil {
-			return err
-		}
-	}
-	if err := writeFile(filepath.Join(root, ObjectsPath(c.Page, c.Revision)), b.Bytes()); err != nil {
+	data, err := MarshalObjects(c.Page, c.Revision, c.Title, r.Objects)
+	if err != nil {
 		return err
 	}
-	b.Reset()
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(c); err != nil {
+	if err := writeFile(filepath.Join(root, ObjectsPath(c.Page, c.Revision)), data); err != nil {
 		return err
 	}
-	return writeFile(filepath.Join(root, CensusPath(c.Page, c.Revision)), b.Bytes())
+	if data, err = MarshalCensus(c); err != nil {
+		return err
+	}
+	return writeFile(filepath.Join(root, CensusPath(c.Page, c.Revision)), data)
 }
 
 // ReadObjects reads the objects file of a page revision.
 func ReadObjects(root string, page, rev int) ([]Object, error) {
-	f, err := os.Open(filepath.Join(root, ObjectsPath(page, rev))) // #nosec G304 -- the path is in the corpus that the user names
+	data, err := os.ReadFile(filepath.Join(root, ObjectsPath(page, rev))) // #nosec G304 -- the path is in the corpus that the user names
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = f.Close() }()
-	var out []Object
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 0, 1<<20), 64<<20)
-	for n := 1; sc.Scan(); n++ {
-		if len(bytes.TrimSpace(sc.Bytes())) == 0 {
-			continue
-		}
-		var o Object
-		if err := json.Unmarshal(sc.Bytes(), &o); err != nil {
-			return nil, fmt.Errorf("%s:%d: %w", ObjectsPath(page, rev), n, err)
-		}
-		out = append(out, o)
+	objs, err := ParseObjects(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", ObjectsPath(page, rev), err)
 	}
-	return out, sc.Err()
+	return objs, nil
 }
 
 // ReadCensus reads the census file of a page revision.
@@ -166,11 +147,11 @@ func ReadCensus(root string, page, rev int) (*Census, error) {
 	if err != nil {
 		return nil, err
 	}
-	var c Census
-	if err := json.Unmarshal(data, &c); err != nil {
+	c, err := ParseCensus(data)
+	if err != nil {
 		return nil, fmt.Errorf("%s: %w", CensusPath(page, rev), err)
 	}
-	return &c, nil
+	return c, nil
 }
 
 // Pages returns the ids of the pages in the content plane, in order.
