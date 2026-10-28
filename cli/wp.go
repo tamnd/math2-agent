@@ -141,6 +141,9 @@ func runWPExtract(args []string, stdout, stderr io.Writer) int {
 			err = wpcorpus.JoinWitness(*corpus, r, m)
 		}
 		if err == nil {
+			_, err = wpcorpus.AssignTags(*corpus, r)
+		}
+		if err == nil {
 			err = wpcorpus.WriteResult(*corpus, r)
 		}
 		if err == nil {
