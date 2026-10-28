@@ -255,7 +255,7 @@ func MatchTags(old, cur []Object) (tags, passes []string) {
 
 // parentPath gives the section path without its last heading.
 func parentPath(section string) string {
-	if i := strings.LastIndex(section, " / "); i >= 0 {
+	if i := strings.LastIndex(section, " > "); i >= 0 {
 		return section[:i]
 	}
 	return ""
@@ -269,7 +269,7 @@ func nearSection(a, b string) bool {
 		return true
 	}
 	last := func(s string) string {
-		if i := strings.LastIndex(s, " / "); i >= 0 {
+		if i := strings.LastIndex(s, " > "); i >= 0 {
 			s = s[i+3:]
 		}
 		return s

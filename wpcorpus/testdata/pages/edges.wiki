@@ -1,0 +1,32 @@
+{{Infobox mathematical statement
+| name = Widget theorem
+| field = [[Group theory]]
+| first proof by = [[Ada Lovelace]]
+| generalizations = [[Gadget theorem]]
+}}
+In [[group theory]], a '''widget''' is a [[Subgroup|subgroup]] with a [[Missing page]].
+
+A widget is a special case of a [[Gizmo]].
+
+== Statement ==
+{{Main|Widget theorem}}
+{{Math theorem|name=Widget lemma|math_statement=Each widget has an [[Order (group theory)|order]], see [[#Proof]] and [[#Nowhere]].}}
+
+== Proof ==
+By [[Lagrange's theorem (group theory)#Statement|Lagrange's theorem]], the [[Coset#Nowhere|coset]] count divides it. This is {{EquationNote|1}}.
+{{NumBlk|:|<math>a=b</math>|{{EquationRef|1}}}}
+
+== <span id="Widget history"></span>History ==
+{{Further|Gadget}}
+[[Euler]] studied the widget. The [[#widget history|history]] is short.<ref>[[Ignored]]</ref>
+
+== See also ==
+* [[Gadget]]
+
+== References ==
+* [[Book]]
+
+{{Group theory sidebar}}
+[[Category:Theorems in group theory]]
+[[Category:Group theory]]
+[[Category:Articles containing proofs]]

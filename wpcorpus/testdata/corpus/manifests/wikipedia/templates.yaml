@@ -59,6 +59,18 @@ templates:
     params: {1: link}
   short description:
     class: meta
+  further:
+    class: hatnote
+    params: {1: link, 2: link}
+  equationnote:
+    class: math
+    params: {1: label}
+  group theory sidebar:
+    class: nav
+  infobox mathematical statement:
+    class: item
+    kind: statement
+    cue: strong
 patterns:
   - prefix: "cite "
     class: citation

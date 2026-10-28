@@ -21,6 +21,8 @@ type Result struct {
 	// TeX is the TeX of each <math> element, in the order of the page. The
 	// witness W-html compares it with the alttext (WP4.3).
 	TeX []string
+	// Links are the link uses of the page, the input of the edges of WP06.
+	Links []LinkUse
 }
 
 // ArticleType gives the article type of WP1.5 that the title shows. The
@@ -154,6 +156,8 @@ type extractor struct {
 	tex      []string
 	anchors  map[string]*object
 	ptrs     []*pointer
+	items    map[*object]bool
+	uses     []linkUse
 }
 
 // Extract reads the wikitext of a page and gives its objects and its census
@@ -184,6 +188,7 @@ func ExtractPage(p *Page, m *Manifests, version string, in *PointerFile) (*Resul
 	if in != nil {
 		x.pointers(in.Pointers)
 	}
+	x.links()
 	r := x.result()
 	if in != nil {
 		r.Census.Witnesses = append(r.Census.Witnesses, WitnessIn)
@@ -434,6 +439,11 @@ func (x *extractor) templates() {
 				x.tex = append(x.tex, texvc.FromMathTag(x.doc.Inner(n), n.Attrs).TeX)
 			case "chem", "ce":
 				x.counts.Math["chem"]++
+			case "span", "div":
+				// An element with an id is an anchor, as {{anchor}} is.
+				if id := strings.TrimSpace(n.Attrs["id"]); id != "" {
+					x.anchorNames(n, []string{id})
+				}
 			case "ref":
 				if !n.SelfClosing && n.InnerEnd > n.InnerStart {
 					x.counts.Citations++
@@ -637,26 +647,35 @@ func (x *extractor) anchor(n *parse.Node) {
 	if p == nil {
 		return
 	}
-	name := x.doc.ParamValue(p)
+	// The template can give several names. A pointer of W-in can use each
+	// of them.
+	var names []string
+	for _, q := range n.Params {
+		if q.Name == "" {
+			names = append(names, x.doc.ParamValue(q))
+		}
+	}
+	x.anchorNames(n, names)
+}
+
+// anchorNames gives the anchor names to the innermost object that holds the
+// node.
+func (x *extractor) anchorNames(n *parse.Node, names []string) {
 	var best *object
 	for _, o := range x.objs {
 		if o.Kind != "citation" && o.Span[0] <= n.Start && n.End <= o.Span[1] && (best == nil || o.Span[1]-o.Span[0] <= best.Span[1]-best.Span[0]) {
 			best = o
 		}
 	}
-	if best == nil {
+	if best == nil || len(names) == 0 {
 		return
 	}
 	if best.Anchor == "" {
-		best.Anchor = name
+		best.Anchor = names[0]
 	}
-	// The template can give several names. A pointer of W-in can use each
-	// of them.
-	for _, q := range n.Params {
-		if q.Name == "" {
-			if a := normAnchor(x.doc.ParamValue(q)); a != "" && x.anchors[a] == nil {
-				x.anchors[a] = best
-			}
+	for _, name := range names {
+		if a := normAnchor(name); a != "" && x.anchors[a] == nil {
+			x.anchors[a] = best
 		}
 	}
 }
@@ -1199,6 +1218,15 @@ func (x *extractor) result() *Result {
 		}
 		o.Citations = x.citations(o)
 		res.Objects = append(res.Objects, o.Object)
+	}
+	for _, u := range x.uses {
+		if u.from != nil {
+			u.From = u.from.Ref
+		}
+		if u.local != nil {
+			u.Local = u.local.Ref
+		}
+		res.Links = append(res.Links, u.LinkUse)
 	}
 	c := &res.Census
 	c.Page, c.Revision, c.Title, c.Type, c.Extractor = x.page.ID, x.page.Revision, x.page.Title, x.typ, x.ver

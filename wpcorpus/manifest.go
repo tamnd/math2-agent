@@ -105,6 +105,9 @@ type Manifests struct {
 	HeadingsVersion  int
 	WaiversVersion   int
 	Waivers          []Waiver
+	EdgesVersion     int
+
+	phrases []EdgePhrase
 
 	templates map[string]*Template
 	patterns  []templatePattern
@@ -217,7 +220,36 @@ func Load(root string) (*Manifests, error) {
 		}
 		m.Waivers = append(m.Waivers, w)
 	}
+
+	var ef struct {
+		Version int          `yaml:"version"`
+		Phrases []EdgePhrase `yaml:"phrases"`
+	}
+	err = readYAML(filepath.Join(dir, "edges.yaml"), &ef)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	m.EdgesVersion = ef.Version
+	for i, p := range ef.Phrases {
+		if p.Phrase == "" || !edgePredicates[p.Predicate] {
+			return nil, fmt.Errorf("edges.yaml: phrase %d needs a phrase and a predicate of WP6.3", i+1)
+		}
+		p.Phrase = strings.ToLower(p.Phrase)
+		m.phrases = append(m.phrases, p)
+	}
 	return m, nil
+}
+
+// edgePredicates are the predicates that a phrase of edges.yaml can give.
+var edgePredicates = map[string]bool{PredSpecializes: true, PredGeneralizes: true, PredRelated: true}
+
+// EdgePhrases gives the phrases of edges.yaml, or the default phrases when
+// the corpus has no edges.yaml.
+func (m *Manifests) EdgePhrases() []EdgePhrase {
+	if m.phrases == nil {
+		return defaultEdgePhrases
+	}
+	return m.phrases
 }
 
 func readYAML(path string, v any) error {
