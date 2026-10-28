@@ -255,3 +255,16 @@ func RecordRevision(hist []Revision, now time.Time) (rev int, unstable bool) {
 	}
 	return 0, true
 }
+
+// NewestSettled gives the newest revision of the history that is at least 7
+// days old, reverted or not. Rule Y13 compares it with the revision of
+// record.
+func NewestSettled(hist []Revision, now time.Time) (Revision, bool) {
+	for _, r := range hist {
+		t, err := time.Parse(time.RFC3339, r.Timestamp)
+		if err == nil && now.Sub(t) >= settleAge {
+			return r, true
+		}
+	}
+	return Revision{}, false
+}

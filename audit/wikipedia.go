@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
@@ -337,6 +338,42 @@ func y14(a *auditor) outcome {
 		o.checked++
 		if c.Signals&(c.Signals-1) != 0 && !c.InScope && c.Confidence < 0.9 {
 			o.add(wpcorpus.CandidatesPath, i+2, 0, "the signals %s name %s, and the classifier gives %s with the confidence %.2f (rule %s)", c.Signals, c.Title, c.Verdict, c.Confidence, c.Rule)
+		}
+	}
+	return o
+}
+
+// y13 reports each article whose revision of record is more than 60 days
+// older than its newest settled revision (WP2.6). The metadata file names
+// the newest settled revision when m2 wp fetch reads the history.
+func y13(a *auditor) outcome {
+	var o outcome
+	if a.wikipedia == "" {
+		o.reason = "no checkout of tamnd/wikipedia-math is given, so set -wikipedia to run the rule"
+		return o
+	}
+	ms, err := wpcorpus.ReadMetadataFiles(a.wikipedia)
+	if err != nil {
+		o.add(wpcorpus.MetadataDir, 0, 0, "%v", err)
+		return o
+	}
+	if len(ms) == 0 {
+		o.reason = "the checkout has no metadata files yet. Run m2 wp fetch to make them"
+		return o
+	}
+	for _, m := range ms {
+		o.checked++
+		if m.SettledTimestamp == "" {
+			continue
+		}
+		rec, err1 := time.Parse(time.RFC3339, m.Timestamp)
+		set, err2 := time.Parse(time.RFC3339, m.SettledTimestamp)
+		if err := errors.Join(err1, err2); err != nil {
+			o.add(wpcorpus.MetadataPath(m.Page), 0, 0, "%v", err)
+			continue
+		}
+		if d := set.Sub(rec); d > 60*24*time.Hour {
+			o.add(wpcorpus.MetadataPath(m.Page), 0, 0, "the revision of record %d of %s is %d days older than the newest settled revision %d", m.Revision, m.Title, int(d.Hours()/24), m.Settled)
 		}
 	}
 	return o
