@@ -105,7 +105,7 @@ func ReadMetadataFiles(root string) ([]*Metadata, error) {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
 			return err
 		}
-		data, err := os.ReadFile(path) // #nosec G304 -- the path is in the corpus that the user names
+		data, err := os.ReadFile(path) // #nosec G304 G122 -- the path is in the corpus that the user names
 		if err != nil {
 			return err
 		}
