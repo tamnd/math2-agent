@@ -1,0 +1,5 @@
+manifests/wikipedia/scope.tsv:4:0: Y01: the page 12399 is in the scope list two times, on the lines 3 and 4
+manifests/wikipedia/scope.tsv:5:0: Y01: the page 12400 (Old_page) is in scope.tsv with in_scope false, so it has no state
+manifests/wikipedia/stopped.tsv:2:0: Y01: the page 12399 stops with the reason "gone", which is not a reason of WP1.8
+manifests/wikipedia/stopped.tsv:3:0: Y01: the page 12345 is merged and does not name the page that it goes into
+manifests/wikipedia/stopped.tsv:4:0: Y01: the page 55555 stops, and the scope list does not have it

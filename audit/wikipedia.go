@@ -257,3 +257,87 @@ func count(n int, noun string) string {
 	}
 	return fmt.Sprintf("%d %ss", n, noun)
 }
+
+// y01 checks that each article of the scope list has an article state of
+// WP1.8. The state is listed for an article of scope.tsv, fetched when the
+// content plane has the article, parsed when it has a census too, and stopped
+// when stopped.tsv names it with a reason.
+func y01(a *auditor) outcome {
+	var o outcome
+	t := a.wpStart(&o)
+	if t == nil {
+		return o
+	}
+	scope, err := wpcorpus.ReadScopeFile(a.wikipedia, wpcorpus.ScopePath)
+	if errors.Is(err, os.ErrNotExist) {
+		o.reason = "the checkout has no scope list yet. Run m2 wp scope to make it"
+		return o
+	}
+	if err != nil {
+		o.add(wpcorpus.ScopePath, 0, 0, "%v", err)
+		return o
+	}
+	stops, err := wpcorpus.ReadStops(a.wikipedia)
+	if err != nil {
+		o.add(wpcorpus.StoppedPath, 0, 0, "%v", err)
+		return o
+	}
+	inScope := map[int64]int{}
+	for i, c := range scope {
+		if prev, ok := inScope[c.PageID]; ok {
+			o.add(wpcorpus.ScopePath, i+2, 0, "the page %d is in the scope list two times, on the lines %d and %d", c.PageID, prev, i+2)
+		}
+		inScope[c.PageID] = i + 2
+	}
+	stopped := map[int64]bool{}
+	for _, s := range stops {
+		switch {
+		case !wpcorpus.StopReasons[s.Reason]:
+			o.add(wpcorpus.StoppedPath, s.Line, 0, "the page %d stops with the reason %q, which is not a reason of WP1.8", s.PageID, s.Reason)
+		case s.Reason == "merged" && s.Into == 0:
+			o.add(wpcorpus.StoppedPath, s.Line, 0, "the page %d is merged and does not name the page that it goes into", s.PageID)
+		case inScope[s.PageID] == 0:
+			o.add(wpcorpus.StoppedPath, s.Line, 0, "the page %d stops, and the scope list does not have it", s.PageID)
+		default:
+			stopped[s.PageID] = true
+		}
+	}
+	fetched := map[int64]bool{}
+	for _, p := range t.pages {
+		fetched[int64(p.page.ID)] = true
+	}
+	for _, c := range scope {
+		o.checked++
+		if !c.InScope && !stopped[c.PageID] && !fetched[c.PageID] {
+			o.add(wpcorpus.ScopePath, inScope[c.PageID], 0, "the page %d (%s) is in scope.tsv with in_scope false, so it has no state", c.PageID, c.Title)
+		}
+	}
+	return o
+}
+
+// y14 reports each candidate that two or more signals name and that the
+// classifier rejects with a confidence below 0.9 (WP1.3). That is where an
+// article of mathematics is most likely to be lost.
+func y14(a *auditor) outcome {
+	var o outcome
+	if a.wikipedia == "" {
+		o.reason = "no checkout of tamnd/wikipedia-math is given, so set -wikipedia to run the rule"
+		return o
+	}
+	cs, err := wpcorpus.ReadScopeFile(a.wikipedia, wpcorpus.CandidatesPath)
+	if errors.Is(err, os.ErrNotExist) {
+		o.reason = "the checkout has no candidates yet. Run m2 wp scope to make them"
+		return o
+	}
+	if err != nil {
+		o.add(wpcorpus.CandidatesPath, 0, 0, "%v", err)
+		return o
+	}
+	for i, c := range cs {
+		o.checked++
+		if c.Signals&(c.Signals-1) != 0 && !c.InScope && c.Confidence < 0.9 {
+			o.add(wpcorpus.CandidatesPath, i+2, 0, "the signals %s name %s, and the classifier gives %s with the confidence %.2f (rule %s)", c.Signals, c.Title, c.Verdict, c.Confidence, c.Rule)
+		}
+	}
+	return o
+}
