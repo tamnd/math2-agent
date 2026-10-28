@@ -544,7 +544,7 @@ $ m2 wp fetch -corpus ../wikipedia-math -store scope.sqlite -dump enwiki-2026100
 $ m2 wp fetch -corpus ../wikipedia-math -store scope.sqlite -dump enwiki-20261001-pages-articles-multistream.xml.bz2 -limit 100
 ```
 
-`m2 wp parsoid` fetches the Parsoid HTML of the revision of record of each article that has a metadata file, which is the second reading of WP2.5. It writes the HTML to `work/parsoid/<shard>/<pageid>-r<revision>.html`, which is not committed. A revision does not change, so the command skips a revision that it already has. The fetch uses `wiki/parsoid` of tamnd/wikipedia-cli, and it stays at or below 200 requests a minute. The articles are fetched in the order of WP2.9.
+`m2 wp parsoid` fetches the Parsoid HTML of the revision of record of each article that has a metadata file, which is the second reading of WP2.5. It writes the HTML to `work/parsoid/<shard>/<pageid>-r<revision>.html`, which is not committed. A revision does not change, so the command skips a revision that it already has. The fetch uses `wiki/parsoid` of tamnd/wikipedia-cli, and it stays at or below 200 requests a minute. The REST API renders an old revision when the command asks for it, and a large article can take 10 seconds. Thus `-workers N` (4 by default) sends N requests at the same time, and all workers share the interval of 300 ms between the starts of two requests. The articles are fetched in the order of WP2.9.
 
 ```
 $ m2 wp parsoid -corpus ../wikipedia-math -limit 500
