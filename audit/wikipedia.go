@@ -231,7 +231,7 @@ func y10(a *auditor) outcome {
 	for _, p := range t.pages {
 		path := wpcorpus.ObjectsPath(p.page.ID, p.page.Revision)
 		seen := map[[2]int]bool{}
-		for i, ob := range p.objects {
+		for _, ob := range p.objects {
 			for _, m := range ob.Math {
 				if seen[m.Span] {
 					continue // an object that contains another object has its formulas too
@@ -239,7 +239,7 @@ func y10(a *auditor) outcome {
 				seen[m.Span] = true
 				o.checked++
 				if len(m.Errors) > 0 {
-					o.add(path, i+1, 1, "the formula %q of the object %s does not convert: %s", m.Source, ob.Ref, strings.Join(m.Errors, "; "))
+					o.add(path, 0, 0, "the formula %q of the object %s does not convert: %s", m.Source, ob.Ref, strings.Join(m.Errors, "; "))
 				}
 			}
 		}

@@ -1,4 +1,4 @@
-analysis/census/0001/12345-r123450.json:0:0: Y03: the cue lead (subject) at the bytes 0 to 204 of "Widget" has no object and no waiver
-analysis/census/0001/12345-r123450.json:0:0: Y03: the cue heading at the bytes 206 to 557 names the object o999, and the objects file has no such object
-analysis/census/0001/12345-r123450.json:0:0: Y03: the cue inline-head at the bytes 274 to 367 names the waiver no-such-waiver, and waivers.yaml has no such waiver
-analysis/census/0001/12345-r123450.json:0:0: Y03: the cue inline-head at the bytes 367 to 405 has the waiver example-in-test with no reason
+analysis/census/0001/12345-r123450.md:0:0: Y03: the cue lead (subject) at the bytes 0 to 204 of "Widget" has no object and no waiver
+analysis/census/0001/12345-r123450.md:0:0: Y03: the cue heading at the bytes 206 to 557 names the object o999, and the objects file has no such object
+analysis/census/0001/12345-r123450.md:0:0: Y03: the cue inline-head at the bytes 274 to 367 names the waiver no-such-waiver, and waivers.yaml has no such waiver
+analysis/census/0001/12345-r123450.md:0:0: Y03: the cue inline-head at the bytes 367 to 405 has the waiver example-in-test with no reason
