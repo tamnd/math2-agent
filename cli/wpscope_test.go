@@ -21,6 +21,7 @@ keywords: [mathemat, group]
 
 const scopeAssess = "pageid\tns\ttitle\tproject\tclass\timportance\n" +
 	"1\t0\tGroup (mathematics)\tMathematics\tB\tTop\n" +
+	"3\t0\tGroups\tMathematics\tRedirect\tNA\n" +
 	"8\t0\tList of group theory topics\tMathematics\tList\tLow\n" +
 	"9\t0\tCoset\tMathematics\tC\tMid\n" +
 	"10\t0\tAbelian group\tMathematics\tB\tHigh\n" +
@@ -108,6 +109,9 @@ func TestWPScope(t *testing.T) {
 	}
 	got := map[string]string{}
 	for _, c := range cs {
+		if c.Title == "Group_(mathematics)" && c.Class != "B" {
+			t.Errorf("Group_(mathematics) has the class %q from the tag of a redirect, want B", c.Class)
+		}
 		got[c.Title] = c.Signals.String() + " " + c.Rule
 	}
 	want := map[string]string{

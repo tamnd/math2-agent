@@ -155,7 +155,9 @@ func (r *scopeRun) build(tree *wpcorpus.CategoryTree, assess, cited, wikidata st
 		if !slices.Contains(c.Projects, a.Project) {
 			c.Projects = append(c.Projects, a.Project)
 		}
-		if a.Project == "Mathematics" || c.Class == "" {
+		// A tag on a redirect gives the signal to the target, but not its
+		// class, which is the class Redirect.
+		if id == a.PageID && (a.Project == "Mathematics" || c.Class == "") {
 			c.Class, c.Importance = a.Class, a.Importance
 		}
 		if sig == wpcorpus.S1 {
