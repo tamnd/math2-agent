@@ -1,0 +1,2 @@
+analysis/census/0001/12345-r123450.md:0:0: Y07: the readings of "Widget" differ: the math count is 6 in W-text and 12 in W-html
+analysis/census/0001/12345-r123450.md:0:0: Y07: the readings of "Widget" differ: 2 of the 3 <math> elements have no equal alttext in W-html
