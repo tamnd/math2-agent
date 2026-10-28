@@ -170,7 +170,14 @@ func Extract(p *Page, m *Manifests, version string) (*Result, error) {
 // ExtractPage is Extract with the incoming pointers of the page, the witness
 // W-in (WP4.2). It matches each pointer to an object (WP4.4). When in is
 // nil, the census does not have the witness W-in.
-func ExtractPage(p *Page, m *Manifests, version string, in *PointerFile) (*Result, error) {
+func ExtractPage(p *Page, m *Manifests, version string, in *PointerFile) (r *Result, err error) {
+	// A fault in the parser or the extractor stops only this page. The
+	// caller records the error, and a long run goes on to the next page.
+	defer func() {
+		if v := recover(); v != nil {
+			r, err = nil, fmt.Errorf("page %d: the extraction failed: %v", p.ID, v)
+		}
+	}()
 	doc, err := parse.Parse(p.Wikitext)
 	if err != nil {
 		return nil, fmt.Errorf("page %d: %w", p.ID, err)
@@ -189,7 +196,7 @@ func ExtractPage(p *Page, m *Manifests, version string, in *PointerFile) (*Resul
 		x.pointers(in.Pointers)
 	}
 	x.links()
-	r := x.result()
+	r = x.result()
 	if in != nil {
 		r.Census.Witnesses = append(r.Census.Witnesses, WitnessIn)
 		r.Census.SetStrength()

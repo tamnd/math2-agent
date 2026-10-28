@@ -342,3 +342,12 @@ func TestHash(t *testing.T) {
 		t.Error("two texts give one hash")
 	}
 }
+
+// TestExtractPageFault checks that a fault in the extractor gives an error
+// for the page and does not stop the caller.
+func TestExtractPageFault(t *testing.T) {
+	_, err := ExtractPage(&Page{ID: 7, Revision: 1, Title: "Widget", Wikitext: "{{Theorem|A widget is a gadget.}}\n== Proof ==\nText."}, nil, "wpcorpus-test", nil)
+	if err == nil || !strings.Contains(err.Error(), "page 7: the extraction failed") {
+		t.Errorf("err %v", err)
+	}
+}
