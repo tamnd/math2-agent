@@ -78,7 +78,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. `-mentions` also writes the mentions. | written |
-| `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope`, `fetch`, `census`, `refresh` and `gold` arrive in the later milestones of the Wikipedia roadmap. | written |
+| `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list. `fetch`, `census` and `refresh` arrive in the later milestones of the Wikipedia roadmap. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
@@ -506,6 +506,13 @@ $ m2 wp extract -corpus ../wikipedia-math            # extract the content plane
 ```
 $ wiki assess Mathematics Statistics "Philosophy/Logic" Cryptography "Computer science" Physics Systems -o tsv > assess.tsv
 $ m2 wp scope -corpus ../wikipedia-math -store scope.sqlite -dump 20261001 -assess assess.tsv -cited cited.txt
+```
+
+`m2 wp gold draw` draws gold set S of WP11.2 from `candidates.tsv`: 500 candidates with S1 or S2, 500 candidates with S4 and no project tag, and 1,000 candidates with one weak signal. It writes `manifests/wikipedia/gold/scope.tsv`, and `-seed N` sets the sample. A reviewer writes `math`, `uses-math` or `not-math` in the column `mark` of each row. `m2 wp gold measure` then compares the marks with the scope list and writes `reports/gold-s.md`. The precision and the recall are weighted by the population of each stratum, so they estimate the measures over all the candidates.
+
+```
+$ m2 wp gold draw -corpus ../wikipedia-math
+$ m2 wp gold measure -corpus ../wikipedia-math
 ```
 
 The Y rules check the corpus. They read the checkout that `-wikipedia` names, and they skip when it is not given. Y02 checks that each revision of the content plane has a census record that names the extractor version and the revision, and an objects file. Y03 checks that each cue of each census has an object, or a waiver of `waivers.yaml` with a reason. These two rules are hard. Y08 lists the templates that the template table does not map, Y09 lists the headings in 5 or more articles that the heading table does not map, and Y10 lists the formulas that `wiki/texvc` does not convert. These three rules are soft. The other Y rules come in the later milestones of the Wikipedia roadmap. `-group Y` runs only the Y rules, and `-hard` runs only the hard rules.
