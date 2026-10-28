@@ -111,7 +111,7 @@ var catalogue = []entry{
 	{Rule{"N07", Notation, false, "a definition introduces a symbol in its notation field, and no register entry has it as introduced_by"}, n07},
 	{Rule{"Y01", Wikipedia, true, "each article in the scope list has an article state, or a reason why it stops"}, y01},
 	{Rule{"Y02", Wikipedia, true, "each extracted revision has a census record, and the census record names the extractor version and the revision id"}, y02},
-	{Rule{"Y03", Wikipedia, true, "each counted cue of the census has an object record, or a waiver with a reason"}, y03},
+	{Rule{"Y03", Wikipedia, true, "each counted cue of the census has an object record, or a waiver with a reason, and each W-in pointer has an object or a finding"}, y03},
 	{Rule{"Y04", Wikipedia, true, "each article in scope has an article mention, and each object of an item kind has an object mention"}, nil},
 	{Rule{"Y05", Wikipedia, true, "no mention, row or edge in the record plane holds article text beyond the name, the aliases and the short description"}, nil},
 	{Rule{"Y06", Wikipedia, true, "each mention, edge and node source names a page id and a revision id, not only a title"}, nil},
