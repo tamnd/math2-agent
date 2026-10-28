@@ -266,8 +266,12 @@ func (r *fetchRun) write(p *wpcorpus.Page, sha string, unstable bool, settled *w
 	c := r.byID[int64(p.ID)]
 	err := wpcorpus.WriteContent(r.corpus, p)
 	var res *wpcorpus.Result
+	var in *wpcorpus.PointerFile
 	if err == nil {
-		res, err = wpcorpus.Extract(p, r.m, "m2/"+version)
+		in, err = wpcorpus.ReadPointers(r.corpus, p.ID)
+	}
+	if err == nil {
+		res, err = wpcorpus.ExtractPage(p, r.m, "m2/"+version, in)
 	}
 	if err == nil {
 		err = wpcorpus.JoinWitness(r.corpus, res, r.m)

@@ -117,6 +117,7 @@ type section struct {
 	anchor string
 	role   string
 	item   *object
+	obj    *object // the object of the section
 	parent *section
 }
 
@@ -128,6 +129,11 @@ type object struct {
 
 type cue struct {
 	Cue
+	obj *object
+}
+
+type pointer struct {
+	Pointer
 	obj *object
 }
 
@@ -146,19 +152,28 @@ type extractor struct {
 	unheads  map[string]bool
 	refs     map[string]*object
 	tex      []string
+	anchors  map[string]*object
+	ptrs     []*pointer
 }
 
 // Extract reads the wikitext of a page and gives its objects and its census
 // (WP3 and WP4). version names the version of the extractor, and it goes
 // into each record.
 func Extract(p *Page, m *Manifests, version string) (*Result, error) {
+	return ExtractPage(p, m, version, nil)
+}
+
+// ExtractPage is Extract with the incoming pointers of the page, the witness
+// W-in (WP4.2). It matches each pointer to an object (WP4.4). When in is
+// nil, the census does not have the witness W-in.
+func ExtractPage(p *Page, m *Manifests, version string, in *PointerFile) (*Result, error) {
 	doc, err := parse.Parse(p.Wikitext)
 	if err != nil {
 		return nil, fmt.Errorf("page %d: %w", p.ID, err)
 	}
 	x := &extractor{
 		doc: doc, m: m, page: p, typ: ArticleType(p.Title), ver: version,
-		unmapped: map[string]int{}, unheads: map[string]bool{}, refs: map[string]*object{},
+		unmapped: map[string]int{}, unheads: map[string]bool{}, refs: map[string]*object{}, anchors: map[string]*object{},
 		counts: Counts{ItemTemplates: map[string]int{}, ItemHeadings: map[string]int{}, Math: map[string]int{}, Maintenance: map[string]int{}},
 	}
 	x.sections(doc.Root, nil)
@@ -166,7 +181,15 @@ func Extract(p *Page, m *Manifests, version string) (*Result, error) {
 	x.blocks()
 	x.templates()
 	x.attachProofs()
-	return x.result(), nil
+	if in != nil {
+		x.pointers(in.Pointers)
+	}
+	r := x.result()
+	if in != nil {
+		r.Census.Witnesses = append(r.Census.Witnesses, WitnessIn)
+		r.Census.SetStrength()
+	}
+	return r, nil
 }
 
 // sections walks the section tree. It makes an object for each section, and
@@ -206,6 +229,7 @@ func (x *extractor) sections(n *parse.Node, parent *section) {
 func (x *extractor) heading(s *section, h string) {
 	sec := x.add(Object{Kind: "section", Cue: "section", Strength: StrengthStrong, Name: h}, s.node.Start, s.node.End)
 	sec.Text = ""
+	s.obj = sec
 	if x.inBack(s) {
 		return
 	}
@@ -620,8 +644,20 @@ func (x *extractor) anchor(n *parse.Node) {
 			best = o
 		}
 	}
-	if best != nil && best.Anchor == "" {
+	if best == nil {
+		return
+	}
+	if best.Anchor == "" {
 		best.Anchor = name
+	}
+	// The template can give several names. A pointer of W-in can use each
+	// of them.
+	for _, q := range n.Params {
+		if q.Name == "" {
+			if a := normAnchor(x.doc.ParamValue(q)); a != "" && x.anchors[a] == nil {
+				x.anchors[a] = best
+			}
+		}
 	}
 }
 
@@ -1186,6 +1222,13 @@ func (x *extractor) result() *Result {
 		}
 	}
 	sort.Strings(c.UnmappedHeadings)
+	c.Witnesses = []string{WitnessText}
+	for _, q := range x.ptrs {
+		if q.obj != nil {
+			q.Object = q.obj.Ref
+		}
+		c.Pointers = append(c.Pointers, q.Pointer)
+	}
 	return res
 }
 

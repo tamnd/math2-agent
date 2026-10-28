@@ -94,10 +94,48 @@ func AddWitness(r *Result, m *Manifests, rd *parsoid.Reading) error {
 		}
 	}
 	c.HTML = w
-	if len(c.HTMLDifferences()) == 0 {
-		c.Strength = StrengthNormal
+	c.Witnesses = appendOnce(c.Witnesses, WitnessHTML)
+	// An anchor that only the HTML has is made by a template that W-text
+	// does not read. The pointer to it is not a broken anchor.
+	anchors := map[string]bool{}
+	for _, a := range rd.Anchors {
+		anchors[normAnchor(a)] = true
 	}
+	for i := range c.Pointers {
+		if p := &c.Pointers[i]; p.Finding == FindingBrokenAnchor && anchors[normAnchor(p.Anchor)] {
+			p.Finding = FindingTemplateAnchor
+		}
+	}
+	c.SetStrength()
 	return nil
+}
+
+// SetStrength sets the strength of the census from its witnesses (WP4.5).
+// It is strong when the three witnesses were read and agree, and normal
+// when W-text and one more witness were read and agree. It is weak when
+// only W-text was read, or when W-html differs by more than the threshold.
+// W-in agrees when each pointer matches an object.
+func (c *Census) SetStrength() {
+	html := slices.Contains(c.Witnesses, WitnessHTML)
+	in := slices.Contains(c.Witnesses, WitnessIn)
+	if html && len(c.HTMLDifferences()) > 0 {
+		c.Strength = StrengthWeak
+		return
+	}
+	agree := true
+	for _, p := range c.Pointers {
+		if p.Object == "" {
+			agree = false
+		}
+	}
+	switch {
+	case html && in && agree:
+		c.Strength = StrengthStrong
+	case html || in:
+		c.Strength = StrengthNormal
+	default:
+		c.Strength = StrengthWeak
+	}
 }
 
 // count counts a template when it is a counted item template or the

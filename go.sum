@@ -141,6 +141,8 @@ github.com/tamnd/wikipedia-cli v0.4.5 h1:ID9+9LCLTHW3rjAevAAO4NAGuIoapjiTet9VIv3
 github.com/tamnd/wikipedia-cli v0.4.5/go.mod h1:LbpjgU+Tg5T4Sh5SbExUHZSWeTaUlQRATMM0WbxQ8Sc=
 github.com/tamnd/wikipedia-cli v0.4.6 h1:gtZ074nTDkvc+pwl1eComrZ+pYM8Mw0zlxObOyMdIIU=
 github.com/tamnd/wikipedia-cli v0.4.6/go.mod h1:LbpjgU+Tg5T4Sh5SbExUHZSWeTaUlQRATMM0WbxQ8Sc=
+github.com/tamnd/wikipedia-cli v0.4.7 h1:JaNXwaScMgmrL53Vvue6v5/+gR27xovci2YotmPOcp8=
+github.com/tamnd/wikipedia-cli v0.4.7/go.mod h1:LbpjgU+Tg5T4Sh5SbExUHZSWeTaUlQRATMM0WbxQ8Sc=
 github.com/tidwall/gjson v1.14.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/gjson v1.20.0 h1:+agJ3rEzKcCXKDKo0ml26UROcpcAlnZyjq+TjbY5Fto=
 github.com/tidwall/gjson v1.20.0/go.mod h1:V37/opeE/JbLUOfH0QTXiNez2l0RUjYUhpT4szFQAfc=

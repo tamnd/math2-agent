@@ -110,8 +110,12 @@ func y02(a *auditor) outcome {
 	return o
 }
 
+// pointerFindings are the findings that a pointer of W-in can have.
+var pointerFindings = map[string]bool{wpcorpus.FindingBrokenAnchor: true, wpcorpus.FindingTemplateAnchor: true}
+
 // y03 checks that each counted cue of each census has an object of the
-// objects file, or a waiver of waivers.yaml (WP4.4, WP4.8).
+// objects file, or a waiver of waivers.yaml, and that each pointer of W-in
+// has an object or a finding (WP4.4, WP4.8).
 func y03(a *auditor) outcome {
 	var o outcome
 	t := a.wpStart(&o)
@@ -142,6 +146,17 @@ func y03(a *auditor) outcome {
 				o.add(path, 0, 0, "the cue %s at the bytes %d to %d names the waiver %s, and waivers.yaml has no such waiver", q.Cue, q.Span[0], q.Span[1], q.Waiver)
 			case q.Waiver != "" && q.Reason == "":
 				o.add(path, 0, 0, "the cue %s at the bytes %d to %d has the waiver %s with no reason", q.Cue, q.Span[0], q.Span[1], q.Waiver)
+			}
+		}
+		for _, q := range p.census.Pointers {
+			o.checked++
+			switch {
+			case q.Object == "" && q.Finding == "":
+				o.add(path, 0, 0, "the %s %q to the anchor %q of %q has no object and no finding", q.Via, q.From, q.Anchor, p.page.Title)
+			case q.Object != "" && !refs[q.Object]:
+				o.add(path, 0, 0, "the %s %q to the anchor %q names the object %s, and the objects file has no such object", q.Via, q.From, q.Anchor, q.Object)
+			case q.Finding != "" && !pointerFindings[q.Finding]:
+				o.add(path, 0, 0, "the %s %q to the anchor %q has the finding %s, which is not a finding of WP4.4", q.Via, q.From, q.Anchor, q.Finding)
 			}
 		}
 	}

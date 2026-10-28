@@ -11,14 +11,17 @@ const (
 // objects file, the header holds the fields and the body holds the text, so
 // the header has no page, revision or text.
 type Object struct {
-	Page          int               `json:"page" yaml:"-"`
-	Revision      int               `json:"revision" yaml:"-"`
-	Ref           string            `json:"ref" yaml:"ref"`
-	Tag           string            `json:"tag,omitempty" yaml:"tag,omitempty"`
-	Kind          string            `json:"kind" yaml:"kind"`
-	Cue           string            `json:"cue" yaml:"cue"`
-	Strength      string            `json:"strength" yaml:"strength"`
-	Name          string            `json:"name,omitempty" yaml:"name,omitempty"`
+	Page     int    `json:"page" yaml:"-"`
+	Revision int    `json:"revision" yaml:"-"`
+	Ref      string `json:"ref" yaml:"ref"`
+	Tag      string `json:"tag,omitempty" yaml:"tag,omitempty"`
+	Kind     string `json:"kind" yaml:"kind"`
+	Cue      string `json:"cue" yaml:"cue"`
+	Strength string `json:"strength" yaml:"strength"`
+	Name     string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Aliases are the other names of the object: the titles of the redirects
+	// to it (WP5.5).
+	Aliases       []string          `json:"aliases,omitempty" yaml:"aliases,omitempty"`
 	Section       string            `json:"section,omitempty" yaml:"section,omitempty"`
 	SectionAnchor string            `json:"section_anchor,omitempty" yaml:"section_anchor,omitempty"`
 	Anchor        string            `json:"anchor,omitempty" yaml:"anchor,omitempty"`
@@ -66,6 +69,11 @@ type Census struct {
 	// HTML is the witness W-html, when the corpus has the Parsoid HTML of
 	// the revision.
 	HTML *Witness `json:"html,omitempty" yaml:"html,omitempty"`
+	// Witnesses names the witnesses that were read: text, html and in.
+	Witnesses []string `json:"witnesses,omitempty" yaml:"witnesses,omitempty"`
+	// Pointers are the incoming pointers of the witness W-in, each with the
+	// object that it matches or a finding (WP4.4).
+	Pointers []Pointer `json:"pointers,omitempty" yaml:"pointers,omitempty"`
 }
 
 // Counts holds the counts of a census.
@@ -97,6 +105,18 @@ type Cue struct {
 	Object   string `json:"object,omitempty" yaml:"object,omitempty"`
 	Waiver   string `json:"waiver,omitempty" yaml:"waiver,omitempty"`
 	Reason   string `json:"reason,omitempty" yaml:"reason,omitempty"`
+}
+
+// PointerGaps gives the pointers of W-in that have no object and no
+// finding. Rule Y03 reports each of them.
+func (c *Census) PointerGaps() []Pointer {
+	var out []Pointer
+	for _, p := range c.Pointers {
+		if p.Object == "" && p.Finding == "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // Gaps returns the cues that have no object and no waiver. Rule Y03 reports

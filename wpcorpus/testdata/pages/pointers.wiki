@@ -1,0 +1,13 @@
+A '''gadget''' is a small widget.
+
+== History ==
+The gadget is old.
+
+== Newton's series ==
+The series of Newton is a sum of differences.
+
+== Properties ==
+{{math theorem|name=Gadget lemma|math_statement=Each gadget is small.}}
+
+== Notes ==
+{{anchor|Gadget rule|Rule}}The rule says that each gadget is a set.
