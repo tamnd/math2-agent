@@ -1,0 +1,43 @@
+{{define "wikipedia"}}
+<header class="page-head">
+  <h1>Wikipedia scope</h1>
+  <p class="lead">The corpus of Math 2.0 takes the mathematics articles of the English Wikipedia. This page shows which articles are in scope, and the signal or the rule that put each one there. The text of the articles is not on this site. Each title links to the article on Wikipedia.</p>
+</header>
+<table class="plain">
+  <tr><th scope="row">Candidates</th><td class="num">{{.Candidates}}</td></tr>
+  <tr><th scope="row">In scope</th><td class="num">{{.InScope}}</td></tr>
+  <tr><th scope="row">Not decided yet</th><td class="num">{{.Pending}}</td></tr>
+</table>
+<p>A candidate is an article with one or more of the signals S1 to S9 of the spec (WP1.2). The rules decide the candidates where their precision is high. The scope model pass decides the other candidates, and until then they are not decided.</p>
+<section>
+  <h2>The articles in scope</h2>
+  <ul class="chips">{{range .Letters}}<li><a href="{{.URL}}">{{if eq .Name "#"}}Other{{else}}{{.Name}}{{end}}</a> <span class="count">{{.Count}}</span></li>{{end}}</ul>
+  <p>The list is also in <a href="{{.JSON}}">scope.json</a>, for programs.</p>
+</section>
+<section>
+  <h2>By rule</h2>
+  <table class="plain">
+    <thead><tr><th scope="col">Rule</th><th scope="col">Candidates</th><th scope="col">In scope</th></tr></thead>
+    {{range .Rules}}<tr><td>{{.Name}}</td><td class="num">{{.Candidates}}</td><td class="num">{{.InScope}}</td></tr>
+    {{end}}
+  </table>
+</section>
+<section>
+  <h2>By signal</h2>
+  <p>An article can have more than one signal, so the rows do not add up to the total.</p>
+  <table class="plain">
+    <thead><tr><th scope="col">Signal</th><th scope="col">Candidates</th><th scope="col">In scope</th></tr></thead>
+    {{range .Signals}}<tr><td>{{.Name}}</td><td class="num">{{.Candidates}}</td><td class="num">{{.InScope}}</td></tr>
+    {{end}}
+  </table>
+</section>
+<section>
+  <h2>By assessment class</h2>
+  <table class="plain">
+    <thead><tr><th scope="col">Class</th><th scope="col">In scope</th></tr></thead>
+    {{range .Classes}}<tr><td>{{.Name}}</td><td class="num">{{.InScope}}</td></tr>
+    {{end}}
+  </table>
+</section>
+<p>The scope list and the reports are in <a href="https://github.com/tamnd/wikipedia-math">tamnd/wikipedia-math</a>. The text of Wikipedia is available under CC BY-SA 4.0.</p>
+{{end}}
