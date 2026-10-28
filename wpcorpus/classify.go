@@ -14,10 +14,13 @@ const (
 	VerdictMath     = "math"
 	VerdictUsesMath = "uses-math"
 	VerdictNotMath  = "not-math"
+	// VerdictPending is the verdict of a candidate that the rules do not
+	// decide. The scope model pass of WP7.2 decides it.
+	VerdictPending = "pending"
 )
 
-// acceptAt is the lowest confidence at which the rule classifier puts a
-// candidate with one weak signal in scope.
+// acceptAt is the lowest confidence at which a candidate with the verdict
+// math is in scope.
 const acceptAt = 0.6
 
 // Candidate is one article that one or more signals name.
@@ -45,39 +48,83 @@ type Candidate struct {
 const weak = S3 | S5 | S6 | S7 | S8 | S9
 
 // Classify applies the scope rule of WP1.2 and the rule classifier of WP1.3.
-// The model pass of WP7.2 replaces the rule verdicts later. Gold set S
-// measures both.
+// The rules decide only where their precision is high: the strong signals,
+// a category near a root of the tree, and S3 alone. Each other candidate has
+// only weak signals, and it gets the verdict pending. The run of 2026-10-28
+// showed that one weak signal, and many pairs of weak signals, name
+// countries, universities and Unicode blocks. Gold set S measures the rules
+// and the model pass together.
 func Classify(c *Candidate) {
-	n := 0
-	for s := S1; s <= S9; s <<= 1 {
-		if c.Signals&weak&s != 0 {
-			n++
-		}
-	}
 	switch {
 	case c.Signals&(S1|S2|S4) != 0:
 		c.Verdict, c.Confidence, c.Rule = VerdictMath, 1, "strong"
-	case n >= 2:
-		c.Verdict, c.Confidence, c.Rule = VerdictMath, 0.9, "two weak"
-	case c.Signals&S5 != 0:
-		c.Verdict, c.Confidence, c.Rule = VerdictMath, 0.8, "S5"
-	case c.Signals&S6 != 0 && c.CatDepth <= 1:
+	case c.Signals&S6 != 0 && c.CatDepth >= 0 && c.CatDepth <= 1:
 		c.Verdict, c.Confidence, c.Rule = VerdictMath, 0.8, "S6 near"
-	case c.Signals&S6 != 0 && c.CatDepth == 2:
-		c.Verdict, c.Confidence, c.Rule = VerdictMath, 0.65, "S6 mid"
-	case c.Signals&S6 != 0:
-		c.Verdict, c.Confidence, c.Rule = VerdictUsesMath, 0.5, "S6 far"
-	case c.Signals&S8 != 0:
-		c.Verdict, c.Confidence, c.Rule = VerdictMath, 0.7, "S8"
-	case c.Signals&S9 != 0:
-		c.Verdict, c.Confidence, c.Rule = VerdictMath, 0.6, "S9"
-	case c.Signals&S7 != 0:
-		c.Verdict, c.Confidence, c.Rule = VerdictUsesMath, 0.5, "S7"
-	case c.Signals&S3 != 0:
+	case c.Signals == S3:
 		c.Verdict, c.Confidence, c.Rule = VerdictUsesMath, 0.4, "S3 alone"
+	case c.Signals&weak != 0:
+		c.Verdict, c.Confidence, c.Rule = VerdictPending, 0, "weak"
 	default:
 		c.Verdict, c.Confidence, c.Rule = VerdictNotMath, 1, "no signal"
 	}
+	c.InScope = c.Verdict == VerdictMath && c.Confidence >= acceptAt
+}
+
+// ModelVerdict is one row of manifests/wikipedia/verdicts.tsv: the verdict
+// of the scope model pass for a candidate that the rules do not decide.
+type ModelVerdict struct {
+	PageID     int64
+	Verdict    string
+	Confidence float64
+	Model      string
+	Note       string
+}
+
+const verdictsHeader = "page_id\ttitle\tverdict\tconfidence\tmodel\tnote"
+
+// ReadVerdicts reads verdicts.tsv.
+func ReadVerdicts(r io.Reader) (map[int64]ModelVerdict, error) {
+	sc := bufio.NewScanner(r)
+	sc.Buffer(make([]byte, 0, 64<<10), 1<<20)
+	out := map[int64]ModelVerdict{}
+	line := 0
+	for sc.Scan() {
+		line++
+		if line == 1 {
+			if sc.Text() != verdictsHeader {
+				return nil, fmt.Errorf("line 1: the header is not %q", verdictsHeader)
+			}
+			continue
+		}
+		f := strings.Split(sc.Text(), "\t")
+		if len(f) != 6 {
+			return nil, fmt.Errorf("line %d: want 6 fields, have %d", line, len(f))
+		}
+		v := ModelVerdict{Verdict: f[2], Model: f[4], Note: f[5]}
+		var err error
+		if v.PageID, err = strconv.ParseInt(f[0], 10, 64); err != nil {
+			return nil, fmt.Errorf("line %d: %w", line, err)
+		}
+		if v.Confidence, err = strconv.ParseFloat(f[3], 64); err != nil {
+			return nil, fmt.Errorf("line %d: %w", line, err)
+		}
+		switch v.Verdict {
+		case VerdictMath, VerdictUsesMath, VerdictNotMath:
+		default:
+			return nil, fmt.Errorf("line %d: the verdict %q is not math, uses-math or not-math", line, v.Verdict)
+		}
+		out[v.PageID] = v
+	}
+	return out, sc.Err()
+}
+
+// ApplyVerdict gives a pending candidate the verdict of the model pass.
+// The verdicts of the rules stay.
+func ApplyVerdict(c *Candidate, v ModelVerdict) {
+	if c.Verdict != VerdictPending {
+		return
+	}
+	c.Verdict, c.Confidence, c.Rule = v.Verdict, v.Confidence, "model"
 	c.InScope = c.Verdict == VerdictMath && c.Confidence >= acceptAt
 }
 
@@ -157,12 +204,15 @@ func ReadCandidates(r io.Reader) ([]*Candidate, error) {
 // the scope by signal, by rule, by verdict and by class.
 func ScopeReport(w io.Writer, cs []*Candidate, dump string, pending []string) error {
 	bw := bufio.NewWriter(w)
-	in := 0
+	in, pend := 0, 0
 	bySignal := map[Signals][2]int{} // candidates, in scope
 	byRule := map[string][2]int{}
 	byClass := map[string]int{}
 	only := map[Signals]int{}
 	for _, c := range cs {
+		if c.Verdict == VerdictPending {
+			pend++
+		}
 		if c.InScope {
 			in++
 			cl := c.Class
@@ -193,6 +243,9 @@ func ScopeReport(w io.Writer, cs []*Candidate, dump string, pending []string) er
 	}
 	fmt.Fprintf(bw, "# The scope of the Wikipedia corpus\n\n")
 	fmt.Fprintf(bw, "This report is made by `m2 wp scope` from the dump %s. It has %d candidates, and %d of them are in scope (WP1.2).\n\n", dump, len(cs), in)
+	if pend > 0 {
+		fmt.Fprintf(bw, "The rules do not decide %d candidates. They have the verdict pending, and the scope model pass of WP7.2 decides them through manifests/wikipedia/verdicts.tsv.\n\n", pend)
+	}
 	if len(pending) > 0 {
 		fmt.Fprintf(bw, "These signals are not computed yet: %s. The counts below do not include them.\n\n", strings.Join(pending, ", "))
 	}

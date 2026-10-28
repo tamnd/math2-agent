@@ -16,6 +16,7 @@ var (
 	CandidatesPath = filepath.Join(ManifestDir, "candidates.tsv")
 	ScopePath      = filepath.Join(ManifestDir, "scope.tsv")
 	StoppedPath    = filepath.Join(ManifestDir, "stopped.tsv")
+	VerdictsPath   = filepath.Join(ManifestDir, "verdicts.tsv")
 )
 
 // The article states of WP1.8 that the corpus has now. The later states

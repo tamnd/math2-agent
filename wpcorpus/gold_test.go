@@ -11,6 +11,9 @@ func goldCandidates() []*Candidate {
 	add := func(id int64, s Signals) {
 		c := &Candidate{PageID: id, Title: "P" + string(rune('A'+id%26)), Signals: s, CatDepth: 3}
 		Classify(c)
+		if id == 17 {
+			ApplyVerdict(c, ModelVerdict{PageID: id, Verdict: VerdictMath, Confidence: 0.9})
+		}
 		cs = append(cs, c)
 	}
 	for i := int64(1); i <= 10; i++ {
@@ -75,7 +78,7 @@ func TestMeasure(t *testing.T) {
 	rows := []GoldRow{
 		{PageID: 1, Stratum: StratumStrong, Signals: S1, Population: 10, Mark: VerdictMath},
 		{PageID: 2, Stratum: StratumStrong, Signals: S1, Population: 10, Mark: VerdictNotMath},
-		{PageID: 16, Title: "PQ", Stratum: StratumWeak, Signals: S6, Rule: "S6 far", Population: 2, Mark: VerdictMath},
+		{PageID: 16, Title: "PQ", Stratum: StratumWeak, Signals: S6, Rule: "weak", Population: 2, Mark: VerdictMath},
 		{PageID: 17, Stratum: StratumWeak, Signals: S5, Population: 2, Mark: VerdictMath},
 		{PageID: 11, Stratum: StratumCited, Signals: S4, Population: 4},
 	}
@@ -95,7 +98,7 @@ func TestMeasure(t *testing.T) {
 	if err := GoldReport(&b, m); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"4 marked rows and 1 rows", "| strong | 2 | 1 | 0.500 |", "| PQ | S6 | S6 far |"} {
+	for _, want := range []string{"4 marked rows and 1 rows", "| strong | 2 | 1 | 0.500 |", "| PQ | S6 | weak |"} {
 		if !strings.Contains(b.String(), want) {
 			t.Errorf("the report has no %q:\n%s", want, b.String())
 		}
