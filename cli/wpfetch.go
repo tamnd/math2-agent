@@ -34,6 +34,7 @@ type fetchRun struct {
 	stderr  io.Writer
 
 	pages, objects, failed int
+	failures               []string
 }
 
 func runWPFetch(args []string, stdout, stderr io.Writer) int {
@@ -52,6 +53,7 @@ func runWPFetch(args []string, stdout, stderr io.Writer) int {
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
+	started := time.Now().UTC()
 	if *dumpPath == "" || *storePath == "" {
 		fmt.Fprintln(stderr, "m2 wp fetch: give -dump and -store")
 		return ExitUsage
@@ -144,7 +146,9 @@ func runWPFetch(args []string, stdout, stderr io.Writer) int {
 			out = append(out, s)
 		}
 	}
+	stopped := 0
 	stop := func(id int64, reason string, into int64, note string) {
+		stopped++
 		out = append(out, wpcorpus.Stop{PageID: id, Reason: reason, Into: into, Note: note})
 		fmt.Fprintf(stdout, "%d stopped: %s %s\n", id, reason, note)
 	}
@@ -201,10 +205,12 @@ func runWPFetch(args []string, stdout, stderr io.Writer) int {
 	// The check of WP2.6 uses the Action API, one request at a time.
 	f := &wpcorpus.Fetcher{API: *api, UserAgent: userAgent()}
 	ctx := context.Background()
+	requests := 0
 	for i, p := range recent {
 		if i > 0 {
 			time.Sleep(wpDelay)
 		}
+		requests++
 		hist, err := f.History(ctx, int(p.ID), historyLimit)
 		if err != nil {
 			stop(p.ID, "failed", 0, err.Error())
@@ -220,6 +226,7 @@ func runWPFetch(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 		time.Sleep(wpDelay)
+		requests++
 		got, err := f.FetchRevision(ctx, rev)
 		if err != nil {
 			stop(p.ID, "failed", 0, err.Error())
@@ -237,8 +244,15 @@ func runWPFetch(args []string, stdout, stderr io.Writer) int {
 	if err := wpcorpus.WriteStops(*corpus, out); err != nil {
 		return fail(err)
 	}
-	fmt.Fprintf(stdout, "%d articles, %d pages, %d objects, %d checked with the API, %d stopped, %d failed\n",
-		len(run), r.pages, r.objects, len(recent), len(out), r.failed)
+	rec := &wpcorpus.RunRecord{Command: "m2 wp fetch", Args: args, M2: version, Wiki: wpcorpus.WikiVersion(), Dump: *date,
+		Started: started.Format(time.RFC3339), Finished: time.Now().UTC().Format(time.RFC3339),
+		Articles: len(run), Pages: r.pages, Stopped: stopped, Failed: r.failed, Requests: requests, Failures: r.failures}
+	rel, err := wpcorpus.WriteRunRecord(*corpus, rec)
+	if err != nil {
+		return fail(err)
+	}
+	fmt.Fprintf(stdout, "%d articles, %d pages, %d objects, %d checked with the API, %d stopped, %d failed, run record %s\n",
+		len(run), r.pages, r.objects, len(recent), len(out), r.failed, rel)
 	if r.failed > 0 {
 		return ExitFailure
 	}
@@ -288,6 +302,7 @@ func (r *fetchRun) write(p *wpcorpus.Page, sha string, unstable bool, settled *w
 	if err != nil {
 		fmt.Fprintf(r.stderr, "m2 wp fetch: %d %s: %v\n", p.ID, p.Title, err)
 		r.failed++
+		r.failures = append(r.failures, fmt.Sprintf("%d r%d: %v", p.ID, p.Revision, err))
 		return
 	}
 	r.pages++

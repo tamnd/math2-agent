@@ -78,7 +78,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. `-mentions` also writes the mentions. | written |
-| `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list, and `m2 wp fetch` reads each article of the scope list from a dump. `census` and `refresh` arrive in the later milestones of the Wikipedia roadmap. | written |
+| `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list, `m2 wp fetch` reads each article of the scope list from a dump, and `m2 wp parsoid` fetches the Parsoid HTML of each article. `census` and `refresh` arrive in the later milestones of the Wikipedia roadmap. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
@@ -521,6 +521,14 @@ $ m2 wp gold measure -corpus ../wikipedia-math
 $ m2 wp fetch -corpus ../wikipedia-math -store scope.sqlite -dump enwiki-20261001-pages-articles-multistream.xml.bz2
 $ m2 wp fetch -corpus ../wikipedia-math -store scope.sqlite -dump enwiki-20261001-pages-articles-multistream.xml.bz2 -limit 100
 ```
+
+`m2 wp parsoid` fetches the Parsoid HTML of the revision of record of each article that has a metadata file, which is the second reading of WP2.5. It writes the HTML to `work/parsoid/<shard>/<pageid>-r<revision>.html`, which is not committed. A revision does not change, so the command skips a revision that it already has. The fetch uses `wiki/parsoid` of tamnd/wikipedia-cli, and it stays at or below 200 requests a minute. The articles are fetched in the order of WP2.9.
+
+```
+$ m2 wp parsoid -corpus ../wikipedia-math -limit 500
+```
+
+`m2 wp fetch` and `m2 wp parsoid` write a run record to `reports/runs/<time>-<command>.md`. Its YAML header gives the command, the versions of m2 and wikipedia-cli, the dump date, the start and the end, the counts of articles, pages and failures, the requests and the requests a minute.
 
 The Y rules check the corpus. They read the checkout that `-wikipedia` names, and they skip when it is not given. Y01 checks that each article of `manifests/wikipedia/scope.tsv` has an article state of WP1.8, and that each row of `stopped.tsv` names a page of the scope list and a reason of WP1.8. A merged page must name the page that it goes into. Y02 checks that each revision of the content plane has a census record that names the extractor version and the revision, and an objects file. Y03 checks that each cue of each census has an object, or a waiver of `waivers.yaml` with a reason. These three rules are hard. Y08 lists the templates that the template table does not map, Y09 lists the headings in 5 or more articles that the heading table does not map, and Y10 lists the formulas that `wiki/texvc` does not convert. Y13 lists each article whose revision of record is more than 60 days older than its newest settled revision, from the metadata files of `m2 wp fetch`. Y14 lists each candidate that two or more signals name and that the classifier rejects with a confidence below 0.9. These five rules are soft. The other Y rules come in the later milestones of the Wikipedia roadmap. `-group Y` runs only the Y rules, and `-hard` runs only the hard rules.
 
