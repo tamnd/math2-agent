@@ -443,7 +443,11 @@ func (x *extractor) termLink(o *object) *parse.Node {
 			return false
 		}
 		if m.Kind == parse.KindLink && m.Start >= o.Span[0] && !isMediaLink(m.Name) {
-			title := strings.ToLower(linkTarget(m.Name).Title)
+			l := linkTarget(m.Name)
+			if l == nil {
+				return false
+			}
+			title := strings.ToLower(l.Title)
 			label := strings.ToLower(strings.TrimSpace(x.doc.Plain(m.Children)))
 			if title == name || label == name || len(label) >= 4 && strings.HasPrefix(name, label) {
 				out = m
