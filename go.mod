@@ -8,7 +8,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/parquet-go/parquet-go v0.32.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
-	github.com/tamnd/wikipedia-cli v0.4.7
+	github.com/tamnd/wikipedia-cli v0.4.8
 	github.com/yuin/goldmark v1.8.6
 	github.com/zeebo/blake3 v0.2.4
 	go.yaml.in/yaml/v3 v3.0.5
