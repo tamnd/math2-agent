@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
+	"sync"
 	"time"
 
 	"github.com/tamnd/math2-agent/wpcorpus"
@@ -23,6 +25,7 @@ func runWPParsoid(args []string, stdout, stderr io.Writer) int {
 	corpus := fs.String("corpus", ".", "the Wikipedia corpus (a clone of tamnd/wikipedia-math)")
 	page := fs.Int("page", 0, "fetch only the article with this page id")
 	limit := fs.Int("limit", 0, "fetch only the first N articles in the order of WP2.9")
+	workers := fs.Int("workers", 4, "the number of requests at the same time. All workers share the interval of 300 ms, so the rate stays at or below 200 requests a minute")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -73,6 +76,38 @@ func runWPParsoid(args []string, stdout, stderr io.Writer) int {
 	rec := &wpcorpus.RunRecord{Command: "m2 wp parsoid", Args: args, M2: version, Wiki: wpcorpus.WikiVersion(), Started: started.Format(time.RFC3339)}
 	f := &parsoid.Fetcher{Base: parsoidBase, UserAgent: userAgent()}
 	ctx := context.Background()
+	// The REST API renders an old revision when it asks for it, and a large
+	// article takes some seconds. Thus the workers fetch at the same time,
+	// and the fetcher keeps the interval between the starts of the requests.
+	type job struct {
+		m    *wpcorpus.Metadata
+		path string
+	}
+	jobs := make(chan job)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for range max(*workers, 1) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := range jobs {
+				body, err := f.Fetch(ctx, j.m.Title, j.m.Revision)
+				if err == nil {
+					err = writeWork(j.path, body)
+				}
+				mu.Lock()
+				if err != nil {
+					fmt.Fprintf(stderr, "m2 wp parsoid: %d %s: %v\n", j.m.Page, j.m.Title, err)
+					rec.Failed++
+					rec.Failures = append(rec.Failures, fmt.Sprintf("%d r%d: %v", j.m.Page, j.m.Revision, err))
+				} else {
+					rec.Pages++
+					fmt.Fprintf(stdout, "%d r%d %s: %d bytes\n", j.m.Page, j.m.Revision, j.m.Title, len(body))
+				}
+				mu.Unlock()
+			}
+		}()
+	}
 	for _, c := range cs {
 		m := byID[c.PageID]
 		if *page != 0 && m.Page != *page {
@@ -87,19 +122,11 @@ func runWPParsoid(args []string, stdout, stderr io.Writer) int {
 			break
 		}
 		rec.Articles++
-		body, err := f.Fetch(ctx, m.Title, m.Revision)
-		if err == nil {
-			err = writeWork(path, body)
-		}
-		if err != nil {
-			fmt.Fprintf(stderr, "m2 wp parsoid: %d %s: %v\n", m.Page, m.Title, err)
-			rec.Failed++
-			rec.Failures = append(rec.Failures, fmt.Sprintf("%d r%d: %v", m.Page, m.Revision, err))
-			continue
-		}
-		rec.Pages++
-		fmt.Fprintf(stdout, "%d r%d %s: %d bytes\n", m.Page, m.Revision, m.Title, len(body))
+		jobs <- job{m, path}
 	}
+	close(jobs)
+	wg.Wait()
+	slices.Sort(rec.Failures)
 	rec.Requests, rec.PerMinute = f.Rate()
 	rec.Finished = time.Now().UTC().Format(time.RFC3339)
 	rel, err := wpcorpus.WriteRunRecord(*corpus, rec)
