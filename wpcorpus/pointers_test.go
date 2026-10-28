@@ -86,7 +86,8 @@ func TestExtractPointers(t *testing.T) {
 	if o := at(6); o == nil || o.Kind != "section" || o.Name != "History" || len(o.Aliases) != 0 {
 		t.Errorf("the link to history matches %+v", o)
 	}
-	if !slices.Equal(c.Witnesses, []string{WitnessText, WitnessIn}) || c.Strength != StrengthNormal {
+	// The pointer to Facts matches no object, so W-in does not agree.
+	if !slices.Equal(c.Witnesses, []string{WitnessText, WitnessIn}) || c.Strength != StrengthWeak {
 		t.Errorf("witnesses = %q, strength = %s", c.Witnesses, c.Strength)
 	}
 	if g := c.PointerGaps(); len(g) != 0 {
