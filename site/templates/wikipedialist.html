@@ -1,9 +1,10 @@
 {{define "wikipedialist"}}
 <header class="page-head">
   <h1>Wikipedia articles in scope, {{if eq .Letter "#"}}other{{else}}{{.Letter}}{{end}}</h1>
-  <p class="lead">{{len .Articles}} articles. Each title links to the article on Wikipedia. Refer to <a href="{{url "wikipedia/"}}">Wikipedia scope</a> for the signals and the rules.</p>
+  <p class="lead">{{.Count}} articles{{with .Pages}}, on {{len .}} pages{{end}}. Each title links to the article on Wikipedia. Refer to <a href="{{url "wikipedia/"}}">Wikipedia scope</a> for the signals and the rules.</p>
 </header>
 <ul class="chips">{{range .Letters}}<li{{if eq .Name $.Letter}} class="here"{{end}}><a href="{{.URL}}">{{if eq .Name "#"}}Other{{else}}{{.Name}}{{end}}</a></li>{{end}}</ul>
+{{with .Pages}}<ul class="chips">{{range .}}<li{{if eq .Name (print $.Page)}} class="here"{{end}}><a href="{{.URL}}">Page {{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}</ul>{{end}}
 <table class="plain">
   <thead><tr><th scope="col">Article</th><th scope="col">Signals</th><th scope="col">Class</th><th scope="col">Rule</th></tr></thead>
   {{range .Articles}}<tr><td><a href="{{.URL}}">{{.Title}}</a></td><td>{{.Signals}}</td><td>{{.Class}}</td><td>{{.Rule}}</td></tr>

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/tamnd/math2-agent/wpcorpus"
@@ -35,6 +36,17 @@ type wpCount struct {
 type wpLetter struct {
 	Name, URL string
 	Count     int
+}
+
+// wpPageSize is the number of articles on one page of a list, so that a page stays near the weight budget of the site.
+var wpPageSize = 1500
+
+// pageDir gives the directory of page n of the list of a letter. Page 1 is the directory of the letter.
+func pageDir(l string, n int) string {
+	if n == 1 {
+		return letterPath(l)
+	}
+	return letterPath(l) + "/" + strconv.Itoa(n)
 }
 
 // letterPath gives the directory of the list of a letter of letterOf.
@@ -138,6 +150,9 @@ func (b *builder) writeWikipedia() error {
 	type listData struct {
 		Letter   string
 		Letters  []wpLetter
+		Count    int // the number of articles of the letter
+		Pages    []wpLetter
+		Page     int
 		Articles []wpArticle
 	}
 	for _, l := range letters {
@@ -145,8 +160,24 @@ func (b *builder) writeWikipedia() error {
 		if l.Name == "#" {
 			title = "Wikipedia articles in scope, other"
 		}
-		if err := b.writePage(letterPath(l.Name), "wikipedialist", listData{l.Name, letters, byLetter[l.Name]}, page{Title: title, Description: desc, Section: "wikipedia"}); err != nil {
-			return err
+		all := byLetter[l.Name]
+		var pages []wpLetter
+		for i := 0; i < len(all); i += wpPageSize {
+			pages = append(pages, wpLetter{Name: strconv.Itoa(len(pages) + 1), URL: b.url(pageDir(l.Name, len(pages)+1) + "/"), Count: min(wpPageSize, len(all)-i)})
+		}
+		if len(pages) == 1 {
+			pages = nil
+		}
+		for i := 0; i < len(all); i += wpPageSize {
+			n := i/wpPageSize + 1
+			t := title
+			if pages != nil {
+				t += ", page " + strconv.Itoa(n)
+			}
+			d := listData{l.Name, letters, len(all), pages, n, all[i:min(i+wpPageSize, len(all))]}
+			if err := b.writePage(pageDir(l.Name, n), "wikipedialist", d, page{Title: t, Description: desc, Section: "wikipedia"}); err != nil {
+				return err
+			}
 		}
 	}
 	return b.writeJSON("api/wikipedia/scope.json", struct {
