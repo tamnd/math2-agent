@@ -1,0 +1,1 @@
+manifests/wikipedia/candidates.tsv:3:0: Y14: the signals S3,S7 name Wave_equation, and the classifier gives uses-math with the confidence 0.70 (rule model)

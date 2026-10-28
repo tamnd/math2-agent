@@ -125,11 +125,13 @@ var options = map[string]func(opt *Options, root string){
 	// D05 reads the analysis plane of a checkout of tamnd/arxiv, which the fixture has in checkout/.
 	"D05": func(opt *Options, root string) { opt.Arxiv = filepath.Join(root, "checkout") },
 	// The Y rules read a checkout of tamnd/wikipedia-math, which the fixture has in wikipedia/.
+	"Y01": wikipediaCheckout,
 	"Y02": wikipediaCheckout,
 	"Y03": wikipediaCheckout,
 	"Y08": wikipediaCheckout,
 	"Y09": wikipediaCheckout,
 	"Y10": wikipediaCheckout,
+	"Y14": wikipediaCheckout,
 }
 
 func wikipediaCheckout(opt *Options, root string) { opt.Wikipedia = filepath.Join(root, "wikipedia") }
@@ -330,7 +332,7 @@ func TestGroupAndHard(t *testing.T) {
 	for _, r := range rep.Results {
 		ids = append(ids, r.Rule)
 		reason := "not written yet"
-		if r.Rule == "Y02" || r.Rule == "Y03" {
+		if r.Rule == "Y01" || r.Rule == "Y02" || r.Rule == "Y03" {
 			reason = "no checkout of tamnd/wikipedia-math is given, so set -wikipedia to run the rule"
 		}
 		if r.State != check.Skip || r.Reason != reason {
