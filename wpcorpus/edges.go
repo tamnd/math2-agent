@@ -376,7 +376,7 @@ func (x *extractor) linkUse(n *parse.Node) {
 		u.Method = MethodLinkInProof
 	case o != nil && o.Kind == "entry" && o.Cue == "list-entry" && x.firstLinkOf(o) == n:
 		u.Method, u.Predicate, u.Confidence = MethodList, PredListedIn, ConfCertain
-	case o != nil && o.Kind == "entry" && o.Cue == "glossary-term" && x.firstLinkOf(o) == n:
+	case o != nil && o.Kind == "entry" && (o.Cue == "glossary-term" || o.Cue == "term") && x.termLink(o) == n:
 		u.Method, u.Predicate, u.Confidence = MethodGlossary, PredGlossaryOf, ConfCertain
 	case o != nil:
 		u.Method = MethodLinkInItem
@@ -428,6 +428,33 @@ func (x *extractor) firstLinkOf(o *object) *parse.Node {
 		}
 		return true
 	})
+	return out
+}
+
+// termLink gives the link of a glossary entry to the article of its term:
+// the first link whose title or label is the term or starts it, as
+// [[Abelian group|abelian]] for the term abelian group. An entry of a
+// definition list with no such link gives its first link.
+func (x *extractor) termLink(o *object) *parse.Node {
+	name := strings.ToLower(o.Name)
+	var out *parse.Node
+	parse.Walk(x.doc.Root, func(m *parse.Node) bool {
+		if out != nil || m.End <= o.Span[0] || m.Start >= o.Span[1] {
+			return false
+		}
+		if m.Kind == parse.KindLink && m.Start >= o.Span[0] && !isMediaLink(m.Name) {
+			title := strings.ToLower(linkTarget(m.Name).Title)
+			label := strings.ToLower(strings.TrimSpace(x.doc.Plain(m.Children)))
+			if title == name || label == name || len(label) >= 4 && strings.HasPrefix(name, label) {
+				out = m
+			}
+			return false
+		}
+		return true
+	})
+	if out == nil && o.Cue == "glossary-term" {
+		return x.firstLinkOf(o)
+	}
 	return out
 }
 
