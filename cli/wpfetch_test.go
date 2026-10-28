@@ -141,7 +141,14 @@ INSERT INTO props VALUES (12345, 'wikibase_item', 'Q1'), (12345, 'wikibase-short
 	if err != nil || p.Revision != 300 || p.Wikitext != "Old text." {
 		t.Errorf("the page Recent is %+v, %v", p, err)
 	}
-	data, err := os.ReadFile(filepath.Join(root, wpcorpus.MetadataPath(12345)))
+	data, err := os.ReadFile(filepath.Join(root, wpcorpus.MetadataPath(300)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m, err := wpcorpus.ParseMetadata(data); err != nil || m.Settled != 301 || m.SettledTimestamp != "2026-09-10T00:00:00Z" {
+		t.Errorf("the metadata of Recent is %+v, %v", m, err)
+	}
+	data, err = os.ReadFile(filepath.Join(root, wpcorpus.MetadataPath(12345)))
 	if err != nil {
 		t.Fatal(err)
 	}

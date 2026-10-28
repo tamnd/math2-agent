@@ -167,7 +167,7 @@ func runWPFetch(args []string, stdout, stderr io.Writer) int {
 		case *check && recentRevision(p.Timestamp, at):
 			recent = append(recent, p)
 		default:
-			r.write(dumpPage(p), p.SHA1, false)
+			r.write(dumpPage(p), p.SHA1, false, nil)
 		}
 		return nil
 	})
@@ -211,8 +211,12 @@ func runWPFetch(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 		rev, unstable := wpcorpus.RecordRevision(hist, at)
+		var settled *wpcorpus.Revision
+		if s, ok := wpcorpus.NewestSettled(hist, at); ok {
+			settled = &s
+		}
 		if unstable || rev == int(p.RevID) {
-			r.write(dumpPage(p), p.SHA1, unstable)
+			r.write(dumpPage(p), p.SHA1, unstable, settled)
 			continue
 		}
 		time.Sleep(wpDelay)
@@ -227,7 +231,7 @@ func runWPFetch(args []string, stdout, stderr io.Writer) int {
 				sha = h.SHA1
 			}
 		}
-		r.write(got, sha, false)
+		r.write(got, sha, false, settled)
 	}
 
 	if err := wpcorpus.WriteStops(*corpus, out); err != nil {
@@ -242,8 +246,9 @@ func runWPFetch(args []string, stdout, stderr io.Writer) int {
 }
 
 // write writes the content, analysis, Markdown and metadata files of one
-// article.
-func (r *fetchRun) write(p *wpcorpus.Page, sha string, unstable bool) {
+// article. settled is the newest settled revision of the history, or nil
+// when the command did not read the history.
+func (r *fetchRun) write(p *wpcorpus.Page, sha string, unstable bool, settled *wpcorpus.Revision) {
 	c := r.byID[int64(p.ID)]
 	err := wpcorpus.WriteContent(r.corpus, p)
 	var res *wpcorpus.Result
@@ -271,6 +276,9 @@ func (r *fetchRun) write(p *wpcorpus.Page, sha string, unstable bool) {
 			Page: p.ID, Title: p.Title, Revision: p.Revision, Timestamp: p.Timestamp, Length: len(p.Wikitext), SHA1: sha, Dump: r.dump,
 			Type: wpcorpus.ArticleType(p.Title), Short: short, Categories: cats, Wikidata: r.facts.Wikidata[int64(p.ID)],
 			Redirects: r.facts.Redirects[strings.ReplaceAll(p.Title, " ", "_")], Unstable: unstable,
+		}
+		if settled != nil && settled.ID != p.Revision {
+			md.Settled, md.SettledTimestamp = settled.ID, settled.Timestamp
 		}
 		if c != nil {
 			md.Signals, md.Rule, md.Projects, md.Class, md.Importance = c.Signals.String(), c.Rule, c.Projects, c.Class, c.Importance

@@ -2,7 +2,10 @@ package wpcorpus
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -43,6 +46,10 @@ type Metadata struct {
 	Categories []string `yaml:"categories,omitempty"`
 	Redirects  []string `yaml:"redirects,omitempty"`
 	MSC        []string `yaml:"msc,omitempty"`
+	// Settled and SettledTimestamp name the newest settled revision when it
+	// is not the revision of record (rule Y13).
+	Settled          int    `yaml:"settled,omitempty"`
+	SettledTimestamp string `yaml:"settled_timestamp,omitempty"`
 	// Unstable is true when no revision passed the rule of WP2.6 and the
 	// revision of the dump is the revision of record.
 	Unstable bool `yaml:"unstable,omitempty"`
@@ -84,6 +91,36 @@ func WriteMetadata(root string, m *Metadata) error {
 		return err
 	}
 	return writeFile(filepath.Join(root, MetadataPath(m.Page)), data)
+}
+
+// ReadMetadataFiles reads each metadata file of the corpus, in the order of
+// the page ids. A corpus with no metadata plane has no files.
+func ReadMetadataFiles(root string) ([]*Metadata, error) {
+	dir := filepath.Join(root, MetadataDir)
+	var out []*Metadata
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if errors.Is(err, fs.ErrNotExist) && path == dir {
+			return filepath.SkipDir
+		}
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
+			return err
+		}
+		data, err := os.ReadFile(path) // #nosec G304 -- the path is in the corpus that the user names
+		if err != nil {
+			return err
+		}
+		m, err := ParseMetadata(data)
+		if err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+		out = append(out, m)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	slices.SortFunc(out, func(a, b *Metadata) int { return a.Page - b.Page })
+	return out, nil
 }
 
 // PageFacts gives the facts of the wikitext of a page: its categories and

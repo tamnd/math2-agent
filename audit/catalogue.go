@@ -121,7 +121,7 @@ var catalogue = []entry{
 	{Rule{"Y10", Wikipedia, false, "a formula whose TeX wiki/texvc does not convert"}, y10},
 	{Rule{"Y11", Wikipedia, true, "each node with text adopted or adapted from Wikipedia has the attribution of rule L03 in its sources and in its run record"}, nil},
 	{Rule{"Y12", Wikipedia, false, "a redirect into an article in scope that names no mention as an alias"}, nil},
-	{Rule{"Y13", Wikipedia, false, "an article in scope whose revision of record is more than 60 days older than its newest settled revision"}, nil},
+	{Rule{"Y13", Wikipedia, false, "an article in scope whose revision of record is more than 60 days older than its newest settled revision"}, y13},
 	{Rule{"Y14", Wikipedia, false, "a candidate article that two signals name and that the classifier rejects with a confidence below 0.9"}, y14},
 	{Rule{"Y15", Wikipedia, true, "no file, report or tool of math2 writes to a Wikimedia wiki"}, nil},
 	{Rule{"Y16", Wikipedia, false, "a citation with a DOI, ISBN, zbMATH id, MR number or arXiv id that resolves to no source record"}, nil},
