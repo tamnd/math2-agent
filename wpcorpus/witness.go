@@ -131,7 +131,7 @@ func (c *Census) SetStrength() {
 	switch {
 	case html && in && agree:
 		c.Strength = StrengthStrong
-	case html || in:
+	case html || in && agree:
 		c.Strength = StrengthNormal
 	default:
 		c.Strength = StrengthWeak
@@ -174,24 +174,51 @@ func (w *Witness) countNested(m *Manifests, wikitext string) {
 	})
 }
 
+// Difference is one comparison of WP4.3 where W-text and W-html differ.
+// Cause names the comparison: math, tex, sections, or the key of an item
+// template.
+type Difference struct {
+	Cause string
+	Text  string
+}
+
+// The causes of a difference that are not item templates.
+const (
+	CauseMath     = "math count"
+	CauseTeX      = "math text"
+	CauseSections = "sections"
+)
+
 // HTMLDifferences gives each comparison of WP4.3 where W-text and W-html
 // differ by more than 1 element or 2%, whichever is larger. It gives nil
 // when the census has no witness W-html.
 func (c *Census) HTMLDifferences() []string {
+	var out []string
+	for _, d := range c.Differences() {
+		out = append(out, d.Text)
+	}
+	return out
+}
+
+// Differences is HTMLDifferences with the cause of each difference.
+func (c *Census) Differences() []Difference {
 	w := c.HTML
 	if w == nil {
 		return nil
 	}
-	var out []string
+	var out []Difference
+	add := func(cause, format string, args ...any) {
+		out = append(out, Difference{cause, fmt.Sprintf(format, args...)})
+	}
 	text := 0
 	for _, n := range c.Counts.Math {
 		text += n
 	}
 	if over(text, w.Math) {
-		out = append(out, fmt.Sprintf("the math count is %d in W-text and %d in W-html", text, w.Math))
+		add(CauseMath, "the math count is %d in W-text and %d in W-html", text, w.Math)
 	}
 	if over(w.TeX, w.TeX-w.TeXMismatches) {
-		out = append(out, fmt.Sprintf("%d of the %d <math> elements have no equal alttext in W-html", w.TeXMismatches, w.TeX))
+		add(CauseTeX, "%d of the %d <math> elements have no equal alttext in W-html", w.TeXMismatches, w.TeX)
 	}
 	keys := map[string]bool{}
 	for k := range c.Counts.ItemTemplates {
@@ -202,11 +229,11 @@ func (c *Census) HTMLDifferences() []string {
 	}
 	for _, k := range slices.Sorted(mapKeys(keys)) {
 		if a, b := c.Counts.ItemTemplates[k], w.ItemTemplates[k]; over(a, b) {
-			out = append(out, fmt.Sprintf("the template {{%s}} has %d uses in W-text and %d transclusions in W-html", k, a, b))
+			add("{{"+k+"}}", "the template {{%s}} has %d uses in W-text and %d transclusions in W-html", k, a, b)
 		}
 	}
 	if over(c.Counts.Sections, w.Sections) {
-		out = append(out, fmt.Sprintf("the page has %d sections in W-text and %d in W-html", c.Counts.Sections, w.Sections))
+		add(CauseSections, "the page has %d sections in W-text and %d in W-html", c.Counts.Sections, w.Sections)
 	}
 	return out
 }

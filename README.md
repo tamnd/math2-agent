@@ -78,7 +78,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 status <tag>` | Show the computed status of a node and the evidence for it. | written |
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. `-mentions` also writes the mentions. | written |
-| `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list, `m2 wp fetch` reads each article of the scope list from a dump, `m2 wp parsoid` fetches the Parsoid HTML of each article, and `m2 wp pointers` collects the incoming pointers of each article. `census` and `refresh` arrive in the later milestones of the Wikipedia roadmap. | written |
+| `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list, `m2 wp fetch` reads each article of the scope list from a dump, `m2 wp parsoid` fetches the Parsoid HTML of each article, and `m2 wp pointers` collects the incoming pointers of each article. `m2 wp census report` writes the completeness report, and `m2 wp census diff` prints the readings of one article side by side. `refresh` arrives in a later milestone of the Wikipedia roadmap. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
@@ -537,6 +537,13 @@ $ m2 wp pointers -corpus ../wikipedia-math -store scope.sqlite -dump enwiki-2026
 ```
 
 When the corpus has the pointers file of an article, `m2 wp extract` and `m2 wp fetch` match each pointer to an object (WP4.4) and put the pointers into the census. A pointer matches the object with the anchor, or the section with the anchor. A redirect to a section that holds no item makes an object `pointer-item` with the name of the redirect, and the titles of the other redirects become aliases of the object. A pointer to an anchor that the article does not have gets the finding `broken-anchor`, and the item is searched for by name. When the anchor is only in the Parsoid HTML, a template that W-text does not read made it, and the finding is `template-anchor`. The census strength is `strong` when W-text, W-html and W-in were read, the readings agree within the threshold, and each pointer matches an object.
+
+`m2 wp census report` writes `reports/census.md`, the completeness report of WP4.9. It gives the states of the articles in scope, the four numbers of WP1.7, the counts for each article type and each MSC code at two digits, the census strength, the gaps of rule Y03 by pattern, the differences of rule Y07 by cause, the unmapped templates and headings, and the gap signals of WP4.7. `m2 wp census diff PAGE` prints the readings W-text and W-html of one article side by side, with the differences and the incoming pointers.
+
+```
+$ m2 wp census report -corpus ../wikipedia-math
+$ m2 wp census diff -corpus ../wikipedia-math 18908
+```
 
 `m2 wp fetch`, `m2 wp parsoid` and `m2 wp pointers` write a run record to `reports/runs/<time>-<command>.md`. Its YAML header gives the command, the versions of m2 and wikipedia-cli, the dump date, the start and the end, the counts of articles, pages and failures, the requests and the requests a minute.
 
