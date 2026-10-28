@@ -11,39 +11,7 @@ import (
 )
 
 func TestWPCensus(t *testing.T) {
-	root := wpCorpus(t)
-	widget, err := os.ReadFile(filepath.Join("..", "wpcorpus", "testdata", "pages", "widget.wiki"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var scope bytes.Buffer
-	cs := []*wpcorpus.Candidate{
-		{PageID: 12345, Title: "Widget", InScope: true, Verdict: "math", Rule: "strong"},
-		{PageID: 200, Title: "Gadget", InScope: true, Verdict: "math", Rule: "strong"},
-		{PageID: 300, Title: "List of widgets", InScope: true, Verdict: "math", Rule: "strong"},
-	}
-	if err := wpcorpus.WriteCandidates(&scope, cs, "20261001", true); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, wpcorpus.ScopePath), scope.Bytes(), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := wpcorpus.WriteStops(root, []wpcorpus.Stop{{PageID: 200, Reason: "deleted"}}); err != nil {
-		t.Fatal(err)
-	}
-	if err := wpcorpus.WriteContent(root, &wpcorpus.Page{ID: 12345, Revision: 678, Title: "Widget", Wikitext: string(widget)}); err != nil {
-		t.Fatal(err)
-	}
-	if err := wpcorpus.WriteMetadata(root, &wpcorpus.Metadata{Page: 12345, Title: "Widget", Revision: 678, Type: "article", Class: "B", MSC: []string{"05C10", "05A15", "11B37"}}); err != nil {
-		t.Fatal(err)
-	}
-	if err := wpcorpus.WritePointers(root, &wpcorpus.PointerFile{Page: 12345, Title: "Widget", Pointers: []wpcorpus.Pointer{{Via: "redirect", From: "Lost widget", Anchor: "Lost part"}}}); err != nil {
-		t.Fatal(err)
-	}
-	if code, stdout, stderr := run("wp", "extract", "-corpus", root, "-page", "12345"); code != ExitOK {
-		t.Fatalf("exit code %d, stderr %q, stdout %q", code, stderr, stdout)
-	}
-
+	root := wpCensusCorpus(t)
 	code, stdout, stderr := run("wp", "census", "report", "-corpus", root)
 	if code != ExitOK || stdout != "3 articles in scope, report reports/census.md\n" {
 		t.Fatalf("exit code %d, stderr %q, stdout %q", code, stderr, stdout)
@@ -78,4 +46,44 @@ func TestWPCensus(t *testing.T) {
 			t.Errorf("the diff has no %q:\n%s", want, stdout)
 		}
 	}
+}
+
+// wpCensusCorpus gives a corpus with a scope of three articles: Widget is
+// extracted, Gadget is stopped, and List of widgets is only listed.
+func wpCensusCorpus(t *testing.T) string {
+	t.Helper()
+	root := wpCorpus(t)
+	widget, err := os.ReadFile(filepath.Join("..", "wpcorpus", "testdata", "pages", "widget.wiki"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scope bytes.Buffer
+	cs := []*wpcorpus.Candidate{
+		{PageID: 12345, Title: "Widget", InScope: true, Verdict: "math", Rule: "strong"},
+		{PageID: 200, Title: "Gadget", InScope: true, Verdict: "math", Rule: "strong"},
+		{PageID: 300, Title: "List of widgets", InScope: true, Verdict: "math", Rule: "strong"},
+	}
+	if err := wpcorpus.WriteCandidates(&scope, cs, "20261001", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, wpcorpus.ScopePath), scope.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := wpcorpus.WriteStops(root, []wpcorpus.Stop{{PageID: 200, Reason: "deleted"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := wpcorpus.WriteContent(root, &wpcorpus.Page{ID: 12345, Revision: 678, Title: "Widget", Wikitext: string(widget)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := wpcorpus.WriteMetadata(root, &wpcorpus.Metadata{Page: 12345, Title: "Widget", Revision: 678, Type: "article", Class: "B", MSC: []string{"05C10", "05A15", "11B37"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := wpcorpus.WritePointers(root, &wpcorpus.PointerFile{Page: 12345, Title: "Widget", Pointers: []wpcorpus.Pointer{{Via: "redirect", From: "Lost widget", Anchor: "Lost part"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if code, stdout, stderr := run("wp", "extract", "-corpus", root, "-page", "12345"); code != ExitOK {
+		t.Fatalf("exit code %d, stderr %q, stdout %q", code, stderr, stdout)
+	}
+
+	return root
 }

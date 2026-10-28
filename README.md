@@ -515,6 +515,13 @@ $ m2 wp gold draw -corpus ../wikipedia-math
 $ m2 wp gold measure -corpus ../wikipedia-math
 ```
 
+`m2 wp gold draw y` draws gold set Y from the parsed articles: 50 articles of each type of WP1.5. In each type, the draw sorts the articles by the class and the MSC code and takes them at equal steps, so the classes and the codes are in proportion to the scope. `m2 wp gold draw m` draws gold set M: 1,000 formulas of each form of WP3.3 (`<math>` with `{{tmath}}`, `{{math}}` and `{{mvar}}`). Each article of a set gets a file `gold/<set>/v1/<shard>/<pageid>.md`. The YAML header holds the draft, which is the output of the extractor. A person corrects the draft, adds the items in running text that have no cue, and sets `marked: true` with the name of the marker. `m2 wp gold measure y` compares the marked articles with the objects and writes `reports/gold-y.md` with the cue recall and precision, the prose recall and precision, the prose recall for each type and each MSC code (rule Y17), and the attachment accuracy of the proofs. `m2 wp gold measure m` writes `reports/gold-m.md` with the share of correct TeX for each form. The targets are the targets of WP11.3.
+
+```
+$ m2 wp gold draw y -corpus ../wikipedia-math
+$ m2 wp gold measure y -corpus ../wikipedia-math
+```
+
 `m2 wp fetch` builds the content plane of WP2 from one multistream dump. It reads `manifests/wikipedia/scope.tsv`, and it reads each article in scope from the dump with the index of the dump. For each article, it writes the content file, the objects file, the census file, the Markdown rendering and the metadata file `metadata/<shard>/<pageid>.md`. The YAML header of the metadata file gives the revision of record, the length, the sha1, the categories, the project tags, the class, the importance, the Wikidata item, the short description and the redirects. The store of `m2 wp scope` gives the Wikidata item, the short description and the redirects, and the command uses the redirects to resolve the links of the Markdown rendering. When the dump revision of an article is less than 7 days older than the dump, the command reads the history of the article through the Action API and applies the rule of WP2.6 for the revision of record. These requests are serial, with `maxlag=5`. An article that is not in the dump gets the stop reason `deleted`, and a redirect gets the stop reason `merged` with the page id of its target, in `manifests/wikipedia/stopped.tsv`. The command reads the articles in the order of WP2.9: the articles that math2 cites, then the pilot area of `manifests/wikipedia/pilot.txt`, then by importance. `-limit N` reads only the first N articles in that order, and `-page ID` reads one article.
 
 ```

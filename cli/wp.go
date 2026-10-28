@@ -14,7 +14,7 @@ import (
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-const wpUsage = "m2 wp extract [-corpus DIR] [-list FILE] [-page ID] [-type T] [-api URL] [title...]\n       m2 wp scope -store DB -dump DATE -assess FILE [-cited FILE] [-wikidata FILE] [-corpus DIR] [-work DIR]\n       m2 wp gold draw|measure [-corpus DIR] [-seed N]\n       m2 wp fetch -dump FILE -store DB [-index FILE] [-date DATE] [-corpus DIR] [-workers N] [-check=false] [-page ID] [-limit N]\n       m2 wp parsoid [-corpus DIR] [-page ID] [-limit N]\n       m2 wp pointers -store DB [-dump FILE] [-index FILE] [-workers N] [-corpus DIR]\n       m2 wp census report|diff [-corpus DIR] [PAGE]\n       m2 wp refresh"
+const wpUsage = "m2 wp extract [-corpus DIR] [-list FILE] [-page ID] [-type T] [-api URL] [title...]\n       m2 wp scope -store DB -dump DATE -assess FILE [-cited FILE] [-wikidata FILE] [-corpus DIR] [-work DIR]\n       m2 wp gold draw|measure [s|y|m] [-corpus DIR] [-seed N]\n       m2 wp fetch -dump FILE -store DB [-index FILE] [-date DATE] [-corpus DIR] [-workers N] [-check=false] [-page ID] [-limit N]\n       m2 wp parsoid [-corpus DIR] [-page ID] [-limit N]\n       m2 wp pointers -store DB [-dump FILE] [-index FILE] [-workers N] [-corpus DIR]\n       m2 wp census report|diff [-corpus DIR] [PAGE]\n       m2 wp refresh"
 
 // wpLater holds the wp subcommands that are not written yet, with the
 // milestone of the Wikipedia roadmap (WP14) that delivers each of them.
