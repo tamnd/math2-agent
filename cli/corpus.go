@@ -17,6 +17,7 @@ import (
 	"time"
 
 	axImport "github.com/tamnd/math2-agent/importer/arxiv"
+	wpImport "github.com/tamnd/math2-agent/importer/wikipedia"
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/node"
@@ -24,7 +25,7 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -source wikipedia -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -85,16 +86,16 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 	plan := fs.String("plan", "", "run the importers of this plan, for example "+ingest.PlanFile+", before the mentions")
 	cache := fs.String("cache", "", "with -plan, the directory of the downloaded snapshots. Empty means m2 in the user cache directory.")
 	summary := fs.String("summary", "", "with -plan, also write the summary in Markdown to this file, for the body of a pull request")
-	source := fs.String("source", "", "a source with its own importer, which reads a checkout and not build/records/. The one such source is arxiv.")
-	corpus := fs.String("corpus", "", "with -source, the checkout that the importer reads, for example a checkout of tamnd/arxiv")
+	source := fs.String("source", "", "a source with its own importer, which reads a checkout and not build/records/. The sources are arxiv and wikipedia.")
+	corpus := fs.String("corpus", "", "with -source, the checkout that the importer reads, for example a checkout of tamnd/arxiv or tamnd/wikipedia-math")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
 	switch *source {
 	case "":
-	case axImport.Source:
+	case axImport.Source, wpImport.Source:
 		if *corpus == "" || *plan != "" || fs.NArg() != 0 {
-			fmt.Fprintln(stderr, name+": -source arxiv needs -corpus, the checkout of tamnd/arxiv, and takes no -plan and no source names")
+			fmt.Fprintf(stderr, "%s: -source %s needs -corpus, the checkout that the importer reads, and takes no -plan and no source names\n", name, *source)
 			return ExitUsage
 		}
 	default:
@@ -114,6 +115,9 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 			return ExitFailure
 		}
 		return ExitOK
+	}
+	if *source == wpImport.Source {
+		return importWikipedia(*root, *commit, *corpus, stdout, stderr)
 	}
 	if *source != "" {
 		// The rows of the last clustering give the named results of the name method (AX6.2).
@@ -174,6 +178,43 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 	if _, err := cluster(*root, *commit, stdout); err != nil {
 		fmt.Fprintf(stderr, "%s: %v\n", name, err)
 		return ExitFailure
+	}
+	return ExitOK
+}
+
+// importWikipedia runs importer/wikipedia on the checkout of the corpus repository, writes the mentions and the edges, and groups the mentions into rows.
+func importWikipedia(root, commit, corpus string, stdout, stderr io.Writer) int {
+	const name = "m2 corpus import"
+	fail := func(err error) int {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	old, err := inventory.ReadMentions(root)
+	if err != nil {
+		return fail(err)
+	}
+	res, err := wpImport.Import(corpus, old)
+	if err != nil {
+		return fail(err)
+	}
+	if err := inventory.WriteMentions(root, wpImport.Source, res.Mentions); err != nil {
+		return fail(err)
+	}
+	if err := inventory.WriteEdges(root, wpImport.Source, res.Edges); err != nil {
+		return fail(err)
+	}
+	fmt.Fprintf(stdout, "%s: %d mentions from %d articles, %d attached, %d members, %d retired, %d stopped, %d edges, %d red links, %d objects with no tag\n", wpImport.Source, len(res.Mentions), res.Articles, res.Attached, res.Members, res.Retired, res.Stopped, len(res.Edges), res.RedLinks, len(res.Untagged))
+	if n := len(res.NotExtracted); n > 0 {
+		fmt.Fprintf(stderr, "%s: %d articles in scope have no objects file for the revision of record. Run m2 wp fetch and m2 wp extract on %s.\n", name, n, corpus)
+	}
+	if n := len(res.StaleEdges); n > 0 {
+		fmt.Fprintf(stderr, "%s: %d articles have an edge file of another revision, so their edges are not imported. Run m2 wp edges on %s.\n", name, n, corpus)
+	}
+	if n := len(res.Untagged); n > 0 {
+		fmt.Fprintf(stderr, "%s: %d objects of %s have no tag, so they have no mention. Run m2 wp extract on %s.\n", name, n, corpus, corpus)
+	}
+	if _, err := cluster(root, commit, stdout); err != nil {
+		return fail(err)
 	}
 	return ExitOK
 }

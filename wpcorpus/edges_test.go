@@ -152,3 +152,24 @@ func TestEdgePhrasesManifest(t *testing.T) {
 		t.Errorf("phrases %d, version %d", len(m.EdgePhrases()), m.EdgesVersion)
 	}
 }
+
+func TestGlossaryTermLink(t *testing.T) {
+	m, err := Load(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := "A glossary.\n\n== A ==\n{{glossary}}\n{{term|1=abelian group}}\n{{defn|1=A [[Group (mathematics)|group]] is [[Abelian group|abelian]] if it commutes.}}\n{{term|1=automorphism}}\n{{defn|1=An [[group automorphism|automorphism]] is an [[isomorphism]] to itself.}}\n{{term|1=coset}}\n{{defn|1=A set of the form [[Subset|gH]].}}\n{{glossary end}}\n"
+	r, err := Extract(&Page{ID: 1, Revision: 2, Title: "Glossary of group theory", Wikitext: src}, m, "wpcorpus-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, u := range r.Links {
+		if u.Method == MethodGlossary {
+			got = append(got, u.Title)
+		}
+	}
+	if strings.Join(got, ", ") != "Abelian group, Group automorphism" {
+		t.Errorf("glossary links %q", got)
+	}
+}

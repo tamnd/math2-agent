@@ -3,14 +3,18 @@ package cli
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-func TestWPEdges(t *testing.T) {
+// edgeCorpus writes a corpus of two articles in scope and runs m2 wp extract on it.
+func edgeCorpus(t *testing.T) string {
+	t.Helper()
 	root := wpCorpus(t)
 	var scope bytes.Buffer
 	cs := []*wpcorpus.Candidate{
@@ -35,6 +39,11 @@ func TestWPEdges(t *testing.T) {
 	if code, stdout, stderr := run("wp", "extract", "-corpus", root); code != ExitOK {
 		t.Fatalf("extract: exit code %d, stderr %q, stdout %q", code, stderr, stdout)
 	}
+	return root
+}
+
+func TestWPEdges(t *testing.T) {
+	root := edgeCorpus(t)
 	code, stdout, stderr := run("wp", "edges", "-corpus", root)
 	if code != ExitOK {
 		t.Fatalf("edges: exit code %d, stderr %q, stdout %q", code, stderr, stdout)
@@ -77,5 +86,33 @@ func TestWPEdges(t *testing.T) {
 	}
 	if code, _, stderr := run("wp", "edges", "-corpus", root, "-page", "100"); code != ExitFailure || !strings.Contains(stderr, "Run m2 wp extract again") {
 		t.Errorf("exit code %d, stderr %q", code, stderr)
+	}
+}
+
+func TestCorpusImportOfWikipedia(t *testing.T) {
+	root := edgeCorpus(t)
+	if code, stdout, stderr := run("wp", "edges", "-corpus", root); code != ExitOK {
+		t.Fatalf("edges: exit code %d, stderr %q, stdout %q", code, stderr, stdout)
+	}
+	for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}, {"-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "-m", "c"}} {
+		if out, err := exec.Command("git", append([]string{"-C", root}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	tree := t.TempDir()
+	code, stdout, stderr := run("corpus", "import", "-root", tree, "-commit", "c", "-source", "wikipedia", "-corpus", root)
+	if code != ExitOK || !strings.Contains(stdout, "wikipedia: 5 mentions from 2 articles") || !strings.Contains(stdout, "3 edges") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	ms, err := inventory.ReadMentions(tree)
+	if err != nil || len(ms) != 5 {
+		t.Fatalf("%d mentions, %v", len(ms), err)
+	}
+	es, err := inventory.ReadEdges(tree, "wikipedia")
+	if err != nil || len(es) != 3 {
+		t.Fatalf("%d edges, %v", len(es), err)
+	}
+	if code, _, stderr := run("corpus", "import", "-root", tree, "-commit", "c", "-source", "wikipedia"); code != ExitUsage || !strings.Contains(stderr, "-corpus") {
+		t.Fatalf("code %d, stderr %q", code, stderr)
 	}
 }

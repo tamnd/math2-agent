@@ -86,6 +86,18 @@ type Mention struct {
 	Hints       []string      `json:"hints,omitempty"`        // hints for the passes, for example conjecture-candidate
 	Flags       []string      `json:"flags,omitempty"`        // the flags of the object record
 	Extractor   string        `json:"extractor,omitempty"`    // the extractor that made the object record
+
+	// The fields below are for the mentions of Wikipedia articles (corpus wikipedia WP5.3). The other sources leave them empty.
+	Page        int      `json:"page,omitempty"`         // the page id of the article
+	Revision    int      `json:"revision,omitempty"`     // the revision of record of the article
+	Section     string   `json:"section,omitempty"`      // the section path of the item
+	Anchor      string   `json:"anchor,omitempty"`       // the anchor of the item
+	Cue         string   `json:"cue,omitempty"`          // the cue that found the item (WP3.4)
+	Strength    string   `json:"strength,omitempty"`     // the strength of the cue (WP3.4)
+	ArticleType string   `json:"article_type,omitempty"` // the type of the article (WP1.5)
+	Assessment  string   `json:"assessment,omitempty"`   // the class and the importance of the article in the project, as B/High
+	AliasesFrom []string `json:"aliases_from,omitempty"` // where each alias came from, in the order of the aliases: lead, redirect or anchor-redirect
+	MemberOf    string   `json:"member_of,omitempty"`    // of a member mention: the mention of the article that it points to (WP5.1)
 }
 
 // Cite is a source that a model names for an item. The clustering does not join mentions by a cite, because a model can give a wrong id. A cite counts only when K9.5 confirms it.
