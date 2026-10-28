@@ -295,7 +295,7 @@ func (r *fetchRun) write(p *wpcorpus.Page, sha string, unstable bool, settled *w
 		}
 		md := &wpcorpus.Metadata{
 			Page: p.ID, Title: p.Title, Revision: p.Revision, Timestamp: p.Timestamp, Length: len(p.Wikitext), SHA1: sha, Dump: r.dump,
-			Type: wpcorpus.ArticleType(p.Title), Short: short, Categories: cats, Wikidata: r.facts.Wikidata[int64(p.ID)],
+			Type: wpcorpus.TypeOf(p.Title, short, cats), Short: short, Categories: cats, Wikidata: r.facts.Wikidata[int64(p.ID)],
 			Redirects: r.facts.Redirects[strings.ReplaceAll(p.Title, " ", "_")], Unstable: unstable,
 		}
 		if settled != nil && settled.ID != p.Revision {

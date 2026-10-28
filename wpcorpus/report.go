@@ -57,7 +57,7 @@ func ReadCensusArticles(root string) ([]*CensusArticle, error) {
 		if !c.InScope {
 			continue
 		}
-		a := &CensusArticle{Page: int(c.PageID), Title: c.Title, Type: ArticleType(c.Title), State: StateListed, Meta: byPage[int(c.PageID)]}
+		a := &CensusArticle{Page: int(c.PageID), Title: c.Title, State: StateListed, Meta: byPage[int(c.PageID)]}
 		switch {
 		case stopped[c.PageID]:
 			a.State = StateStopped
@@ -75,6 +75,7 @@ func ReadCensusArticles(root string) ([]*CensusArticle, error) {
 			}
 			a.State = StateParsed
 		}
+		a.Type = typeOf(a)
 		out = append(out, a)
 	}
 	return out, nil
