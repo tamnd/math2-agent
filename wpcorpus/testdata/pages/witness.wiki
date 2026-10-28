@@ -1,0 +1,8 @@
+{{Short description|A set with a map}}
+A '''widget''' is a set <math>W</math> with {{math|{{mvar|f}}}} and {{mvar|g}}.
+
+== Definition ==
+{{math theorem|name=Widget lemma|math_statement=Each map <math>x \le y</math> is injective.}}
+
+== Notes ==
+The value is <math>u^2_1</math>.

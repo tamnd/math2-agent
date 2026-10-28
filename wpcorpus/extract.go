@@ -18,6 +18,9 @@ import (
 type Result struct {
 	Objects []Object
 	Census  Census
+	// TeX is the TeX of each <math> element, in the order of the page. The
+	// witness W-html compares it with the alttext (WP4.3).
+	TeX []string
 }
 
 // ArticleType gives the article type of WP1.5 that the title shows. The
@@ -142,6 +145,7 @@ type extractor struct {
 	unmapped map[string]int
 	unheads  map[string]bool
 	refs     map[string]*object
+	tex      []string
 }
 
 // Extract reads the wikitext of a page and gives its objects and its census
@@ -189,6 +193,9 @@ func (x *extractor) sections(n *parse.Node, parent *section) {
 			}
 		}
 		x.secs = append(x.secs, s)
+		if c.Level > 0 {
+			x.counts.Sections++
+		}
 		if h != "" {
 			x.heading(s, h)
 		}
@@ -400,6 +407,7 @@ func (x *extractor) templates() {
 			switch n.Name {
 			case "math":
 				x.counts.Math["math"]++
+				x.tex = append(x.tex, texvc.FromMathTag(x.doc.Inner(n), n.Attrs).TeX)
 			case "chem", "ce":
 				x.counts.Math["chem"]++
 			case "ref":
@@ -1148,7 +1156,7 @@ func (x *extractor) result() *Result {
 	for i, o := range x.objs {
 		o.Ref = fmt.Sprintf("o%d", i+1)
 	}
-	res := &Result{}
+	res := &Result{TeX: x.tex}
 	for _, o := range x.objs {
 		if o.target != nil {
 			o.AttachedTo = o.target.Ref

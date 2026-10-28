@@ -270,6 +270,9 @@ func (r *fetchRun) write(p *wpcorpus.Page, sha string, unstable bool, settled *w
 		res, err = wpcorpus.Extract(p, r.m, "m2/"+version)
 	}
 	if err == nil {
+		err = wpcorpus.JoinWitness(r.corpus, res, r.m)
+	}
+	if err == nil {
 		err = wpcorpus.WriteResult(r.corpus, res)
 	}
 	if err == nil {

@@ -131,6 +131,9 @@ func runWPExtract(args []string, stdout, stderr io.Writer) int {
 		}
 		r, err := wpcorpus.Extract(p, m, "m2/"+version)
 		if err == nil {
+			err = wpcorpus.JoinWitness(*corpus, r, m)
+		}
+		if err == nil {
 			err = wpcorpus.WriteResult(*corpus, r)
 		}
 		if err == nil {

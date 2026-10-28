@@ -115,7 +115,7 @@ var catalogue = []entry{
 	{Rule{"Y04", Wikipedia, true, "each article in scope has an article mention, and each object of an item kind has an object mention"}, nil},
 	{Rule{"Y05", Wikipedia, true, "no mention, row or edge in the record plane holds article text beyond the name, the aliases and the short description"}, nil},
 	{Rule{"Y06", Wikipedia, true, "each mention, edge and node source names a page id and a revision id, not only a title"}, nil},
-	{Rule{"Y07", Wikipedia, false, "the wikitext and Parsoid readings of an article differ in the count of math elements or item templates by more than the threshold"}, nil},
+	{Rule{"Y07", Wikipedia, false, "the wikitext and Parsoid readings of an article differ in the count of math elements or item templates by more than the threshold"}, y07},
 	{Rule{"Y08", Wikipedia, false, "a template that an article uses and that the template table does not map"}, y08},
 	{Rule{"Y09", Wikipedia, false, "a heading in 5 or more articles that the heading table does not map"}, y09},
 	{Rule{"Y10", Wikipedia, false, "a formula whose TeX wiki/texvc does not convert"}, y10},

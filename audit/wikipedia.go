@@ -151,6 +151,31 @@ func y03(a *auditor) outcome {
 	return o
 }
 
+// y07 reports each census whose readings W-text and W-html differ by more
+// than 1 element or 2%, whichever is larger (WP4.3). A census without the
+// witness W-html is not checked.
+func y07(a *auditor) outcome {
+	var o outcome
+	t := a.wpStart(&o)
+	if t == nil {
+		return o
+	}
+	for _, p := range t.pages {
+		if p.census == nil || p.census.HTML == nil {
+			continue
+		}
+		o.checked++
+		path := wpcorpus.CensusPath(p.page.ID, p.page.Revision)
+		for _, d := range p.census.HTMLDifferences() {
+			o.add(path, 0, 0, "the readings of %q differ: %s", p.page.Title, d)
+		}
+	}
+	if o.checked == 0 && len(o.findings) == 0 {
+		o.reason = "no census of the checkout has the witness W-html. Run m2 wp parsoid and then m2 wp extract"
+	}
+	return o
+}
+
 // y08 reports each template that a page uses and that the template table
 // does not map (WP3.2). The current table decides, so a template that was
 // mapped after the extraction is not reported.

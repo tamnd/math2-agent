@@ -189,7 +189,7 @@ func writeFile(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- the corpus is a public repository
 		return err
 	}
-	return os.WriteFile(path, data, 0o644) // #nosec G306 -- the corpus is a public repository
+	return os.WriteFile(path, data, 0o644) // #nosec G306 G703 -- the corpus is a public repository, and the path is in it
 }
 
 // RemoveStale removes the objects files and the census files of the other

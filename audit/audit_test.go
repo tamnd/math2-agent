@@ -128,6 +128,7 @@ var options = map[string]func(opt *Options, root string){
 	"Y01": wikipediaCheckout,
 	"Y02": wikipediaCheckout,
 	"Y03": wikipediaCheckout,
+	"Y07": wikipediaCheckout,
 	"Y08": wikipediaCheckout,
 	"Y09": wikipediaCheckout,
 	"Y10": wikipediaCheckout,

@@ -63,6 +63,9 @@ type Census struct {
 	Cues             []Cue          `json:"cues" yaml:"cues"`
 	Unmapped         map[string]int `json:"unmapped_templates,omitempty" yaml:"unmapped_templates,omitempty"`
 	UnmappedHeadings []string       `json:"unmapped_headings,omitempty" yaml:"unmapped_headings,omitempty"`
+	// HTML is the witness W-html, when the corpus has the Parsoid HTML of
+	// the revision.
+	HTML *Witness `json:"html,omitempty" yaml:"html,omitempty"`
 }
 
 // Counts holds the counts of a census.
@@ -76,6 +79,7 @@ type Counts struct {
 	GlossaryEntries int            `json:"glossary_entries" yaml:"glossary_entries"`
 	ListEntries     int            `json:"list_entries" yaml:"list_entries"`
 	TableRows       int            `json:"table_rows" yaml:"table_rows"`
+	Sections        int            `json:"sections,omitempty" yaml:"sections,omitempty"`
 	Anchors         int            `json:"anchors" yaml:"anchors"`
 	Math            map[string]int `json:"math,omitempty" yaml:"math,omitempty"`
 	Citations       int            `json:"citations" yaml:"citations"`
