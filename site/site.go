@@ -56,6 +56,7 @@ type Options struct {
 	Milestones []Milestone // the plan
 	Current    string      // the current milestone, for example M0
 	Cloudflare bool        // build for Cloudflare Pages: a worker sends node/TAG/ to the page of the node, so the site has no page for each short link
+	Wikipedia  string      // the Wikipedia corpus (a clone of tamnd/wikipedia-math), or "". With a corpus, the site has the pages of the Wikipedia scope.
 }
 
 // kinds are the 12 node kinds with a short description, in schema order.
@@ -192,7 +193,7 @@ func Build(opt Options) error {
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeLevels}
+	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeLevels, b.writeWikipedia}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err

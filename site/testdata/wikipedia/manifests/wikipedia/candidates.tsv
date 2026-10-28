@@ -1,0 +1,5 @@
+page_id	title	signals	projects	class	importance	cat_depth	s1_links	verdict	confidence	rule	in_scope	dump
+12	Anarchism	S8				-1	13	pending	0.00	weak	false	20261001
+1000	Group_(mathematics)	S1,S5,S6	Mathematics	GA	Top	1	300	math	1.00	strong	true	20261001
+1001	Abelian_group	S1,S6	Mathematics	B	High	2	120	math	1.00	strong	true	20261001
+1002	2-group	S6				0	4	math	0.80	S6 near	true	20261001

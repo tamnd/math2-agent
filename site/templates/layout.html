@@ -39,6 +39,7 @@
     <li{{if eq .Section "explore"}} class="here"{{end}}><a href="{{url "explore/frontier/"}}">Frontier</a></li>
     <li{{if eq .Section "reviewers"}} class="here"{{end}}><a href="{{url "reviewers/"}}">Reviewers</a></li>
     <li{{if eq .Section "projects"}} class="here"{{end}}><a href="{{url "projects/"}}">Projects</a></li>
+    {{if .Site.HasWikipedia}}<li{{if eq .Section "wikipedia"}} class="here"{{end}}><a href="{{url "wikipedia/"}}">Wikipedia scope</a></li>{{end}}
   </ul>
   <h2>Project</h2>
   <ul>
