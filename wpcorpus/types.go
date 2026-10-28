@@ -70,14 +70,22 @@ func TypeOf(title, short string, categories []string) string {
 	return TypeConcept
 }
 
+// IsType tells if t is an article type of WP1.5.
+func IsType(t string) bool {
+	for _, x := range Types {
+		if t == x {
+			return true
+		}
+	}
+	return false
+}
+
 // typeOf gives the type of an article in the census report: the type of
 // the metadata when it is a type of WP1.5, or the type from the title.
 func typeOf(a *CensusArticle) string {
 	if a.Meta != nil {
-		for _, t := range Types {
-			if a.Meta.Type == t {
-				return t
-			}
+		if IsType(a.Meta.Type) {
+			return a.Meta.Type
 		}
 		return TypeOf(a.Title, a.Meta.Short, a.Meta.Categories)
 	}
