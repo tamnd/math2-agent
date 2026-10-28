@@ -116,6 +116,11 @@ func runWPExtract(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
+	resolve, err := wpcorpus.ScopeResolver(*corpus)
+	if err != nil {
+		fmt.Fprintf(stderr, "m2 wp extract: %v\n", err)
+		return ExitFailure
+	}
 	var objects, cues, gaps, done int
 	for _, p := range pages {
 		if *typ != "" && wpcorpus.ArticleType(p.Title) != *typ {
@@ -127,6 +132,12 @@ func runWPExtract(args []string, stdout, stderr io.Writer) int {
 		}
 		if err == nil {
 			err = wpcorpus.RemoveStale(*corpus, p.ID, p.Revision)
+		}
+		if err == nil {
+			var md []byte
+			if md, err = wpcorpus.Render(p, m, r, resolve, "m2/"+version); err == nil {
+				err = wpcorpus.WriteMarkdown(*corpus, p.ID, md)
+			}
 		}
 		if err != nil {
 			fmt.Fprintf(stderr, "m2 wp extract: %s: %v\n", p.Title, err)

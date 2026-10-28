@@ -15,6 +15,7 @@ const (
 	WikitextDir = "content/wikitext"
 	ObjectsDir  = "analysis/objects"
 	CensusDir   = "analysis/census"
+	MarkdownDir = "content/markdown"
 )
 
 // Shard gives the shard directory of a page: the page id divided by 10000,
@@ -25,6 +26,11 @@ func Shard(page int) string { return fmt.Sprintf("%04d", page/10000) }
 // corpus root.
 func WikitextPath(page int) string {
 	return filepath.Join(WikitextDir, Shard(page), strconv.Itoa(page)+".wiki")
+}
+
+// MarkdownPath gives the path of the Markdown rendering of a page (WP3.12).
+func MarkdownPath(page int) string {
+	return filepath.Join(MarkdownDir, Shard(page), strconv.Itoa(page)+".md")
 }
 
 // ObjectsPath gives the path of the objects file of a page revision.
@@ -212,4 +218,40 @@ func RemoveStale(root string, page, rev int) error {
 		}
 	}
 	return nil
+}
+
+// ScopeResolver gives a Resolver for the articles of scope.tsv. A link to an
+// article that is not in scope keeps its URL on Wikipedia. When the corpus
+// has no scope.tsv, the resolver knows no title.
+func ScopeResolver(root string) (Resolver, error) {
+	cs, err := ReadScopeFile(root, ScopePath)
+	if errors.Is(err, os.ErrNotExist) {
+		return func(string) int { return 0 }, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	ids := make(map[string]int, len(cs))
+	for _, c := range cs {
+		if c.InScope {
+			ids[normTitle(c.Title)] = int(c.PageID)
+		}
+	}
+	return func(title string) int { return ids[normTitle(title)] }, nil
+}
+
+// normTitle gives the form of a title that the resolver compares: spaces
+// as underscores and the first letter in upper case.
+func normTitle(t string) string {
+	t = strings.ReplaceAll(strings.TrimSpace(t), " ", "_")
+	if t == "" {
+		return t
+	}
+	r := []rune(t)
+	return strings.ToUpper(string(r[0])) + string(r[1:])
+}
+
+// WriteMarkdown writes the Markdown rendering of a page to the content plane.
+func WriteMarkdown(root string, page int, data []byte) error {
+	return writeFile(filepath.Join(root, MarkdownPath(page)), data)
 }
