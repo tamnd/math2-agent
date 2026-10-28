@@ -142,20 +142,46 @@ func TestClassify(t *testing.T) {
 	}{
 		{S1, -1, VerdictMath, true},
 		{S4, -1, VerdictMath, true},
-		{S3 | S6, 3, VerdictMath, true},
-		{S5, -1, VerdictMath, true},
+		{S6, 0, VerdictMath, true},
 		{S6, 1, VerdictMath, true},
-		{S6, 2, VerdictMath, true},
-		{S6, 3, VerdictUsesMath, false},
-		{S8, -1, VerdictMath, true},
-		{S9, -1, VerdictMath, true},
-		{S7, -1, VerdictUsesMath, false},
+		{S3 | S6, 1, VerdictMath, true},
+		{S3 | S6, 3, VerdictPending, false},
+		{S5, -1, VerdictPending, false},
+		{S6, 2, VerdictPending, false},
+		{S8 | S9, -1, VerdictPending, false},
+		{S7, -1, VerdictPending, false},
 		{S3, -1, VerdictUsesMath, false},
+		{0, -1, VerdictNotMath, false},
 	} {
 		cand := &Candidate{Signals: c.sig, CatDepth: c.depth}
 		Classify(cand)
 		if cand.Verdict != c.verdict || cand.InScope != c.in {
 			t.Errorf("%s depth %d: %s %v, want %s %v", c.sig, c.depth, cand.Verdict, cand.InScope, c.verdict, c.in)
+		}
+	}
+}
+
+func TestVerdicts(t *testing.T) {
+	in := verdictsHeader + "\n5\tSylow_theorems\tmath\t0.85\tgpt\ta theorem\n6\tCoset\tnot-math\t0.90\tgpt\t\n"
+	vs, err := ReadVerdicts(strings.NewReader(in))
+	if err != nil || len(vs) != 2 || vs[5].Confidence != 0.85 {
+		t.Fatalf("verdicts %v, %v", vs, err)
+	}
+	c := &Candidate{PageID: 5, Signals: S5, CatDepth: -1}
+	Classify(c)
+	ApplyVerdict(c, vs[5])
+	if c.Verdict != VerdictMath || !c.InScope || c.Rule != "model" {
+		t.Errorf("pending candidate: %+v", c)
+	}
+	s := &Candidate{PageID: 6, Signals: S1, CatDepth: -1}
+	Classify(s)
+	ApplyVerdict(s, vs[6])
+	if !s.InScope || s.Rule != "strong" {
+		t.Errorf("the model changed a verdict of the rules: %+v", s)
+	}
+	for _, bad := range []string{"x\n", verdictsHeader + "\n1\tA\tmaybe\t0.5\tgpt\t\n", verdictsHeader + "\n1\tA\tmath\n"} {
+		if _, err := ReadVerdicts(strings.NewReader(bad)); err == nil {
+			t.Errorf("ReadVerdicts(%q) has no error", bad)
 		}
 	}
 }
@@ -190,7 +216,7 @@ func TestCandidatesRoundTrip(t *testing.T) {
 	if err := ScopeReport(&b, cs, "20261001", []string{"S7"}); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"It has 2 candidates, and 1 of them are in scope", "| S6 | 2 | 1 | 0 |", "| S1 | 1 | 1 | 0 |", "| S6 far | 1 | 0 |", "not computed yet: S7"} {
+	for _, want := range []string{"It has 2 candidates, and 1 of them are in scope", "| S6 | 2 | 1 | 0 |", "| S1 | 1 | 1 | 0 |", "| weak | 1 | 0 |", "The rules do not decide 1 candidates", "not computed yet: S7"} {
 		if !strings.Contains(b.String(), want) {
 			t.Errorf("the report has no %q:\n%s", want, b.String())
 		}

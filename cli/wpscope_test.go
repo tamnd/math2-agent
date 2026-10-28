@@ -95,10 +95,10 @@ func TestWPScope(t *testing.T) {
 	if code := runWP(args, &out, &errb); code != ExitOK {
 		t.Fatalf("exit %d: %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "8 candidates, 8 in scope") {
+	if !strings.Contains(out.String(), "8 candidates, 6 in scope") {
 		t.Errorf("stdout: %s", out.String())
 	}
-	f, err := os.Open(filepath.Join(root, wpcorpus.ManifestDir, "scope.tsv"))
+	f, err := os.Open(filepath.Join(root, wpcorpus.ManifestDir, "candidates.tsv"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,9 +116,9 @@ func TestWPScope(t *testing.T) {
 	}
 	want := map[string]string{
 		"Group_(mathematics)":               "S1,S4 strong",
-		"Lagrange's_theorem_(group_theory)": "S9 S9",
+		"Lagrange's_theorem_(group_theory)": "S9 weak",
 		"Sylow_theorems":                    "S6 S6 near",
-		"Monster_group":                     "S3,S8 two weak",
+		"Monster_group":                     "S3,S8 weak",
 		"List_of_group_theory_topics":       "S1 strong",
 		"Coset":                             "S1 strong",
 		"Abelian_group":                     "S1 strong",
@@ -130,8 +130,15 @@ func TestWPScope(t *testing.T) {
 		}
 	}
 	report, err := os.ReadFile(filepath.Join(root, "reports", "scope.md"))
-	if err != nil || !strings.Contains(string(report), "It has 8 candidates, and 8 of them are in scope") || !strings.Contains(string(report), "not computed yet: S5, S7") {
+	if err != nil || !strings.Contains(string(report), "It has 8 candidates, and 6 of them are in scope") || !strings.Contains(string(report), "not computed yet: S5, S7") {
 		t.Errorf("scope.md: %s, %v", report, err)
+	}
+
+	// The verdicts of the model pass decide the pending candidates.
+	write(filepath.Join(wpcorpus.ManifestDir, "verdicts.tsv"), "page_id\ttitle\tverdict\tconfidence\tmodel\tnote\n6\tMonster_group\tmath\t0.90\ttest\ta sporadic group\n")
+	out.Reset()
+	if code := runWP(args, &out, &errb); code != ExitOK || !strings.Contains(out.String(), "8 candidates, 7 in scope") {
+		t.Errorf("with verdicts: exit %d, %s %s", code, out.String(), errb.String())
 	}
 }
 

@@ -64,7 +64,7 @@ func TestWPGold(t *testing.T) {
 	if err := os.WriteFile(gold, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if s := run(ExitOK, "measure", "-corpus", root); !strings.Contains(s, "3 marked, precision 0.667, recall 1.000") {
+	if s := run(ExitOK, "measure", "-corpus", root); !strings.Contains(s, "3 marked, precision 1.000, recall 1.000") {
 		t.Errorf("measure: %s", s)
 	}
 	if _, err := os.Stat(filepath.Join(root, "reports", "gold-s.md")); err != nil {

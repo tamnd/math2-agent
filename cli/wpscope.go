@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ func (e *errNextLoad) Error() string {
 type scopeRun struct {
 	store    *wpcorpus.Store
 	storeArg string
+	corpus   string
 	dump     string
 	work     string
 	stdout   io.Writer
@@ -71,7 +73,7 @@ func runWPScope(args []string, stdout, stderr io.Writer) int {
 	if err := os.MkdirAll(*work, 0o750); err != nil {
 		return fail(err)
 	}
-	r := &scopeRun{store: st, storeArg: *storePath, dump: *dump, work: *work, stdout: stdout}
+	r := &scopeRun{store: st, storeArg: *storePath, corpus: *corpus, dump: *dump, work: *work, stdout: stdout}
 	cs, pending, err := r.build(tree, *assess, *cited, *wikidata)
 	if err != nil {
 		return fail(err)
@@ -293,7 +295,12 @@ func (r *scopeRun) build(tree *wpcorpus.CategoryTree, assess, cited, wikidata st
 		}
 	}
 
-	// Keep the articles, and classify them.
+	// Keep the articles, and classify them. The verdicts of the scope model
+	// pass decide the candidates that the rules leave pending.
+	verdicts, err := readVerdicts(r.corpus)
+	if err != nil {
+		return nil, nil, err
+	}
 	all := make([]int64, 0, len(cands))
 	for id := range cands {
 		all = append(all, id)
@@ -310,6 +317,9 @@ func (r *scopeRun) build(tree *wpcorpus.CategoryTree, assess, cited, wikidata st
 		}
 		c.Title = t
 		wpcorpus.Classify(c)
+		if v, ok := verdicts[id]; ok {
+			wpcorpus.ApplyVerdict(c, v)
+		}
 		out = append(out, c)
 	}
 	var pending []string
@@ -334,6 +344,25 @@ func readAssessFile(path string) ([]wpcorpus.AssessRow, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return rows, nil
+}
+
+// readVerdicts reads manifests/wikipedia/verdicts.tsv of the corpus. A
+// corpus with no such file has no verdict of the model pass yet.
+func readVerdicts(corpus string) (map[int64]wpcorpus.ModelVerdict, error) {
+	path := filepath.Join(corpus, wpcorpus.VerdictsPath)
+	f, err := os.Open(path) // #nosec G304 -- the path is in the corpus
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	v, err := wpcorpus.ReadVerdicts(f)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return v, nil
 }
 
 func writeIDs[T any](path string, v []T, id func(T) int64) error {
