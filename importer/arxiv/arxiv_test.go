@@ -12,6 +12,7 @@ import (
 
 	"github.com/tamnd/math2-agent/importer/arxiv"
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/mdrec"
 )
 
 const objectsV = `{"tag":"S1C1","kind":"section","paper":"2401.00001","version":"VER","local":"sec-1","number":"1","path":"source"}
@@ -234,5 +235,46 @@ func TestPlanUnderstand(t *testing.T) {
 	}
 	if _, err := arxiv.PlanUnderstand("T0", rows, ms, ""); err == nil {
 		t.Error("T0 has a plan")
+	}
+}
+
+// A checkout whose files of records are Markdown gives the mentions that one of JSON Lines gives.
+func TestACheckoutInMarkdownGivesTheSameMentions(t *testing.T) {
+	root := checkout(t, "cc-by")
+	old, err := arxiv.Import(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || filepath.Ext(p) != mdrec.Old {
+			return err
+		}
+		recs, err := mdrec.Read(p)
+		if err != nil {
+			return err
+		}
+		return mdrec.Write(strings.TrimSuffix(p, mdrec.Old)+mdrec.Ext, recs)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(root, "analysis", "objects", "2401", "2401.00001.md"))
+	if err != nil || !strings.Contains(string(b), "<!-- lem-1: body_md -->") {
+		t.Fatalf("the objects file is not Markdown (%v):\n%s", err, b)
+	}
+	res, err := arxiv.Import(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := func(ms []inventory.Mention) []string {
+		var out []string
+		for _, m := range ms {
+			out = append(out, strings.Join([]string{m.ID, m.Kind, m.Number, m.AttachedTo, m.Hash, m.Class, strings.Join(m.MSC, ",")}, "|"))
+		}
+		slices.Sort(out)
+		return out
+	}
+	if got, want := key(res.Mentions), key(old.Mentions); !slices.Equal(got, want) {
+		t.Errorf("the mentions are\n%v\nand they must be\n%v", got, want)
 	}
 }

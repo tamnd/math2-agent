@@ -2,11 +2,13 @@
 //
 // The importer reads these files of the checkout:
 //
-//	analysis/objects/<YYMM>/<id>.jsonl   the object records of each version (AX03)
-//	analysis/edges/<YYMM>/<id>.jsonl     the in-paper edges (AX06)
+//	analysis/objects/<YYMM>/<id>.md      the object records of each version (AX03)
+//	analysis/edges/<YYMM>/<id>.md        the in-paper edges (AX06)
 //	analysis/census/<YYMM>/<id>v<n>.json the census of each version (AX04)
-//	analysis/bib/<YYMM>/<id>.jsonl       the bibliography entries of each version, for the cited results (AX5.7)
-//	metadata/<YYMM>.jsonl                the metadata of the papers, for the licence and the MSC codes
+//	analysis/bib/<YYMM>/<id>.md          the bibliography entries of each version, for the cited results (AX5.7)
+//	metadata/<YYMM>.md                   the metadata of the papers, for the licence and the MSC codes
+//
+// A file of records is Markdown with the records in a YAML header (package mdrec). A checkout that has not moved to Markdown has a .jsonl file of the same name, one record on each line, and the importer reads it.
 //
 // The id of a mention is ax://paper/<id>#<tag>, where the tag is the tag of the object in the analysis plane. The id has no version, because the tag stays on its object from version to version. The mention describes the latest version that has the object. A mention whose object is not in the latest version of the paper is retired.
 //
@@ -16,8 +18,6 @@
 package arxiv
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +32,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/mdrec"
 )
 
 // Source is the source of the mentions.
@@ -143,11 +144,10 @@ func ImportNames(root string, names *Names) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	files, err := filepath.Glob(filepath.Join(root, "analysis", "objects", "*", "*.jsonl"))
+	files, err := mdrec.Glob(filepath.Join(root, "analysis", "objects", "*", "*"+mdrec.Ext))
 	if err != nil {
 		return nil, err
 	}
-	slices.Sort(files)
 	months := map[string]bool{}
 	for _, f := range files {
 		months[filepath.Base(filepath.Dir(f))] = true
@@ -492,7 +492,7 @@ func readStrength(file string) string {
 func readMetadata(root string, months map[string]bool) (map[string]*Paper, error) {
 	out := map[string]*Paper{}
 	for m := range months {
-		ps, err := readLines[Paper](filepath.Join(root, "metadata", m+".jsonl"))
+		ps, err := readLines[Paper](filepath.Join(root, "metadata", m+mdrec.Ext))
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
@@ -506,26 +506,17 @@ func readMetadata(root string, months map[string]bool) (map[string]*Paper, error
 	return out, nil
 }
 
+// readLines reads the records of a file of records, or of the .jsonl file of the same name in a checkout that has not moved to Markdown.
 func readLines[T any](file string) ([]T, error) {
-	b, err := os.ReadFile(file) // #nosec G304 -- the file is in the checkout that the user names
+	recs, err := mdrec.Read(file)
 	if err != nil {
 		return nil, err
 	}
-	var out []T
-	sc := bufio.NewScanner(bytes.NewReader(b))
-	sc.Buffer(make([]byte, 1<<20), 64<<20)
-	for n := 1; sc.Scan(); n++ {
-		line := bytes.TrimSpace(sc.Bytes())
-		if len(line) == 0 {
-			continue
-		}
-		var v T
-		if err := json.Unmarshal(line, &v); err != nil {
-			return nil, fmt.Errorf("%s:%d: %w", file, n, err)
-		}
-		out = append(out, v)
+	out, err := mdrec.Unmarshal[T](recs)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", file, err)
 	}
-	return out, sc.Err()
+	return out, nil
 }
 
 // commit returns the HEAD commit of the checkout, which is the snapshot of the mentions.
@@ -560,11 +551,10 @@ type Want struct {
 
 // Expect returns the objects of an item kind in the latest version of each paper of the checkout at root, with the mention that must hold each one. A restated print is held by the mention of its first print.
 func Expect(root string) ([]Want, error) {
-	files, err := filepath.Glob(filepath.Join(root, "analysis", "objects", "*", "*.jsonl"))
+	files, err := mdrec.Glob(filepath.Join(root, "analysis", "objects", "*", "*"+mdrec.Ext))
 	if err != nil {
 		return nil, err
 	}
-	slices.Sort(files)
 	var out []Want
 	for _, f := range files {
 		objs, err := readLines[Object](f)
@@ -588,7 +578,8 @@ func Expect(root string) ([]Want, error) {
 				in = append(in, objs[i])
 			}
 		}
-		rel, _ := filepath.Rel(root, f)
+		// A finding names the file that is there, .md or .jsonl.
+		rel, _ := filepath.Rel(root, mdrec.Which(f))
 		for _, o := range in {
 			if !Wanted(o.Item) {
 				continue
@@ -620,7 +611,7 @@ func PathForm(id string) string { return strings.ReplaceAll(id, "/", "-") }
 
 // ObjectsFile returns the objects file of a paper, relative to the checkout.
 func ObjectsFile(id string) string {
-	return filepath.ToSlash(filepath.Join("analysis", "objects", Month(id), PathForm(id)+".jsonl"))
+	return filepath.ToSlash(filepath.Join("analysis", "objects", Month(id), PathForm(id)+mdrec.Ext))
 }
 
 // ReadPaper reads the metadata record and the object records of one paper from the checkout at root. A paper with no metadata record gives a nil Paper.

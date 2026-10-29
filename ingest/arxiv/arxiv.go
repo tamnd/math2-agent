@@ -1,4 +1,4 @@
-// Package arxiv is the ingest adapter of arXiv (spec 09.2). It reads the metadata plane of tamnd/arxiv, which has one JSONL file for each month of arXiv, and gives one record for each mathematics paper.
+// Package arxiv is the ingest adapter of arXiv (spec 09.2). It reads the metadata plane of tamnd/arxiv, which has one file of records for each month of arXiv, Markdown with the records in a YAML header (package mdrec) or, before the plane moved to Markdown, JSON Lines, and gives one record for each mathematics paper.
 //
 // A paper is a mathematics paper when one of its categories is in the math archive or is math-ph. The metadata of arXiv is under CC0. The licence of each record is the licence of the last version of the paper that has one. A paper under the default licence of arXiv, or with no licence in the metadata plane yet, has the class record: math2 keeps its metadata and its locator, and no text. The records keep no text in any case, because the text of a paper stays in the content plane of tamnd/arxiv. The locator of a paper is its ax:// reference.
 //
@@ -14,11 +14,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path"
 	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/mdrec"
 )
 
 // Contents is the GitHub contents API of the metadata plane of tamnd/arxiv. Add ?ref=<commit> to pin a commit.
@@ -47,11 +49,11 @@ func (Adapter) Version() string { return "arxiv/1" }
 // Dump returns the URL of the metadata plane on the main branch.
 func (Adapter) Dump() string { return Contents + "?ref=main" }
 
-// Fetch gets the metadata plane. When req.URL names one .jsonl file, Fetch gets that file. In other cases req.URL is a GitHub contents API listing, and Fetch gets each .jsonl file of the listing in the order of the names. The snapshot is the files one after the other, compressed with gzip.
+// Fetch gets the metadata plane. When req.URL names one .md or .jsonl file, Fetch gets that file. In other cases req.URL is a GitHub contents API listing, and Fetch gets the file of each month of the listing in the order of the names. The snapshot is the records of the files one after the other as JSON Lines, compressed with gzip.
 func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) error {
 	u, get := req.URL, req.Get
 	files := []string{u}
-	if path, _, _ := strings.Cut(u, "?"); !strings.HasSuffix(path, ".jsonl") {
+	if path, _, _ := strings.Cut(u, "?"); !strings.HasSuffix(path, mdrec.Old) && !strings.HasSuffix(path, mdrec.Ext) {
 		var err error
 		if files, err = listing(ctx, get, u); err != nil {
 			return err
@@ -73,7 +75,10 @@ type entry struct {
 	Download string `json:"download_url"`
 }
 
-// listing returns the download URLs of the .jsonl files of a GitHub contents API listing, in the order of the names.
+// month is the name of the file of a month of the plane, YYMM, with no extension. The listing has other files, as README.md.
+var month = regexp.MustCompile(`^[0-9]{4}$`)
+
+// listing returns the download URLs of the files of records of a GitHub contents API listing, in the order of the names. A month with a .md file and a .jsonl file is the .md file, and a file that is not of a month is not a file of records.
 func listing(ctx context.Context, get ingest.Getter, u string) ([]string, error) {
 	body, err := get(ctx, u)
 	if err != nil {
@@ -85,19 +90,27 @@ func listing(ctx context.Context, get ingest.Getter, u string) ([]string, error)
 		return nil, fmt.Errorf("%s: %w", u, err)
 	}
 	slices.SortFunc(entries, func(a, b entry) int { return strings.Compare(a.Name, b.Name) })
-	var out []string
+	md := map[string]bool{}
 	for _, e := range entries {
-		if e.Type == "file" && strings.HasSuffix(e.Name, ".jsonl") && e.Download != "" {
-			out = append(out, e.Download)
+		if e.Type == "file" && month.MatchString(strings.TrimSuffix(e.Name, mdrec.Ext)) && strings.HasSuffix(e.Name, mdrec.Ext) {
+			md[strings.TrimSuffix(e.Name, mdrec.Ext)] = true
 		}
 	}
+	var out []string
+	for _, e := range entries {
+		ext := path.Ext(e.Name)
+		if e.Type != "file" || e.Download == "" || ext != mdrec.Ext && ext != mdrec.Old || !month.MatchString(strings.TrimSuffix(e.Name, ext)) || ext == mdrec.Old && md[strings.TrimSuffix(e.Name, ext)] {
+			continue
+		}
+		out = append(out, e.Download)
+	}
 	if len(out) == 0 {
-		return nil, fmt.Errorf("%s lists no .jsonl files", u)
+		return nil, fmt.Errorf("%s lists no file of records", u)
 	}
 	return out, nil
 }
 
-// copyFile gets one file and writes it to w, with a newline at the end.
+// copyFile gets one file and writes its records to w as JSON Lines, with a newline at the end.
 func copyFile(ctx context.Context, get ingest.Getter, u string, w io.Writer) error {
 	body, err := get(ctx, u)
 	if err != nil {
@@ -107,6 +120,13 @@ func copyFile(ctx context.Context, get ingest.Getter, u string, w io.Writer) err
 	data, err := io.ReadAll(body)
 	if err != nil {
 		return fmt.Errorf("%s: %w", u, err)
+	}
+	if mdrec.IsMarkdown(data) {
+		recs, err := mdrec.Decode(data)
+		if err != nil {
+			return fmt.Errorf("%s: %w", u, err)
+		}
+		data = mdrec.Join(recs)
 	}
 	if len(data) > 0 && data[len(data)-1] != '\n' {
 		data = append(data, '\n')

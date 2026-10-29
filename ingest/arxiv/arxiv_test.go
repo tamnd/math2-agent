@@ -11,6 +11,7 @@ import (
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/ingest/arxiv"
+	"github.com/tamnd/math2-agent/mdrec"
 )
 
 // plane serves testdata as the metadata plane of tamnd/arxiv, with a GitHub contents API listing at /contents/metadata.
@@ -25,16 +26,31 @@ func plane(t *testing.T) *httptest.Server {
 				Download string `json:"download_url"`
 			}
 			list := []entry{{Name: "README.md", Type: "file", Download: srv.URL + "/raw/README.md"}}
-			for _, n := range []string{"2312.jsonl", "0211.jsonl", "1311.jsonl"} {
+			// The month 1311 is there in both forms, and its Markdown file is read.
+			for _, n := range []string{"2312.jsonl", "0211.jsonl", "1311.jsonl", "1311.md"} {
 				list = append(list, entry{Name: n, Type: "file", Download: srv.URL + "/raw/" + n})
 			}
 			_ = json.NewEncoder(w).Encode(list)
 			return
 		}
-		b, err := os.ReadFile("testdata/" + strings.TrimPrefix(r.URL.Path, "/raw/"))
+		name := strings.TrimPrefix(r.URL.Path, "/raw/")
+		if name == "1311.jsonl" {
+			t.Errorf("the JSON Lines file of a month that has a Markdown file was read")
+		}
+		// A Markdown file is the JSON Lines file of the month in testdata, encoded.
+		md := strings.HasSuffix(name, mdrec.Ext)
+		if md {
+			name = strings.TrimSuffix(name, mdrec.Ext) + mdrec.Old
+		}
+		b, err := os.ReadFile("testdata/" + name)
 		if err != nil {
 			http.NotFound(w, r)
 			return
+		}
+		if md {
+			if b, err = mdrec.EncodeAuto(mdrec.Lines(b)); err != nil {
+				t.Fatal(err)
+			}
 		}
 		_, _ = w.Write(b)
 	}))
@@ -76,7 +92,7 @@ func TestPull(t *testing.T) {
 	}
 
 	// One month by its URL.
-	one, err := ingest.Pull(context.Background(), arxiv.Adapter{}, ingest.Options{Root: t.TempDir(), Cache: opt.Cache, URL: srv.URL + "/raw/1311.jsonl"})
+	one, err := ingest.Pull(context.Background(), arxiv.Adapter{}, ingest.Options{Root: t.TempDir(), Cache: opt.Cache, URL: srv.URL + "/raw/1311.md"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +107,7 @@ func TestFetchErrors(t *testing.T) {
 	}))
 	defer srv.Close()
 	_, err := ingest.Pull(context.Background(), arxiv.Adapter{}, ingest.Options{Root: t.TempDir(), Cache: t.TempDir(), URL: srv.URL + "/contents/metadata"})
-	if err == nil || !strings.Contains(err.Error(), "lists no .jsonl files") {
+	if err == nil || !strings.Contains(err.Error(), "lists no file of records") {
 		t.Errorf("a listing without months gives %v", err)
 	}
 }
