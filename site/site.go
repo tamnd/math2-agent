@@ -1,6 +1,6 @@
 // Package site builds the math2 wiki: a static site for GitHub Pages.
 //
-// The site has one page for each node, each MSC class, each spec document and each kind. People read the HTML pages. Agents read the same content as JSON in api/, as Markdown next to each page and through llms.txt. The site works with no server. Search runs in the browser from api/search.json. Archive writes the site as a zip file that works from disk, with no network. The build renders the math of each node to HTML and MathML with the katex package and the macros of the content repository, so a reader can read each node with JavaScript off.
+// The site has one page for each node, each MSC class, each spec document and each kind. People read the HTML pages. Agents read the same content as JSON in api/, as Markdown next to each page and through llms.txt. The site works with no server. Search runs in the browser from api/search.json. Archive writes the site as a zip file that works from disk, with no network. The build renders the math of each node to MathML with the katex package and the macros of the content repository, and the browser draws it with the font STIX Two Math, so a reader can read each node with JavaScript off.
 package site
 
 import (
@@ -130,6 +130,9 @@ type nodeView struct {
 	UsedBy                                 []link
 	Prov                                   *provView // nil when the node has no provenance log
 	HTML                                   template.HTML
+	Lead, Plain, Rest                      template.HTML // the body for a person: the first section, the explanations for people and the other sections
+	Excerpt, PlainExcerpt                  template.HTML // the first paragraph of the summary and of the explanations, for the cards of the feeds
+	Added, Updated                         time.Time     // the first and the last change of the node file in the history of the content repository, or zero
 	URL, MarkdownURL, JSONURL, EditURL     string
 	source                                 func(file []byte) []byte // the Markdown copy of a node with fields in quarantine, or nil
 }
@@ -167,6 +170,8 @@ type builder struct {
 	nodeMD    *markup.Markdown
 	plainMD   *markup.Markdown
 
+	history    bool              // the nodes have dates from the history of the content repository
+	depthOf    map[*nodeView]int // the depth of each node, for the order of the pages of the subjects
 	invSummary *inventory.Summary
 	invLetters []*invLetter
 	invCards   []*invCards
@@ -193,7 +198,7 @@ func Build(opt Options) error {
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeLevels, b.writeWikipedia}
+	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeLevels, b.writeWikipedia, b.writeFeeds}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
@@ -253,6 +258,7 @@ func (b *builder) load() error {
 		return fmt.Errorf("site: %w", err)
 	}
 	b.nodeMD = markup.New(b.math)
+	b.loadHistory()
 	if err := b.loadProv(); err != nil {
 		return err
 	}
@@ -402,14 +408,32 @@ func (b *builder) resolve(v *nodeView) error {
 		return fmt.Errorf("site: %s: %w", v.Path, err)
 	}
 	v.HTML = template.HTML(body) // #nosec G203 -- the body is content from the math2 repository, which review gates.
+	parts := splitBody(v.Body)
+	for _, p := range []struct {
+		src string
+		out *template.HTML
+	}{{parts.Lead, &v.Lead}, {parts.Plain, &v.Plain}, {parts.Rest, &v.Rest}, {parts.Excerpt, &v.Excerpt}, {firstParagraph(parts.Plain), &v.PlainExcerpt}} {
+		if strings.TrimSpace(p.src) == "" {
+			continue
+		}
+		h, err := b.nodeMD.Render(p.src, dests(b.contentLinks))
+		if err != nil {
+			return fmt.Errorf("site: %s: %w", v.Path, err)
+		}
+		*p.out = template.HTML(h) // #nosec G203 -- as v.HTML.
+	}
 	return nil
 }
 
-// math returns the HTML and MathML of a formula. A formula that KaTeX cannot parse shows as its TeX source, with the error as the title.
+// math returns the MathML of a formula. A formula that KaTeX cannot parse shows as its TeX source, with the error as the title.
 func (b *builder) math(tex string, display bool) string {
 	out, err := b.katex.Render(tex, display)
 	if err != nil {
 		return `<code class="tex-error" title="` + html.EscapeString(err.Error()) + `">` + html.EscapeString(tex) + `</code>`
+	}
+	// The page shows the MathML in the math font of the site. The browser draws it, so the page needs no KaTeX style sheet and no KaTeX fonts.
+	if m := katex.MathML(out); m != "" {
+		return `<span class="katex">` + m + `</span>`
 	}
 	return out
 }
@@ -544,7 +568,9 @@ type page struct {
 	Content                           template.HTML
 	Site                              *builder
 	MarkdownURL, JSONURL              string
+	FeedURL                           string // the Atom feed of the page, or ""
 	Math                              bool
+	Bare                              bool // the page fills the screen, with no footer
 }
 
 // writePage renders the content template name with data, puts it in the layout and writes it to dir/index.html.
@@ -569,12 +595,9 @@ func (b *builder) writePage(dir, name string, data any, p page) error {
 	return b.write(file, out.Bytes())
 }
 
-// writeAssets writes the files of the site and the style sheet and the fonts of KaTeX in assets/katex/.
+// writeAssets writes the files of the site: the style sheet, the script, the icon and the fonts, Inter for the text and STIX Two Math for the math.
 func (b *builder) writeAssets() error {
-	if err := b.copyFS(files, "assets", "assets"); err != nil {
-		return err
-	}
-	return b.copyFS(katex.Assets(), ".", "assets/katex")
+	return b.copyFS(files, "assets", "assets")
 }
 
 // copyFS writes each file in dir of fsys to the output directory out.

@@ -43,7 +43,7 @@ func TestLevels(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := strings.Count(string(list), `<span class="tag">`); got != count[l] {
+			if got := strings.Count(string(list), "<tr><td><a href="); got != count[l] {
 				t.Errorf("build %v: the list of %s has %d nodes, and api/nodes.json has %d", withBuild, l, got, count[l])
 			}
 		}
@@ -68,7 +68,7 @@ func TestLevels(t *testing.T) {
 		if !strings.Contains(html, `<tr><th>Writing</th><td><a href="/math2/levels/`+e.Level+`/"`) {
 			t.Errorf("build %v: the page of %s does not show its level", withBuild, e.Tag)
 		}
-		if e.Level != "W3" && !strings.Contains(html, "What this node needs for W") {
+		if e.Level != "W3" && !strings.Contains(html, "What this page needs for W") {
 			t.Errorf("build %v: the page of %s has no work list", withBuild, e.Tag)
 		}
 	}

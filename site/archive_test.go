@@ -119,7 +119,7 @@ func TestArchiveFixtures(t *testing.T) {
 	}
 
 	node := readNode(t, root, "Q529ES")
-	for _, s := range []string{`<body data-base="../../">`, `href="../../assets/site.css"`, `href="../../nodes/index.html"`, `href="../../index.html"`, `action="../../search/index.html"`} {
+	for _, s := range []string{`<body data-base="../../" `, `href="../../assets/site.css"`, `href="../../nodes/index.html"`, `href="../../index.html"`, `action="../../search/index.html"`} {
 		if !strings.Contains(node, s) {
 			t.Errorf("the node page has no %s", s)
 		}

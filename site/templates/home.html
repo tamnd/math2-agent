@@ -1,73 +1,56 @@
 {{define "home"}}
 <section class="hero">
-  <h1>Math 2.0</h1>
-  <p class="lead">A free knowledge graph of all mathematics. Each node has a permanent tag, its sources, typed links to other nodes and a status that the build computes from the evidence. People read the pages. Agents read the same content as JSON and Markdown.</p>
+  <p class="eyebrow">A free, open map of mathematics</p>
+  <h1>Mathematics, one idea at a time.</h1>
+  <p class="lead">{{if .Total}}{{.Total}} ideas{{else}}Ideas{{end}}, from first definitions to famous theorems. Each one says what it is, explains it in plain words and shows what to read first.</p>
   <form class="search-box big" action="{{url "search/"}}" role="search">
-    <input type="search" name="q" placeholder="Search {{.Total}} nodes and {{len .Specs}} spec documents" aria-label="Search" autocomplete="off">
+    <input type="search" name="q" placeholder="Search for an idea, for example “prime number”" aria-label="Search" autocomplete="off">
   </form>
+  <p class="hero-links"><a class="button primary" href="{{url "discover/"}}">Discover ideas</a> <a class="button" href="{{url "msc/"}}">Browse subjects</a></p>
 </section>
-
-{{with .Inventory}}
-<section class="notice">
-  <h2>The inventory</h2>
-  <p>The <a href="{{url "inventory/"}}">inventory</a> lists {{.Rows}} items of mathematics that external sources present, from {{.Mentions}} mentions. {{.Open}} rows are open: they wait for a node or for a decision. Each row links to the item in its sources. The import workflow adds new rows each week.</p>
-  {{template "invletters" $.Letters}}
-</section>
-{{end}}
 
 {{if eq .Total 0}}
 <div class="notice">
-  <p><b>The graph has no nodes yet.</b> The project is at milestone {{.Current}}. The schema, the checks and this site are ready. The seed of about 2,000 nodes arrives in M1. Each merge to <code>main</code> in the content repository rebuilds this site. To add the first node, read <a href="{{url "contribute/"}}">Contribute</a>.</p>
+  <p><b>The graph has no ideas yet.</b> The project is at milestone {{.Current}}. To add the first one, read <a href="{{url "contribute/"}}">Contribute</a>.</p>
 </div>
 {{end}}
 
-<div class="cards">
-  <section class="card">
-    <h2>Browse by kind</h2>
-    <table class="plain">
-      <thead{{if not .Inventory}} class="sr-only"{{end}}><tr><th scope="col">Kind</th><th scope="col">Nodes</th>{{if .Inventory}}<th scope="col">Inventory</th>{{end}}<th scope="col">What it is</th></tr></thead>
-      {{range .Kinds}}<tr><th scope="row"><a href="{{.URL}}">{{.Plural}}</a></th><td class="num">{{.Count}}</td>{{if $.Inventory}}<td class="num">{{.Rows}}</td>{{end}}<td class="muted">{{.Text}}</td></tr>
-      {{end}}
-    </table>
-    {{if .Total}}{{with .Levels}}<p><a href="{{url "levels/"}}">Writing levels</a>: {{range $i, $l := .}}{{if $i}} · {{end}}<a href="{{$l.URL}}">{{$l.Name}}</a> {{$l.Count}}{{end}}.</p>{{end}}{{end}}
-  </section>
-
-  <section class="card">
-    <h2>For agents</h2>
-    <p>Each page has a machine copy. You do not need to parse HTML.</p>
-    <ul>
-      <li><a href="{{url "llms.txt"}}"><code>llms.txt</code></a> and <a href="{{url "llms-full.txt"}}"><code>llms-full.txt</code></a></li>
-      <li><a href="{{url "api/nodes.json"}}"><code>api/nodes.json</code></a>, the index of all nodes</li>
-      <li><code>api/node/&lt;TAG&gt;.json</code> and <code>node/&lt;TAG&gt;.md</code> for each node</li>
-      <li><a href="{{url schemaFile}}"><code>{{schemaFile}}</code></a>, the JSON Schema</li>
-    </ul>
-    <p><a href="{{url "agents/"}}">Read more about the agent interface.</a></p>
-  </section>
-</div>
-
-{{with .Recent}}
-<section>
-  <h2>Nodes</h2>
-  <ul class="node-list">
-    {{range .}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="tag">{{.Tag}}</span> <span class="kind kind-{{.Kind}}">{{.Kind}}</span></li>
+{{with .Top}}
+<section class="band">
+  <div class="band-head"><h2>Start with a subject</h2><a href="{{url "msc/"}}">All subjects</a></div>
+  <ul class="tiles">
+    {{range .}}<li style="--hue: {{hue .Code}}"><a href="{{.URL}}"><span class="tile-name">{{.Name}}</span><span class="tile-count">{{len .Nodes}} ideas</span></a></li>
     {{end}}
   </ul>
-  <p><a href="{{url "nodes/"}}">See all nodes.</a></p>
 </section>
 {{end}}
 
-<section>
-  <h2>Subjects</h2>
-  <p>The graph uses the <a href="https://msc2020.org/">Mathematics Subject Classification</a> (MSC2020). <a href="{{url "msc/"}}">See all 63 classes.</a></p>
-  {{with .Groups}}<ul class="chips">{{range .}}<li><a href="{{.URL}}">{{.Code}} {{.Name}}</a> <span class="count">{{len .Nodes}}</span></li>{{end}}</ul>{{end}}
-</section>
-
-<section>
-  <h2>The plan</h2>
-  <ol class="milestones">
-    {{range .Milestones}}<li{{if eq .ID $.Current}} class="current"{{end}}><a href="{{.URL}}"><b>{{.ID}}</b> {{.Title}}</a>{{with .Dates}} <span class="muted">{{.}}</span>{{end}}{{if eq .ID $.Current}} <span class="badge">now</span>{{end}}</li>
+{{with .Latest}}
+<section class="band">
+  <div class="band-head"><h2>Just added</h2><a href="{{url "latest/"}}">See all the latest</a></div>
+  <ul class="mini-cards">
+    {{range .}}<li style="--hue: {{hue .SubjectCode}}"><a href="{{.URL}}"><span class="label">{{.Label}}{{with .Subject}} · {{.}}{{end}}</span><span class="mini-title">{{.Name}}</span></a><div class="mini-text">{{.Text}}</div></li>
     {{end}}
-  </ol>
-  {{with .Specs}}<p>The full design is in the <a href="{{url "spec/"}}">specification</a>.</p>{{end}}
+  </ul>
+</section>
+{{end}}
+
+{{if .Total}}
+<section class="band kinds-band">
+  <div class="band-head"><h2>What you can read here</h2><a href="{{url "nodes/"}}">Every idea</a></div>
+  <ul class="kind-grid">
+    {{range .Kinds}}{{if .Count}}<li><a href="{{.URL}}"><b>{{.Plural}}</b> <span class="count">{{.Count}}</span></a><span>{{.Text}}</span></li>{{end}}
+    {{end}}
+  </ul>
+</section>
+{{end}}
+
+<section class="band about-band">
+  <h2>How Math 2.0 works</h2>
+  <div class="three">
+    <div><h3>Small pages</h3><p>Each page is one idea: a definition, a theorem, an example. Pages link to the ideas they build on, so you can always step back to what you need.</p></div>
+    <div><h3>Plain words first</h3><p>Next to the exact statement, most pages explain the idea in plain words, with a picture you can hold in your head.</p></div>
+    <div><h3>Open to all</h3><p>The text is free to share and change. Anyone can <a href="{{url "contribute/"}}">help write it</a>, and agents can read the same content as data.</p></div>
+  </div>
 </section>
 {{end}}

@@ -1,0 +1,26 @@
+{{define "discover"}}
+<div class="deck" data-deck>
+{{range .Cards}}<article class="slide" style="--hue: {{hue .SubjectCode}}">
+  <div class="slide-inner">
+    <p class="slide-meta">{{.Label}}{{with .Subject}} · {{.}}{{end}}</p>
+    <h2><a href="{{.URL}}">{{.Name}}</a></h2>
+    <div class="slide-text">{{.Text}}</div>
+    {{with .Uses}}<p class="builds">Builds on {{range $i, $l := .}}{{if lt $i 4}}{{if $i}}, {{end}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{end}}{{end}}</p>{{end}}
+    <p class="slide-actions"><a class="button primary" href="{{.URL}}">Read the page</a> <button class="button" type="button" data-share="{{.URL}}" data-title="{{.Name}}">Share</button></p>
+  </div>
+</article>
+{{end}}
+<article class="slide slide-end">
+  <div class="slide-inner">
+    {{if .Next}}<h2>More ideas</h2>
+    <p class="slide-text">You saw {{len .Cards}} ideas. A new set waits.</p>
+    <p class="slide-actions"><a class="button primary" href="{{.Next}}" data-next>Next ideas</a> <a class="button" href="{{url "msc/"}}">Browse subjects</a></p>
+    {{else}}<h2>That is all for today</h2>
+    <p class="slide-text">The deck changes each day. Until then, learn a subject from its foundations.</p>
+    <p class="slide-actions"><a class="button primary" href="{{url "msc/"}}">Browse subjects</a> <a class="button" href="{{url "latest/"}}">See the latest</a></p>
+    {{end}}
+  </div>
+</article>
+</div>
+<p class="deck-hint" aria-hidden="true">Scroll, or press ↓ and ↑</p>
+{{end}}

@@ -27,6 +27,7 @@ func parseTemplates(b *builder) (*template.Template, error) {
 		"mscName":      func(code string) string { return mscTop[code] },
 		"mscCodes":     mscCodes,
 		"subjectCount": subjectCount,
+		"hue":          hue,
 		"top": func(code string) string {
 			if len(code) < 2 {
 				return code
@@ -142,8 +143,8 @@ func (b *builder) writeLists() error {
 		Nodes       []*nodeView
 		Groups      []*mscGroup
 	}
-	all := listData{Title: "All nodes", Kinds: b.kindCounts(), Nodes: b.order}
-	if err := b.writePage("nodes", "list", all, page{Title: "All nodes", Description: "Each node of Math 2.0.", Section: "nodes", JSONURL: b.url("api/nodes.json")}); err != nil {
+	all := listData{Title: "Every idea", Kinds: b.kindCounts(), Nodes: b.order}
+	if err := b.writePage("nodes", "list", all, page{Title: "Every idea", Description: "Each idea in Math 2.0.", Section: "nodes", JSONURL: b.url("api/nodes.json")}); err != nil {
 		return err
 	}
 	for _, k := range kinds {
@@ -159,7 +160,15 @@ func (b *builder) writeLists() error {
 		}
 	}
 	groups := b.mscGroups()
-	if err := b.writePage("msc", "subjects", groups, page{Title: "Subjects", Description: "The nodes of Math 2.0 by Mathematics Subject Classification.", Section: "msc"}); err != nil {
+	idx := subjectsData{Full: slices.Clone(groups)}
+	b.depthOf = b.depths()
+	slices.SortStableFunc(idx.Full, func(x, y *mscGroup) int { return len(y.Nodes) - len(x.Nodes) })
+	for _, code := range mscCodes() {
+		if subjectCount(groups, code) == 0 {
+			idx.Empty = append(idx.Empty, &mscGroup{Code: code, Name: mscTop[code], URL: b.url("msc/" + code + "/")})
+		}
+	}
+	if err := b.writePage("msc", "subjects", idx, page{Title: "Subjects", Description: "The nodes of Math 2.0 by Mathematics Subject Classification.", Section: "msc"}); err != nil {
 		return err
 	}
 	for _, code := range mscCodes() {
@@ -169,8 +178,8 @@ func (b *builder) writeLists() error {
 				g = x
 			}
 		}
-		title := code + " " + g.Name
-		if err := b.writePage("msc/"+code, "subject", g, page{Title: title, Description: "The nodes of Math 2.0 in MSC class " + title + ".", Section: "msc"}); err != nil {
+		title := g.Name
+		if err := b.writePage("msc/"+code, "subject", b.subjectView(g), page{Title: title, Description: "The ideas of " + title + " in Math 2.0, the foundations first.", Section: "msc", Math: true}); err != nil {
 			return err
 		}
 	}
@@ -304,6 +313,8 @@ type homeData struct {
 	Specs      []*specDoc
 	Inventory  *inventory.Summary
 	Letters    []*invLetter
+	Top        []*mscGroup // the subjects with the most nodes
+	Latest     []feedCard  // the newest nodes
 }
 
 func (b *builder) writeHome() error {
@@ -312,7 +323,17 @@ func (b *builder) writeHome() error {
 		d.Inventory = b.invSummary
 	}
 	d.Recent = b.order[:min(len(b.order), 12)]
-	p := page{Title: "", Description: "Math 2.0 is a versioned knowledge graph of mathematics for people and for agents.", Section: "home", JSONURL: b.url("api/nodes.json")}
+	d.Top = slices.Clone(d.Groups)
+	slices.SortStableFunc(d.Top, func(x, y *mscGroup) int { return len(y.Nodes) - len(x.Nodes) })
+	d.Top = d.Top[:min(len(d.Top), 12)]
+	latest := b.feedNodes()
+	if b.history {
+		slices.SortStableFunc(latest, func(x, y *nodeView) int { return y.Updated.Compare(x.Updated) })
+	}
+	for _, v := range latest[:min(len(latest), 6)] {
+		d.Latest = append(d.Latest, b.card(v, false))
+	}
+	p := page{Title: "", Description: "Math 2.0 is a free, open map of mathematics, one idea at a time, for people and for agents.", Section: "home", JSONURL: b.url("api/nodes.json"), Math: true}
 	return b.writePage("", "home", d, p)
 }
 
@@ -367,4 +388,100 @@ func (b *builder) shortLink(v *nodeView) []byte {
 <p>The page of this node is <a href="` + to + `">` + name + `</a>.</p>
 </html>
 `)
+}
+
+type subjectsData struct {
+	Full  []*mscGroup // the subjects with nodes, the most nodes first
+	Empty []*mscGroup // the subjects with no node
+}
+
+// kindGroup is the nodes of one kind on the page of a subject.
+type kindGroup struct {
+	Title string
+	Nodes []*nodeView
+}
+
+type subjectView struct {
+	*mscGroup
+	Start []*nodeView // the first nodes to read: the concepts with the shortest reading paths
+	Kinds []kindGroup
+}
+
+// kindTitles are the kinds in the order of the page of a subject, with the title of each for a reader. A definition comes late, because the page of its concept comes first.
+var kindTitles = []struct{ Kind, Title string }{
+	{"concept", "Concepts"},
+	{"statement", "Theorems and results"},
+	{"example", "Examples"},
+	{"counterexample", "Counterexamples"},
+	{"object", "Objects"},
+	{"problem", "Problems"},
+	{"conjecture", "Conjectures"},
+	{"exercise", "Exercises"},
+	{"computation", "Computations"},
+	{"proof", "Proofs"},
+	{"definition", "Definitions"},
+	{"topic", "Topics"},
+}
+
+// depths gives the length of the reading path of each node: the number of nodes that it needs, with itself. A concept has no uses of its own, so its depth is the least depth of the definitions that define it.
+func (b *builder) depths() map[*nodeView]int {
+	d := map[*nodeView]int{}
+	for _, v := range b.order {
+		d[v] = 1
+		if v.Closure != nil {
+			d[v] = len(v.Closure.Items)
+		}
+	}
+	for _, v := range b.order {
+		c, ok := v.Meta["defines"].(string)
+		if !ok || v.Kind != "definition" || b.nodes[c] == nil || b.nodes[c].Closure != nil {
+			continue
+		}
+		if k := b.nodes[c]; d[k] == 1 || d[v] < d[k] {
+			d[k] = d[v]
+		}
+	}
+	return d
+}
+
+// subjectView orders the nodes of a subject for a learner: the foundations first, by the length of their reading paths, and by kind.
+func (b *builder) subjectView(g *mscGroup) subjectView {
+	sv := subjectView{mscGroup: g}
+	depth := b.depthOf
+	nodes := slices.Clone(g.Nodes)
+	slices.SortStableFunc(nodes, func(x, y *nodeView) int {
+		if d := depth[x] - depth[y]; d != 0 {
+			return d
+		}
+		return strings.Compare(strings.ToLower(x.Name), strings.ToLower(y.Name))
+	})
+	for _, v := range nodes {
+		if v.Kind == "concept" && v.Excerpt != "" && v.Retired == nil && len(sv.Start) < 6 {
+			sv.Start = append(sv.Start, v)
+		}
+	}
+	for _, k := range kindTitles {
+		kg := kindGroup{Title: k.Title}
+		for _, v := range nodes {
+			if v.Kind == k.Kind {
+				kg.Nodes = append(kg.Nodes, v)
+			}
+		}
+		if len(kg.Nodes) > 0 {
+			sv.Kinds = append(sv.Kinds, kg)
+		}
+	}
+	return sv
+}
+
+// hue gives a colour hue in degrees for a subject code, so that each subject keeps its colour on each page.
+func hue(code string) int {
+	if code == "" {
+		return 250
+	}
+	h := 0
+	for _, r := range code {
+		h = h*31 + int(r)
+	}
+	return (h*47 + 200) % 360
 }

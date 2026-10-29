@@ -1,35 +1,29 @@
 {{define "node"}}
-<article class="node">
-<header class="page-head">
-  <p class="kicker"><a href="{{url (print "kind/" .Kind "/")}}" class="kind kind-{{.Kind}}">{{.Kind}}</a>{{with .Role}} <span class="muted">{{.}}</span>{{end}}</p>
+<article class="node" style="--hue: {{hue .SubjectCode}}">
+<header class="node-head">
+  <p class="crumbs">{{with .SubjectCode}}<a href="{{url (print "msc/" . "/")}}">{{mscName .}}</a> <span aria-hidden="true">/</span> {{end}}<a href="{{url (print "kind/" .Kind "/")}}">{{.Label}}</a></p>
   <h1>{{.Name}}</h1>
+  {{with .Uses}}<p class="builds"><span>Builds on</span> {{range $i, $l := .}}<a href="{{$l.URL}}"{{if $l.Missing}} class="missing" title="This page does not exist yet"{{end}}>{{$l.Text}}</a>{{end}}</p>{{end}}
 </header>
-{{with .Retired}}<div class="notice warn"><p><b>This node is retired.</b> The reason is: {{.reason}}.{{with .note}} {{.}}{{end}}</p></div>{{end}}
-{{with .Prov}}{{with .Quarantined}}<div class="notice warn"><p><b>Some text of this node is in quarantine.</b> An agent wrote it with a model or a prompt that is under review, and no person checked it since. This page does not show {{list .}}.</p></div>{{end}}
-{{with .Unchecked}}<div class="notice"><p><b>An agent wrote some of this node, and no person checked it yet:</b> {{list .}}.</p></div>{{end}}{{end}}
-<aside class="infobox" aria-label="Facts">
-  <table>
-    <caption>{{.Name}}</caption>
-    <tr><th>Tag</th><td><code class="copy" title="Click to copy">{{.Tag}}</code></td></tr>
-    {{with .URI}}<tr><th>URI</th><td><code class="copy" title="Click to copy">{{.}}</code></td></tr>{{end}}
-    {{with .Aliases}}<tr><th>Aliases</th><td>{{range $i, $a := .}}{{if $i}}, {{end}}<code>{{$a}}</code>{{end}}</td></tr>{{end}}
-    <tr><th>Kind</th><td>{{.Kind}}{{with .Role}}, {{.}}{{end}}</td></tr>
-    {{with .Writing}}<tr><th>Writing</th><td><a href="{{url (print "levels/" .Level "/")}}" title="The writing level of the node">{{.Level}}</a> <span class="muted">{{.Level.Word}}</span></td></tr>{{end}}
-    {{with .MSC}}<tr><th>MSC</th><td>{{range $i, $c := .}}{{if $i}}, {{end}}<a href="{{url (print "msc/" (top $c) "/")}}" title="{{mscName (top $c)}}">{{$c}}</a>{{end}}</td></tr>{{end}}
-    {{with .Status}}<tr><th>Evidence</th><td>{{if .Evidence.String}}{{.Evidence}} <span class="muted">{{.Evidence.Word}}</span>{{else}}<span class="muted">none for this kind</span>{{end}}</td></tr>
-    {{if ge .Fidelity 0}}<tr><th>Fidelity</th><td>{{.Fidelity}}</td></tr>{{end}}
-    {{with .Flags}}<tr><th>Flags</th><td>{{join . ", "}}</td></tr>{{end}}
-    {{else}}{{if or (eq .Kind "statement") (eq .Kind "conjecture") (eq .Kind "problem")}}<tr><th>Status</th><td><span class="muted">This copy of the site has no build data. Run <code>m2 status {{.Tag}}</code>.</span></td></tr>{{end}}{{end}}
-    {{range .Refs}}<tr><th>{{.Label}}</th><td>{{range $i, $l := .Links}}{{if $i}}, {{end}}<a href="{{$l.URL}}"{{if $l.Missing}} class="missing" title="This node does not exist yet"{{end}}>{{$l.Text}}</a>{{with $l.Note}} <span class="muted">({{.}})</span>{{end}}{{end}}</td></tr>
-    {{end}}
-    {{with .Formal}}<tr><th>Formal</th><td>{{range .}}<div>{{if .URL}}<a href="{{.URL}}"><code>{{.Text}}</code></a>{{else}}<code>{{.Text}}</code>{{end}} <span class="muted">{{.Note}}</span></div>{{end}}</td></tr>{{end}}
-    {{with .SameAs}}<tr><th>Same as</th><td>{{range .}}<div>{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{with .Note}} <span class="muted">{{.}}</span>{{end}}</div>{{end}}</td></tr>{{end}}
-  </table>
-  <p class="formats"><a href="{{.MarkdownURL}}">Markdown</a> · <a href="{{.JSONURL}}">JSON</a> · <a href="{{.EditURL}}">Edit</a></p>
-</aside>
-<div class="prose">
+{{with .Retired}}<div class="notice warn"><p><b>This page is retired.</b> The reason is: {{.reason}}.{{with .note}} {{.}}{{end}}</p></div>{{end}}
+{{with .Prov}}{{with .Quarantined}}<div class="notice warn"><p><b>Some text of this page is hidden.</b> An agent wrote it with a model or a prompt that is under review, and no person checked it since. This page does not show {{list .}}.</p></div>{{end}}
+{{with .Unchecked}}<div class="notice"><p><b>An agent wrote some of this page, and no person checked it yet:</b> {{list .}}.</p></div>{{end}}{{end}}
+{{if or .Lead .Rest .Plain}}
+{{with .Lead}}<div class="prose lead-part">
+{{.}}
+</div>{{end}}
+{{with .Plain}}<aside class="plain-words" aria-labelledby="plain-h">
+  <h2 id="plain-h">In plain words</h2>
+  <div class="prose">
+{{.}}
+  </div>
+</aside>{{end}}
+{{with .Rest}}<div class="prose">
+{{.}}
+</div>{{end}}
+{{else}}<div class="prose">
 {{.HTML}}
-</div>
+</div>{{end}}
 {{with .Run}}
 <section class="run" aria-labelledby="run-h">
   <h2 id="run-h">Run this</h2>
@@ -53,73 +47,85 @@
   {{else}}<p class="muted">The build has no run of this computation.</p>{{end}}{{end}}
 </section>
 {{end}}
-{{with .Status}}{{with .Reasons}}
-<details class="reasons">
-  <summary>Why the build gives this status</summary>
-  <ul>{{range .}}<li>{{.}}</li>{{end}}</ul>
-</details>
-{{end}}{{end}}
-{{with .Writing}}{{with .Next}}
-<details class="reasons">
-  <summary>What this node needs for {{$.NextLevel}}</summary>
-  <ul>{{range .}}<li>{{.What}}{{with .Note}}: {{.}}{{end}} <span class="muted">({{.Have}} of {{.Want}})</span></li>{{end}}</ul>
-  <p class="muted">The <a href="{{url "levels/"}}">writing levels</a> say how complete the text of a node is. They do not measure its truth.</p>
-</details>
-{{end}}{{end}}
 {{with .Closure}}
 <section class="closure" aria-labelledby="closure-h">
-  <h2 id="closure-h">What this needs</h2>
-  <p>To read this node, read these {{len .Items}} nodes in this order. The foundations come first, and the list ends with this node.{{with .Proofs}} The list takes the proof{{if gt (len .) 1}}s{{end}} {{range $i, $l := .}}{{if $i}}, {{end}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{end}}.{{end}}</p>
+  <h2 id="closure-h">Reading path</h2>
+  <p class="muted">To understand this page from the ground up, read these {{len .Items}} pages in order. The foundations come first.{{with .Proofs}} The path takes the proof{{if gt (len .) 1}}s{{end}} {{range $i, $l := .}}{{if $i}}, {{end}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{end}}.{{end}}</p>
   {{template "dag" .}}
 </section>
 {{end}}
 {{with .Blueprint}}
 <section class="blueprint" aria-labelledby="blueprint-h">
-  <h2 id="blueprint-h">Blueprint</h2>
-  <p>The members of this topic and each node that they need, {{len .Items}} nodes in all. A member has a thick border in the figure and the mark "member" in the list.</p>
+  <h2 id="blueprint-h">Everything in this topic</h2>
+  <p class="muted">The members of this topic and each page that they need, {{len .Items}} pages in all.</p>
   {{template "dag" .}}
 </section>
 {{end}}
 {{with .UsedBy}}
 <section class="usedby" aria-labelledby="usedby-h">
-  <h2 id="usedby-h">What depends on this</h2>
-  <p>{{len .}} node{{if gt (len .) 1}}s use{{else}} uses{{end}} this node, directly or through other nodes.</p>
-  <ul class="cols">{{range .}}<li><a href="{{.URL}}"{{if .Missing}} class="missing"{{end}}>{{.Text}}</a> <span class="tag">{{.Tag}}</span></li>{{end}}</ul>
+  <h2 id="usedby-h">Where this leads</h2>
+  <p class="muted">{{len .}} page{{if gt (len .) 1}}s build{{else}} builds{{end}} on this one.</p>
+  <ul class="link-cloud">{{range .}}<li><a href="{{.URL}}"{{if .Missing}} class="missing"{{end}}>{{.Text}}</a></li>{{end}}</ul>
 </section>
 {{end}}
 {{with .Sources}}
 <section class="sources">
-  <h2>Sources</h2>
+  <h2>Further reading</h2>
   <ol>{{range .}}<li>{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{with .Note}}, {{.}}{{end}}</li>{{end}}</ol>
 </section>
 {{end}}
-{{with .Prov}}
-<section class="history" aria-labelledby="history-h">
-  <h2 id="history-h">History</h2>
-  <p>Each change to this node, from its <a href="{{.LogURL}}">provenance log</a>. A change by an agent names its run.</p>
+<details class="about">
+  <summary>About this page</summary>
+  <div class="about-body">
+  <table class="facts">
+    <tr><th>Tag</th><td><code class="copy" title="Click to copy">{{.Tag}}</code></td></tr>
+    {{with .URI}}<tr><th>URI</th><td><code class="copy" title="Click to copy">{{.}}</code></td></tr>{{end}}
+    {{with .Aliases}}<tr><th>Aliases</th><td>{{range $i, $a := .}}{{if $i}}, {{end}}<code>{{$a}}</code>{{end}}</td></tr>{{end}}
+    <tr><th>Kind</th><td>{{.Kind}}{{with .Role}}, {{.}}{{end}}</td></tr>
+    {{with .Writing}}<tr><th>Writing</th><td><a href="{{url (print "levels/" .Level "/")}}" title="The writing level of the page">{{.Level}}</a> {{.Level.Word}}</td></tr>{{end}}
+    {{with .MSC}}<tr><th>MSC</th><td>{{range $i, $c := .}}{{if $i}}, {{end}}<a href="{{url (print "msc/" (top $c) "/")}}" title="{{mscName (top $c)}}">{{$c}}</a>{{end}}</td></tr>{{end}}
+    {{with .Status}}<tr><th>Evidence</th><td>{{if .Evidence.String}}{{.Evidence}} {{.Evidence.Word}}{{else}}none for this kind{{end}}</td></tr>
+    {{if ge .Fidelity 0}}<tr><th>Fidelity</th><td>{{.Fidelity}}</td></tr>{{end}}
+    {{with .Flags}}<tr><th>Flags</th><td>{{join . ", "}}</td></tr>{{end}}
+    {{else}}{{if or (eq .Kind "statement") (eq .Kind "conjecture") (eq .Kind "problem")}}<tr><th>Status</th><td>This copy of the site has no build data. Run <code>m2 status {{.Tag}}</code>.</td></tr>{{end}}{{end}}
+    {{range .Refs}}<tr><th>{{.Label}}</th><td>{{range $i, $l := .Links}}{{if $i}}, {{end}}<a href="{{$l.URL}}"{{if $l.Missing}} class="missing" title="This page does not exist yet"{{end}}>{{$l.Text}}</a>{{with $l.Note}} ({{.}}){{end}}{{end}}</td></tr>
+    {{end}}
+    {{with .Formal}}<tr><th>Formal</th><td>{{range .}}<div>{{if .URL}}<a href="{{.URL}}"><code>{{.Text}}</code></a>{{else}}<code>{{.Text}}</code>{{end}} {{.Note}}</div>{{end}}</td></tr>{{end}}
+    {{with .SameAs}}<tr><th>Same as</th><td>{{range .}}<div>{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{with .Note}} {{.}}{{end}}</div>{{end}}</td></tr>{{end}}
+    {{if not .Updated.IsZero}}<tr><th>Changed</th><td>{{.Updated.Format "2 January 2006"}}{{if ne (.Added.Format "2006-01-02") (.Updated.Format "2006-01-02")}}, first written {{.Added.Format "2 January 2006"}}{{end}}</td></tr>{{end}}
+  </table>
+  <p class="formats"><a href="{{.MarkdownURL}}">Markdown</a> · <a href="{{.JSONURL}}">JSON</a> · <a href="{{.EditURL}}">Edit on GitHub</a></p>
+  {{with .Status}}{{with .Reasons}}<h3>Why the build gives this status</h3>
+  <ul>{{range .}}<li>{{.}}</li>{{end}}</ul>{{end}}{{end}}
+  {{with .Writing}}{{with .Next}}<h3>What this page needs for {{$.NextLevel}}</h3>
+  <ul>{{range .}}<li>{{.What}}{{with .Note}}: {{.}}{{end}} ({{.Have}} of {{.Want}})</li>{{end}}</ul>
+  <p>The <a href="{{url "levels/"}}">writing levels</a> say how complete the text of a page is. They do not measure its truth.</p>{{end}}{{end}}
+  {{with .Prov}}<h3 id="history-h">History</h3>
+  <p>Each change to this page, from its <a href="{{.LogURL}}">provenance log</a>. A change by an agent names its run.</p>
   <table class="plain">
-    <caption>The changes to this node, the oldest first</caption>
+    <caption class="sr-only">The changes to this page, the oldest first</caption>
     <tr><th scope="col">Date</th><th scope="col">Change</th><th scope="col">Field</th><th scope="col">By</th></tr>
     {{range .History}}<tr><td>{{.Day}}</td><td>{{.Op}}</td><td>{{.Field}}</td><td>{{with .By}}{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}<code>{{.Text}}</code>{{end}}{{with .Note}} <span class="muted">{{.}}</span>{{end}}{{end}}</td></tr>
     {{end}}
-  </table>
-</section>
-{{end}}
-<section class="backlinks">
-  <h2>What links here</h2>
-  {{range .Backlinks}}<h3>{{.Label}}</h3><ul>{{range .Links}}<li><a href="{{.URL}}">{{.Text}}</a> <span class="tag">{{.Tag}}</span></li>{{end}}</ul>
-  {{else}}<p class="muted">No node links to this node yet.</p>{{end}}
-</section>
+  </table>{{end}}
+  <h3>What links here</h3>
+  {{range .Backlinks}}<h4>{{.Label}}</h4><ul class="link-cloud">{{range .Links}}<li><a href="{{.URL}}">{{.Text}}</a></li>{{end}}</ul>
+  {{else}}<p>No page links to this page yet.</p>{{end}}
+  </div>
+</details>
 </article>
 {{end}}
 
 {{define "dag"}}
-{{with .SVG}}<figure class="dag-figure{{if $.Wide}} wide{{end}}">
+{{with .SVG}}<details class="graph">
+<summary>Show the path as a graph</summary>
+<figure class="dag-figure{{if $.Wide}} wide{{end}}">
   <div class="dag-scroll">{{.}}</div>
-  <figcaption id="{{$.ID}}">Each node uses the nodes above it. The colour of the bar on a box shows the evidence level, and the box also gives it as text. The list below has the same nodes.</figcaption>
+  <figcaption id="{{$.ID}}">Each page uses the pages above it. The colour of the bar on a box shows how strong the evidence is, and the box also gives it as text. The list has the same pages.</figcaption>
 </figure>
 <ul class="legend" aria-label="Evidence levels">{{range $.Legend}}<li><span class="swatch {{.Class}}" aria-hidden="true"></span>{{.Label}}</li>{{end}}</ul>
+</details>
 {{end}}
-<ol class="reading">{{range .Items}}<li{{if .Root}} class="root"{{end}}><a href="{{.URL}}"{{if .Missing}} class="missing"{{end}}>{{.Text}}</a> <span class="kind kind-{{.Kind}}">{{.Kind}}</span>{{with .Evidence}} <span class="ev-text">{{.}}</span>{{end}}{{if .Member}} <span class="muted">member</span>{{end}}</li>
+<ol class="reading">{{range .Items}}<li{{if .Root}} class="root"{{end}}><a href="{{.URL}}"{{if .Missing}} class="missing"{{end}}>{{.Text}}</a> <span class="kind-word">{{.Kind}}</span>{{if .Member}} <span class="kind-word">member</span>{{end}}</li>
 {{end}}</ol>
 {{end}}

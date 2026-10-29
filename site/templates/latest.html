@@ -1,0 +1,28 @@
+{{define "latest"}}
+<div class="feed-head">
+  <h1>Latest</h1>
+  <p class="lead">The newest and the changed ideas, the newest first. Follow them in a feed reader with the <a href="{{url "latest/feed.xml"}}">Atom feed</a>.</p>
+  {{if not .History}}<p class="note">This build has no history of changes, so the ideas are in the order of the graph.</p>{{end}}
+</div>
+<div class="feed" data-feed>
+{{range .Days}}<section class="feed-day">
+  {{with .Day}}<h2 class="day">{{.}}</h2>{{end}}
+  {{range .Cards}}<article class="post" style="--hue: {{hue .SubjectCode}}">
+    <a class="avatar" href="{{.URL}}" aria-hidden="true" tabindex="-1">{{printf "%.1s" .Label}}</a>
+    <div class="post-body">
+      <p class="post-meta"><span>{{.Label}}</span>{{with .Subject}} · <span>{{.}}</span>{{end}}{{if .When}} · <time datetime="{{.When}}">{{.Date}}</time>{{end}}{{if $.History}}{{if .New}}<span class="tag-new">New</span>{{else}}<span class="tag-rev">Revised</span>{{end}}{{end}}</p>
+      <h3><a href="{{.URL}}">{{.Name}}</a></h3>
+      <div class="post-text">{{.Text}}</div>
+      {{with .Uses}}<p class="builds">Builds on {{range $i, $l := .}}{{if lt $i 4}}{{if $i}}, {{end}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{end}}{{end}}</p>{{end}}
+    </div>
+  </article>
+  {{end}}
+</section>
+{{end}}
+</div>
+{{if or .Prev .Next}}<nav class="pager" aria-label="Pages">
+  {{with .Prev}}<a href="{{.}}" rel="prev">Newer</a>{{end}}
+  <span>Page {{.Page}} of {{.Pages}}</span>
+  {{with .Next}}<a href="{{.}}" rel="next" data-next>Older</a>{{end}}
+</nav>{{end}}
+{{end}}
