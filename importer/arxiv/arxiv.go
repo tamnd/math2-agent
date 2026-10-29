@@ -158,7 +158,7 @@ func ImportNames(root string, names *Names) (*Result, error) {
 	}
 	res := &Result{}
 	for _, f := range files {
-		objs, err := readLines[Object](f)
+		objs, err := readObjects(f)
 		if err != nil {
 			return nil, err
 		}
@@ -318,6 +318,9 @@ func (p *paperIn) version(v int, objs []Object, es []Edge) *versionIn {
 	if p.meta != nil {
 		vp.class = ClassOf(p.meta.Licence(v))
 		vp.msc = MSC(p.meta.MSCClass)
+		if len(vp.msc) == 0 {
+			vp.msc = CategoryMSC(p.meta.Categories)
+		}
 	}
 	vp.census = readStrength(filepath.Join(p.root, "analysis", "census", p.month, fmt.Sprintf("%sv%d.json", p.id, v)))
 	for _, e := range es {
@@ -519,6 +522,15 @@ func readLines[T any](file string) ([]T, error) {
 	return out, nil
 }
 
+// readObjects reads an objects file of tamnd/arxiv, and gives each object of the kind unknown the kind of ItemOf.
+func readObjects(file string) ([]Object, error) {
+	objs, err := readLines[Object](file)
+	for i := range objs {
+		objs[i].Item = ItemOf(&objs[i])
+	}
+	return objs, err
+}
+
 // commit returns the HEAD commit of the checkout, which is the snapshot of the mentions.
 func commit(root string) (string, error) {
 	out, err := exec.Command("git", "-C", root, "rev-parse", "HEAD").Output() // #nosec G204 -- the command is git, and root is the checkout that the user names
@@ -557,7 +569,7 @@ func Expect(root string) ([]Want, error) {
 	}
 	var out []Want
 	for _, f := range files {
-		objs, err := readLines[Object](f)
+		objs, err := readObjects(f)
 		if err != nil {
 			return nil, err
 		}
@@ -616,7 +628,7 @@ func ObjectsFile(id string) string {
 
 // ReadPaper reads the metadata record and the object records of one paper from the checkout at root. A paper with no metadata record gives a nil Paper.
 func ReadPaper(root, id string) (*Paper, []Object, error) {
-	objs, err := readLines[Object](filepath.Join(root, filepath.FromSlash(ObjectsFile(id))))
+	objs, err := readObjects(filepath.Join(root, filepath.FromSlash(ObjectsFile(id))))
 	if err != nil {
 		return nil, nil, err
 	}

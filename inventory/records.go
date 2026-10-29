@@ -91,6 +91,14 @@ func kindOf(src *ingest.Source, r *ingest.Record) string {
 		case r.Meta["oeis"] != "" && len(r.Meta) == 1:
 			return "object"
 		}
+		if r.Meta["instance_of"] != "" {
+			// A person, a work, a place, an algorithm or a paradox: the rules decide.
+			return Unknown
+		}
+		if k := mathlibKind(split(r.Meta["mathlib"])); k != "" {
+			return k
+		}
+		return NameKind(r.Title)
 	case "mathlib":
 		switch r.Kind {
 		case "theorem", "axiom":
@@ -159,4 +167,65 @@ func split(v string) []string {
 		}
 	}
 	return out
+}
+
+// mathlibKind gives the kind of a Wikidata item from the names of its Mathlib declarations (P14534), by the naming rules of Mathlib: a theorem has a name in snake_case, as integral_comp_mul_deriv, and a structure, a class or a function has a name in camel case, as CommRing, IsCoprime or Real.log. It returns "" with no name, and when the names disagree.
+func mathlibKind(names []string) string {
+	k := ""
+	for _, n := range names {
+		last := n[strings.LastIndex(n, ".")+1:]
+		got := "concept"
+		if strings.Contains(last, "_") {
+			got = "statement"
+		}
+		if k != "" && k != got {
+			return ""
+		}
+		k = got
+	}
+	return k
+}
+
+// headKinds gives the kind of a name of a Wikidata item from its last word, the head of the noun phrase, as the "theorem" of "Gershgorin circle theorem" or the "group" of "knot group". The words are the frequent heads of the items with no class on 2026-10-28. A word that heads names of more than one kind, as "algebra" in "Lie algebra" and "linear algebra", or "method", is not in the list, and the name gives no kind.
+var headKinds = map[string]string{}
+
+func init() {
+	for kind, ws := range map[string][]string{
+		"statement":  {"theorem", "theorems", "lemma", "inequality", "inequalities", "identity", "identities", "formula", "formulas", "formulae", "law", "laws", "principle", "criterion", "corollary", "postulate", "axiom", "reciprocity"},
+		"conjecture": {"conjecture"},
+		"problem":    {"problem"},
+		"topic":      {"theory", "combinatorics", "mathematics", "statistics", "dynamics", "calculus", "analysis"},
+		"concept": {"graph", "graphs", "function", "functions", "number", "numbers", "group", "groups", "space", "spaces", "matrix", "matrices", "category", "curve", "curves", "set", "sets",
+			"distribution", "polynomial", "polynomials", "field", "map", "mapping", "form", "manifold", "bundle", "sequence", "ring", "surface", "operator", "integral", "knot",
+			"functor", "series", "module", "tree", "cohomology", "homology", "extension", "relation", "variety", "representation", "projection", "transform", "transformation", "vector",
+			"tensor", "measure", "subgroup", "dimension", "lattice", "ideal", "morphism", "homomorphism", "isomorphism", "metric", "norm", "derivative", "matroid", "process", "scheme",
+			"sheaf", "stack", "complex", "monoid", "semigroup", "groupoid", "topology", "filter", "invariant", "polytope", "order", "ordering", "equation", "equations", "system", "code",
+			"coloring", "colouring", "partition", "permutation", "quotient", "subspace", "submanifold", "connection", "flow", "game", "language", "automaton", "grammar"},
+	} {
+		for _, w := range ws {
+			headKinds[w] = kind
+		}
+	}
+}
+
+// NameKind returns the kind that the name of an item tells by the last word of its first part, before a comma, a bracket or a preposition, or Unknown. "Hahn–Banach theorem" is a statement and "knot group" a concept. A name of one word gives no kind, because one word, as "group" or "theorem", names the concept or the word and not an item.
+func NameKind(name string) string {
+	name = strings.ToLower(name)
+	if i := strings.IndexAny(name, ",(["); i >= 0 {
+		name = name[:i]
+	}
+	// The head of "second fundamental theorem of calculus" is "theorem", and the name of "degree of a field extension" has no head of the list.
+	for _, p := range []string{" of ", " for ", " on ", " in "} {
+		if i := strings.Index(name, p); i >= 0 {
+			name = name[:i]
+		}
+	}
+	ws := strings.Fields(name)
+	if len(ws) < 2 {
+		return Unknown
+	}
+	if k := headKinds[strings.Trim(ws[len(ws)-1], ".:;'\"")]; k != "" {
+		return k
+	}
+	return Unknown
 }
