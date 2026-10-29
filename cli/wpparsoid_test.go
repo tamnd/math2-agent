@@ -83,7 +83,7 @@ func TestWPParsoidWorkers(t *testing.T) {
 	}
 	var mu sync.Mutex
 	var starts []time.Time
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		mu.Lock()
 		starts = append(starts, time.Now())
 		mu.Unlock()

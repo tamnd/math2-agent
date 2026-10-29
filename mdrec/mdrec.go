@@ -110,7 +110,7 @@ func Decode(data []byte) ([][]byte, error) {
 	head, rest, ok := strings.Cut(s[4:], "\n---\n")
 	if !ok {
 		if strings.HasSuffix(s[4:], "\n---") {
-			head, rest, ok = strings.TrimSuffix(s[4:], "\n---"), "", true
+			head, rest = strings.TrimSuffix(s[4:], "\n---"), ""
 		} else {
 			return nil, errors.New("mdrec: the YAML header has no end")
 		}
@@ -180,7 +180,7 @@ func Decode(data []byte) ([][]byte, error) {
 
 // ReadFile reads the records of a file.
 func ReadFile(path string) ([][]byte, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- the path is a file of records of a checkout that the caller names.
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func WriteFile(path string, records [][]byte, body string) error {
 }
 
 func atomic(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- a checkout of tamnd/arxiv is public, and its directories are read by all.
 		return err
 	}
 	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*")
@@ -215,13 +215,13 @@ func atomic(path string, data []byte) error {
 		err = cerr
 	}
 	if err == nil {
-		err = os.Chmod(tmp, 0o644)
+		err = os.Chmod(tmp, 0o644) // #nosec G302 -- a file of a checkout of tamnd/arxiv is public, and is read by all.
 	}
 	if err == nil {
 		err = os.Rename(tmp, path)
 	}
 	if err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 	}
 	return err
 }
@@ -353,46 +353,46 @@ func toJSON(w io.Writer, n *yaml.Node) error {
 	case yaml.AliasNode:
 		return toJSON(w, n.Alias)
 	case yaml.MappingNode:
-		io.WriteString(w, "{")
+		_, _ = io.WriteString(w, "{")
 		for i := 0; i+1 < len(n.Content); i += 2 {
 			if i > 0 {
-				io.WriteString(w, ",")
+				_, _ = io.WriteString(w, ",")
 			}
 			if err := writeString(w, n.Content[i].Value); err != nil {
 				return err
 			}
-			io.WriteString(w, ":")
+			_, _ = io.WriteString(w, ":")
 			if err := toJSON(w, n.Content[i+1]); err != nil {
 				return err
 			}
 		}
-		io.WriteString(w, "}")
+		_, _ = io.WriteString(w, "}")
 	case yaml.SequenceNode:
-		io.WriteString(w, "[")
+		_, _ = io.WriteString(w, "[")
 		for i, c := range n.Content {
 			if i > 0 {
-				io.WriteString(w, ",")
+				_, _ = io.WriteString(w, ",")
 			}
 			if err := toJSON(w, c); err != nil {
 				return err
 			}
 		}
-		io.WriteString(w, "]")
+		_, _ = io.WriteString(w, "]")
 	case yaml.ScalarNode:
 		switch n.ShortTag() {
 		case "!!null":
-			io.WriteString(w, "null")
+			_, _ = io.WriteString(w, "null")
 		case "!!bool":
 			var v bool
 			if err := n.Decode(&v); err != nil {
 				return err
 			}
-			io.WriteString(w, strconv.FormatBool(v))
+			_, _ = io.WriteString(w, strconv.FormatBool(v))
 		case "!!int", "!!float":
 			if !json.Valid([]byte(n.Value)) {
 				return fmt.Errorf("the number %q is not a JSON number", n.Value)
 			}
-			io.WriteString(w, n.Value)
+			_, _ = io.WriteString(w, n.Value)
 		default:
 			if err := writeString(w, n.Value); err != nil {
 				return err
@@ -439,9 +439,9 @@ func old(path string) string {
 // A file that does not open with a header is read as JSON Lines, whatever its
 // name.
 func Read(path string) ([][]byte, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- the path is a file of records of a checkout that the caller names.
 	if o := old(path); errors.Is(err, os.ErrNotExist) && o != "" {
-		if d, oerr := os.ReadFile(o); oerr == nil {
+		if d, oerr := os.ReadFile(o); oerr == nil { // #nosec G304 -- the .jsonl name of the same file.
 			data, err = d, nil
 		} else if !errors.Is(oerr, os.ErrNotExist) {
 			err = oerr
