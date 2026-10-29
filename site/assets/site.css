@@ -1,8 +1,7 @@
 /* The style of Math 2.0. It is made for reading: one column of text, a modern sans-serif for the words and a math font for the formulas. Space and tints of colour separate the parts of a page, not lines, and no box has round corners. Each subject has a hue, so its tiles, cards and pages share a colour. It has a light and a dark theme and works on narrow screens. */
 
-@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("fonts/InterVariable.woff2") format("woff2"); }
-@font-face { font-family: "Inter"; font-style: italic; font-weight: 100 900; font-display: swap; src: url("fonts/InterVariable-Italic.woff2") format("woff2"); }
-@font-face { font-family: "STIX Two Math"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/STIXTwoMath-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 400 760; font-display: swap; src: url("fonts/InterVariable.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: italic; font-weight: 400 760; font-display: swap; src: url("fonts/InterVariable-Italic.woff2") format("woff2"); }
 
 :root {
   --bg: #fbfaf8;
@@ -21,7 +20,7 @@
   --ink-l: 32%;
   --hue: 235;
   --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --math: "STIX Two Math", math;
+  --math: "STIX Two Math Web", "STIX Two Math", "Cambria Math", math;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --measure: 42rem;
   --wide: 72rem;
@@ -154,7 +153,7 @@ main a.button { text-decoration: none; }
 .prose hr::after, hr::after { content: "· · ·"; color: var(--muted); letter-spacing: 0.5em; }
 .prose strong { font-weight: 650; }
 
-/* Math. The build writes MathML, and the browser draws it with STIX Two Math. MathML Core does not have the attributes columnalign and rowspacing, so these rules give their effect. */
+/* Math. The build writes MathML, and the browser draws it with STIX Two Math. The script loads the font after the page, so that the 550 kB of the font do not hold back the first paint; until then, and with no script, the browser draws the math with a math font of the system. MathML Core does not have the attributes columnalign and rowspacing, so these rules give their effect. */
 
 math { font-family: var(--math); font-size: 1.12em; }
 .math.display { display: block; overflow-x: auto; overflow-y: hidden; margin: 1.3rem 0; padding: 0.2rem 0; text-align: center; }
@@ -241,6 +240,7 @@ mtable[rowspacing] mtd { padding-top: 0.25em; padding-bottom: 0.25em; }
 .reading li::before { content: counter(step); min-width: 1.6rem; font-variant-numeric: tabular-nums; font-size: 0.85rem; font-weight: 650; color: var(--muted); }
 .reading li.root { background: hsl(var(--hue) var(--tint-s) var(--tint-l)); }
 .reading li.root a { font-weight: 650; }
+.reading li.root .kind-word, .reading li.root::before { color: var(--soft); }
 .reading a { text-decoration: none; }
 .kind-word { font-size: 0.8rem; color: var(--muted); margin-left: auto; }
 
@@ -386,6 +386,7 @@ ul.bare, .bare > ul { list-style: none; padding-left: 0; }
 .bottom a { color: var(--soft); }
 .bottom a:hover { color: var(--text); }
 .fine { margin: 2.5rem 0 0; font-size: 0.82rem; line-height: 1.6; }
+.fine a { text-decoration: underline; text-underline-offset: 0.18em; }
 
 /* The graph figures. The bar on each box shows the evidence level: one blue ramp for E1 to E5, the critical red for E⊥, and grey for E0 and for no level. The box also gives the level as text. */
 :root {

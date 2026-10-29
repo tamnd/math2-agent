@@ -145,7 +145,7 @@ func TestNodes(t *testing.T) {
 		`<annotation encoding="application/x-tex">G</annotation>`,
 		`<mi>ℤ</mi>`,
 		`<div class="math display"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block">`,
-		`<link rel="preload" href="/math2/assets/fonts/STIXTwoMath-Regular.woff2" as="font" type="font/woff2" crossorigin>`,
+		`<link rel="preload" href="/math2/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>`,
 		`m2://7K3QX2`,
 		`<a href="/math2/msc/20/"`,
 		`<link rel="canonical" href="https://example.org/math2/wiki/lagranges-theorem/">`,

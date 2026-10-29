@@ -15,6 +15,27 @@
     });
   }
 
+  // Load STIX Two Math once the page has painted, when the page has math, and draw the math with it as soon as it arrives. The font is large, and the text comes first.
+  if (window.FontFace && document.fonts && document.querySelector("math")) {
+    var math = function () {
+      new FontFace("STIX Two Math Web", "url(" + base + "assets/fonts/STIXTwoMath-Regular.woff2) format(\"woff2\")").load().then(function (f) { document.fonts.add(f); }, function () {});
+    };
+    var later = function () { requestAnimationFrame(function () { setTimeout(math, 0); }); };
+    if (window.PerformanceObserver && (PerformanceObserver.supportedEntryTypes || []).indexOf("paint") >= 0) {
+      var seen = false;
+      var po = new PerformanceObserver(function (list) {
+        if (seen || !list.getEntriesByName("first-contentful-paint").length) return;
+        seen = true;
+        po.disconnect();
+        addEventListener("load", later);
+        if (document.readyState === "complete") later();
+      });
+      po.observe({ type: "paint", buffered: true });
+    } else {
+      addEventListener("load", later);
+    }
+  }
+
   // Click a tag or a URI to copy it.
   document.querySelectorAll("code.copy").forEach(function (el) {
     el.addEventListener("click", function () {
