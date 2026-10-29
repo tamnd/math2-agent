@@ -16,8 +16,12 @@ import (
 	"github.com/tamnd/wikipedia-cli/wiki/parsoid"
 )
 
-// parsoidBase is the REST API that m2 wp parsoid uses. The tests change it.
-var parsoidBase = parsoid.DefaultBase
+// parsoidBase and parsoidAPI are the REST API and the Action API that m2 wp
+// parsoid uses. The tests change them.
+var (
+	parsoidBase = parsoid.DefaultBase
+	parsoidAPI  = parsoid.DefaultAPI
+)
 
 func runWPParsoid(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 wp parsoid", flag.ContinueOnError)
@@ -74,7 +78,7 @@ func runWPParsoid(args []string, stdout, stderr io.Writer) int {
 	wpcorpus.FetchOrder(cs, pilot)
 
 	rec := &wpcorpus.RunRecord{Command: "m2 wp parsoid", Args: args, M2: version, Wiki: wpcorpus.WikiVersion(), Started: started.Format(time.RFC3339)}
-	f := &parsoid.Fetcher{Base: parsoidBase, UserAgent: userAgent()}
+	f := &parsoid.Fetcher{Base: parsoidBase, API: parsoidAPI, UserAgent: userAgent()}
 	ctx := context.Background()
 	// The REST API renders an old revision when it asks for it, and a large
 	// article takes some seconds. Thus the workers fetch at the same time,
@@ -92,6 +96,13 @@ func runWPParsoid(args []string, stdout, stderr io.Writer) int {
 			defer wg.Done()
 			for j := range jobs {
 				body, err := f.Fetch(ctx, j.m.Title, j.m.Revision)
+				via := ""
+				if errors.Is(err, parsoid.ErrTimeout) {
+					// The REST API could not render a large revision in
+					// time. The Action API gives the same HTML.
+					body, err = f.FetchParse(ctx, j.m.Revision)
+					via = " from the Action API"
+				}
 				if err == nil {
 					err = writeWork(j.path, body)
 				}
@@ -102,7 +113,7 @@ func runWPParsoid(args []string, stdout, stderr io.Writer) int {
 					rec.Failures = append(rec.Failures, fmt.Sprintf("%d r%d: %v", j.m.Page, j.m.Revision, err))
 				} else {
 					rec.Pages++
-					fmt.Fprintf(stdout, "%d r%d %s: %d bytes\n", j.m.Page, j.m.Revision, j.m.Title, len(body))
+					fmt.Fprintf(stdout, "%d r%d %s: %d bytes%s\n", j.m.Page, j.m.Revision, j.m.Title, len(body), via)
 				}
 				mu.Unlock()
 			}
