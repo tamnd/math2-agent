@@ -58,3 +58,18 @@ func ReadEdges(root, source string) ([]Edge, error) {
 	})
 	return out, err
 }
+
+// WalkEdges calls fn for each edge of the source in the tree at root, with the file relative to root and the line number. A tree with no edges gives no error.
+func WalkEdges(root, source string, fn func(file string, line int, e Edge) error) error {
+	return readLines(filepath.Join(root, EdgesDir, source), func(path string, n int, line []byte) error {
+		var e Edge
+		if err := json.Unmarshal(line, &e); err != nil {
+			return fmt.Errorf("an edge: %w", err)
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		return fn(filepath.ToSlash(rel), n, e)
+	})
+}

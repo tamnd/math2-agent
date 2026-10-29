@@ -128,6 +128,7 @@ var options = map[string]func(opt *Options, root string){
 	"Y01": wikipediaCheckout,
 	"Y02": wikipediaCheckout,
 	"Y03": wikipediaCheckout,
+	"Y04": wikipediaCheckout,
 	"Y07": wikipediaCheckout,
 	"Y08": wikipediaCheckout,
 	"Y09": wikipediaCheckout,
@@ -334,8 +335,11 @@ func TestGroupAndHard(t *testing.T) {
 	for _, r := range rep.Results {
 		ids = append(ids, r.Rule)
 		reason := "not written yet"
-		if r.Rule == "Y01" || r.Rule == "Y02" || r.Rule == "Y03" {
+		switch r.Rule {
+		case "Y01", "Y02", "Y03", "Y04":
 			reason = "no checkout of tamnd/wikipedia-math is given, so set -wikipedia to run the rule"
+		case "Y05", "Y06":
+			reason = "the record plane has no Wikipedia mention"
 		}
 		if r.State != check.Skip || r.Reason != reason {
 			t.Errorf("%s: the state is %s %q, and it must be skip with the reason %q", r.Rule, r.State, r.Reason, reason)

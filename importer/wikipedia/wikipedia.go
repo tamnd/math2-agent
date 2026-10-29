@@ -64,39 +64,10 @@ func Import(root string, old []inventory.Mention) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	all, err := wpcorpus.ReadScopeFile(root, wpcorpus.ScopePath)
+	pages, meta, err := scopePages(root)
 	if err != nil {
 		return nil, err
 	}
-	metas, err := wpcorpus.ReadMetadataFiles(root)
-	if err != nil {
-		return nil, err
-	}
-	meta := map[int]*wpcorpus.Metadata{}
-	for _, md := range metas {
-		meta[md.Page] = md
-	}
-	var pages []int
-	for _, c := range all {
-		if !c.InScope {
-			continue
-		}
-		p := int(c.PageID)
-		pages = append(pages, p)
-		// A corpus with no metadata plane has the facts of the content
-		// header and of the scope list.
-		if meta[p] == nil {
-			cp, err := wpcorpus.ReadContent(root, p)
-			if errors.Is(err, fs.ErrNotExist) {
-				continue
-			}
-			if err != nil {
-				return nil, err
-			}
-			meta[p] = &wpcorpus.Metadata{Page: p, Title: cp.Title, Revision: cp.Revision, Timestamp: cp.Timestamp, Class: c.Class, Importance: c.Importance}
-		}
-	}
-	slices.Sort(pages)
 	// kinds is the mention kind of each article, for the member mentions.
 	kinds := map[int]string{}
 	for _, p := range pages {
@@ -149,6 +120,86 @@ func Import(root string, old []inventory.Mention) (*Result, error) {
 	res.keep(old, done, gone)
 	slices.SortFunc(res.Mentions, func(a, b inventory.Mention) int { return strings.Compare(a.ID, b.ID) })
 	return res, nil
+}
+
+// scopePages returns the page ids of the articles in scope, in order, and the metadata of each article that has metadata or a content file.
+func scopePages(root string) ([]int, map[int]*wpcorpus.Metadata, error) {
+	all, err := wpcorpus.ReadScopeFile(root, wpcorpus.ScopePath)
+	if err != nil {
+		return nil, nil, err
+	}
+	metas, err := wpcorpus.ReadMetadataFiles(root)
+	if err != nil {
+		return nil, nil, err
+	}
+	meta := map[int]*wpcorpus.Metadata{}
+	for _, md := range metas {
+		meta[md.Page] = md
+	}
+	var pages []int
+	for _, c := range all {
+		if !c.InScope {
+			continue
+		}
+		p := int(c.PageID)
+		pages = append(pages, p)
+		// A corpus with no metadata plane has the facts of the content
+		// header and of the scope list.
+		if meta[p] == nil {
+			cp, err := wpcorpus.ReadContent(root, p)
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			if err != nil {
+				return nil, nil, err
+			}
+			meta[p] = &wpcorpus.Metadata{Page: p, Title: cp.Title, Revision: cp.Revision, Timestamp: cp.Timestamp, Class: c.Class, Importance: c.Importance}
+		}
+	}
+	slices.Sort(pages)
+	return pages, meta, nil
+}
+
+// Want is one mention that an import of the checkout must give (rule Y04).
+type Want struct {
+	File    string // the objects file, relative to the checkout
+	Ref     string // the ref of the object, or empty for the article
+	Mention string // the mention id, or empty when the object has no tag
+}
+
+// Expect returns the mentions that an import of the checkout at root must give: one for each article in scope that has an objects file for its revision of record, and one for each object of an item kind of that file. An article with no objects file gives no want, because rules Y01 and Y02 report it.
+func Expect(root string) ([]Want, error) {
+	pages, meta, err := scopePages(root)
+	if err != nil {
+		return nil, err
+	}
+	var out []Want
+	for _, p := range pages {
+		md := meta[p]
+		if md == nil {
+			continue
+		}
+		objs, err := wpcorpus.ReadObjects(root, p, md.Revision)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		file := filepath.ToSlash(wpcorpus.ObjectsPath(p, md.Revision))
+		out = append(out, Want{File: file, Mention: wpcorpus.MentionID(p, "")})
+		for _, o := range objs {
+			if !Wanted(o.Kind) {
+				continue
+			}
+			w := Want{File: file, Ref: o.Ref}
+			if o.Tag != "" {
+				w.Mention = wpcorpus.MentionID(p, o.Tag)
+			}
+			out = append(out, w)
+		}
+	}
+	return out, nil
 }
 
 // keep adds the mentions of an earlier import that this import does not give, so that their ids stay.
