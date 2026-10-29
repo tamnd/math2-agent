@@ -111,3 +111,32 @@ func TestWPParsoidWorkers(t *testing.T) {
 		}
 	}
 }
+
+// TestWPParsoidActionAPI checks that a revision that the REST API cannot
+// render in time (HTTP 504) comes from the Action API.
+func TestWPParsoidActionAPI(t *testing.T) {
+	root := t.TempDir()
+	if err := wpcorpus.WriteMetadata(root, &wpcorpus.Metadata{Page: 3989, Title: "Banach space", Revision: 77, Timestamp: "2026-01-02T03:04:05Z", Type: "concept"}); err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/page/html/") {
+			http.Error(w, "upstream timeout", http.StatusGatewayTimeout)
+			return
+		}
+		_, _ = w.Write([]byte(`{"parse":{"revid":77,"text":"<section data-mw-section-id=\"0\"><p>A space.</p></section>"}}`))
+	}))
+	defer srv.Close()
+	savedBase, savedAPI := parsoidBase, parsoidAPI
+	parsoidBase, parsoidAPI = srv.URL, srv.URL+"/w/api.php"
+	t.Cleanup(func() { parsoidBase, parsoidAPI = savedBase, savedAPI })
+
+	code, stdout, stderr := run("wp", "parsoid", "-corpus", root)
+	if code != ExitOK || !strings.Contains(stdout, "3989 r77 Banach space:") || !strings.Contains(stdout, "from the Action API") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	rd, err := wpcorpus.ReadParsoid(root, 3989, 77)
+	if err != nil || rd.Revision != 77 || len(rd.Sections) != 1 {
+		t.Errorf("the reading is %+v, %v", rd, err)
+	}
+}
