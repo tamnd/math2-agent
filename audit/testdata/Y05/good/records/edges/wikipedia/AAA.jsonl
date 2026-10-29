@@ -1,0 +1,6 @@
+{"from":"wikipedia://en/100","to":"wikipedia://en/55","predicate":"related","method":"link-in-text","confidence":"low","span":[70,80],"revision":7,"by":"importer/wikipedia/1"}
+{"from":"wikipedia://en/100","to":"Category:Theorems in group theory","predicate":"kind-of","method":"category","confidence":"medium","span":[90,99],"revision":7,"by":"importer/wikipedia/1"}
+{"from":"wikipedia://en/100#GLO1","to":"wikipedia://en/200","predicate":"glossary-of","method":"glossary","confidence":"certain","span":[50,60],"revision":7,"by":"importer/wikipedia/1"}
+{"from":"wikipedia://en/100#PRF1","to":"wikipedia://en/100#THM1","predicate":"uses","method":"anchor","confidence":"certain","span":[30,40],"revision":7,"by":"importer/wikipedia/1"}
+{"from":"wikipedia://en/100#THM1","to":"wikipedia://en/100","predicate":"uses","method":"anchor","confidence":"certain","span":[12,14],"revision":7,"by":"importer/wikipedia/1"}
+{"from":"wikipedia://en/100#THM1","to":"wikipedia://en/200","predicate":"uses","method":"link-in-item","confidence":"high","span":[15,18],"revision":7,"by":"importer/wikipedia/1"}

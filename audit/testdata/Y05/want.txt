@@ -1,0 +1,5 @@
+records/edges/wikipedia/AAA.jsonl:1:1: Y05: the edge from wikipedia://en/100 to wikipedia://en/55 has a finding that is not a short token
+records/mentions/wikipedia/AAA.jsonl:5:1: Y05: the Wikipedia mention wikipedia://en/100#PRF1 has a text_ref that is not of the form content/wikitext/<shard>/<pageid>.wiki@r<revision>#<start>-<end>
+records/mentions/wikipedia/AAA.jsonl:7:1: Y05: the Wikipedia mention wikipedia://en/100#THM1 has a text that is not empty
+records/mentions/wikipedia/AAA.jsonl:8:1: Y05: the Wikipedia mention wikipedia://en/200 has a hash that is not a sha256 hash
+records/mentions/wikipedia/AAA.jsonl:9:1: Y05: the Wikipedia mention wikipedia://en/300 has a locator that does not end with the permanent link of the revision

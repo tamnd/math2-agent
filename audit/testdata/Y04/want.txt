@@ -1,0 +1,5 @@
+analysis/objects/0000/100-r7.md:0:0: Y04: the object o3 has no mention: wikipedia://en/100#THM1 is not in records/mentions. Run m2 corpus import -source wikipedia
+analysis/objects/0000/100-r7.md:0:0: Y04: the object o8 has no tag, so it has no mention. Run m2 wp extract on the checkout
+records/mentions/wikipedia/AAA.jsonl:2:1: Y04: the mention wikipedia://en/100#GLO1 is a member of wikipedia://en/999, and that mention does not exist
+records/mentions/wikipedia/AAA.jsonl:4:1: Y04: the proof wikipedia://en/100#PRF1 has no attached_to
+records/mentions/wikipedia/AAA.jsonl:5:1: Y04: the mention wikipedia://en/100#PRF2 is attached to wikipedia://en/100#NONE, and that mention does not exist
