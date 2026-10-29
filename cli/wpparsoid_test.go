@@ -42,7 +42,8 @@ func TestWPParsoid(t *testing.T) {
 	parsoidBase = srv.URL
 	t.Cleanup(func() { parsoidBase = saved })
 
-	code, stdout, stderr := run("wp", "parsoid", "-corpus", root)
+	// One worker, so that the requests come in the order of the queue.
+	code, stdout, stderr := run("wp", "parsoid", "-corpus", root, "-workers", "1")
 	if code != ExitOK {
 		t.Fatalf("exit code %d, stderr %q", code, stderr)
 	}
@@ -131,7 +132,8 @@ func TestWPParsoidActionAPI(t *testing.T) {
 	parsoidBase, parsoidAPI = srv.URL, srv.URL+"/w/api.php"
 	t.Cleanup(func() { parsoidBase, parsoidAPI = savedBase, savedAPI })
 
-	code, stdout, stderr := run("wp", "parsoid", "-corpus", root)
+	// One worker, so that the requests come in the order of the queue.
+	code, stdout, stderr := run("wp", "parsoid", "-corpus", root, "-workers", "1")
 	if code != ExitOK || !strings.Contains(stdout, "3989 r77 Banach space:") || !strings.Contains(stdout, "from the Action API") {
 		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
 	}

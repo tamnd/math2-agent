@@ -578,7 +578,8 @@ func Expect(root string) ([]Want, error) {
 				in = append(in, objs[i])
 			}
 		}
-		rel, _ := filepath.Rel(root, f)
+		// A finding names the file that is there, .md or .jsonl.
+		rel, _ := filepath.Rel(root, mdrec.Which(f))
 		for _, o := range in {
 			if !Wanted(o.Item) {
 				continue
