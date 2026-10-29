@@ -9,7 +9,7 @@
   --surface-2: #e8e6e1;
   --text: #17181c;
   --soft: #3b3f47;
-  --muted: #6a707b;
+  --muted: #5a606a;
   --link: #3949c9;
   --missing: #c23a3a;
   --accent: #3949c9;
@@ -17,7 +17,7 @@
   --warn: #fbefd5;
   --tint-l: 94%;
   --tint-s: 55%;
-  --ink-l: 32%;
+  --ink-l: 26%;
   --hue: 235;
   --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --math: "STIX Two Math Web", "STIX Two Math", "Cambria Math", math;
@@ -29,14 +29,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #111317; --surface: #1a1d23; --surface-2: #252932; --text: #eceef2; --soft: #c9cdd5; --muted: #9298a3;
+    --bg: #111317; --surface: #1a1d23; --surface-2: #252932; --text: #eceef2; --soft: #c9cdd5; --muted: #a0a6b0;
     --link: #9eaaff; --missing: #ff8a7a; --accent: #8f9cff; --on-accent: #10121a; --warn: #33290f;
     --tint-l: 17%; --tint-s: 30%; --ink-l: 78%;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #111317; --surface: #1a1d23; --surface-2: #252932; --text: #eceef2; --soft: #c9cdd5; --muted: #9298a3;
+  --bg: #111317; --surface: #1a1d23; --surface-2: #252932; --text: #eceef2; --soft: #c9cdd5; --muted: #a0a6b0;
   --link: #9eaaff; --missing: #ff8a7a; --accent: #8f9cff; --on-accent: #10121a; --warn: #33290f;
   --tint-l: 17%; --tint-s: 30%; --ink-l: 78%;
   color-scheme: dark;
@@ -190,7 +190,7 @@ mtable[rowspacing] mtd { padding-top: 0.25em; padding-bottom: 0.25em; }
 }
 .tiles a:hover { background: hsl(var(--hue) var(--tint-s) calc(var(--tint-l) - 5%)); transform: translateY(-2px); }
 .tile-name { font-weight: 650; font-size: 1.05rem; line-height: 1.3; letter-spacing: -0.01em; }
-.tile-count { font-size: 0.85rem; opacity: 0.8; font-variant-numeric: tabular-nums; }
+.tile-count { font-size: 0.85rem; font-weight: 450; font-variant-numeric: tabular-nums; }
 
 .mini-cards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 0.8rem; }
 .mini-cards li { position: relative; background: var(--surface); padding: 1.2rem 1.3rem 1.1rem; overflow: hidden; }
