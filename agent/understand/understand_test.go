@@ -22,7 +22,7 @@ import (
 const objects = `{"tag":"THM1","kind":"statement","subkind":"theorem","paper":"2401.00001","version":"1","local":"thm-1","number":"1.1","env":"theorem","body_md":"Every compact metric space is complete.","path":"source","item":"statement/theorem","scope":"paper"}
 {"tag":"PRF1","kind":"proof","paper":"2401.00001","version":"1","local":"proof-1","path":"source","item":"proof","scope":"paper","proves":"thm-1"}
 {"tag":"RMK1","kind":"remark","paper":"2401.00001","version":"1","local":"remark-1","env":"remark","body_md":"The converse holds by [Ser, Theorem 4.1].","path":"source","item":"remark","scope":"paper"}
-{"tag":"UNK1","kind":"unknown","paper":"2401.00001","version":"1","local":"unknown-1","env":"satz","number":"2","body_md":"Let $X$ be a space. Then $X$ is compact.","path":"source","item":"unknown","scope":"paper"}
+{"tag":"UNK1","kind":"unknown","paper":"2401.00001","version":"1","local":"unknown-1","env":"point","number":"2","body_md":"Let $X$ be a space. Then $X$ is compact.","path":"source","item":"unknown","scope":"paper"}
 {"tag":"DEF1","kind":"definition","paper":"2401.00001","version":"1","local":"def-1","env":"definition","body_md":"A space is \\emph{tame} if it is compact.","path":"source","item":"definition","scope":"paper"}
 {"kind":"remark","paper":"2401.00001","version":"1","local":"remark-2","path":"source","item":"remark","scope":"paper"}
 `
@@ -122,7 +122,7 @@ func TestLoad(t *testing.T) {
 func TestBrief(t *testing.T) {
 	p := load(t, "", "arxiv:2401.00001/classify")
 	b := understand.Brief(&agent.Job{ID: "j-1", Goal: "classify the items."}, p)
-	for _, want := range []string{"the pass classify on the arXiv paper 2401.00001v1", "The goal of the job: classify the items.", "each of the 2 items", "statement/lemma", "Item ax://paper/2401.00001#UNK1", "environment: satz", "Then $X$ is compact.", "54D30", "no licence"} {
+	for _, want := range []string{"the pass classify on the arXiv paper 2401.00001v1", "The goal of the job: classify the items.", "each of the 2 items", "statement/lemma", "Item ax://paper/2401.00001#UNK1", "environment: point", "Then $X$ is compact.", "54D30", "no licence"} {
 		if !strings.Contains(b, want) {
 			t.Errorf("the brief has no %q:\n%s", want, b)
 		}

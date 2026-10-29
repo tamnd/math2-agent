@@ -412,3 +412,46 @@ func TestClusterJoinsByCitedResult(t *testing.T) {
 		}
 	}
 }
+
+func TestClusterJoinsByName(t *testing.T) {
+	ax := func(id, kind, name string, msc ...string) Mention {
+		return Mention{ID: "ax://paper/" + id, Source: "arxiv", NativeID: id, Kind: kind, Name: name, MSC: msc, Class: "record", By: "m2/arxiv"}
+	}
+	ms := []Mention{
+		wikidata("Q1", "Perron–Frobenius theorem", map[string]string{"proofwiki": "Perron-Frobenius_Theorem"}),
+		wikidata("Q2", "stopping time", map[string]string{"proofwiki": "Definition:Stopping_Time"}),
+		wikidata("Q3", "chain rule", map[string]string{"proofwiki": "Chain_Rule"}),
+		wikidata("Q4", "lower bound", map[string]string{"proofwiki": "Lower_Bound"}),
+		wikidata("Q5", "Hahn–Banach theorem", map[string]string{"proofwiki": "Hahn-Banach_Theorem"}),
+		wikidata("Q6", "Hahn–Banach theorem", map[string]string{"proofwiki": "Hahn-Banach_Theorem_(Real)"}),
+		ax("1701.00517#R1", "statement", "The Perron-Frobenius Theorem", "15B48"),
+		ax("1701.00518#R1", "definition", "Stopping time", "60G40"),
+		ax("1701.00519#R1", "statement", "Chain rule"),                         // no result word
+		ax("1701.00520#R1", "statement", "Lower bound"),                        // no result word
+		ax("1701.00521#R1", "statement", "Perron-Frobenius theorem for cones"), // a variant
+		ax("1701.00522#R1", "definition", "Perron–Frobenius theorem"),          // another kind
+		ax("1701.00523#R1", "statement", "Hahn-Banach theorem"),                // two groups
+	}
+	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Named != 2 {
+		t.Fatalf("got %d joins by name, want 2", res.Named)
+	}
+	for _, r := range res.Rows {
+		if (slices.Contains(r.Mentions, ms[0].ID) || slices.Contains(r.Mentions, ms[1].ID)) && (len(r.Mentions) != 2 || r.Layer != Textbook || r.Spread != 2) {
+			t.Errorf("the row of %s is %+v", r.Name, r)
+		}
+	}
+	// A run on rows that kept the paper apart merges its row into the row of the other source, by the rule name.
+	again, err := Cluster([]Row{{ID: "AB00000017", Mentions: []string{ms[0].ID}, Layer: Textbook}, {ID: "AB00000025", Mentions: []string{ms[6].ID}, Layer: Research, Outcome: &Outcome{Value: OutcomeRecord}}}, ms[:7], Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(again.Rows, func(r Row) bool {
+		return r.ID == "AB00000025" && r.Outcome.Value == OutcomeMerged && r.Outcome.Rule == "name" && r.Outcome.Target[0] == "AB00000017"
+	}) {
+		t.Errorf("the second run gives %+v", again.Rows)
+	}
+}

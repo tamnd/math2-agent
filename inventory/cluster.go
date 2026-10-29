@@ -38,7 +38,9 @@ type Result struct {
 	Hashed int
 	// Equivalent is the number of joins of pass 2: each join puts two groups of pass 1 into one group, because they have statements with the same canonical type.
 	Equivalent int
-	Orphans    int // the number of attached mentions whose target has no row
+	// Named is the number of joins of the name pass: each join puts a mention of the research layer into the group of a mention of another source with its name (corpus arxiv AX8.2 and AX8.4).
+	Named   int
+	Orphans int // the number of attached mentions whose target has no row
 	// Formal is the number of rows whose outcome the formal rules changed: a new outcome formal_only, or formal_only open again because a test of corpus K4.5 now selects the row.
 	Formal int
 	// Aligned is the number of rows of the research layer that got the outcome aligned, or lost it, because of the aligned edges of the nodes.
@@ -85,6 +87,8 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 	res := &Result{Cited: cited, Hashed: joinHash(u, ms)}
 	hashed := u.roots(ms)
 	res.Equivalent = joinEquivalent(u, ms)
+	equivalent := u.roots(ms)
+	res.Named = joinNames(u, ms)
 	groups := map[string][]string{}
 	for i := range ms {
 		if ms[i].Attached() {
@@ -129,6 +133,8 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 			a, b := firstIn(r, byID), firstIn(keep, byID)
 			rule, why := "identifiers", "a shared identifier"
 			switch {
+			case equivalent[a] != equivalent[b]:
+				rule, why = "name", "an equal name"
 			case hashed[a] != hashed[b]:
 				rule, why = "equivalence", "an equal formal statement"
 			case pass1[a] != pass1[b]:
@@ -329,6 +335,20 @@ func Passes(ms []Mention) []map[string]string {
 
 // keepFirst orders the rows of one group: the row to keep comes first. A row with an outcome other than merged comes first, then the row with more mentions, then the row with the smaller identifier.
 func keepFirst(a, b *Row) int {
+	// A node keeps its row, and so does a row of another layer that a paper joins: the paper adds spread to it (corpus arxiv AX8.4).
+	na, nb := a.Outcome != nil && a.Outcome.Value == OutcomeNode, b.Outcome != nil && b.Outcome.Value == OutcomeNode
+	if na != nb {
+		if na {
+			return -1
+		}
+		return 1
+	}
+	if ra, rb := a.Layer == Research, b.Layer == Research; ra != rb {
+		if rb {
+			return -1
+		}
+		return 1
+	}
 	ha, hb := a.Outcome != nil, b.Outcome != nil
 	if ha != hb {
 		if ha {

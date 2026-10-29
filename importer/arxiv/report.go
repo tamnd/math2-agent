@@ -42,12 +42,8 @@ type Candidate struct {
 	Name    string `json:"name"`
 }
 
-// NameKey returns the form of a name that the name pass compares: lower case, with a space for each dash, one space between words and no leading "the".
-func NameKey(name string) string {
-	name = strings.NewReplacer("-", " ", "\u2013", " ", "\u2014", " ", "\u2212", " ", "\u2019", "'").Replace(strings.ToLower(name))
-	name = strings.Join(strings.Fields(name), " ")
-	return strings.TrimPrefix(name, "the ")
-}
+// NameKey returns the form of a name that the name pass compares. It is inventory.NameKey, so the candidates and the joins of the name pass read names in one way.
+func NameKey(name string) string { return inventory.NameKey(name) }
 
 // nameBlock is the kind group of the name pass: statements and conjectures share a block (AX8.1).
 func nameBlock(kind string) string {
@@ -109,8 +105,13 @@ func Candidates(rows []inventory.Row, ms []inventory.Mention, msc string) []Cand
 			continue
 		}
 		var found []string
-		for _, b := range inventory.Blocks(m) {
-			if msc != "" && b != msc[:min(2, len(msc))] {
+		// A row with no code is in each block, as in the name method.
+		blocks := inventory.Blocks(m)
+		if !slices.Contains(blocks, "") {
+			blocks = append(blocks, "")
+		}
+		for _, b := range blocks {
+			if msc != "" && b != "" && b != msc[:min(2, len(msc))] {
 				continue
 			}
 			if e := names[nameBlock(m.Kind)+"|"+b+"|"+NameKey(m.Name)]; e != nil {
