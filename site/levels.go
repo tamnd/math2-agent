@@ -93,3 +93,6 @@ func (b *builder) writeLevels() error {
 	}
 	return nil
 }
+
+// HasLevels says if the site has the pages of the writing levels.
+func (b *builder) HasLevels() bool { return b.levels != nil }

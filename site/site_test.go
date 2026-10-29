@@ -99,7 +99,7 @@ func TestEmptyTree(t *testing.T) {
 			t.Errorf("the site has no %s", f)
 		}
 	}
-	if !strings.Contains(readFile(t, out, "index.html"), "The graph has no nodes yet") {
+	if !strings.Contains(readFile(t, out, "index.html"), "The graph has no ideas yet") {
 		t.Error("the home page does not say that the graph is empty")
 	}
 	var index struct{ Count int }
@@ -141,11 +141,11 @@ func TestNodes(t *testing.T) {
 	for _, want := range []string{
 		`<a href="/math2/wiki/group/">group</a>`,
 		`class="missing"`,
-		`<span class="math"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML">`,
+		`<span class="math"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML">`,
 		`<annotation encoding="application/x-tex">G</annotation>`,
-		`<mi mathvariant="double-struck">Z</mi>`,
-		`<div class="math display"><span class="katex-display">`,
-		`<link rel="stylesheet" href="/math2/assets/katex/katex.min.css">`,
+		`<mi>ℤ</mi>`,
+		`<div class="math display"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block">`,
+		`<link rel="preload" href="/math2/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>`,
 		`m2://7K3QX2`,
 		`<a href="/math2/msc/20/"`,
 		`<link rel="canonical" href="https://example.org/math2/wiki/lagranges-theorem/">`,
@@ -162,7 +162,10 @@ func TestNodes(t *testing.T) {
 	if !strings.Contains(group, `<code class="tex-error" title="KaTeX parse error: Undefined control sequence: \nosuch`) {
 		t.Error("a formula that KaTeX cannot parse does not show as TeX")
 	}
-	for _, f := range []string{"assets/katex/katex.min.css", "assets/katex/fonts/KaTeX_Main-Regular.woff2", "assets/katex/LICENSE"} {
+	if strings.Contains(page, "katex-html") || strings.Contains(page, "katex.min.css") {
+		t.Error("the node page has the HTML of KaTeX, and the build writes MathML only")
+	}
+	for _, f := range []string{"assets/fonts/STIXTwoMath-Regular.woff2", "assets/fonts/InterVariable.woff2", "assets/fonts/LICENSE-STIX.txt", "assets/fonts/LICENSE-Inter.txt"} {
 		if _, err := os.Stat(filepath.Join(out, f)); err != nil {
 			t.Error(err)
 		}

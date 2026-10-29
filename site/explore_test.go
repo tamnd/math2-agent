@@ -33,15 +33,15 @@ func TestExplore(t *testing.T) {
 	// Lagrange's theorem: the closure, the status and the dependents.
 	page := readNode(t, out, "Q529ES")
 	for _, want := range []string{
-		`<h2 id="closure-h">What this needs</h2>`,
+		`<h2 id="closure-h">Reading path</h2>`,
 		`<svg class="dag" viewBox=`,
 		`aria-labelledby="closure-caption"`,
 		`<figcaption id="closure-caption">`,
 		`class="box ev-e1 root"`,
 		`<span class="swatch ev-e1" aria-hidden="true"></span>E1 claimed</li>`,
-		`<tr><th>Evidence</th><td>E1 <span class="muted">claimed</span>`,
+		`<tr><th>Evidence</th><td>E1 claimed`,
 		`sorry_in_closure`,
-		`<h2 id="usedby-h">What depends on this</h2>`,
+		`<h2 id="usedby-h">Where this leads</h2>`,
 		`Why the build gives this status`,
 	} {
 		if !strings.Contains(page, want) {
@@ -51,7 +51,7 @@ func TestExplore(t *testing.T) {
 
 	// Finite groups: the blueprint marks the members of the topic.
 	page = readNode(t, out, "ZZZJE6")
-	for _, want := range []string{`<h2 id="blueprint-h">Blueprint</h2>`, `aria-labelledby="blueprint-caption"`, `class="box ev-e1 member"`, `<span class="muted">member</span>`} {
+	for _, want := range []string{`<h2 id="blueprint-h">Everything in this topic</h2>`, `aria-labelledby="blueprint-caption"`, `class="box ev-e1 member"`, `<span class="kind-word">member</span>`} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page of ZZZJE6 has no %q", want)
 		}
@@ -77,7 +77,7 @@ func TestExploreNoBuild(t *testing.T) {
 	if !strings.Contains(page, "This copy of the site has no build data") {
 		t.Error("a site with no build does not say that it has no status")
 	}
-	if strings.Contains(page, `<tr><th>Evidence</th><td>E1 <span class="muted">claimed</span>`) || strings.Contains(page, "ev-e1") {
+	if strings.Contains(page, `<tr><th>Evidence</th><td>E1 claimed`) || strings.Contains(page, "ev-e1") {
 		t.Error("a site with no build shows an evidence level")
 	}
 	// The closure comes from the graph, so it needs no build.

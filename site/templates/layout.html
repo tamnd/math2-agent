@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{if .Title}}{{.Title}} · Math 2.0{{else}}Math 2.0 · a knowledge graph of mathematics{{end}}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{if .Title}}{{.Title}} · Math 2.0{{else}}Math 2.0 · mathematics, one idea at a time{{end}}</title>
 <meta name="description" content="{{.Description}}">
 <meta name="color-scheme" content="light dark">
 <meta property="og:site_name" content="Math 2.0">
@@ -12,57 +12,75 @@
 <link rel="canonical" href="{{.Site.Canonical .Path}}">
 {{with .MarkdownURL}}<link rel="alternate" type="text/markdown" href="{{.}}">
 {{end}}{{with .JSONURL}}<link rel="alternate" type="application/json" href="{{.}}">
-{{end}}<link rel="alternate" type="text/plain" title="llms.txt" href="{{url "llms.txt"}}">
+{{end}}<link rel="alternate" type="application/atom+xml" title="Math 2.0, the latest ideas" href="{{url "latest/feed.xml"}}">
+<link rel="alternate" type="text/plain" title="llms.txt" href="{{url "llms.txt"}}">
 <link rel="icon" href="{{url "assets/icon.svg"}}" type="image/svg+xml">
-{{if .Math}}<link rel="stylesheet" href="{{url "assets/katex/katex.min.css"}}">
-{{end}}<link rel="stylesheet" href="{{url "assets/site.css"}}">
+<link rel="preload" href="{{url "assets/fonts/InterVariable.woff2"}}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{url "assets/site.css"}}">
 <script>document.documentElement.dataset.theme = localStorage.getItem("m2-theme") || "";</script>
 <script defer src="{{url "assets/site.js"}}"></script>
 </head>
-<body data-base="{{url ""}}">
+<body data-base="{{url ""}}" class="s-{{if .Section}}{{.Section}}{{else}}none{{end}}{{if .Bare}} bare{{end}}">
 <a class="skip" href="#content">Skip to the content</a>
 <header class="top">
-  <a class="brand" href="{{url ""}}" aria-label="Math 2.0, main page"><img src="{{url "assets/icon.svg"}}" alt="" width="28" height="28"><span>Math <b>2.0</b></span></a>
+  <a class="brand" href="{{url ""}}" aria-label="Math 2.0, main page"><img src="{{url "assets/icon.svg"}}" alt="" width="26" height="26"><span>Math 2.0</span></a>
+  <nav class="main-nav" aria-label="Main">
+    <a href="{{url "msc/"}}"{{if or (eq .Section "msc") (eq .Section "nodes")}} aria-current="page"{{end}}>Learn</a>
+    <a href="{{url "latest/"}}"{{if eq .Section "latest"}} aria-current="page"{{end}}>Latest</a>
+    <a href="{{url "discover/"}}"{{if eq .Section "discover"}} aria-current="page"{{end}}>Discover</a>
+  </nav>
   <form class="search-box" action="{{url "search/"}}" role="search">
-    <input type="search" name="q" placeholder="Search for a concept, a theorem or a tag" aria-label="Search" autocomplete="off">
+    <input type="search" name="q" placeholder="Search ideas" aria-label="Search" autocomplete="off">
   </form>
-  <button class="theme" type="button" aria-label="Change the colour theme" title="Change the colour theme">◐</button>
+  <button class="theme" type="button" aria-label="Change the colour theme" title="Change the colour theme"><span aria-hidden="true">◐</span></button>
 </header>
-<div class="frame">
-<nav class="side" aria-label="Main">
-  <ul>
-    <li{{if eq .Section "home"}} class="here"{{end}}><a href="{{url ""}}">Main page</a></li>
-    <li{{if eq .Section "nodes"}} class="here"{{end}}><a href="{{url "nodes/"}}">All nodes</a></li>
-    <li{{if eq .Section "msc"}} class="here"{{end}}><a href="{{url "msc/"}}">Subjects</a></li>
-    <li{{if eq .Section "inventory"}} class="here"{{end}}><a href="{{url "inventory/"}}">Inventory</a></li>
-    <li{{if eq .Section "search"}} class="here"{{end}}><a href="{{url "search/"}}">Search</a></li>
-    <li{{if eq .Section "explore"}} class="here"{{end}}><a href="{{url "explore/frontier/"}}">Frontier</a></li>
-    <li{{if eq .Section "reviewers"}} class="here"{{end}}><a href="{{url "reviewers/"}}">Reviewers</a></li>
-    <li{{if eq .Section "projects"}} class="here"{{end}}><a href="{{url "projects/"}}">Projects</a></li>
-    {{if .Site.HasWikipedia}}<li{{if eq .Section "wikipedia"}} class="here"{{end}}><a href="{{url "wikipedia/"}}">Wikipedia scope</a></li>{{end}}
-  </ul>
-  <h2>Project</h2>
-  <ul>
-    <li{{if eq .Section "spec"}} class="here"{{end}}><a href="{{url "spec/"}}">Specification</a></li>
-    <li{{if eq .Section "contribute"}} class="here"{{end}}><a href="{{url "contribute/"}}">Contribute</a></li>
-    <li{{if eq .Section "agents"}} class="here"{{end}}><a href="{{url "agents/"}}">For agents</a></li>
-    <li><a href="{{repo}}">Content on GitHub</a></li>
-    <li><a href="{{agentRepo}}">Toolchain on GitHub</a></li>
-  </ul>
-  <h2>Kinds</h2>
-  <ul class="kinds">
-    {{range .Site.KindCounts}}<li><a href="{{.URL}}">{{.Plural}}</a> <span class="count">{{.Count}}</span></li>
-    {{end}}
-  </ul>
-</nav>
 <main id="content">
 {{.Content}}
 </main>
-</div>
-<footer class="bottom">
-  <p>The prose is under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. The metadata is under <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>. The code is under Apache-2.0.</p>
-  <p>Built by m2 {{.Site.Version}}{{with .Site.Commit}} from <a href="{{repo}}/commit/{{.}}"><code>{{printf "%.12s" .}}</code></a>{{end}}{{with .Site.Built}} on {{.}}{{end}}. <a href="{{url "llms.txt"}}">llms.txt</a> · <a href="{{url "api/nodes.json"}}">JSON</a> · <a href="{{url "sitemap.xml"}}">Sitemap</a></p>
-</footer>
+{{if not .Bare}}<footer class="bottom">
+  <div class="foot-cols">
+    <section>
+      <h2>Learn</h2>
+      <ul>
+        <li><a href="{{url "msc/"}}">Subjects</a></li>
+        <li><a href="{{url "nodes/"}}">Every idea</a></li>
+        <li><a href="{{url "search/"}}">Search</a></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Follow</h2>
+      <ul>
+        <li><a href="{{url "latest/"}}">Latest</a></li>
+        <li><a href="{{url "discover/"}}">Discover</a></li>
+        <li><a href="{{url "latest/feed.xml"}}">Atom feed</a></li>
+      </ul>
+    </section>
+    <section>
+      <h2>Build it with us</h2>
+      <ul>
+        <li><a href="{{url "contribute/"}}">Contribute</a></li>
+        <li><a href="{{url "spec/"}}">Specification</a></li>
+        <li><a href="{{url "inventory/"}}">Inventory</a></li>
+        <li><a href="{{url "explore/frontier/"}}">Frontier</a></li>
+        <li><a href="{{url "reviewers/"}}">Reviewers</a></li>
+        <li><a href="{{url "projects/"}}">Projects</a></li>
+        {{if .Site.HasLevels}}<li><a href="{{url "levels/"}}">Writing levels</a></li>{{end}}
+        {{if .Site.HasWikipedia}}<li><a href="{{url "wikipedia/"}}">Wikipedia scope</a></li>{{end}}
+      </ul>
+    </section>
+    <section>
+      <h2>For machines</h2>
+      <ul>
+        <li><a href="{{url "agents/"}}">For agents</a></li>
+        <li><a href="{{url "llms.txt"}}">llms.txt</a></li>
+        <li><a href="{{url "api/nodes.json"}}">JSON</a></li>
+        <li><a href="{{repo}}">Content on GitHub</a></li>
+        <li><a href="{{agentRepo}}">Toolchain on GitHub</a></li>
+      </ul>
+    </section>
+  </div>
+  <p class="fine">The prose is under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, the metadata under <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a> and the code under Apache-2.0. Built by m2 {{.Site.Version}}{{with .Site.Commit}} from <a href="{{repo}}/commit/{{.}}">{{printf "%.7s" .}}</a>{{end}}{{with .Site.Built}} on {{.}}{{end}}. <a href="{{url "sitemap.xml"}}">Sitemap</a>.</p>
+</footer>{{end}}
 </body>
 </html>
 {{end}}

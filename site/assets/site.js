@@ -1,4 +1,4 @@
-// The scripts of the Math 2.0 wiki: the colour theme, copy buttons, list filters and search. Each page can be read with no script. The build renders the math.
+// The scripts of Math 2.0: the colour theme, copy buttons, list filters, the feeds and search. Each page can be read with no script. The build renders the math.
 (function () {
   "use strict";
 
@@ -13,6 +13,27 @@
       root.dataset.theme = dark ? "light" : "dark";
       localStorage.setItem("m2-theme", root.dataset.theme);
     });
+  }
+
+  // Load STIX Two Math once the page has painted, when the page has math, and draw the math with it as soon as it arrives. The font is large, and the text comes first.
+  if (window.FontFace && document.fonts && document.querySelector("math")) {
+    var math = function () {
+      new FontFace("STIX Two Math Web", "url(" + base + "assets/fonts/STIXTwoMath-Regular.woff2) format(\"woff2\")").load().then(function (f) { document.fonts.add(f); }, function () {});
+    };
+    var later = function () { requestAnimationFrame(function () { setTimeout(math, 0); }); };
+    if (window.PerformanceObserver && (PerformanceObserver.supportedEntryTypes || []).indexOf("paint") >= 0) {
+      var seen = false;
+      var po = new PerformanceObserver(function (list) {
+        if (seen || !list.getEntriesByName("first-contentful-paint").length) return;
+        seen = true;
+        po.disconnect();
+        addEventListener("load", later);
+        if (document.readyState === "complete") later();
+      });
+      po.observe({ type: "paint", buffered: true });
+    } else {
+      addEventListener("load", later);
+    }
   }
 
   // Click a tag or a URI to copy it.
@@ -36,6 +57,105 @@
         tr.hidden = q !== "" && tr.textContent.toLowerCase().indexOf(q) < 0;
       });
     });
+  });
+
+  // Times in a feed say how long ago, for example "3 days ago". The date stays as the title.
+  var rtf = window.Intl && Intl.RelativeTimeFormat ? new Intl.RelativeTimeFormat("en", { numeric: "auto" }) : null;
+  function ago(scope) {
+    if (!rtf) return;
+    scope.querySelectorAll("time[datetime]").forEach(function (t) {
+      var d = (new Date(t.getAttribute("datetime")) - Date.now()) / 1000;
+      if (isNaN(d)) return;
+      var steps = [[60, "second"], [60, "minute"], [24, "hour"], [7, "day"], [4.35, "week"], [12, "month"], [Infinity, "year"]];
+      for (var i = 0; i < steps.length; i++) {
+        if (Math.abs(d) < steps[i][0]) {
+          if (!t.title) t.title = t.textContent;
+          t.textContent = rtf.format(Math.round(d), steps[i][1]);
+          return;
+        }
+        d /= steps[i][0];
+      }
+    });
+  }
+  ago(document);
+
+  // Latest and Discover load the next page when the reader comes near the end, so the feed goes on. The sentinel is the element after the last item: the pager of Latest or the last card of Discover. The links to the pages stay for a reader with no script.
+  function endless(feed, sentinel, item) {
+    var next = document.querySelector("[data-next]");
+    if (!feed || !sentinel || !next || !window.IntersectionObserver) return;
+    var busy = false;
+    var watch = new IntersectionObserver(function (es) {
+      if (busy || !next || !es.some(function (e) { return e.isIntersecting; })) return;
+      busy = true;
+      fetch(next.href).then(function (r) { return r.text(); }).then(function (html) {
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var more = doc.querySelector(feed.matches("[data-deck]") ? "[data-deck]" : "[data-feed]");
+        var end = feed.querySelector(".slide-end");
+        if (more) {
+          more.querySelectorAll(item).forEach(function (el) {
+            // A day of Latest can start on one page and go on to the next.
+            var last = feed.lastElementChild;
+            var day = el.querySelector(".day");
+            if (day && last && last.querySelector(".day") && last.querySelector(".day").textContent === day.textContent) {
+              el.querySelectorAll(".post").forEach(function (p) { last.appendChild(p); });
+              return;
+            }
+            if (end) feed.insertBefore(el, end); else feed.appendChild(el);
+          });
+          ago(feed);
+        }
+        var n = doc.querySelector("[data-next]");
+        if (n) {
+          next.href = n.href;
+        } else {
+          next = null;
+          watch.disconnect();
+          var newEnd = doc.querySelector(".slide-end");
+          if (end && newEnd) end.replaceWith(newEnd);
+          var pager = document.querySelector(".pager");
+          if (pager) pager.hidden = true;
+        }
+        busy = false;
+        // Observe the sentinel again, so that it loads one more page when it is still on the screen.
+        if (next) { watch.unobserve(sentinel); watch.observe(sentinel); }
+      }).catch(function () { busy = false; });
+    }, { rootMargin: "0px 0px 600px 0px" });
+    watch.observe(sentinel);
+  }
+  var feed = document.querySelector("[data-feed]");
+  if (feed) endless(feed, document.querySelector(".pager"), ".feed-day");
+  var deck = document.querySelector("[data-deck]");
+  if (deck) {
+    endless(deck, deck.querySelector(".slide-end"), ".slide:not(.slide-end)");
+    // The keys ↓, j and space go to the next card, ↑ and k to the one before.
+    document.addEventListener("keydown", function (e) {
+      if (e.target.closest && e.target.closest("input, textarea")) return;
+      var step = { ArrowDown: 1, j: 1, PageDown: 1, ArrowUp: -1, k: -1, PageUp: -1 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      var slides = deck.querySelectorAll(".slide");
+      var y = window.scrollY + 2;
+      var at = 0;
+      slides.forEach(function (s, i) { if (s.offsetTop <= y) at = i; });
+      var to = slides[Math.min(slides.length - 1, Math.max(0, at + step))];
+      if (to) to.scrollIntoView({ behavior: "smooth" });
+    });
+  }
+
+  // Share a card with the share sheet of the device, or else copy its link.
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-share]");
+    if (!b) return;
+    var url = new URL(b.dataset.share, location.href).href;
+    if (navigator.share) {
+      navigator.share({ title: b.dataset.title, url: url }).catch(function () { /* the reader closed the sheet */ });
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(function () {
+        var old = b.textContent;
+        b.textContent = "Link copied";
+        setTimeout(function () { b.textContent = old; }, 1500);
+      });
+    }
   });
 
   // Search. The index is api/search.json. A page on disk cannot read it, so the offline archive sets window.m2Search instead. A match on the tag or the name ranks first.
@@ -80,7 +200,7 @@
     // A browser can refuse this for a page on disk.
     try { history.replaceState(null, "", url); } catch (e) { /* keep the old URL */ }
     list.textContent = "";
-    if (!q) { status.textContent = "Type to search the nodes and the spec documents."; return; }
+    if (!q) { status.textContent = "Type to search the ideas."; return; }
     if (!index) { status.textContent = "Loading the index."; return; }
     var words = fold(q).split(/\s+/);
     var tq = tagForm(q);
@@ -96,7 +216,8 @@
       a.textContent = h.e.n;
       var meta = document.createElement("span");
       meta.className = "meta";
-      meta.textContent = [h.e.k, h.e.t].concat(h.e.a || []).concat(h.e.m || []).join(" · ");
+      var kind = h.e.k ? h.e.k.charAt(0).toUpperCase() + h.e.k.slice(1) : "";
+      meta.textContent = [kind].concat((h.e.a || []).slice(0, 3)).filter(Boolean).join(" · ");
       li.appendChild(a);
       li.appendChild(meta);
       list.appendChild(li);

@@ -236,8 +236,8 @@ func svg(id string, layers [][]*dagItem, perRow int) template.HTML {
 				sub += " · " + it.Evidence
 			}
 			fmt.Fprintf(&s, `<a href="%s" class="%s"><title>%s, %s, %s</title>`, template.HTMLEscapeString(it.URL), cls, template.HTMLEscapeString(it.Text), template.HTMLEscapeString(it.Kind), template.HTMLEscapeString(label))
-			fmt.Fprintf(&s, `<rect x="%d" y="%d" width="%d" height="%d" rx="4"/>`, it.x, it.y, boxW, boxH)
-			fmt.Fprintf(&s, `<rect class="ev" x="%d" y="%d" width="6" height="%d" rx="2"/>`, it.x+3, it.y+3, boxH-6)
+			fmt.Fprintf(&s, `<rect x="%d" y="%d" width="%d" height="%d"/>`, it.x, it.y, boxW, boxH)
+			fmt.Fprintf(&s, `<rect class="ev" x="%d" y="%d" width="6" height="%d"/>`, it.x+3, it.y+3, boxH-6)
 			fmt.Fprintf(&s, `<text x="%d" y="%d">%s</text>`, it.x+16, it.y+19, template.HTMLEscapeString(clip(it.Text, 22)))
 			fmt.Fprintf(&s, `<text class="sub" x="%d" y="%d">%s</text>`, it.x+16, it.y+36, template.HTMLEscapeString(sub))
 			s.WriteString(`</a>`)
