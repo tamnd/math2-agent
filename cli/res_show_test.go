@@ -72,6 +72,32 @@ func TestResShow(t *testing.T) {
 	}
 }
 
+func TestResShowMentions(t *testing.T) {
+	root := showTree(t)
+	if code, stdout, stderr := run("res", "show", "-root", root, "-mentions", "5", "8F2K1QW7ZJ"); code != ExitOK || !strings.Contains(stdout, "mentions: 0\n") {
+		t.Fatalf("exit code %d, stderr %q, no mentions:\n%s", code, stderr, stdout)
+	}
+	lines := `{"id":"m2://rec/rudin/a#1","source":"rudin","kind":"theorem","name":"Heine-Borel","resource":"8F2K1QW7ZJ/e3","at":{"section":"2.41","kind":"theorem","number":"2.41"},"class":"record","by":"t"}` + "\n" +
+		`{"id":"m2://rec/rudin/a#2","source":"rudin","kind":"definition","locator":"p. 10","resource":"8F2K1QW7ZJ","class":"record","by":"t"}` + "\n" +
+		`{"id":"m2://rec/other/b#1","source":"other","kind":"theorem","resource":"8F2AAAAAA3/e1","class":"record","by":"t"}` + "\n"
+	dir := filepath.Join(root, "records", "mentions", "rudin")
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "a.jsonl"), []byte(lines), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, stdout, _ := run("res", "show", "-root", root, "-mentions", "1", "8F2K1QW7ZJ")
+	for _, want := range []string{"mentions: 2 (rudin 2)\n", "mention: m2://rec/rudin/a#1 theorem Heine-Borel, in e3, section 2.41, theorem 2.41\n"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("the output has no %q:\n%s", want, stdout)
+		}
+	}
+	if strings.Contains(stdout, "a#2") {
+		t.Errorf("the output has more than one mention:\n%s", stdout)
+	}
+}
+
 func TestResQueue(t *testing.T) {
 	root := t.TempDir()
 	if code, stdout, _ := run("res", "queue", "-root", root, "res-scope"); code != ExitOK || !strings.Contains(stdout, "is empty") {
