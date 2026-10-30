@@ -52,6 +52,7 @@ type Source struct {
 	Resource       string        `yaml:"resource,omitempty"`         // for a source that is one work, for example an open textbook, the resource id of the work (corpus resources RS8.1)
 	RecordLicence  string        `yaml:"record_licence,omitempty"`   // the SPDX expression of the licence of the bibliographic records, when it is not the licence of the texts (RS8.1)
 	Cadence        string        `yaml:"cadence,omitempty"`          // one of Cadences: the time from one snapshot to the next (corpus resources RS8.4)
+	Lineage        []string      `yaml:"lineage,omitempty"`          // the catalogues that the source takes records from, by source id. The census merges two catalogues with shared lineage into one capture (RS11.4.3)
 }
 
 // LicenceRead records one reading of the licence at the source itself, never at an aggregator (K5.2.1).
@@ -189,6 +190,17 @@ func ReadCatalogue(root string) (*Catalogue, error) {
 	return &c, nil
 }
 
+// Lineage gives the lineage of each source that has one.
+func (c *Catalogue) Lineage() map[string][]string {
+	out := map[string][]string{}
+	for _, s := range c.Sources {
+		if len(s.Lineage) > 0 {
+			out[s.ID] = s.Lineage
+		}
+	}
+	return out
+}
+
 // Source returns the entry of the source with the id, or nil.
 func (c *Catalogue) Source(id string) *Source {
 	for i := range c.Sources {
@@ -230,6 +242,14 @@ func (s *Source) Problems() []string {
 	}
 	if s.Cadence != "" && !slices.Contains(Cadences, s.Cadence) {
 		out = append(out, fmt.Sprintf("the cadence %q is not one of %v", s.Cadence, Cadences))
+	}
+	for i, l := range s.Lineage {
+		switch {
+		case l == "" || l == s.ID:
+			out = append(out, fmt.Sprintf("the lineage %q is empty or names the source itself", l))
+		case slices.Contains(s.Lineage[:i], l):
+			out = append(out, fmt.Sprintf("the lineage names %s twice", l))
+		}
 	}
 	if s.Resource != "" && !tag.IsTag(s.Resource) {
 		out = append(out, fmt.Sprintf("the resource %q is not a resource id", s.Resource))
