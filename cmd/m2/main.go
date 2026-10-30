@@ -41,6 +41,7 @@ import (
 	_ "github.com/tamnd/math2-agent/resource/adapters/locmarc"
 	_ "github.com/tamnd/math2-agent/resource/adapters/ndl"
 	_ "github.com/tamnd/math2-agent/resource/adapters/nlv"
+	_ "github.com/tamnd/math2-agent/resource/adapters/nptel"
 	_ "github.com/tamnd/math2-agent/resource/adapters/numdam"
 	_ "github.com/tamnd/math2-agent/resource/adapters/openalex"
 	_ "github.com/tamnd/math2-agent/resource/adapters/openlibrary"
