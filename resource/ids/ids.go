@@ -109,6 +109,8 @@ var systems = map[string]system{
 		strip: []string{"videos:collection:"},
 		re:    carminSlug,
 	},
+	"nnt":   {strip: []string{"https://theses.fr/", "https://www.theses.fr/", "http://www.theses.fr/"}, fold: strings.ToUpper, re: regexp.MustCompile(`^[0-9]{4}[A-Z0-9]{8}$`)},
+	"idref": {strip: []string{"https://www.idref.fr/", "http://www.idref.fr/", "https://idref.fr/"}, fold: strings.ToUpper, re: regexp.MustCompile(`^[0-9]{8}[0-9X]$`), check: idref},
 }
 
 // Keys returns the keys of the systems of RS3.2, in sorted order.
@@ -355,6 +357,23 @@ func ror(s string) error {
 	want := 98 - (n*100)%97
 	if got, _ := strconv.Atoi(s[7:]); got != want {
 		return errors.New("the check digits are wrong")
+	}
+	return nil
+}
+
+// idref checks the check character of a PPN of IdRef: the first eight digits with the weights 9 to 2, mod 11. The value 10 is written X.
+func idref(s string) error {
+	sum := 0
+	for i := range 8 {
+		sum += (9 - i) * int(s[i]-'0')
+	}
+	want := (11 - sum%11) % 11
+	got := int(s[8] - '0')
+	if s[8] == 'X' {
+		got = 10
+	}
+	if got != want {
+		return errors.New("the check character is wrong")
 	}
 	return nil
 }

@@ -31,6 +31,8 @@ func Check(r *Record) string {
 		return "the record has no title"
 	case !slices.Contains(resource.Kinds, r.Kind):
 		return fmt.Sprintf("the kind %q is not a kind of resource", r.Kind)
+	case r.Thesis != "" && (r.Kind != "thesis" || !slices.Contains(resource.ThesisLevels, r.Thesis)):
+		return fmt.Sprintf("the level %q is not a level of a thesis, or the record is not a thesis", r.Thesis)
 	}
 	return ""
 }

@@ -15,6 +15,9 @@ func TestCheck(t *testing.T) {
 		{Record{Title: "T", Kind: "monograph"}, true},
 		{Record{NativeID: "1", Kind: "monograph"}, true},
 		{Record{NativeID: "1", Title: "T", Kind: "film"}, true},
+		{Record{NativeID: "1", Title: "T", Kind: "thesis", Thesis: "doctoral"}, false},
+		{Record{NativeID: "1", Title: "T", Kind: "thesis", Thesis: "phd"}, true},
+		{Record{NativeID: "1", Title: "T", Kind: "article", Thesis: "master"}, true},
 	} {
 		if got := Check(&c.r) != ""; got != c.want {
 			t.Errorf("Check(%+v) = %q", c.r, Check(&c.r))

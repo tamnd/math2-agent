@@ -48,6 +48,7 @@ import (
 	_ "github.com/tamnd/math2-agent/resource/adapters/openlibrary"
 	_ "github.com/tamnd/math2-agent/resource/adapters/series"
 	_ "github.com/tamnd/math2-agent/resource/adapters/swmath"
+	_ "github.com/tamnd/math2-agent/resource/adapters/thesesfr"
 	_ "github.com/tamnd/math2-agent/resource/adapters/wikidataworks"
 )
 

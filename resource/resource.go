@@ -43,6 +43,9 @@ var (
 	ManifestationKinds = []string{"print", "pdf", "html", "latex", "pretext", "video", "page"}
 )
 
+// ThesisLevels are the values of the field level of a thesis (RS2.3).
+var ThesisLevels = []string{"bachelor", "master", "doctoral", "habilitation"}
+
 // Roles are the roles of a creator (RS2.5).
 var Roles = []string{"author", "editor", "translator", "instructor", "contributor", "advisor"}
 
@@ -81,7 +84,7 @@ type Resource struct {
 	Date        string            `json:"date,omitempty"`        // the date of the first expression, ISO 8601, as precise as known
 	MSC         []Code            `json:"msc,omitempty"`         // the MSC2020 codes, each with its origin
 	Subjects    []Subject         `json:"subjects,omitempty"`    // other classifications: LCC, DDC, UDC, arXiv categories
-	Level       string            `json:"level,omitempty"`       // of a thesis: bachelor, master, doctoral or habilitation
+	Level       string            `json:"level,omitempty"`       // of a thesis: one of ThesisLevels
 	IDs         IDs               `json:"ids,omitempty"`         // the external ids of the work, in the normal form of RS3.3
 	Expressions []Expression      `json:"expressions,omitempty"` // the expressions of the work
 	Relations   []Relation        `json:"relations,omitempty"`   // the edges to other resources (RS2.7)
@@ -94,7 +97,7 @@ type Resource struct {
 type Creator struct {
 	Name string `json:"name"`          // the name as the catalogue gives it
 	Role string `json:"role"`          // one of Roles
-	IDs  IDs    `json:"ids,omitempty"` // orcid, zbmath_author, wikidata, mgp, openalex_author, isni, viaf, lcnaf
+	IDs  IDs    `json:"ids,omitempty"` // orcid, zbmath_author, wikidata, mgp, idref, openalex_author, isni, viaf, lcnaf
 }
 
 // Code is a code of a classification with the origin of the code: a catalogue, or classifier/<version> (RS9.3).

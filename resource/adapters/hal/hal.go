@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,7 +35,7 @@ const Base = "https://api.archives-ouvertes.fr/search/"
 const Filter = "level0_domain_s:math"
 
 // Fields names the fields of a document that Fetch asks for.
-const Fields = "docid,halId_s,version_i,title_s,en_title_s,authFullName_s,authORCIDIdExt_s,doiId_s,arxivId_s,isbn_s,journalIssn_s,journalEissn_s,volume_s,page_s,publisher_s,producedDate_s,language_s,docType_s,primaryDomain_s,domain_s,uri_s"
+const Fields = "docid,halId_s,version_i,title_s,en_title_s,authFullName_s,authORCIDIdExt_s,doiId_s,arxivId_s,isbn_s,journalIssn_s,journalEissn_s,volume_s,page_s,publisher_s,producedDate_s,language_s,docType_s,primaryDomain_s,domain_s,uri_s,director_s,nntId_s,defenseDate_s,authorityInstitution_s"
 
 // PageSize is the number of documents in one page.
 const PageSize = 1000
@@ -131,6 +132,10 @@ type Doc struct {
 	PrimaryDomain string   `json:"primaryDomain_s"`
 	Domains       []string `json:"domain_s"`
 	URI           string   `json:"uri_s"`
+	Directors     []string `json:"director_s"`             // of a thesis: the advisors
+	NNT           string   `json:"nntId_s"`                // of a thesis: the national number of theses.fr
+	Defence       string   `json:"defenseDate_s"`          // of a thesis: the date of the defence
+	Institutions  []string `json:"authorityInstitution_s"` // of a thesis: the institution that gives the degree
 }
 
 func each(r io.Reader, fn func(Doc) error) error {
@@ -175,9 +180,15 @@ var Kinds = map[string]string{
 	"BLOG": "website", "NOTICE": "encyclopedia", "TRAD": "monograph",
 }
 
-// SourceRecord makes the source record of one document. The domains of HAL go into the subjects with the system arxiv, by the map of fetch.HALDomain, for the test S2 of RS9.2.
+// ThesisLevels maps the document types of HAL for a thesis to the levels of a thesis. The type MEM is a student dissertation of any level, so it gives no level.
+var ThesisLevels = map[string]string{"THESE": "doctoral", "HDR": "habilitation"}
+
+// email finds an email address in parentheses after a name, as HAL gives for some advisors. The catalogue never holds an email (RS14.7).
+var email = regexp.MustCompile(`\s*\([^()]*@[^()]*\)`)
+
+// SourceRecord makes the source record of one document. The domains of HAL go into the subjects with the system arxiv, by the map of fetch.HALDomain, for the test S2 of RS9.2. A thesis gets its level, its advisors with the role advisor, its NNT, the date of the defence, and the institution as the publisher when it has no publisher.
 func SourceRecord(d Doc) cluster.Record {
-	rec := cluster.Record{NativeID: d.HalID, Level: "work", Kind: Kinds[d.DocType], Volume: d.Volume, Page: firstPage(d.Page), IDs: resource.IDs{}}
+	rec := cluster.Record{NativeID: d.HalID, Level: "work", Kind: Kinds[d.DocType], Thesis: ThesisLevels[d.DocType], Volume: d.Volume, Page: firstPage(d.Page), IDs: resource.IDs{}}
 	if rec.Kind == "" {
 		rec.Kind = "preprint"
 	}
@@ -195,11 +206,17 @@ func SourceRecord(d Doc) cluster.Record {
 	if len(d.Date) >= 4 {
 		rec.Date = d.Date[:min(10, len(d.Date))]
 	}
+	if len(d.Defence) >= 4 && rec.Kind == "thesis" {
+		rec.Date = d.Defence[:min(10, len(d.Defence))]
+	}
 	if len(d.Language) > 0 {
 		rec.Language = d.Language[0]
 	}
 	if len(d.Publisher) > 0 {
 		rec.Publisher = d.Publisher[0]
+	}
+	if len(d.Institutions) > 0 && rec.Publisher == "" && rec.Kind == "thesis" {
+		rec.Publisher = d.Institutions[0]
 	}
 	orcid := map[string]string{}
 	for _, o := range d.ORCIDs {
@@ -219,7 +236,14 @@ func SourceRecord(d Doc) cluster.Record {
 		}
 		rec.Creators = append(rec.Creators, cr)
 	}
-	for key, v := range map[string]string{"doi": d.DOI, "arxiv": d.ArXiv} {
+	if rec.Kind == "thesis" {
+		for _, a := range d.Directors {
+			if n := strings.TrimSpace(email.ReplaceAllString(a, "")); n != "" && !strings.Contains(n, "@") {
+				rec.Creators = append(rec.Creators, resource.Creator{Name: n, Role: "advisor"})
+			}
+		}
+	}
+	for key, v := range map[string]string{"doi": d.DOI, "arxiv": d.ArXiv, "nnt": d.NNT} {
 		if n, err := ids.Normalize(key, v); err == nil {
 			rec.IDs[key] = resource.Values{n}
 		}

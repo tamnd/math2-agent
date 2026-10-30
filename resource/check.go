@@ -49,6 +49,8 @@ func Check(r *Resource) []Problem {
 	}
 	if r.Level != "" && r.Kind != "thesis" {
 		add("level", "only a thesis has a level")
+	} else if r.Level != "" && !valid(ThesisLevels, r.Level) {
+		add("level", "%q is not a level of a thesis of RS2.3", r.Level)
 	}
 	creators(add, "creators", r.Creators)
 	for i, c := range r.MSC {

@@ -18,7 +18,9 @@ const page1 = `{"response":{"docs":[{"docid":1,"halId_s":"hal-00000001","version
 "journalIssn_s":"0003-486X","volume_s":"12","page_s":"101-120","producedDate_s":"2021-03-04","language_s":["fr"],"docType_s":"ART",
 "primaryDomain_s":"math.math-co","domain_s":["0.math","1.math.math-co","1.info.info-dm"],"uri_s":"https://hal.science/hal-00000001"}]},"nextCursorMark":"AoE1"}`
 
-const page2 = `{"response":{"docs":[{"halId_s":"tel-00000002","title_s":["Thèse"],"docType_s":"THESE","isbn_s":["978-0-8053-9021-6"]}]},"nextCursorMark":"AoE2"}`
+const page2 = `{"response":{"docs":[{"halId_s":"tel-00000002","title_s":["Thèse"],"docType_s":"THESE","isbn_s":["978-0-8053-9021-6"],"producedDate_s":"2003",
+"director_s":["Hajer Bahouri","Sylvie Thiria(sylvie@example.org)","ann@example.org"],"nntId_s":"2019pesc0034","defenseDate_s":"2003-05-21","authorityInstitution_s":["Université Paris-Est"]},
+{"halId_s":"tel-00000003","title_s":["Mémoire"],"docType_s":"MEM","director_s":["Bo Li"]}]},"nextCursorMark":"AoE2"}`
 
 const page3 = `{"response":{"docs":[]},"nextCursorMark":"AoE2"}`
 
@@ -52,7 +54,7 @@ func TestFetchAndRecords(t *testing.T) {
 	if err := (Adapter{}).Records(snap, func(r cluster.Record) error { rs = append(rs, r); return nil }); err != nil {
 		t.Fatal(err)
 	}
-	if len(rs) != 2 {
+	if len(rs) != 3 {
 		t.Fatalf("records %+v", rs)
 	}
 	r := rs[0]
@@ -73,7 +75,16 @@ func TestFetchAndRecords(t *testing.T) {
 	if strings.Join(subjects, " ") != "arxiv:math.CO arxiv:math arxiv:cs.DM" {
 		t.Errorf("subjects %v", subjects)
 	}
-	if rs[1].Kind != "thesis" || rs[1].IDs["isbn"][0] != "9780805390216" {
-		t.Errorf("record 2 %+v", rs[1])
+	if r := rs[1]; r.Kind != "thesis" || r.Thesis != "doctoral" || r.IDs["isbn"][0] != "9780805390216" || r.IDs["nnt"][0] != "2019PESC0034" || r.Date != "2003-05-21" || r.Publisher != "Université Paris-Est" {
+		t.Errorf("record 2 %+v", r)
+	}
+	if c := rs[1].Creators; len(c) != 2 || c[0].Name != "Hajer Bahouri" || c[0].Role != "advisor" || c[1].Name != "Sylvie Thiria" {
+		t.Errorf("creators %+v", c)
+	}
+	if r := rs[2]; r.Kind != "thesis" || r.Thesis != "" || len(r.Creators) != 1 || r.Creators[0].Role != "advisor" {
+		t.Errorf("record 3 %+v", r)
+	}
+	if rs[0].Thesis != "" {
+		t.Errorf("an article has the level %q", rs[0].Thesis)
 	}
 }
