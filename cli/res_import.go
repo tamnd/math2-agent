@@ -80,8 +80,13 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 		return fail(err)
 	}
 	var rs []rescluster.Record
+	var rejects []rescluster.Reject
 	err = sr.Records(snapshot, func(r rescluster.Record) error {
 		r.Source, r.Snapshot = source, res.Snapshot.Hash
+		if why := rescluster.Check(&r); why != "" {
+			rejects = append(rejects, rescluster.Reject{NativeID: r.NativeID, Snapshot: r.Snapshot, Reason: why})
+			return nil
+		}
 		rs = append(rs, r)
 		return nil
 	})
@@ -91,6 +96,9 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	if err := rescluster.WriteRecords(opt.Root, source, rescluster.SourceFile, rs); err != nil {
 		return fail(err)
 	}
-	fmt.Fprintf(stdout, "%s: %d source records from the snapshot %s in %s\n", source, len(rs), res.Snapshot.Hash, filepath.Join(rescluster.RecordsDir, source, rescluster.SourceFile+mdrec.Ext))
+	if err := rescluster.WriteRejects(opt.Root, source, rejects); err != nil {
+		return fail(err)
+	}
+	fmt.Fprintf(stdout, "%s: %d source records from the snapshot %s in %s, %d rejected\n", source, len(rs), res.Snapshot.Hash, filepath.Join(rescluster.RecordsDir, source, rescluster.SourceFile+mdrec.Ext), len(rejects))
 	return ExitOK
 }
