@@ -155,6 +155,8 @@ type record struct {
 		Year       string   `xml:"publication_year"`
 		Source     string   `xml:"source"`
 		DOI        string   `xml:"doi"`
+		Language   string   `xml:"language"`
+		AuthorIDs  []string `xml:"author_ids>author_id"`
 		Classes    []string `xml:"classifications>classification"`
 		References []string `xml:"references>reference>ref_id"`
 	} `xml:"metadata>zbmath"`

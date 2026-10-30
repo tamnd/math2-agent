@@ -19,6 +19,7 @@ import (
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/ingest/textbook"
+	"github.com/tamnd/math2-agent/resource/cluster"
 )
 
 // archive makes a git archive of the fixtures of a book like the one GitHub gives, with the files in one directory and the commit in the global header.
@@ -345,5 +346,17 @@ func TestPull(t *testing.T) {
 	}
 	if kinds["statement"] != 2 || kinds["proof"] != 2 || kinds["definition"] != 1 || kinds["example"] != 1 || kinds["exercise"] != 2 {
 		t.Errorf("the kinds of the mentions are %v", kinds)
+	}
+}
+
+func TestRecords(t *testing.T) {
+	for _, b := range textbook.Books {
+		var rs []cluster.Record
+		if err := b.Records(nil, func(r cluster.Record) error { rs = append(rs, r); return nil }); err != nil {
+			t.Fatal(err)
+		}
+		if len(rs) != 1 || rs[0].NativeID != b.ID || rs[0].Kind != "textbook" || rs[0].Title == "" || len(rs[0].Creators) == 0 {
+			t.Errorf("%s: records = %+v", b.ID, rs)
+		}
 	}
 }
