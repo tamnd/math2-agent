@@ -116,6 +116,24 @@ func TestResSampleArxiv(t *testing.T) {
 	}
 }
 
+func TestResSampleHathi(t *testing.T) {
+	cols := make([]string, 26)
+	cols[0], cols[3], cols[11], cols[16], cols[19] = "mdp.39015018415946", "000000001", "A title", "1969", "BK"
+	file := filepath.Join(t.TempDir(), "hathi_full_20261001.txt")
+	if err := os.WriteFile(file, []byte(strings.Join(cols, "\t")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	var out, errb bytes.Buffer
+	if code := runRes([]string{"sample", "-catalogue", "hathitrust", "-hathi", file, "-dir", dir}, &out, &errb); code != ExitOK {
+		t.Fatalf("code = %d, stderr = %s", code, errb.String())
+	}
+	recs, err := mdrec.ReadFile(filepath.Join(dir, "hathitrust.md"))
+	if err != nil || len(recs) != 1 || !strings.Contains(string(recs[0]), "mdp.39015018415946") {
+		t.Errorf("hathitrust.md = %q, %v", recs, err)
+	}
+}
+
 func TestResSampleUsage(t *testing.T) {
 	for _, args := range [][]string{{"sample"}, {"sample", "-catalogue", "nope", "-dir", "x"}, {"lookup"}, {"lookup", "-dir", "x", "-against", "nope"}} {
 		var out, errb bytes.Buffer

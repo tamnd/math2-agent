@@ -35,10 +35,17 @@ type Looker interface {
 	Lookup(ctx context.Context, c *Client, dois []string) (map[string]bool, error)
 }
 
-// Samplers gives the samplers by the name of the catalogue. The arXiv sampler reads the metadata plane in dir.
-func Samplers(arxivDir string) map[string]Sampler {
+// Paths names the local files that some samplers read.
+type Paths struct {
+	Arxiv string // the metadata plane of a checkout of tamnd/arxiv
+	DBLP  string // the XML dump of dblp
+	Hathi string // a Hathifile
+}
+
+// Samplers gives the samplers by the name of the catalogue. The samplers of arXiv, dblp and HathiTrust read the local files of p.
+func Samplers(p Paths) map[string]Sampler {
 	return map[string]Sampler{
-		"arxiv":           Arxiv{Dir: arxivDir},
+		"arxiv":           Arxiv{Dir: p.Arxiv},
 		"zbmath":          ZBMath{Base: ZBMathBase},
 		"openalex":        OpenAlex{Base: OpenAlexBase, Filter: OpenAlexMath},
 		"crossref":        Crossref{Base: CrossrefBase},
@@ -50,6 +57,15 @@ func Samplers(arxivDir string) map[string]Sampler {
 		"internetarchive": Archive{Base: ArchiveBase},
 		"wikidata":        Wikidata{Base: WikidataBase},
 		"numdam":          Numdam{Base: NumdamOAIBase},
+		"loc":             LoC{Base: LoCSRUBase},
+		"hathitrust":      Hathi{File: p.Hathi},
+		"doab":            OAIBooks{Catalogue: "doab", Base: DOABOAIBase, Set: DOABBooks},
+		"oapen":           OAIBooks{Catalogue: "oapen", Base: OAPENOAIBase},
+		"eudml":           EuDML{Base: EuDMLOAIBase},
+		"dblp":            DBLP{File: p.DBLP},
+		"semanticscholar": SemanticScholar{Base: SemanticScholarBase},
+		"mathnetru":       MathNetRu{Base: MathNetRuBase, Gap: MathNetRuGap},
+		"cyberleninka":    CyberLeninka{Base: CyberLeninkaOAIBase},
 	}
 }
 

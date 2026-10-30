@@ -21,23 +21,25 @@ import (
 )
 
 const (
-	resSampleUsage = "m2 res sample -catalogue NAME -dir DIR [-n N] [-seed N] [-arxiv DIR] [-gap D]"
+	resSampleUsage = "m2 res sample -catalogue NAME -dir DIR [-n N] [-seed N] [-arxiv DIR] [-dblp FILE] [-hathi FILE] [-gap D]"
 	resLookupUsage = "m2 res lookup -dir DIR [-n N] [-seed N] [-against A,B] [-env FILE] [-gap D]"
 )
 
 func runResSample(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 res sample", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	name := fs.String("catalogue", "", "the catalogue: "+strings.Join(fetch.Names(fetch.Samplers("")), ", "))
+	name := fs.String("catalogue", "", "the catalogue: "+strings.Join(fetch.Names(fetch.Samplers(fetch.Paths{})), ", "))
 	dir := fs.String("dir", "", "the directory of the census records. The sample goes to <catalogue>.md in it.")
 	n := fs.Int("n", 10000, "the size of the sample")
 	seed := fs.Uint64("seed", 1, "the seed of the sample")
 	axDir := fs.String("arxiv", "", "the metadata plane of a checkout of tamnd/arxiv, for the catalogue arxiv")
+	dblpFile := fs.String("dblp", "", "the XML dump of dblp, dblp.xml or dblp.xml.gz, for the catalogue dblp")
+	hathiFile := fs.String("hathi", "", "a Hathifile, hathi_full_YYYYMMDD.txt.gz, for the catalogue hathitrust")
 	gap := fs.Duration("gap", time.Second, "the shortest time between two requests")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
-	s, ok := fetch.Samplers(*axDir)[*name]
+	s, ok := fetch.Samplers(fetch.Paths{Arxiv: *axDir, DBLP: *dblpFile, Hathi: *hathiFile})[*name]
 	if fs.NArg() != 0 || !ok || *dir == "" || *n < 1 {
 		fmt.Fprintln(stderr, "usage: "+resSampleUsage)
 		return ExitUsage
