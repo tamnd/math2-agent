@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/tamnd/math2/blob/main/schema/cite.v1.json",
   "title": "cite.v1",
-  "description": "One edge from an expression to the resource that one of its references names (corpus resources RS2.7 and RS3.7). One edge is one line of records/resources/cites/<shard>.jsonl.",
+  "description": "One edge from an expression to the resource that one of its references names (corpus resources RS2.7 and RS3.7). One edge is one entry of the YAML header of records/resources/cites/<shard>.md.",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -23,7 +23,7 @@ import (
 const resResolveUsage = "m2 res resolve [-root DIR] [-live] [-gap D] [-index] [-cite TEXT | -in FILE | ID ...]"
 
 // ResResolveQueue is the file of the queue res-resolve in the tree.
-const ResResolveQueue = "build/resources/queues/res-resolve.jsonl"
+const ResResolveQueue = "build/resources/queues/res-resolve.md"
 
 func runResResolve(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 res resolve", flag.ContinueOnError)

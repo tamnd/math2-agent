@@ -1,21 +1,21 @@
 package resolve
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource/census/fetch"
 )
 
 // CacheFile holds the answers of the live APIs with their dates. The answers become part of the next snapshot (RS3.6 pass 3).
-const CacheFile = "build/resources/resolve-cache.jsonl"
+const CacheFile = "build/resources/resolve-cache.md"
 
 // Answer is one answer of a live API.
 type Answer struct {
@@ -35,21 +35,18 @@ type Cache struct {
 // ReadCache reads the cache file at path. A missing file gives an empty cache.
 func ReadCache(path, day string) (*Cache, error) {
 	c := &Cache{Day: day, answers: map[string]Answer{}}
-	data, err := os.ReadFile(path) // #nosec G304 -- the caller owns the tree.
+	recs, err := mdrec.Read(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return c, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	for _, line := range bytes.Split(data, []byte("\n")) {
-		if len(bytes.TrimSpace(line)) == 0 {
-			continue
-		}
-		var a Answer
-		if err := json.Unmarshal(line, &a); err != nil {
-			return nil, err
-		}
+	as, err := mdrec.Unmarshal[Answer](recs)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	for _, a := range as {
 		c.answers[a.API+" "+a.ID] = a
 	}
 	return c, nil
@@ -83,22 +80,18 @@ func (c *Cache) Write(path string) error {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
-	var b bytes.Buffer
+	as := make([]Answer, 0, len(keys))
 	for _, k := range keys {
-		line, err := json.Marshal(c.answers[k])
-		if err != nil {
-			return err
-		}
-		b.Write(append(line, '\n'))
+		as = append(as, c.answers[k])
+	}
+	recs, err := mdrec.Marshal(as)
+	if err != nil {
+		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, b.Bytes(), 0o644); err != nil { // #nosec G306 -- the answers are public metadata.
-		return err
-	}
-	return os.Rename(tmp, path)
+	return mdrec.Write(path, recs)
 }
 
 // CrossrefBase is the REST API of Crossref.

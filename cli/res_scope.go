@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/queue"
 	"github.com/tamnd/math2-agent/resource"
 	resclassify "github.com/tamnd/math2-agent/resource/classify"
@@ -21,7 +22,7 @@ import (
 const resScopeUsage = "m2 res scope [-root DIR] [-env FILE] [-day YYYY-MM-DD] [-fit] [-no-model]"
 
 // ResScopeQueue is the file of the queue res-scope in the tree.
-const ResScopeQueue = "build/resources/queues/res-scope.jsonl"
+const ResScopeQueue = "build/resources/queues/res-scope.md"
 
 func runResScope(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 res scope", flag.ContinueOnError)
@@ -98,7 +99,7 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 	return ExitOK
 }
 
-// goldLine is one line of the gold set of RS9.3: a resource and the label that a person gave.
+// goldLine is one record of the gold set of RS9.3: a resource and the label that a person gave.
 type goldLine struct {
 	ID    string `json:"id"`
 	Label string `json:"label"`
@@ -140,7 +141,7 @@ func fitScope(root string, rs []resource.Resource, env resscope.Env, stdout io.W
 }
 
 func readGold(root string, rs []resource.Resource) ([]resclassify.Example, error) {
-	data, err := os.ReadFile(filepath.Join(root, resclassify.GoldFile)) // #nosec G304 -- the caller owns the tree.
+	recs, err := mdrec.Read(filepath.Join(root, resclassify.GoldFile))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -152,17 +153,14 @@ func readGold(root string, rs []resource.Resource) ([]resclassify.Example, error
 		byID[rs[i].ID] = &rs[i]
 	}
 	var out []resclassify.Example
-	for n, line := range bytes.Split(data, []byte("\n")) {
-		if len(bytes.TrimSpace(line)) == 0 {
-			continue
-		}
+	for n, rec := range recs {
 		var g goldLine
-		if err := json.Unmarshal(line, &g); err != nil || g.ID == "" || g.Label == "" {
-			return nil, fmt.Errorf("%s:%d: want an id and a label", resclassify.GoldFile, n+1)
+		if err := json.Unmarshal(rec, &g); err != nil || g.ID == "" || g.Label == "" {
+			return nil, fmt.Errorf("%s: record %d: want an id and a label", resclassify.GoldFile, n+1)
 		}
 		r := byID[g.ID]
 		if r == nil {
-			return nil, fmt.Errorf("%s:%d: no resource has the id %s", resclassify.GoldFile, n+1, g.ID)
+			return nil, fmt.Errorf("%s: record %d: no resource has the id %s", resclassify.GoldFile, n+1, g.ID)
 		}
 		out = append(out, resclassify.Example{ID: g.ID, Features: resclassify.Features(r, nil), Label: g.Label})
 	}

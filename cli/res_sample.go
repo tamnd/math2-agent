@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource/census"
 	"github.com/tamnd/math2-agent/resource/census/fetch"
 	resscope "github.com/tamnd/math2-agent/resource/scope"
@@ -29,7 +29,7 @@ func runResSample(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 res sample", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	name := fs.String("catalogue", "", "the catalogue: "+strings.Join(fetch.Names(fetch.Samplers("")), ", "))
-	dir := fs.String("dir", "", "the directory of the census records. The sample goes to <catalogue>.jsonl in it.")
+	dir := fs.String("dir", "", "the directory of the census records. The sample goes to <catalogue>.md in it.")
 	n := fs.Int("n", 10000, "the size of the sample")
 	seed := fs.Uint64("seed", 1, "the seed of the sample")
 	axDir := fs.String("arxiv", "", "the metadata plane of a checkout of tamnd/arxiv, for the catalogue arxiv")
@@ -60,7 +60,7 @@ func runResSample(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "m2 res sample: %v\n", err)
 		return ExitFailure
 	}
-	out := filepath.Join(*dir, *name+".jsonl")
+	out := filepath.Join(*dir, *name+mdrec.Ext)
 	if err := writeOut(out, buf.Bytes()); err != nil {
 		fmt.Fprintf(stderr, "m2 res sample: %v\n", err)
 		return ExitFailure
@@ -72,7 +72,7 @@ func runResSample(args []string, stdout, stderr io.Writer) int {
 func runResLookup(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 res lookup", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	dir := fs.String("dir", "", "the directory of the census records, one file <catalogue>.jsonl for each catalogue")
+	dir := fs.String("dir", "", "the directory of the census records, one file <catalogue>.md for each catalogue")
 	n := fs.Int("n", 5000, "the in records of each catalogue to look up")
 	seed := fs.Uint64("seed", 1, "the seed of the choice of the records")
 	against := fs.String("against", strings.Join(fetch.Names(fetch.Lookers()), ","), "the catalogues to look in")
@@ -100,16 +100,16 @@ func runResLookup(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "m2 res lookup: %v\n", err)
 		return ExitFailure
 	}
-	files, err := filepath.Glob(filepath.Join(*dir, "*.jsonl"))
+	files, err := mdrec.Glob(filepath.Join(*dir, "*"+mdrec.Ext))
 	if err != nil || len(files) == 0 {
-		fmt.Fprintf(stderr, "m2 res lookup: %s has no file <catalogue>.jsonl\n", *dir)
+		fmt.Fprintf(stderr, "m2 res lookup: %s has no file <catalogue>.md\n", *dir)
 		return ExitFailure
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	c := fetch.NewClient(*gap)
 	for _, f := range files {
-		name := strings.TrimSuffix(filepath.Base(f), ".jsonl")
+		name := strings.TrimSuffix(filepath.Base(f), mdrec.Ext)
 		rs, err := readRecords(f)
 		if err != nil {
 			fmt.Fprintf(stderr, "m2 res lookup: %v\n", err)
@@ -162,36 +162,27 @@ func readEnv(path string) (resscope.Env, error) {
 }
 
 func readRecords(path string) ([]census.Record, error) {
-	f, err := os.Open(path) // #nosec G304 -- the user names the directory.
+	recs, err := mdrec.Read(path)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = f.Close() }()
-	var out []census.Record
-	sc := bufio.NewScanner(f)
-	sc.Buffer(nil, 64<<20)
-	for n := 1; sc.Scan(); n++ {
-		if len(bytes.TrimSpace(sc.Bytes())) == 0 {
-			continue
-		}
+	out := make([]census.Record, 0, len(recs))
+	for n, rec := range recs {
 		var r census.Record
-		dec := json.NewDecoder(bytes.NewReader(sc.Bytes()))
+		dec := json.NewDecoder(bytes.NewReader(rec))
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&r); err != nil {
-			return nil, fmt.Errorf("%s:%d: %w", path, n, err)
+			return nil, fmt.Errorf("%s: record %d: %w", path, n+1, err)
 		}
 		out = append(out, r)
 	}
-	return out, sc.Err()
+	return out, nil
 }
 
+// writeOut writes the records, given as JSON Lines, to path as a file of records (mdrec), and removes the file of JSON Lines that it replaces.
 func writeOut(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil { // #nosec G306 -- census records are public metadata.
-		return err
-	}
-	return os.Rename(tmp, path)
+	return mdrec.WriteLines(path, data)
 }

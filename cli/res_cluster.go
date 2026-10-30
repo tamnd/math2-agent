@@ -19,7 +19,7 @@ import (
 const resClusterUsage = "m2 res cluster [-root DIR] [-day YYYY-MM-DD] [-commit C] [-no-mint]"
 
 // ResClusterQueue is the file of the queue res-cluster in the tree.
-const ResClusterQueue = "build/resources/queues/res-cluster.jsonl"
+const ResClusterQueue = "build/resources/queues/res-cluster.md"
 
 func runResCluster(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 res cluster", flag.ContinueOnError)
