@@ -10,11 +10,10 @@ import (
 	"github.com/tamnd/math2-agent/resource"
 )
 
-const resUsage = "m2 res mint [-root DIR] [-commit C]\n       m2 res census|import|resolve|cluster|scope|show|queue|refs|status|gaps"
+const resUsage = "m2 res mint [-root DIR] [-commit C]\n       " + resCensusUsage + "\n       m2 res import|resolve|cluster|scope|show|queue|refs|status|gaps"
 
 // resLater holds the res subcommands that are not written yet, with the milestone of the resources roadmap (RS15) that delivers each of them.
 var resLater = map[string]string{
-	"census":  "RS-M1, the census",
 	"import":  "RS-M2, the core catalogues",
 	"resolve": "RS-M2, the core catalogues",
 	"cluster": "RS-M2, the core catalogues",
@@ -34,6 +33,8 @@ func runRes(args []string, stdout, stderr io.Writer) int {
 	switch sub := args[0]; {
 	case sub == "mint":
 		return runResMint(args[1:], stdout, stderr)
+	case sub == "census":
+		return runResCensus(args[1:], stdout, stderr)
 	case resLater[sub] != "":
 		fmt.Fprintf(stderr, "m2 res %s: this command is not written yet. It arrives in %s.\n", sub, resLater[sub])
 		return ExitNotWritten
