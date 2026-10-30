@@ -79,7 +79,8 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. `-mentions` also writes the mentions. | written |
 | `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list, `m2 wp fetch` reads each article of the scope list from a dump, `m2 wp parsoid` fetches the Parsoid HTML of each article, and `m2 wp pointers` collects the incoming pointers of each article. `m2 wp census report` writes the completeness report, and `m2 wp census diff` prints the readings of one article side by side. `refresh` arrives in a later milestone of the Wikipedia roadmap. | written |
-| `m2 res mint` | Change the provisional ids of the resources in `records/resources/` to resource ids, and add the ids to `registers/resources/`. The other subcommands of `m2 res` (`census`, `import`, `resolve`, `cluster`, `scope`, `show`, `queue`, `refs`, `status` and `gaps`) arrive in the milestones RS-M1 to RS-M4. | written |
+| `m2 res mint` | Change the provisional ids of the resources in `records/resources/` to resource ids, and add the ids to `registers/resources/`. The other subcommands of `m2 res` (`import`, `resolve`, `cluster`, `scope`, `show`, `queue`, `refs`, `status` and `gaps`) arrive in the milestones RS-M2 to RS-M4. | written |
+| `m2 res census` | Count the records of each catalogue by scope outcome and by stratum, measure the overlap of each pair of catalogues, and give the Chapman estimate of each independent pair. The report goes to `reports/resources-census.md`. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
@@ -514,6 +515,14 @@ A source of `manifests/sources.yaml` can have the kind `catalogue` (its records 
 The rules H04, H05 and H07 to H17 are in the catalogue and are not written yet.
 
 The package `resource/scope` decides if a work is in the scope of the catalogue. It applies the tests S1 to S7 of the spec in order: the MSC code, the arXiv category, the library class (LCC, DDC, UDC, CLC and BK), the venue register, the curricula, the mathematics units of the institutions and the subject in Wikidata or OpenAlex. A work that no test puts in can be `border`, `out` or `deferred`. The decision records the test that gave it. The classifier, test S8, is not written yet.
+
+The census measures the catalogues before the import (spec RS15.2). The adapter of each catalogue writes one file `<catalogue>.jsonl` of census records, from a dump or from a sample of an API. Each record has the kind, the date, the language, the title, the authors, the external ids and the signals of the scope tests. A record of a sample has a weight, the number of records that it stands for. `m2 res census` reads the files and counts the records of each catalogue by outcome, kind group, MSC2, decade and language. It takes a random sample of the `in` records of each catalogue and matches the sample against each other catalogue, by a strong id and then by the title and the first author. For each pair that `-pairs` names as independent, it gives the Chapman estimate of each stratum (kind group and decade) with a 95% interval by the bootstrap, and the recall of each catalogue. The report also lists the strata that no pair covers.
+
+```sh
+m2 res census -root ../math2 -in census/ -pairs zbmath:crossref,zbmath:hal -env census/env.json
+```
+
+The file of `-env` is optional. It gives the venue register (`venues`), the Wikidata items of mathematics (`math_items`) and the topic threshold of S7 (`topic_threshold`).
 
 ## The Wikipedia corpus
 

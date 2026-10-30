@@ -14,33 +14,33 @@ import (
 
 // Record holds the signals of one work that the tests read. In each list, the first value is the primary value when the source gives one.
 type Record struct {
-	MSC          []string // the MSC2020 codes, the primary code first
-	ZBMath       bool     // the work has a record in zbMATH Open
-	Arxiv        []string // the arXiv categories, the primary category first
-	LCC          []string // the Library of Congress classes, for example QA300 or QA76.73.P98
-	DDC          []string // the Dewey classes, for example 515.7
-	UDC          []string // the UDC classes, for example 517.9
-	CLC          []string // the Chinese Library Classification, for example O174
-	BK           []string // the Basisklassifikation, for example 31.44
-	MathHeading  bool     // a subject heading of the work is a heading of mathematics
-	Venues       []string // the keys of the venues of the work in the venue register: resource ids or ISSN-L
-	Curriculum   bool     // a curriculum or a syllabus names the work (RS5.6)
-	MathUnit     bool     // the work is a course of a mathematics unit of an institution (RS5.3)
-	MainSubjects []string // the Wikidata items of the property P921 main subject
-	Topics       []Topic  // the OpenAlex topics of the work
+	MSC          []string `json:"msc,omitempty"`           // the MSC2020 codes, the primary code first
+	ZBMath       bool     `json:"zbmath,omitempty"`        // the work has a record in zbMATH Open
+	Arxiv        []string `json:"arxiv,omitempty"`         // the arXiv categories, the primary category first
+	LCC          []string `json:"lcc,omitempty"`           // the Library of Congress classes, for example QA300 or QA76.73.P98
+	DDC          []string `json:"ddc,omitempty"`           // the Dewey classes, for example 515.7
+	UDC          []string `json:"udc,omitempty"`           // the UDC classes, for example 517.9
+	CLC          []string `json:"clc,omitempty"`           // the Chinese Library Classification, for example O174
+	BK           []string `json:"bk,omitempty"`            // the Basisklassifikation, for example 31.44
+	MathHeading  bool     `json:"math_heading,omitempty"`  // a subject heading of the work is a heading of mathematics
+	Venues       []string `json:"venues,omitempty"`        // the keys of the venues of the work in the venue register: resource ids or ISSN-L
+	Curriculum   bool     `json:"curriculum,omitempty"`    // a curriculum or a syllabus names the work (RS5.6)
+	MathUnit     bool     `json:"math_unit,omitempty"`     // the work is a course of a mathematics unit of an institution (RS5.3)
+	MainSubjects []string `json:"main_subjects,omitempty"` // the Wikidata items of the property P921 main subject
+	Topics       []Topic  `json:"topics,omitempty"`        // the OpenAlex topics of the work
 }
 
 // Topic is one OpenAlex topic of a work with its score.
 type Topic struct {
-	Field string  // the OpenAlex field of the topic, for example Mathematics
-	Score float64 // from 0 to 1
+	Field string  `json:"field"` // the OpenAlex field of the topic, for example Mathematics
+	Score float64 `json:"score"` // from 0 to 1
 }
 
 // Env holds the registers and the thresholds that the tests read.
 type Env struct {
-	Venues         map[string]string // the scope of each venue of the venue register (RS6.5): core, mixed or border
-	MathItems      map[string]bool   // the Wikidata items of mathematics
-	TopicThreshold float64           // the lowest score of an OpenAlex topic for test S7 (RS9.3)
+	Venues         map[string]string `json:"venues,omitempty"`          // the scope of each venue of the venue register (RS6.5): core, mixed or border
+	MathItems      map[string]bool   `json:"math_items,omitempty"`      // the Wikidata items of mathematics
+	TopicThreshold float64           `json:"topic_threshold,omitempty"` // the lowest score of an OpenAlex topic for test S7 (RS9.3)
 }
 
 // The scopes of a venue in the venue register (RS6.5).
