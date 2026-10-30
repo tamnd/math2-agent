@@ -447,6 +447,9 @@ func h13(a *auditor) outcome {
 	}
 	if o.checked == 0 {
 		o.reason = "no resource in scope has a row in " + depth.File
+	}
+	return o
+}
 
 // h17 reports each source of the catalogue whose last snapshot is older than twice its cadence (rule H17, RS8.4). A stale snapshot is a warning and not an error, because a source can stop publishing. A source with no cadence, the cadence none or no snapshot is not checked.
 func h17(a *auditor) outcome {
