@@ -1,4 +1,4 @@
-// Package status computes the measures of the catalogue of resources and writes the report of RS11.8. This version measures the coverage of each source (RS11.2), the decision open count (RS9.6) and the curriculum closure (RS11.6). The recall by stratum, the reference closure and the depth by tier come in RS-M4.
+// Package status computes the measures of the catalogue of resources and writes the report of RS11.8. This version measures the coverage of each source (RS11.2), the decision open count (RS9.6) and the curriculum closure (RS11.6). It also computes the tier and the depth of each resource with package depth and gives the depth by tier (RS1.6). The recall by stratum and the reference closure come in RS-M4.
 package status
 
 import (
@@ -14,6 +14,7 @@ import (
 
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/cluster"
+	"github.com/tamnd/math2-agent/resource/depth"
 )
 
 // The files of the report.
@@ -64,6 +65,16 @@ type Report struct {
 	Coverage  []Coverage `json:"coverage"`
 	Open      Open       `json:"open"`
 	Closure   Closure    `json:"closure"`
+	Depth     []Tier     `json:"depth"`
+	Late      []string   `json:"late,omitempty"` // the resources more than depth.GapDays below their target (rule H13)
+}
+
+// Tier is the depth of the resources of one tier. ByDepth counts the resources at each depth from -1 (below D0) to 4, at the index depth+1.
+type Tier struct {
+	Tier    string `json:"tier"`
+	Target  int    `json:"target"`
+	ByDepth [6]int `json:"by_depth"`
+	Below   int    `json:"below"` // the depth gap: the resources below the target
 }
 
 // Build computes the report of the tree at root on the day, YYYY-MM-DD.
@@ -144,6 +155,7 @@ func Build(root, day string) (*Report, error) {
 		return nil, err
 	}
 	rep.Closure.Texts = len(texts)
+	named := map[string]bool{}
 	for _, t := range texts {
 		id, _, _ := strings.Cut(t.Resource, "/")
 		r := byID[id]
@@ -159,6 +171,31 @@ func Build(root, day string) (*Report, error) {
 		if why != "" && len(rep.Closure.Missing) < MaxList {
 			rep.Closure.Missing = append(rep.Closure.Missing, Missing{t.File, t.Line, t.Name, why})
 		}
+		if why == "" {
+			named[id] = true
+		}
+	}
+	rows, err := depth.Build(root, day, rs, named)
+	if err != nil {
+		return nil, err
+	}
+	byTier := map[string]*Tier{}
+	for _, row := range rows {
+		t := byTier[row.Tier]
+		if t == nil {
+			t = &Tier{Tier: row.Tier, Target: row.Target}
+			byTier[row.Tier] = t
+		}
+		t.ByDepth[min(max(row.Depth, -1), 4)+1]++
+		if row.Depth < row.Target {
+			t.Below++
+		}
+		if row.Late(day) && len(rep.Late) < MaxList {
+			rep.Late = append(rep.Late, row.ID)
+		}
+	}
+	for _, k := range slices.Sorted(maps.Keys(byTier)) {
+		rep.Depth = append(rep.Depth, *byTier[k])
 	}
 	return rep, nil
 }
@@ -183,7 +220,7 @@ func (rep *Report) Write(root string) error {
 // Markdown gives the report as Markdown, in the sections of RS11.8.
 func (rep *Report) Markdown() []byte {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "# The catalogue of resources\n\nThe report of %s. The catalogue has %d live resources. The sections follow RS11.8. The sections 4, 5, 7, 8 and 9 are not measured yet.\n", rep.Day, rep.Resources)
+	fmt.Fprintf(&b, "# The catalogue of resources\n\nThe report of %s. The catalogue has %d live resources. The sections follow RS11.8. The sections 4, 5, 8 and 9 are not measured yet.\n", rep.Day, rep.Resources)
 	fmt.Fprintf(&b, "\n## 1. The measures\n\n| Measure | Value | Target | State |\n|---|---:|---:|---|\n")
 	gaps := 0
 	for _, c := range rep.Coverage {
@@ -194,6 +231,13 @@ func (rep *Report) Markdown() []byte {
 	fmt.Fprintf(&b, "| sources below 100%% coverage | %d | 0 | %s |\n", gaps, state(gaps == 0 && len(rep.Coverage) > 0))
 	fmt.Fprintf(&b, "| curriculum works with no resource | %d | 0 | %s |\n", len(rep.Closure.Missing), state(len(rep.Closure.Missing) == 0))
 	fmt.Fprintf(&b, "| open decisions | %d | 0 | %s |\n", rep.Open.Total, state(rep.Open.Total == 0))
+	t1 := 0
+	for _, t := range rep.Depth {
+		if t.Tier == depth.T1 {
+			t1 = t.Below
+		}
+	}
+	fmt.Fprintf(&b, "| depth gap of tier T1 | %d | 0 | %s |\n", t1, state(t1 == 0))
 	fmt.Fprintf(&b, "\n## 2. Coverage by source\n\n")
 	if len(rep.Coverage) == 0 {
 		fmt.Fprintf(&b, "The tree has no source records. Run `m2 res import` for each source.\n")
@@ -233,6 +277,24 @@ func (rep *Report) Markdown() []byte {
 		for _, m := range rep.Closure.Missing {
 			fmt.Fprintf(&b, "| %s | %s:%d | %s |\n", strings.ReplaceAll(m.Name, "|", "\\|"), m.File, m.Line, m.Reason)
 		}
+	}
+	fmt.Fprintf(&b, "\n## 7. Depth by tier\n\n")
+	if len(rep.Depth) == 0 {
+		fmt.Fprintf(&b, "No resource has the scope in or border.\n")
+	} else {
+		fmt.Fprintf(&b, "| Tier | Target | below D0 | D0 | D1 | D2 | D3 | D4 | Below the target |\n|---|---|---:|---:|---:|---:|---:|---:|---:|\n")
+		for _, t := range rep.Depth {
+			fmt.Fprintf(&b, "| %s | D%d", t.Tier, t.Target)
+			for _, n := range t.ByDepth {
+				fmt.Fprintf(&b, " | %d", n)
+			}
+			fmt.Fprintf(&b, " | %d |\n", t.Below)
+		}
+		fmt.Fprintf(&b, "\n%d resources are more than %d days below their target depth (rule H13).", len(rep.Late), depth.GapDays)
+		if len(rep.Late) > 0 {
+			fmt.Fprintf(&b, " The first of them: %s.", strings.Join(first(rep.Late, 20), ", "))
+		}
+		b.WriteString("\n")
 	}
 	return b.Bytes()
 }
