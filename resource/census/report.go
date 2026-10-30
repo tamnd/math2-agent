@@ -2,9 +2,13 @@ package census
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -115,4 +119,67 @@ func (c *Census) wholeNames() string {
 	}
 	slices.Sort(names)
 	return strings.Join(names, ", ")
+}
+
+// ReportRow is one row of the estimates of ReportFile.
+type ReportRow struct {
+	A, B         string
+	Kind, Decade string
+	N, Low, High float64
+	Line         int // the line of the row in ReportFile
+}
+
+// ReadEstimates reads the rows of the estimates of ReportFile in the tree at root. A tree with no file has no rows.
+func ReadEstimates(root string) ([]ReportRow, error) {
+	data, err := os.ReadFile(filepath.Join(root, ReportFile)) // #nosec G304 -- the caller owns the tree.
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var out []ReportRow
+	in := false
+	for n, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "## ") {
+			in = line == "## Estimates"
+			continue
+		}
+		if !in || !strings.HasPrefix(line, "| ") || strings.HasPrefix(line, "| A |") {
+			continue
+		}
+		cells := strings.Split(strings.Trim(line, "| "), " | ")
+		if len(cells) != 12 {
+			return nil, fmt.Errorf("%s:%d: an estimate has %d cells, and it must have 12", ReportFile, n+1, len(cells))
+		}
+		r := ReportRow{A: cells[0], B: cells[1], Kind: cells[2], Decade: cells[3], Line: n + 1}
+		for i, f := range []*float64{&r.N, &r.Low, &r.High} {
+			if *f, err = strconv.ParseFloat(cells[7+i], 64); err != nil {
+				return nil, fmt.Errorf("%s:%d: %w", ReportFile, n+1, err)
+			}
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
+// Target gives the target of the estimated recall of a stratum (RS1.7), or 0 when the stratum has no target.
+func Target(kind, decade string) float64 {
+	switch kind {
+	case "article":
+		if decade != "unknown" && decade >= "1990s" {
+			return 0.99
+		}
+	case "book":
+		if decade == "unknown" {
+			return 0
+		}
+		if decade >= "1950s" {
+			return 0.97
+		}
+		return 0.90
+	case "thesis", "report-notes", "course":
+		return 0.90
+	}
+	return 0
 }
