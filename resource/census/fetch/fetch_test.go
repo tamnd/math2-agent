@@ -134,24 +134,27 @@ func TestZBMath(t *testing.T) {
 		`"contributors":{"authors":[{"name":"Erdős, Paul"}]},"links":[{"type":"doi","identifier":"10.1000/A"},{"type":"arxiv","identifier":"math/9912001"}],` +
 		`"msc":[{"code":"26A42"},{"code":"26A42"}],"source":{"series":[{"issn":[{"number":"0001-8708"}]}]}}`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/document/_all":
+		q := r.URL.Query().Get("search_string")
+		switch {
+		case q == "py:1970-1979" || q == "py:1977":
 			fmt.Fprintf(w, `{"result":[%s],"status":{"nr_total_results":250}}`, doc)
-		case "/document/_search":
-			if q := r.URL.Query().Get("search_string"); q != "doi:(10.1000/a | 10.1000/b)" {
+		case strings.HasPrefix(q, "py:"):
+			http.NotFound(w, r)
+		default:
+			if q != "doi:(10.1000/a | 10.1000/b)" {
 				t.Errorf("search_string = %q", q)
 			}
 			fmt.Fprintf(w, `{"result":[%s],"status":{"nr_total_results":1}}`, doc)
 		}
 	}))
 	defer srv.Close()
-	z := ZBMath{Base: srv.URL}
+	z := ZBMath{Base: srv.URL, LastYear: 1979}
 	rs, info := collect(t, z, 100)
 	if info.Total != 250 || len(rs) != 1 {
 		t.Fatalf("info = %+v, records = %d", info, len(rs))
 	}
 	r := rs[0]
-	if r.Kind != "article" || r.Language != "en" || r.Weight != 2.5 || r.IDs["doi"][0] != "10.1000/A" || len(r.Signals.MSC) != 1 || !r.Signals.ZBMath || r.Signals.Venues[0] != "0001-8708" {
+	if r.Kind != "article" || r.Language != "en" || r.Weight != 250 || r.IDs["doi"][0] != "10.1000/A" || len(r.Signals.MSC) != 1 || !r.Signals.ZBMath || r.Signals.Venues[0] != "0001-8708" {
 		t.Errorf("record = %+v", r)
 	}
 	found, err := z.Lookup(context.Background(), client(), []string{"10.1000/a", "10.1000/b", "10.1000/(c)"})
