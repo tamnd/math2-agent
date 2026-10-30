@@ -18,7 +18,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/s2"
 )
 
-const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-cache DIR] [-structure] <source> | m2 res import [-root DIR] [-lookup] [-gap D] refs | m2 res import [-root DIR] [-gap D] s2"
+const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-url URL] [-cache DIR] [-structure] <source> | m2 res import [-root DIR] [-lookup] [-gap D] refs | m2 res import [-root DIR] [-gap D] s2"
 
 // structurer is an adapter that gives the table of contents of the work of its snapshot (RS4.5), as the adapter of an open textbook does. It also gives the commit of the snapshot.
 type structurer interface {
@@ -43,6 +43,7 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	var opt ingest.Options
 	fs.StringVar(&opt.Root, "root", ".", "the math2 working tree")
 	fs.StringVar(&opt.Snapshot, "snapshot", "", "use again the snapshot with this hash from manifests/sources.yaml. Empty means a new fetch.")
+	fs.StringVar(&opt.URL, "url", "", "fetch the new snapshot from this URL or local path, and not from the bulk channel of the adapter")
 	fs.StringVar(&opt.Cache, "cache", "", "the directory of the downloaded snapshots. Empty means m2 in the user cache directory.")
 	structure := fs.Bool("structure", false, "also write the table of contents of the snapshot to the first expression of the resource that groups the source records")
 	lookup := fs.Bool("lookup", false, "for the source refs: confirm the ids of the references with a live lookup")
