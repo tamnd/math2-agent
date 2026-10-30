@@ -300,10 +300,11 @@ type Node struct {
 	Children  []Node    `json:"children,omitempty"`
 }
 
-// Reading is one section of a book that a session of a course uses.
+// Reading is one section of a book that a session of a course uses. A reading whose book is not in the tree has no resource. It keeps the citation of the course as text for the reference resolver.
 type Reading struct {
-	Resource string            `json:"resource"` // the expression, as <id>/e<n>
+	Resource string            `json:"resource,omitempty"` // the expression, as <id>/e<n>
 	At       map[string]string `json:"at,omitempty"`
+	Text     string            `json:"text,omitempty"` // the citation as the course gives it
 }
 
 // Find returns the node of the structure with the key, or nil.

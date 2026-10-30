@@ -259,3 +259,53 @@ func TestJoinedBy(t *testing.T) {
 		t.Errorf("JoinedBy gave %q, want C1 and none", got)
 	}
 }
+
+func TestCourseOfferings(t *testing.T) {
+	instr := []resource.Creator{{Name: "Gilbert Strang", Role: "instructor"}}
+	site := func(slug, term, label, year string) Record {
+		return Record{Source: "ocw", NativeID: slug, Level: "manifestation", Kind: "course", Title: "Introduction to Linear Algebra", Creators: instr, Date: year, Language: "en", Edition: label, Publisher: "MIT OpenCourseWare",
+			IDs: resource.IDs{"course": {"042nb2s44:18.06"}, "offering": {"042nb2s44:18.06:" + term}, "ocw": {slug}}}
+	}
+	res := run(t, Input{Records: []Record{
+		site("18-06-linear-algebra-spring-2010", "2010-spring", "Spring 2010", "2010"),
+		site("18-06-linear-algebra-spring-2005", "2005-spring", "Spring 2005", "2005"),
+		{Source: "ocw", NativeID: "18-06-linear-algebra-spring-2010/resources/pset1", Level: "manifestation", Kind: "course-material", Title: "Problem set 1", Date: "2010", Language: "en",
+			IDs: resource.IDs{"ocw": {"18-06-linear-algebra-spring-2010/resources/pset1"}}, Relations: []resource.Relation{{Kind: "part_of", To: "offering:042nb2s44:18.06:2010-spring", Source: "ocw"}}},
+		{Source: "openlibrary", NativeID: "OL1W", Level: "work", Kind: "textbook", Title: "Introduction to Linear Algebra", Creators: author("Gilbert Strang"), Date: "2010", Language: "en"},
+	}})
+	rs := live(res)
+	if len(rs) != 3 {
+		t.Fatalf("%d resources, want the course, the material and the book apart: %+v", len(rs), rs)
+	}
+	var course, material *resource.Resource
+	for i := range rs {
+		switch rs[i].Kind {
+		case "course":
+			course = &rs[i]
+		case "course-material":
+			material = &rs[i]
+		}
+	}
+	if course == nil || material == nil {
+		t.Fatalf("the resources are %+v", rs)
+	}
+	if course.IDs.Get("course") != "042nb2s44:18.06" || len(course.Expressions) != 2 {
+		t.Fatalf("the course is %+v", course)
+	}
+	spring := ""
+	for _, e := range course.Expressions {
+		if e.Kind != "offering" || len(e.Contributors) != 1 || len(e.Manifestations) != 1 || e.Manifestations[0].Kind != "page" {
+			t.Errorf("the expression is %+v", e)
+		}
+		if e.IDs.Get("offering") == "042nb2s44:18.06:2010-spring" {
+			spring = e.Key
+			if e.Label != "Spring 2010" {
+				t.Errorf("the label of the offering is %q", e.Label)
+			}
+		}
+	}
+	want := resource.Relation{Kind: "part_of", To: course.ID + "/" + spring, Source: Version}
+	if spring == "" || len(material.Relations) != 1 || material.Relations[0] != want {
+		t.Errorf("the relations of the material are %+v, want %+v", material.Relations, want)
+	}
+}

@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"compress/gzip"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -141,5 +142,87 @@ func TestResImportStructure(t *testing.T) {
 	}
 	if len(got) != 2 || len(got[0].Expressions) != 2 || got[0].Expressions[0].Structure != "8F2K1QW7ZJ/e1.json" || got[0].Expressions[1].Structure != "" || got[1].Expressions != nil {
 		t.Errorf("the resources are %+v", got)
+	}
+}
+
+// courseShelf is a shelf that also gives the sessions of two offerings, as a course platform does. The snapshot does not change them.
+type courseShelf struct{ shelf }
+
+func (courseShelf) Source() ingest.Source {
+	return ingest.Source{ID: "courseshelf", Name: "A test course platform", Licence: "CC0-1.0", Class: ingest.Open}
+}
+func (courseShelf) Structures(r io.Reader, emit func(string, []resource.Node) error) error {
+	if _, err := io.Copy(io.Discard, r); err != nil {
+		return err
+	}
+	ns := []resource.Node{{Key: "L01", Kind: "session", Number: "1", Title: "Vectors", Materials: []string{"ocw:c/resources/m1", "ocw:c/resources/m2"},
+		Readings: []resource.Reading{{Resource: "isbn:9780980232714", At: map[string]string{"section": "1.1"}, Text: "1.1"}, {Resource: "isbn:9780000000002", At: map[string]string{"section": "2.1"}, Text: "Other book 2.1"}, {Text: "Notes"}}}}
+	if err := emit("offering:042nb2s44:18.06:2010-spring", ns); err != nil {
+		return err
+	}
+	return emit("offering:042nb2s44:18.06:2011-fall", ns)
+}
+
+func init() { ingest.Register(courseShelf{}) }
+
+func TestResImportStructures(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "c Linear Algebra\n") }))
+	defer srv.Close()
+	root, cache := t.TempDir(), t.TempDir()
+	if code, _, stderr := run("ingest", "-root", root, "-cache", cache, "-url", srv.URL+"/c.txt", "courseshelf"); code != ExitOK {
+		t.Fatalf("exit code %d, stderr %q", code, stderr)
+	}
+	cat, err := ingest.ReadCatalogue(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"res", "import", "-root", root, "-cache", cache, "-snapshot", cat.Source("courseshelf").Snapshots[0].Hash, "-structure", "courseshelf"}
+	if code, _, stderr := run(args...); code != ExitFailure || !strings.Contains(stderr, "Run m2 res cluster first") {
+		t.Fatalf("exit code %d with no resource, stderr %q", code, stderr)
+	}
+	rs := []resource.Resource{
+		{ID: "8F2K1QW7ZA", Kind: "course", Title: "Linear Algebra", IDs: resource.IDs{"course": {"042nb2s44:18.06"}},
+			Expressions: []resource.Expression{{Key: "e1", Kind: "offering", Label: "Spring 2010", IDs: resource.IDs{"offering": {"042nb2s44:18.06:2010-spring"}}}}},
+		{ID: "8F2K1QW7ZB", Kind: "course-material", Title: "Lecture 1", Expressions: []resource.Expression{{Key: "e1", Kind: "edition", Manifestations: []resource.Manifestation{{Key: "m1", Kind: "page", IDs: resource.IDs{"ocw": {"c/resources/m1"}}}}}}},
+		{ID: "8F2K1QW7ZC", Kind: "textbook", Title: "Introduction to Linear Algebra", Expressions: []resource.Expression{{Key: "e1", Kind: "edition"}, {Key: "e2", Kind: "edition", Manifestations: []resource.Manifestation{{Key: "m1", Kind: "print", IDs: resource.IDs{"isbn": {"9780980232714"}}}}}}},
+	}
+	if err := resource.WriteResources(root, rs); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := run(args...)
+	if code != ExitOK || !strings.Contains(stdout, "courseshelf: 1 structures in records/resources/structure, 1 with no resource") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	s, err := resource.ReadStructure(root, "8F2K1QW7ZA", "e1")
+	if err != nil || s == nil || len(s.Nodes) != 1 {
+		t.Fatalf("the structure is %+v, %v", s, err)
+	}
+	n := s.Nodes[0]
+	if len(n.Materials) != 2 || n.Materials[0] != "8F2K1QW7ZB" || n.Materials[1] != "ocw:c/resources/m2" {
+		t.Errorf("the materials are %v. A material that the tree does not have keeps its id", n.Materials)
+	}
+	want := []resource.Reading{{Resource: "8F2K1QW7ZC/e2", At: map[string]string{"section": "1.1"}}, {At: map[string]string{"section": "2.1"}, Text: "Other book 2.1"}, {Text: "Notes"}}
+	if len(n.Readings) != len(want) {
+		t.Fatalf("the readings are %+v", n.Readings)
+	}
+	for i, r := range n.Readings {
+		if r.Resource != want[i].Resource || r.Text != want[i].Text || r.At["section"] != want[i].At["section"] {
+			t.Errorf("reading %d is %+v, want %+v", i, r, want[i])
+		}
+	}
+	got, err := resource.ReadResources(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := got[0].Expressions[0]
+	if e.Structure != "8F2K1QW7ZA/e1.json" || len(got[0].Relations) != 1 || got[0].Relations[0] != (resource.Relation{Kind: "uses_text", From: "e1", To: "8F2K1QW7ZC/e2", Source: "courseshelf"}) {
+		t.Errorf("the course is %+v", got[0])
+	}
+	data, err := json.Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := resource.Validate(resource.StructureSchema, data); err != nil {
+		t.Errorf("the structure does not match its schema: %v", err)
 	}
 }
