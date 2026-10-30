@@ -297,6 +297,7 @@ type Node struct {
 	Date      string    `json:"date,omitempty"`      // of a session
 	Materials []string  `json:"materials,omitempty"` // of a session: the resources of its materials
 	Readings  []Reading `json:"readings,omitempty"`  // of a session: the sections of the books that it uses (RS5.4)
+	Links     []string  `json:"links,omitempty"`     // of a problem: the pages of the source that show it (RS7.2). The statement is not held
 	Children  []Node    `json:"children,omitempty"`
 }
 

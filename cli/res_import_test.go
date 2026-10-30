@@ -226,3 +226,70 @@ func TestResImportStructures(t *testing.T) {
 		t.Errorf("the structure does not match its schema: %v", err)
 	}
 }
+
+// setShelf is a shelf whose snapshot holds sets: each line is a set with one problem.
+type setShelf struct{ shelf }
+
+func (setShelf) Source() ingest.Source {
+	return ingest.Source{ID: "setshelf", Name: "A test catalogue of problem sets", Licence: "CC0-1.0", Class: ingest.Open}
+}
+func (setShelf) SetStructures(r io.Reader) (map[string][]resource.Node, error) {
+	out := map[string][]resource.Node{}
+	sc := bufio.NewScanner(r)
+	for sc.Scan() {
+		id, _, _ := strings.Cut(sc.Text(), " ")
+		out[id] = []resource.Node{{Key: "1", Kind: "problem", Number: "1", Links: []string{"https://example.org/" + id}}}
+	}
+	return out, sc.Err()
+}
+
+func init() { ingest.Register(setShelf{}) }
+
+func TestResImportSetStructures(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		zw := gzip.NewWriter(w)
+		_, _ = io.WriteString(zw, "2023 Olympiad 2023\n2024 Olympiad 2024\n2025 Olympiad 2025\n")
+		_ = zw.Close()
+	}))
+	defer srv.Close()
+	root, cache := t.TempDir(), t.TempDir()
+	if code, _, stderr := run("ingest", "-root", root, "-cache", cache, "-url", srv.URL+"/s.txt", "setshelf"); code != ExitOK {
+		t.Fatalf("exit code %d, stderr %q", code, stderr)
+	}
+	cat, err := ingest.ReadCatalogue(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hash := cat.Source("setshelf").Snapshots[0].Hash
+	args := []string{"res", "import", "-root", root, "-cache", cache, "-snapshot", hash, "-structure", "setshelf"}
+	if code, _, stderr := run(args...); code != ExitFailure || !strings.Contains(stderr, "Run m2 res cluster first") {
+		t.Fatalf("exit code %d with no resource, stderr %q", code, stderr)
+	}
+	// 2023 has one resource, 2024 has two, and 2025 has none.
+	cr := func(id string) []resource.CatalogueRecord {
+		return []resource.CatalogueRecord{{Source: "setshelf", Snapshot: hash, NativeID: id, Level: "work"}}
+	}
+	rs := []resource.Resource{
+		{ID: "8F2K1QW7ZJ", Kind: "problem-set", Title: "Olympiad 2023", Catalogue: cr("2023")},
+		{ID: "8F2K1QW7ZK", Kind: "problem-set", Title: "Olympiad 2024", Catalogue: cr("2024")},
+		{ID: "8F2K1QW7ZM", Kind: "problem-set", Title: "Olympiad 2024 again", Catalogue: cr("2024")},
+	}
+	if err := resource.WriteResources(root, rs); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := run(args...)
+	if code != ExitOK || !strings.Contains(stdout, "setshelf: the structures of 1 sets in records/resources/structure, 2 sets skipped") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	s, err := resource.ReadStructure(root, "8F2K1QW7ZJ", "e1")
+	if err != nil || s == nil || len(s.Nodes) != 1 || s.Nodes[0].Links[0] != "https://example.org/2023" {
+		t.Fatalf("the structure is %+v, %v", s, err)
+	}
+	got, err := resource.ReadResources(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].Expressions[0].Structure != "8F2K1QW7ZJ/e1.json" || got[1].Expressions != nil {
+		t.Errorf("the resources are %+v", got)
+	}
+}
