@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -90,5 +91,35 @@ func TestResCensus(t *testing.T) {
 	writeFile(t, in, "bad.jsonl", `{"native_id":"1","colour":"red"}`+"\n")
 	if code, _, stderr := run("res", "census", "-in", in, "-root", root); code != ExitFailure || !strings.Contains(stderr, "bad.jsonl:1") {
 		t.Errorf("exit code %d, stderr %q for an unknown field", code, stderr)
+	}
+}
+
+func TestResSampleArxiv(t *testing.T) {
+	ax := t.TempDir()
+	rec := "---\nrecords:\n  - id: \"2310.00001\"\n    title: A\n    categories: [math.AC]\n  - id: \"2310.00002\"\n    title: B\n    categories: [hep-th]\n---\n"
+	if err := os.WriteFile(filepath.Join(ax, "2310.md"), []byte(rec), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	var out, errb bytes.Buffer
+	if code := runRes([]string{"sample", "-catalogue", "arxiv", "-arxiv", ax, "-dir", dir}, &out, &errb); code != ExitOK {
+		t.Fatalf("code = %d, stderr = %s", code, errb.String())
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "arxiv.jsonl"))
+	if err != nil || strings.Count(string(data), "\n") != 1 || !strings.Contains(string(data), "2310.00001") {
+		t.Errorf("arxiv.jsonl = %q, %v", data, err)
+	}
+	out.Reset()
+	if code := runRes([]string{"census", "-in", dir, "-root", t.TempDir()}, &out, &errb); code != ExitOK {
+		t.Errorf("census code = %d, stderr = %s", code, errb.String())
+	}
+}
+
+func TestResSampleUsage(t *testing.T) {
+	for _, args := range [][]string{{"sample"}, {"sample", "-catalogue", "nope", "-dir", "x"}, {"lookup"}, {"lookup", "-dir", "x", "-against", "nope"}} {
+		var out, errb bytes.Buffer
+		if code := runRes(args, &out, &errb); code != ExitUsage {
+			t.Errorf("%v: code = %d", args, code)
+		}
 	}
 }

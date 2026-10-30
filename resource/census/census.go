@@ -17,15 +17,16 @@ import (
 
 // Record is one record of a catalogue as the census reads it.
 type Record struct {
-	NativeID string       `json:"native_id"`
-	Kind     string       `json:"kind"`               // one of resource.Kinds
-	Date     string       `json:"date,omitempty"`     // ISO 8601, as precise as known
-	Language string       `json:"language,omitempty"` // BCP 47
-	Title    string       `json:"title,omitempty"`
-	Authors  []string     `json:"authors,omitempty"` // the names as the catalogue gives them, the first author first
-	IDs      resource.IDs `json:"ids,omitempty"`     // the external ids, by the keys of resource/ids
-	Weight   float64      `json:"weight,omitempty"`  // the number of records of the catalogue that this record stands for. Zero means 1
-	Signals  scope.Record `json:"signals"`           // the signals of the scope tests
+	NativeID string          `json:"native_id"`
+	Kind     string          `json:"kind"`               // one of resource.Kinds
+	Date     string          `json:"date,omitempty"`     // ISO 8601, as precise as known
+	Language string          `json:"language,omitempty"` // BCP 47
+	Title    string          `json:"title,omitempty"`
+	Authors  []string        `json:"authors,omitempty"` // the names as the catalogue gives them, the first author first
+	IDs      resource.IDs    `json:"ids,omitempty"`     // the external ids, by the keys of resource/ids
+	Weight   float64         `json:"weight,omitempty"`  // the number of records of the catalogue that this record stands for. Zero means 1
+	Signals  scope.Record    `json:"signals"`           // the signals of the scope tests
+	Found    map[string]bool `json:"found,omitempty"`   // the catalogues where a lookup of the DOI looked for the record, and if it found it
 }
 
 // weight gives the weight of the record, 1 when it has none.
@@ -118,6 +119,7 @@ type Catalogue struct {
 	Strata  map[Stratum]float64         // the weighted count of in records by kind group and decade
 	Weight  float64                     // the mean weight of the records
 	sample  *Reservoir[Record]
+	looked  []Record        // the in records with a lookup
 	keys    map[string]bool // the match keys of all records
 	weights float64
 }
@@ -176,6 +178,9 @@ func (c *Census) Add(catalogue string, r Record) {
 	if d.Value == "in" {
 		cat.Strata[Stratum{vals[DimKind], vals[DimDecade]}] += w
 		cat.sample.Add(r)
+		if len(r.Found) > 0 {
+			cat.looked = append(cat.looked, r)
+		}
 	}
 }
 
@@ -239,10 +244,14 @@ type Overlap struct {
 	Sampled int                // the records of the sample of A
 	Matched int                // the records of the sample of A with a key in B
 	Strata  map[Stratum][2]int // the sampled and the matched records by stratum
+	Lookup  bool               // the match is by a lookup of the DOI in B, not by the keys of the records of B
 }
 
-// Fraction gives the share of the sample of A that B has, corrected by the weight of B: a record of a sample of B with weight w stands for w records, so a match is found with chance 1/w. The fraction is never more than 1.
+// Fraction gives the share of the sample of A that B has. A match by the keys is corrected by the weight of B: a record of a sample of B with weight w stands for w records, so a match is found with chance 1/w. A match by a lookup needs no correction. The fraction is never more than 1.
 func (o Overlap) Fraction(wB float64) float64 {
+	if o.Lookup {
+		wB = 1
+	}
 	return fraction(o.Matched, o.Sampled, wB)
 }
 
@@ -253,7 +262,7 @@ func fraction(matched, sampled int, wB float64) float64 {
 	return min(1, float64(matched)/float64(sampled)*max(1, wB))
 }
 
-// Overlaps gives the overlap of each ordered pair of catalogues.
+// Overlaps gives the overlap of each ordered pair of catalogues. When records of A have a lookup in B, the overlap uses these records and the answers of the lookup. Else it uses the sample of A and the match keys of the records of B.
 func (c *Census) Overlaps() []Overlap {
 	var out []Overlap
 	cats := c.Catalogues()
@@ -263,12 +272,27 @@ func (c *Census) Overlaps() []Overlap {
 				continue
 			}
 			o := Overlap{A: a.Name, B: b.Name, Strata: map[Stratum][2]int{}}
-			for _, r := range a.sample.Items() {
+			var looked []Record
+			for _, r := range a.looked {
+				if _, ok := r.Found[b.Name]; ok {
+					looked = append(looked, r)
+				}
+			}
+			o.Lookup = len(looked) > 0
+			recs := a.sample.Items()
+			if o.Lookup {
+				recs = looked
+			}
+			for _, r := range recs {
 				s := Stratum{KindGroup(r.Kind), Decade(r.Date)}
 				n := o.Strata[s]
 				n[0]++
 				o.Sampled++
-				if slices.ContainsFunc(Keys(&r), func(k string) bool { return b.keys[k] }) {
+				hit := r.Found[b.Name]
+				if !o.Lookup {
+					hit = slices.ContainsFunc(Keys(&r), func(k string) bool { return b.keys[k] })
+				}
+				if hit {
 					n[1]++
 					o.Matched++
 				}
@@ -312,7 +336,7 @@ func (c *Census) Estimates(pairs [][2]string) []StratumEstimate {
 			if nA == 0 || nB == 0 || n[0] == 0 {
 				continue
 			}
-			m := min(nA, nB, nA*fraction(n[1], n[0], b.Weight))
+			m := min(nA, nB, nA*o.strataFraction(s, b.Weight))
 			e := Pair(round(nA), round(nB), round(m), c.Seed^hash(p[0]+"|"+p[1]+"|"+s.Kind+"|"+s.Decade))
 			out = append(out, StratumEstimate{A: p[0], B: p[1], Stratum: s, Estimate: e, RecallA: Recall(e.NA, e.N), RecallB: Recall(e.NB, e.N)})
 		}
@@ -340,6 +364,14 @@ func (c *Census) Uncovered(est []StratumEstimate) []Stratum {
 	}
 	slices.SortFunc(out, func(x, y Stratum) int { return cmp.Or(cmp.Compare(x.Kind, y.Kind), cmp.Compare(x.Decade, y.Decade)) })
 	return out
+}
+
+func (o Overlap) strataFraction(s Stratum, wB float64) float64 {
+	if o.Lookup {
+		wB = 1
+	}
+	n := o.Strata[s]
+	return fraction(n[1], n[0], wB)
 }
 
 func round(f float64) int { return int(f + 0.5) }

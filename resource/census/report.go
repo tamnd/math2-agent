@@ -43,10 +43,14 @@ func (c *Census) WriteReport(w io.Writer, pairs [][2]string) error {
 	}
 
 	fmt.Fprintf(&b, "## Overlap\n\n")
-	fmt.Fprintf(&b, "Each row gives the share of the sample of in records of A that has a match in B, by a strong id or by the title and the first author. The share is corrected by the weight of B.\n\n")
-	fmt.Fprintf(&b, "| A | B | Sampled | Matched | Share |\n|---|---|--:|--:|--:|\n")
+	fmt.Fprintf(&b, "Each row gives the share of the sample of in records of A that has a match in B. The match is a lookup of the DOI in the API of B, or else a strong id or the title and the first author in the records of B. A match in the records of B is corrected by the weight of B.\n\n")
+	fmt.Fprintf(&b, "| A | B | Match | Sampled | Matched | Share |\n|---|---|---|--:|--:|--:|\n")
 	for _, o := range c.Overlaps() {
-		fmt.Fprintf(&b, "| %s | %s | %d | %d | %.3f |\n", o.A, o.B, o.Sampled, o.Matched, o.Fraction(c.cats[o.B].Weight))
+		how := "records"
+		if o.Lookup {
+			how = "lookup"
+		}
+		fmt.Fprintf(&b, "| %s | %s | %s | %d | %d | %.3f |\n", o.A, o.B, how, o.Sampled, o.Matched, o.Fraction(c.cats[o.B].Weight))
 	}
 	b.WriteString("\n")
 
