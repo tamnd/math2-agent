@@ -133,6 +133,18 @@ func Pull(ctx context.Context, a Adapter, opt Options) (*Result, error) {
 	return res, nil
 }
 
+// SnapshotFile returns the path of the snapshot with the hash in the cache directory of Options. Empty means m2 in the user cache directory, as for Pull.
+func SnapshotFile(cache, hash string) (string, error) {
+	if cache == "" {
+		dir, err := os.UserCacheDir()
+		if err != nil {
+			return "", err
+		}
+		cache = filepath.Join(dir, "m2")
+	}
+	return cached(filepath.Join(cache, "snapshots"), hash)
+}
+
 // cached returns the path of the snapshot with the hash in the cache.
 func cached(cache, hash string) (string, error) {
 	path := filepath.Join(cache, strings.TrimPrefix(hash, "blake3:"))

@@ -74,6 +74,9 @@ func Import(a Adapter, src *Source, snapshot io.Reader) ([]Record, error) {
 	return out, nil
 }
 
+// Uncompressed returns a reader of the uncompressed bytes of a snapshot, as Import reads them.
+func Uncompressed(snapshot io.Reader) (io.Reader, error) { return gunzip(snapshot) }
+
 // gunzip returns a reader of the uncompressed bytes of r when r starts with the gzip magic number, and a reader of the bytes of r when it does not.
 func gunzip(r io.Reader) (io.Reader, error) {
 	br := bufio.NewReader(r)

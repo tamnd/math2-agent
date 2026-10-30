@@ -148,6 +148,7 @@ type paper struct {
 	Versions   []struct {
 		Version int    `json:"version"`
 		Licence string `json:"licence"`
+		Created string `json:"created"`
 	} `json:"versions"`
 	DOI        string `json:"doi"`
 	JournalRef string `json:"journal_ref"`
