@@ -11,6 +11,7 @@ import (
 
 	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
+	"github.com/tamnd/math2-agent/resource/cites"
 )
 
 func TestResResolveCrossref(t *testing.T) {
@@ -82,6 +83,11 @@ func TestResResolveArxiv(t *testing.T) {
 	}
 	if len(cs) != 2 || cs[0].From != "8F2AAAAAA3/e2" || cs[0].To != "8F2K1QW7ZJ/e3" || cs[1].To != "" || cs[1].Parsed.Year != "2001" {
 		t.Errorf("cites %+v", cs)
+	}
+	run("res", "resolve", "-root", root, "-source", "arxiv", "-arxiv", ax)
+	un, err := cites.ReadUnresolved(root)
+	if err != nil || len(un) != 1 || un["8F2AAAAAA3/e2#2"].Runs != 2 {
+		t.Errorf("unresolved %+v, %v", un, err)
 	}
 	if code, _, _ := run("res", "resolve", "-root", root, "-source", "arxiv"); code != ExitUsage {
 		t.Errorf("exit code %d with no checkout", code)

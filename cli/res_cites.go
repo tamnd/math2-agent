@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/queue"
@@ -77,6 +78,13 @@ func (c *citeRun) write(root string, stderr io.Writer) error {
 		return err
 	}
 	if err := mergeResolveQueue(root, c.weak, c.done); err != nil {
+		return err
+	}
+	un, err := cites.ReadUnresolved(root)
+	if err != nil {
+		return err
+	}
+	if err := cites.WriteUnresolved(root, cites.CountRuns(un, c.edges, c.done, time.Now().UTC().Format(time.DateOnly))); err != nil {
 		return err
 	}
 	fmt.Fprintf(stderr, "%s: %d works, %d references, %d matched, %d with candidates\n", c.source, c.works, len(c.edges), c.found, len(c.weak))

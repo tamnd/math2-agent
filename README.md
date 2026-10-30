@@ -582,6 +582,8 @@ In one work, a preprint, each edition and each translation is an expression, and
 
 `m2 res resolve -root ../math2 -source arxiv -arxiv ../arxiv` reads the bibliography entries in `analysis/bib/` of a checkout of tamnd/arxiv. It takes the entries of the latest version of each paper whose resource is live and in scope. The edge comes from the expression of that version, or from the first expression when the catalogue does not have the version. An entry holds the year and the DOI or the arXiv id that the bibliography gives, and no text, so only an entry with an id can match.
 
+Each run of `m2 res resolve -source` also writes `build/resources/unresolved.md`. It has one row for each reference that resolves to no resource, with the count of the runs that did not resolve it and the day of the first of these runs. A reference that resolves leaves the file. Rule H14 reads the counts.
+
 `-cite TEXT` resolves one reference, and `-in FILE` resolves one reference on each line, as text or as a JSON citation (RS3.7). The matcher uses an id of the reference first. Then it compares the resources with the family name of an author and the year within one, and it scores the title, the authors and the year. A score of 0.9 or more is a match, and a reference that names an edition goes to the expression of that edition. A score from 0.75 to 0.9 gives the candidates, and with `-in` they go to `build/resources/queues/res-resolve.md`. `-index` writes the index to `build/resources/ids.parquet`.
 
 ### Scope
