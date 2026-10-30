@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+  <responseDate>2026-10-30T21:23:51+01:00</responseDate>
+  <request verb="ListSets">https://www.carmin.tv/fr/oai</request>
+  <ListsSets>
+    <set>
+      <setSpec>videos</setSpec>
+      <setName>Toutes les notices descriptives des vidéos</setName>
+      <setDescription/>
+    </set>
+    <set>
+      <setSpec>videos:institution:ihes</setSpec>
+      <setName>Vidéos : institution : IHES</setName>
+    </set>
+    <set>
+      <setSpec>videos:collection:the-pentagram-map-and-ramifications</setSpec>
+      <setName>Vidéos : collection : The Pentagram Map and Ramifications</setName>
+      <setDescription>
+        <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc" xmlns:dc="http://purl.org/dc/elements/1.1/">
+          <dc:description xml:lang="fre">Toutes les notices descriptives des vidéos classées dans la collection "The Pentagram Map and Ramifications"</dc:description>
+        </oai_dc:dc>
+      </setDescription>
+    </set>
+    <set>
+      <setSpec>videos:collection:not-only-scalar-curvature-seminar</setSpec>
+      <setName>Vidéos : collection : Not Only Scalar Curvature Seminar</setName>
+    </set>
+  </ListsSets>
+</OAI-PMH>
