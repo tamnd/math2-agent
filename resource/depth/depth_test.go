@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tamnd/math2-agent/resource"
+	"github.com/tamnd/math2-agent/resource/institutions"
 )
 
 func full() resource.Resource {
@@ -124,5 +125,22 @@ func TestBuild(t *testing.T) {
 	rows, err = Build(root, "2026-11-01", []resource.Resource{a}, nil)
 	if err != nil || rows[0].Depth != 3 {
 		t.Errorf("rows %+v, %v", rows, err)
+	}
+}
+
+func TestComputeCourseTier(t *testing.T) {
+	course := func(id, ror string) resource.Resource {
+		return resource.Resource{ID: id, Kind: "course", Scope: &resource.Scope{Value: resource.In}, IDs: resource.IDs{"course": {ror + ":MATH101"}}}
+	}
+	in := Input{
+		Resources:    []resource.Resource{course("8F2CCCCCC1", "01a"), course("8F2CCCCCC2", "03c"), course("8F2CCCCCC3", "04d"), course("8F2CCCCCC4", "09z")},
+		Institutions: map[string]string{"01a": institutions.I1, "03c": institutions.I3, "04d": institutions.I4},
+		Day:          "2026-10-31",
+	}
+	want := []string{T5, T4, T4, T5}
+	for i, r := range Compute(in) {
+		if r.Tier != want[i] || r.Target != Targets[want[i]] {
+			t.Errorf("course %s has the tier %s and the target %d, want %s", r.ID, r.Tier, r.Target, want[i])
+		}
 	}
 }
