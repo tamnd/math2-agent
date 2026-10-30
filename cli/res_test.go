@@ -40,7 +40,7 @@ func TestResMint(t *testing.T) {
 }
 
 func TestResNotWritten(t *testing.T) {
-	if code, _, stderr := run("res", "refs"); code != ExitNotWritten || !strings.Contains(stderr, "RS-M3") {
+	if code, _, stderr := run("res", "gaps"); code != ExitNotWritten || !strings.Contains(stderr, "RS-M4") {
 		t.Fatalf("exit code %d, stderr %q", code, stderr)
 	}
 	if code, _, _ := run("res", "nothing"); code != ExitUsage {
