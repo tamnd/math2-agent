@@ -1,0 +1,5 @@
+records/resources/8F2.jsonl:1:1: H02: the resource 8F2AAAAAAA does not have a resource id with a valid check character
+records/resources/8F2.jsonl:3:1: H02: the resource 8F2ZZZZZZ3 has no line in registers/resources
+records/resources/8F2.jsonl:4:1: H02: the resource 9XYAAAAAAT is in the shard of another id
+records/resources/~00.jsonl:1:1: H02: the resource ~0000000a has a provisional id. Run m2 res mint before merge
+registers/resources/8F2.reg:3:1: H02: the register line 8F2ZZZZZZZ does not have a resource id with a valid check character

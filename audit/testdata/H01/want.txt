@@ -1,0 +1,2 @@
+registers/resources/7K3.reg:2:1: H01: the resource id 7K3QX2M9R2 is also a tag. A resource id, a tag and an inventory id never have the same value
+registers/resources/9XY.reg:2:1: H01: the resource id 9XYAAAAAAT is also an inventory id. A resource id, a tag and an inventory id never have the same value

@@ -211,10 +211,10 @@ func TestFixtures(t *testing.T) {
 
 func TestCatalogue(t *testing.T) {
 	rules := Rules()
-	if len(rules) != 119 {
-		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K5.14, K6.12, K7.10, K9.9, K10.7 and K13.9 and corpus arxiv AX5.8 and corpus wikipedia have 119", len(rules))
+	if len(rules) != 136 {
+		t.Errorf("the catalogue has %d rules, and spec 15.3 and corpus spec K3.7, K4.9, K5.14, K6.12, K7.10, K9.9, K10.7 and K13.9 and corpus arxiv AX5.8, corpus wikipedia and corpus resources have 136", len(rules))
 	}
-	planes := map[byte]string{'T': Nodes, 'S': Nodes, 'B': Nodes, 'G': Graph, 'F': Formal, 'V': Formal, 'C': Compute, 'A': Align, 'L': Licence, 'P': Prov, 'R': Release, 'X': Agents, 'I': Inventory, 'D': Inventory, 'N': Notation, 'Y': Wikipedia}
+	planes := map[byte]string{'T': Nodes, 'S': Nodes, 'B': Nodes, 'G': Graph, 'F': Formal, 'V': Formal, 'C': Compute, 'A': Align, 'L': Licence, 'P': Prov, 'R': Release, 'X': Agents, 'I': Inventory, 'D': Inventory, 'N': Notation, 'Y': Wikipedia, 'H': Resources}
 	id := regexp.MustCompile(`^[A-Z][0-9]{2}$`)
 	seen := map[string]bool{}
 	for _, r := range rules {

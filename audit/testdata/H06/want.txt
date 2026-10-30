@@ -1,0 +1,4 @@
+records/resources/8F2.jsonl:1:1: H06: the resource 8F2K1QW7ZJ: kind: "book" is not a kind of RS2.3
+records/resources/8F2.jsonl:2:1: H06: the line is not a resource record: json: unknown field "tier"
+records/resources/8F2.jsonl:3:1: H06: the resource 8F2ZZZZZZ3: scope.target: a duplicate needs the id of the live resource
+records/resources/8F2.jsonl:3:1: H06: the resource 8F2ZZZZZZ3: catalogue: a resource needs at least one record of a catalogue

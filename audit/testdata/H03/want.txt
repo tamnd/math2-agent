@@ -1,0 +1,4 @@
+records/resources/8F2.jsonl:1:1: H03: the resource 8F2K1QW7ZJ has the id isni "0000000121032683" in ids: unknown system "isni"
+records/resources/8F2.jsonl:1:1: H03: the resource 8F2K1QW7ZJ has the id orcid "0000-0002-1825-0098" in creator 1: orcid "0000-0002-1825-0098": the check character is wrong
+records/resources/8F2.jsonl:1:1: H03: the resource 8F2K1QW7ZJ has the id doi "10.1007/ABC" in e3: the normal form of the doi id "10.1007/ABC" is "10.1007/abc"
+records/resources/8F2.jsonl:1:1: H03: the resource 8F2K1QW7ZJ has the id isbn "978-0-07-054235-8" in e3/m1: the normal form of the isbn id "978-0-07-054235-8" is "9780070542358"
