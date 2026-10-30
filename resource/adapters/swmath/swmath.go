@@ -42,6 +42,7 @@ func (Adapter) Source() ingest.Source {
 		Home:        "https://zbmath.org/software/",
 		Licence:     "CC-BY-SA-4.0",
 		Class:       ingest.ClassOf("CC-BY-SA-4.0"),
+		Lineage:     []string{"zbmath"}, // swMATH is a service of zbMATH Open, so the two are one capture (RS11.4.3)
 		Attribution: "swMATH, zbMATH Open, FIZ Karlsruhe, https://zbmath.org/software/, CC BY-SA 4.0",
 	}
 }
