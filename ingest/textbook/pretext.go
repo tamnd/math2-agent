@@ -123,6 +123,9 @@ func (p *pretext) children(d *xml.Decoder, file string, w *sink, at func(xml.Sta
 // node reads one element and its content.
 func (p *pretext) node(d *xml.Decoder, file string, se xml.StartElement, line int, w *sink) error {
 	name := se.Name.Local
+	if name == "idx" && p.toc != nil && p.toc.index && attr(se, "", "component") == "" {
+		return p.pretextTerm(d, file, line)
+	}
 	if attr(se, "", "component") != "" || hidden[name] || se.Name.Space == prefig {
 		return d.Skip() // a variant for one platform, or not text
 	}

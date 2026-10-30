@@ -188,7 +188,7 @@ type item struct {
 	refs                                         []string // the labels that the item refers to
 }
 
-// Read reads a git archive of the book and emits one record for each item, in the order of the files and of the items in each file. It fails when a file does not parse, when the main file of a PreTeXt book is not in the archive, and when the archive has no items. An item with no text is not read.
+// Read reads a git archive of the book and emits one record for each item, in the order of the files and of the items in each file. Then it emits one record of kind concept for each term of the back-of-book index, with the node of the table of contents that holds it (RS4.6). It fails when a file does not parse, when the main file of a PreTeXt book is not in the archive, and when the archive has no items. An item with no text is not read.
 func (b Book) Read(r io.Reader, emit func(ingest.Record) error) error {
 	files, order, commit, err := b.load(r)
 	if err != nil {
@@ -211,7 +211,11 @@ func (b Book) Read(r io.Reader, emit func(ingest.Record) error) error {
 	if len(items) == 0 {
 		return errors.New("the archive has no definitions, statements, proofs, examples or exercises")
 	}
-	for _, rec := range b.records(items, commit) {
+	t, err := b.build(files, order, true)
+	if err != nil {
+		return err
+	}
+	for _, rec := range append(b.records(items, commit), b.termRecords(t.terms, commit)...) {
 		if err := emit(rec); err != nil {
 			return err
 		}

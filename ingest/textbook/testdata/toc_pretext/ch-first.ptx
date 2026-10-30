@@ -4,7 +4,7 @@
     steps</title>
   <section xml:id="sec-start">
     <title>Start</title>
-    <p>This text is not in the tree.</p>
+    <p>This text is not in the tree. <idx><h>set</h><h>empty</h></idx><idx>collection</idx><idx><h>group</h><see>set</see></idx></p>
     <subsection><title>Sub</title></subsection>
     <exercises><title>Exercises</title></exercises>
   </section>
