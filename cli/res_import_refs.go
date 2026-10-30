@@ -14,6 +14,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/census/fetch"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
 	"github.com/tamnd/math2-agent/resource/refs"
+	"github.com/tamnd/math2-agent/resource/s2"
 	resscope "github.com/tamnd/math2-agent/resource/scope"
 )
 
@@ -80,18 +81,28 @@ func runResImportRefs(root string, lookup bool, gap time.Duration, stdout, stder
 	if err != nil {
 		return fail(err)
 	}
+	kept, rejected, hash, err := saveBuilt(root, refs.Entry(), refs.Snapshot, recs)
+	if err != nil {
+		return fail(err)
+	}
+	fmt.Fprintf(stdout, "refs: %d unresolved references, %d records (%d cited by two or more, %d by id, %d by a person), %d ids looked up, %d rejected, snapshot %s\n", n.Unresolved, kept, n.Cited, n.ByID, n.Person, n.Lookups, rejected, hash)
+	return ExitOK
+}
+
+// saveBuilt writes the records of a source that m2 builds, as refs and s2. It adds the entry of the source to manifests/sources.yaml when the catalogue does not have it, and a snapshot for each new set of records. A record that fails the checks of the clustering goes to the rejected records. It gives the counts of the kept and the rejected records, and the hash of the snapshot.
+func saveBuilt(root string, entry ingest.Source, snapshot func([]rescluster.Record, string) (ingest.Snapshot, error), recs []rescluster.Record) (kept, rejected int, hash string, err error) {
 	cat, err := ingest.ReadCatalogue(root)
 	if err != nil {
-		return fail(err)
+		return 0, 0, "", err
 	}
-	src := cat.Source(refs.Source)
+	src := cat.Source(entry.ID)
 	if src == nil {
-		cat.Sources = append(cat.Sources, refs.Entry())
+		cat.Sources = append(cat.Sources, entry)
 		src = &cat.Sources[len(cat.Sources)-1]
 	}
-	sn, err := refs.Snapshot(recs, time.Now().UTC().Format(time.DateOnly))
+	sn, err := snapshot(recs, time.Now().UTC().Format(time.DateOnly))
 	if err != nil {
-		return fail(err)
+		return 0, 0, "", err
 	}
 	if have := src.Snapshot(sn.Hash); have != nil {
 		sn = *have
@@ -99,24 +110,49 @@ func runResImportRefs(root string, lookup bool, gap time.Duration, stdout, stder
 		src.Snapshots = append(src.Snapshots, sn)
 	}
 	var rejects []rescluster.Reject
-	kept := recs[:0]
+	good := recs[:0]
 	for _, r := range recs {
 		r.Snapshot = sn.Hash
 		if why := rescluster.Check(&r); why != "" {
 			rejects = append(rejects, rescluster.Reject{NativeID: r.NativeID, Snapshot: r.Snapshot, Reason: why})
 			continue
 		}
-		kept = append(kept, r)
+		good = append(good, r)
 	}
-	if err := rescluster.WriteRecords(root, refs.Source, rescluster.SourceFile, kept); err != nil {
-		return fail(err)
+	if err := rescluster.WriteRecords(root, entry.ID, rescluster.SourceFile, good); err != nil {
+		return 0, 0, "", err
 	}
-	if err := rescluster.WriteRejects(root, refs.Source, rejects); err != nil {
-		return fail(err)
+	if err := rescluster.WriteRejects(root, entry.ID, rejects); err != nil {
+		return 0, 0, "", err
 	}
 	if err := cat.Write(root); err != nil {
+		return 0, 0, "", err
+	}
+	return len(good), len(rejects), sn.Hash, nil
+}
+
+// runResImportS2 builds the source records of Semantic Scholar: the corpus ids of the in-scope resources with a DOI or an arXiv id (RS3.2).
+func runResImportS2(root string, gap time.Duration, stdout, stderr io.Writer) int {
+	fail := func(err error) int {
+		fmt.Fprintf(stderr, "m2 res import: s2: %v\n", err)
+		return ExitFailure
+	}
+	rs, err := resource.ReadResources(root)
+	if err != nil {
 		return fail(err)
 	}
-	fmt.Fprintf(stdout, "refs: %d unresolved references, %d records (%d cited by two or more, %d by id, %d by a person), %d ids looked up, %d rejected, snapshot %s\n", n.Unresolved, len(kept), n.Cited, n.ByID, n.Person, n.Lookups, len(rejects), sn.Hash)
+	c := fetch.NewClient(gap)
+	recs, n, err := s2.Build(context.Background(), rs, s2.Batch(s2URL, c.Post))
+	if err != nil {
+		return fail(err)
+	}
+	kept, rejected, hash, err := saveBuilt(root, s2.Entry(), s2.Snapshot, recs)
+	if err != nil {
+		return fail(err)
+	}
+	fmt.Fprintf(stdout, "s2: asked %d, found %d, records %d, rejected %d, requests %d, snapshot %s\n", n.Asked, n.Found, kept, rejected, n.Requests, hash)
 	return ExitOK
 }
+
+// s2URL is the batch endpoint of Semantic Scholar. A test sets it to a local server.
+var s2URL = s2.BatchURL

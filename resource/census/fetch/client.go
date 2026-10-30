@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -46,6 +47,15 @@ func (c *Client) JSON(ctx context.Context, url string, v any) error {
 
 // Get gets the URL and gives the body.
 func (c *Client) Get(ctx context.Context, url string) ([]byte, error) {
+	return c.do(ctx, http.MethodGet, url, nil)
+}
+
+// Post posts the JSON body to the URL and gives the body of the answer.
+func (c *Client) Post(ctx context.Context, url string, body []byte) ([]byte, error) {
+	return c.do(ctx, http.MethodPost, url, body)
+}
+
+func (c *Client) do(ctx context.Context, method, url string, payload []byte) ([]byte, error) {
 	var last error
 	for try := 0; try <= c.Retries; try++ {
 		if try > 0 {
@@ -55,9 +65,16 @@ func (c *Client) Get(ctx context.Context, url string) ([]byte, error) {
 			}
 		}
 		c.pace(ctx)
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		var in io.Reader
+		if payload != nil {
+			in = bytes.NewReader(payload)
+		}
+		req, err := http.NewRequestWithContext(ctx, method, url, in)
 		if err != nil {
 			return nil, err
+		}
+		if payload != nil {
+			req.Header.Set("Content-Type", "application/json")
 		}
 		req.Header.Set("User-Agent", UserAgent)
 		req.Header.Set("Accept", "application/json")
