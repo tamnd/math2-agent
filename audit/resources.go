@@ -58,7 +58,7 @@ func (a *auditor) resources() *resTree {
 		return t
 	}
 	for _, e := range entries {
-		if e.IsDir() || filepath.Ext(e.Name()) != ".jsonl" {
+		if e.IsDir() || !resource.IsShard(e.Name()) {
 			continue
 		}
 		rel := filepath.ToSlash(filepath.Join(resource.Dir, e.Name()))

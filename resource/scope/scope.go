@@ -298,11 +298,14 @@ func lccClass(c, cls string) bool {
 	return letters == cls
 }
 
-// FromResource makes a Record from the fields of a resource: the MSC codes, the subjects, the zbMATH ids and the venues of its part_of relations. The fields Curriculum, MathUnit and MathHeading come from other registers, so the caller sets them.
+// FromResource makes a Record from the fields of a resource: the MSC codes that a catalogue gave, the subjects, the zbMATH ids and the venues of its part_of relations. The fields Curriculum, MathUnit and MathHeading come from other registers, so the caller sets them.
 func FromResource(r *resource.Resource) Record {
 	var rec Record
 	for _, c := range r.MSC {
-		rec.MSC = append(rec.MSC, c.Code)
+		// A code of the classifier is not a signal, or its own output would decide the scope by S1 in the next run.
+		if !strings.HasPrefix(c.From, "classify/") {
+			rec.MSC = append(rec.MSC, c.Code)
+		}
 	}
 	for _, s := range r.Subjects {
 		switch strings.ToLower(s.System) {

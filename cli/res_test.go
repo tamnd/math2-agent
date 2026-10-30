@@ -182,3 +182,24 @@ func TestResResolve(t *testing.T) {
 		t.Fatalf("no input gave exit code %d", code)
 	}
 }
+
+func TestResScope(t *testing.T) {
+	root := t.TempDir()
+	data, err := os.ReadFile(filepath.Join("..", "resource", "testdata", "rudin.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, root, "records/resources/8F2.jsonl", string(data))
+	writeFile(t, root, "records/resources/decisions.jsonl", `{"id":"8F2K1QW7ZJ","kind":"scope","value":"border","reason":"a test of the decision of a person","by":"tamnd","at":"2026-10-30"}`+"\n")
+	code, stdout, stderr := run("res", "scope", "-root", root, "-day", "2026-10-30")
+	if code != ExitOK || !strings.Contains(stdout, "in 0, border 1, out 0, deferred 0") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	rs, err := resource.ReadResources(root)
+	if err != nil || rs[0].Scope.Rule != "person" {
+		t.Fatalf("got %+v, %v", rs[0].Scope, err)
+	}
+	if code, _, stderr := run("res", "scope", "-root", root, "-fit"); code != ExitFailure || !strings.Contains(stderr, "no examples") {
+		t.Fatalf("a fit with no examples gave exit code %d, stderr %q", code, stderr)
+	}
+}
