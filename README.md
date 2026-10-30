@@ -525,13 +525,14 @@ A source of `manifests/sources.yaml` can have the kind `catalogue` (its records 
 | H05 | Each live resource has at least one catalogue record from a source with `approved_by` in `manifests/sources.yaml`. A record of the source `refs` does not count. |
 | H06 | Each record parses and has its required fields with valid values, and each manifestation with a link has an access. |
 | H07 | Each duplicate resource points to a live resource. A duplicate that points to a duplicate is a finding. |
+| H08 | Each mention with the field `resource` names a live resource and one of its expressions. When the expression has a structure, the section and the number of the field `at` are nodes of the structure. |
 | H09 | No record holds text of a work. A title, a label and the title of a node of a structure have at most 500 characters, a note of the history and a reason of a scope have at most 500, and a cites edge keeps the text of a reference only when its citing expression has a manifestation of the class `open`. A record with a field for an abstract, a body or the content does not parse, and H06 reports it. |
 | H10 | Each catalogue record names a source of `manifests/sources.yaml` and one of the snapshots of that source. |
 | H11 | A soft rule. It reports each deferred resource whose date has passed. |
 | H15 | A soft rule. It reports each text that a curriculum names and that has no live resource: a text with no resource id, a text whose id is not in the catalogue, and a text that names a duplicate. This is the curriculum closure, and the target is 0. |
 | H16 | No source, catalogue record, link or id key points to a shadow library. The ban list is `manifests/banned-domains.txt` and a list in the code. |
 
-The rules H08, H12 to H14 and H17 are in the catalogue and are not written yet.
+The rules H12 to H14 and H17 are in the catalogue and are not written yet.
 
 A curriculum of `topics/curricula/` names its books, notes, courses and papers by resource id (change to K5.8). The list `texts` is on the curriculum and on each course. Each text has a `name` for display, a `resource` id when it is known (a work, or an expression as `ID/e3`), and a `kind`: `book`, `notes`, `course` or `paper`. For example:
 

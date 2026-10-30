@@ -551,3 +551,92 @@ func h15(a *auditor) outcome {
 	}
 	return o
 }
+
+// h08 checks each mention with the field resource (rule H08, RS2.8). The resource is in the catalogue and live, the expression is an expression of the resource, and when the expression has a structure, the section and the number of the field at name nodes of the structure.
+func h08(a *auditor) outcome {
+	t := a.resources()
+	if o, done := t.skip(); done {
+		return o
+	}
+	var o outcome
+	byID := map[string]*resRecord{}
+	for i := range t.recs {
+		byID[t.recs[i].ID] = &t.recs[i]
+	}
+	type tree struct {
+		sections, numbers map[string]bool
+		err               error
+	}
+	trees := map[string]*tree{}
+	structure := func(id, key string) *tree {
+		if tr, ok := trees[id+"/"+key]; ok {
+			return tr
+		}
+		s, err := resource.ReadStructure(a.root, id, key)
+		var tr *tree
+		if s != nil || err != nil {
+			tr = &tree{sections: map[string]bool{}, numbers: map[string]bool{}, err: err}
+			if s != nil {
+				var walk func([]resource.Node)
+				walk = func(ns []resource.Node) {
+					for _, n := range ns {
+						switch n.Kind {
+						case "part", "chapter", "section", "subsection", "subsubsection", "appendix":
+							tr.sections[n.Key] = true
+							if n.Number != "" {
+								tr.sections[n.Number] = true
+							}
+						default:
+							if n.Number != "" {
+								tr.numbers[n.Number] = true
+							}
+						}
+						walk(n.Children)
+					}
+				}
+				walk(s.Nodes)
+			}
+		}
+		trees[id+"/"+key] = tr
+		return tr
+	}
+	err := inventory.WalkMentions(a.root, func(file string, line int, m inventory.Mention) error {
+		if m.Resource == "" {
+			return nil
+		}
+		o.checked++
+		id, key, _ := strings.Cut(m.Resource, "/")
+		r := byID[id]
+		switch {
+		case r == nil:
+			o.add(file, line, 1, "the mention %s names the resource %s, which is not in the catalogue", m.ID, id)
+			return nil
+		case !r.Live():
+			o.add(file, line, 1, "the mention %s names the duplicate resource %s. Name the live resource %s", m.ID, id, r.Scope.Target)
+			return nil
+		case key == "":
+			return nil
+		case r.Expression(key) == nil:
+			o.add(file, line, 1, "the mention %s names the expression %s, which the resource %s does not have", m.ID, key, id)
+			return nil
+		}
+		tr := structure(id, key)
+		switch {
+		case tr == nil || m.At == nil:
+		case tr.err != nil:
+			o.add(file, line, 1, "the mention %s: %v", m.ID, tr.err)
+		case m.At.Section != "" && !tr.sections[m.At.Section]:
+			o.add(file, line, 1, "the mention %s is at the section %s, which the structure of %s does not have", m.ID, m.At.Section, m.Resource)
+		case m.At.Number != "" && len(tr.numbers) > 0 && !tr.numbers[m.At.Number]:
+			o.add(file, line, 1, "the mention %s is at the number %s, which the structure of %s does not have", m.ID, m.At.Number, m.Resource)
+		}
+		return nil
+	})
+	if err != nil {
+		o.add(inventory.MentionsDir, 0, 0, "%v", err)
+	}
+	if o.checked == 0 && len(o.findings) == 0 {
+		o.reason = "no mention names a resource"
+	}
+	return o
+}
