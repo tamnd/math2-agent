@@ -38,12 +38,18 @@ type Looker interface {
 // Samplers gives the samplers by the name of the catalogue. The arXiv sampler reads the metadata plane in dir.
 func Samplers(arxivDir string) map[string]Sampler {
 	return map[string]Sampler{
-		"arxiv":       Arxiv{Dir: arxivDir},
-		"zbmath":      ZBMath{Base: ZBMathBase},
-		"openalex":    OpenAlex{Base: OpenAlexBase, Filter: OpenAlexMath},
-		"crossref":    Crossref{Base: CrossrefBase},
-		"hal":         HAL{Base: HALBase},
-		"openlibrary": OpenLibrary{Base: OpenLibraryBase, Subject: "mathematics"},
+		"arxiv":           Arxiv{Dir: arxivDir},
+		"zbmath":          ZBMath{Base: ZBMathBase},
+		"openalex":        OpenAlex{Base: OpenAlexBase, Filter: OpenAlexMath},
+		"crossref":        Crossref{Base: CrossrefBase},
+		"hal":             HAL{Base: HALBase},
+		"openlibrary":     OpenLibrary{Base: OpenLibraryBase, Subject: "mathematics"},
+		"datacite":        DataCite{Base: DataCiteBase},
+		"doaj":            DOAJ{Base: DOAJBase},
+		"gutenberg":       Gutenberg{Base: GutenbergBase},
+		"internetarchive": Archive{Base: ArchiveBase},
+		"wikidata":        Wikidata{Base: WikidataBase},
+		"numdam":          Numdam{Base: NumdamOAIBase},
 	}
 }
 
