@@ -115,6 +115,31 @@ func WriteCites(root string, cs []Cite) error {
 	return replaceShards(filepath.Join(root, CitesDir), files)
 }
 
+// ReadCites reads the cites edges of records/resources/cites/ in the tree at root, in the order of the citing expression and the number. A tree with no cites gives no edge and no error.
+func ReadCites(root string) ([]Cite, error) {
+	files, err := mdrec.Glob(filepath.Join(root, CitesDir, "*"+mdrec.Ext))
+	if err != nil {
+		return nil, err
+	}
+	var out []Cite
+	for _, path := range files {
+		if !IsShard(filepath.Base(path)) {
+			continue
+		}
+		recs, err := mdrec.Read(path)
+		if err != nil {
+			return nil, err
+		}
+		cs, err := mdrec.Unmarshal[Cite](recs)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+		out = append(out, cs...)
+	}
+	slices.SortFunc(out, func(a, b Cite) int { return cmp.Or(cmp.Compare(a.From, b.From), cmp.Compare(a.N, b.N)) })
+	return out, nil
+}
+
 // ReadStructure reads the structure of the expression <id>/<key> from the tree at root. It returns nil and no error when the expression has no structure file.
 func ReadStructure(root, id, key string) (*Structure, error) {
 	data, err := os.ReadFile(filepath.Join(root, StructureDir, id, key+".json")) // #nosec G304 -- the caller owns the tree.
