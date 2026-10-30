@@ -522,9 +522,18 @@ A source of `manifests/sources.yaml` can have the kind `catalogue` (its records 
 | H07 | Each duplicate resource points to a live resource. A duplicate that points to a duplicate is a finding. |
 | H10 | Each catalogue record names a source of `manifests/sources.yaml` and one of the snapshots of that source. |
 | H11 | A soft rule. It reports each deferred resource whose date has passed. |
+| H15 | A soft rule. It reports each text that a curriculum names and that has no live resource: a text with no resource id, a text whose id is not in the catalogue, and a text that names a duplicate. This is the curriculum closure, and the target is 0. |
 | H16 | No source, catalogue record, link or id key points to a shadow library. The ban list is `manifests/banned-domains.txt` and a list in the code. |
 
-The rules H08, H09, H12 to H15 and H17 are in the catalogue and are not written yet.
+The rules H08, H09, H12 to H14 and H17 are in the catalogue and are not written yet.
+
+A curriculum of `topics/curricula/` names its books, notes, courses and papers by resource id (change to K5.8). The list `texts` is on the curriculum and on each course. Each text has a `name` for display, a `resource` id when it is known (a work, or an expression as `ID/e3`), and a `kind`: `book`, `notes`, `course` or `paper`. For example:
+
+```yaml
+texts:
+  - {name: "Rudin, Principles of Mathematical Analysis", resource: 8F2K1QW7ZJ, kind: book}
+```
+
 
 The package `resource/scope` decides if a work is in the scope of the catalogue. It applies the tests S1 to S7 of the spec in order: the MSC code, the arXiv category, the library class (LCC, DDC, UDC, CLC and BK), the venue register, the curricula, the mathematics units of the institutions and the subject in Wikidata or OpenAlex. A work that no test puts in can be `border`, `out` or `deferred`. The decision records the test that gave it. The classifier, test S8, is not written yet.
 
@@ -562,7 +571,7 @@ In one work, a preprint, each edition and each translation is an expression, and
 
 ### Scope
 
-`m2 res scope -root ../math2` sets the field `scope` of each resource (RS9). A decision of a person in `records/resources/decisions.md` wins over each test, and the build never changes it. Then the tests S1 to S7 and the border rules decide. A resource that no test decides goes to the classifier of RS9.3 (test S8). A score of `in` at or above the high threshold gives `in`, a score below the low threshold gives the best other label, and a score between them defers the resource and puts it in the queue `res-scope`. A deferred resource gets a date 90 days later, and when the date passes it goes to the queue. The queue goes to `build/resources/queues/res-scope.md`.
+`m2 res scope -root ../math2` sets the field `scope` of each resource (RS9). A decision of a person in `records/resources/decisions.md` wins over each test, and the build never changes it. Then the tests S1 to S7 and the border rules decide. Test S5 is true for each resource that a text of a curriculum names. A resource that no test decides goes to the classifier of RS9.3 (test S8). A score of `in` at or above the high threshold gives `in`, a score below the low threshold gives the best other label, and a score between them defers the resource and puts it in the queue `res-scope`. A deferred resource gets a date 90 days later, and when the date passes it goes to the queue. The queue goes to `build/resources/queues/res-scope.md`.
 
 `m2 res scope -fit` fits the classifier on the resources that S1 or S3 says are `in` and the resources that a rule says are `border` or `out`. The model is a naive Bayes model over the words of the title, the venues, the subjects and the kind, with a second model for the MSC2 class of a work in scope. The thresholds come from the gold set `records/resources/gold/scope.md` when the tree has it, or else from a held-out tenth of the examples. The command prints the precision and the recall of `in` and tells if they meet the targets of 0.98 and 0.95. The model goes to `build/resources/models/scope.json`, and its version is a hash of the file. A class that the classifier gives has the version as its source, and the scope tests do not read it.
 

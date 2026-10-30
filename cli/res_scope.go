@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/tamnd/math2-agent/mdrec"
@@ -73,7 +74,11 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 			return fail(err)
 		}
 	}
-	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day}
+	texts, err := resource.ReadTexts(*root)
+	if err != nil {
+		return fail(err)
+	}
+	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day, Signals: curriculumSignal(texts)}
 	if model != nil && !*noModel {
 		in.Classifier = resclassify.Scope{Model: model}
 	}
@@ -165,4 +170,22 @@ func readGold(root string, rs []resource.Resource) ([]resclassify.Example, error
 		out = append(out, resclassify.Example{ID: g.ID, Features: resclassify.Features(r, nil), Label: g.Label})
 	}
 	return out, nil
+}
+
+// curriculumSignal sets the signal of test S5 on each resource that a curriculum names (RS5.6). It gives nil when no curriculum names a text.
+func curriculumSignal(texts []resource.Text) func(*resource.Resource, *resscope.Record) {
+	named := map[string]bool{}
+	for _, t := range texts {
+		if id, _, _ := strings.Cut(t.Resource, "/"); id != "" {
+			named[id] = true
+		}
+	}
+	if len(named) == 0 {
+		return nil
+	}
+	return func(r *resource.Resource, rec *resscope.Record) {
+		if named[r.ID] {
+			rec.Curriculum = true
+		}
+	}
 }

@@ -1,0 +1,3 @@
+topics/curricula/analysis.yaml:5:1: H15: the text "Apostol, Mathematical Analysis" has no resource id. Find its resource, or add one at T1
+topics/curricula/analysis.yaml:11:1: H15: the text "Notes of the course" names the resource 8F2ZZZZZZ3, which is not in the catalogue
+topics/curricula/analysis.yaml:12:1: H15: the text "Rudin, the copy of another edition" names the duplicate 8F2AAAAAA3. Name 8F2K1QW7ZJ, the live resource
