@@ -9,11 +9,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
 )
 
 // DecisionsFile holds the decisions of people (RS9.6). A decision of a person wins over each test, and a build never changes it.
-const DecisionsFile = "records/resources/decisions.jsonl"
+const DecisionsFile = "records/resources/decisions.md"
 
 // PersonRule is the rule of a scope that a person set.
 const PersonRule = "person"
@@ -24,7 +25,7 @@ const ClassifierRule = "S8"
 // DeferDays is the time from a deferred decision to the next decision.
 const DeferDays = 90
 
-// PersonDecision is one line of DecisionsFile. Kind is scope for a scope outcome. The kinds merge and split are for clustering (RS10.6).
+// PersonDecision is one record of DecisionsFile. Kind is scope for a scope outcome. The kinds merge and split are for clustering (RS10.6).
 type PersonDecision struct {
 	ID     string `json:"id"`
 	Kind   string `json:"kind"`
@@ -37,8 +38,7 @@ type PersonDecision struct {
 
 // ReadDecisions reads DecisionsFile in the tree at root. A tree with no file has no decisions. A scope decision with no reason is an error.
 func ReadDecisions(root string) ([]PersonDecision, error) {
-	path := filepath.Join(root, DecisionsFile)
-	data, err := os.ReadFile(path) // #nosec G304 -- the caller owns the tree.
+	recs, err := mdrec.Read(filepath.Join(root, DecisionsFile))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -46,18 +46,15 @@ func ReadDecisions(root string) ([]PersonDecision, error) {
 		return nil, err
 	}
 	var out []PersonDecision
-	for n, line := range bytes.Split(data, []byte("\n")) {
-		if len(bytes.TrimSpace(line)) == 0 {
-			continue
-		}
+	for n, rec := range recs {
 		var d PersonDecision
-		dec := json.NewDecoder(bytes.NewReader(line))
+		dec := json.NewDecoder(bytes.NewReader(rec))
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&d); err != nil {
-			return nil, fmt.Errorf("%s:%d: %w", DecisionsFile, n+1, err)
+			return nil, fmt.Errorf("%s: record %d: %w", DecisionsFile, n+1, err)
 		}
 		if d.ID == "" || d.Kind == "" || d.Reason == "" || d.By == "" {
-			return nil, fmt.Errorf("%s:%d: a decision needs an id, a kind, a reason and a person", DecisionsFile, n+1)
+			return nil, fmt.Errorf("%s: record %d: a decision needs an id, a kind, a reason and a person", DecisionsFile, n+1)
 		}
 		out = append(out, d)
 	}

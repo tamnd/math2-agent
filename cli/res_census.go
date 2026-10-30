@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource/census"
 )
 
@@ -18,7 +19,7 @@ func runResCensus(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 res census", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	root := fs.String("root", ".", "the math2 working tree. The report goes to "+census.ReportFile+" in it.")
-	in := fs.String("in", "", "the directory with one file <catalogue>.jsonl of census records for each catalogue")
+	in := fs.String("in", "", "the directory with one file <catalogue>.md of census records for each catalogue")
 	envFile := fs.String("env", "", "a JSON file with the venue register, the Wikidata items of mathematics and the topic threshold of the scope tests")
 	sample := fs.Int("sample", 5000, "the size of the sample of in records of each catalogue for the overlap")
 	seed := fs.Uint64("seed", 1, "the seed of the samples and of the bootstrap")
@@ -40,14 +41,14 @@ func runResCensus(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "m2 res census: %v\n", err)
 		return ExitFailure
 	}
-	files, err := filepath.Glob(filepath.Join(*in, "*.jsonl"))
+	files, err := mdrec.Glob(filepath.Join(*in, "*"+mdrec.Ext))
 	if err != nil || len(files) == 0 {
-		fmt.Fprintf(stderr, "m2 res census: %s has no file <catalogue>.jsonl\n", *in)
+		fmt.Fprintf(stderr, "m2 res census: %s has no file <catalogue>.md\n", *in)
 		return ExitFailure
 	}
 	c := census.New(env, *sample, *seed)
 	for _, f := range files {
-		name := strings.TrimSuffix(filepath.Base(f), ".jsonl")
+		name := strings.TrimSuffix(filepath.Base(f), mdrec.Ext)
 		if err := readCensus(c, name, f); err != nil {
 			fmt.Fprintf(stderr, "m2 res census: %v\n", err)
 			return ExitFailure
@@ -56,7 +57,7 @@ func runResCensus(args []string, stdout, stderr io.Writer) int {
 	for _, p := range ps {
 		for _, n := range p {
 			if c.Catalogue(n) == nil {
-				fmt.Fprintf(stderr, "m2 res census: the pair names %s, and %s has no file %s.jsonl\n", n, *in, n)
+				fmt.Fprintf(stderr, "m2 res census: the pair names %s, and %s has no file %s.md\n", n, *in, n)
 				return ExitUsage
 			}
 		}

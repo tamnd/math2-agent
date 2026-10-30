@@ -4,12 +4,12 @@
 //
 // The files of the catalogue are in the record plane of the math2 tree:
 //
-//	records/resources/<shard>.jsonl                 the resource records
-//	records/resources/cites/<shard>.jsonl           the cites edges, by the shard of the citing resource
+//	records/resources/<shard>.md                    the resource records
+//	records/resources/cites/<shard>.md              the cites edges, by the shard of the citing resource
 //	records/resources/structure/<id>/<expr>.json    the structure of one expression
 //	registers/resources/<shard>.reg                 the register of the resource ids
 //
-// A resource id has the format of a tag (corpus spec K3.3), and it is in the one space of values of tags and inventory rows (K3.6). The shard of a resource is the first three characters of its id. Each file is sorted by id, with one JSON object or one register entry on each line, so two writes of the same catalogue give the same bytes.
+// A resource id has the format of a tag (corpus spec K3.3), and it is in the one space of values of tags and inventory rows (K3.6). The shard of a resource is the first three characters of its id. Each file is sorted by id. A file of records is Markdown with a YAML header that holds the records (package mdrec), and a register has one entry on each line, so two writes of the same catalogue give the same bytes.
 package resource
 
 import (

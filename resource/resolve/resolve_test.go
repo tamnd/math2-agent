@@ -132,7 +132,7 @@ func TestIndexFile(t *testing.T) {
 }
 
 func TestCacheFile(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "cache.jsonl")
+	p := filepath.Join(t.TempDir(), "cache.md")
 	c, err := ReadCache(p, "2026-10-30")
 	if err != nil {
 		t.Fatal(err)

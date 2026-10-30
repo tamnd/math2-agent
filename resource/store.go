@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"bufio"
 	"bytes"
 	"cmp"
 	"encoding/json"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/tamnd/math2-agent/mdrec"
 )
 
 // WriteResources writes the resources to records/resources/ in the tree at root. It replaces each shard file that has a resource, and it removes the shard files that have no resource now. Two resources with the same id are an error.
@@ -36,7 +37,7 @@ func WriteResources(root string, rs []Resource) error {
 		if err != nil {
 			return err
 		}
-		files[k+".jsonl"] = data
+		files[k+mdrec.Ext] = data
 	}
 	return replaceShards(filepath.Join(root, Dir), files)
 }
@@ -52,48 +53,36 @@ func ReadResources(root string) ([]Resource, error) {
 	return out, err
 }
 
-// WalkResources calls fn for each resource of records/resources/ in the tree at root, in the order of the files and their lines. It gives fn the file, relative to root and with forward slashes, and the line of the resource. It reads only the shard files, not the files of cites/ and structure/. A field that Resource does not have is an error.
+// WalkResources calls fn for each resource of records/resources/ in the tree at root, in the order of the files and their records. It gives fn the file, relative to root and with forward slashes, and the number of the record in the file, from 1. A shard of JSON Lines that has no Markdown file is read too. It reads only the shard files, not the files of cites/ and structure/. A field that Resource does not have is an error.
 func WalkResources(root string, fn func(file string, line int, r Resource) error) error {
-	dir := filepath.Join(root, Dir)
-	entries, err := os.ReadDir(dir)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
-	}
+	files, err := mdrec.Glob(filepath.Join(root, Dir, "*"+mdrec.Ext))
 	if err != nil {
 		return err
 	}
-	for _, e := range entries {
-		if e.IsDir() || !IsShard(e.Name()) {
+	for _, path := range files {
+		name := filepath.Base(path)
+		if !IsShard(name) {
 			continue
 		}
-		path := filepath.Join(dir, e.Name())
-		rel := filepath.ToSlash(filepath.Join(Dir, e.Name()))
-		data, err := os.ReadFile(path) // #nosec G304 -- the caller owns the tree.
+		rel := filepath.ToSlash(filepath.Join(Dir, name))
+		recs, err := mdrec.Read(path)
 		if err != nil {
 			return err
 		}
-		sc := bufio.NewScanner(bytes.NewReader(data))
-		sc.Buffer(nil, 64<<20)
-		for n := 1; sc.Scan(); n++ {
-			if len(bytes.TrimSpace(sc.Bytes())) == 0 {
-				continue
-			}
-			r, err := Parse(sc.Bytes())
+		for n, rec := range recs {
+			r, err := Parse(rec)
 			if err != nil {
-				return fmt.Errorf("%s:%d: %w", rel, n, err)
+				return fmt.Errorf("%s: record %d: %w", rel, n+1, err)
 			}
-			if err := fn(rel, n, r); err != nil {
+			if err := fn(rel, n+1, r); err != nil {
 				return err
 			}
-		}
-		if err := sc.Err(); err != nil {
-			return fmt.Errorf("%s: %w", rel, err)
 		}
 	}
 	return nil
 }
 
-// Parse reads one resource from one JSON line. A field that Resource does not have is an error.
+// Parse reads one resource from its JSON form. A field that Resource does not have is an error.
 func Parse(line []byte) (Resource, error) {
 	var r Resource
 	dec := json.NewDecoder(bytes.NewReader(line))
@@ -121,7 +110,7 @@ func WriteCites(root string, cs []Cite) error {
 		if err != nil {
 			return err
 		}
-		files[k+".jsonl"] = data
+		files[k+mdrec.Ext] = data
 	}
 	return replaceShards(filepath.Join(root, CitesDir), files)
 }
@@ -157,21 +146,20 @@ func WriteStructure(root string, s *Structure) error {
 	return writeFile(filepath.Join(root, StructureDir, id, key+".json"), append(data, '\n'))
 }
 
-// lines writes each value as one JSON line.
+// lines gives the file of records (mdrec) of the values.
 func lines[T any](vs []T) ([]byte, error) {
-	var buf bytes.Buffer
+	recs := make([][]byte, 0, len(vs))
 	for _, v := range vs {
 		data, err := encode(v)
 		if err != nil {
 			return nil, err
 		}
-		buf.Write(data)
-		buf.WriteByte('\n')
+		recs = append(recs, data)
 	}
-	return buf.Bytes(), nil
+	return mdrec.EncodeAuto(recs)
 }
 
-// replaceShards writes the files to dir and removes the other .jsonl files of dir. It does not touch the subdirectories.
+// replaceShards writes the files to dir and removes the other shard files of dir, and each shard of JSON Lines. It does not touch the subdirectories.
 func replaceShards(dir string, files map[string][]byte) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -192,9 +180,12 @@ func replaceShards(dir string, files map[string][]byte) error {
 	return nil
 }
 
-// IsShard reports whether a file of records/resources/ is a shard of resources: three characters of an id, or four for a split shard (RS12.1), and .jsonl. The registers beside the shards, as decisions.jsonl and venues.jsonl, have longer names.
+// IsShard reports whether a file of records/resources/ is a shard of resources: three characters of an id, or four for a split shard (RS12.1), and mdrec.Ext, or mdrec.Old for a shard that has not moved to Markdown. The registers beside the shards, as decisions.md and venues.md, have longer names.
 func IsShard(name string) bool {
-	base, ok := strings.CutSuffix(name, ".jsonl")
+	base, ok := strings.CutSuffix(name, mdrec.Ext)
+	if !ok {
+		base, ok = strings.CutSuffix(name, mdrec.Old)
+	}
 	return ok && (len(base) == 3 || len(base) == 4)
 }
 

@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/tamnd/math2-agent/mdrec"
 )
 
 func fixture(t *testing.T) Resource {
@@ -70,15 +72,15 @@ func TestWriteRead(t *testing.T) {
 	if !reflect.DeepEqual(got[1], a) {
 		t.Fatalf("the round trip changed the record:\n%+v\n%+v", got[1], a)
 	}
-	first, _ := os.ReadFile(filepath.Join(root, Dir, "8F2.jsonl"))
+	first, _ := os.ReadFile(filepath.Join(root, Dir, "8F2.md"))
 	if err := WriteResources(root, []Resource{a, b}); err != nil {
 		t.Fatal(err)
 	}
-	again, _ := os.ReadFile(filepath.Join(root, Dir, "8F2.jsonl"))
-	if string(first) != string(again) {
+	again, _ := os.ReadFile(filepath.Join(root, Dir, "8F2.md"))
+	if len(first) == 0 || string(first) != string(again) {
 		t.Fatal("two writes of the same resources give different bytes")
 	}
-	if _, err := os.Stat(filepath.Join(root, Dir, "9XY.jsonl")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, Dir, "9XY.md")); !os.IsNotExist(err) {
 		t.Fatal("the shard with no resource is still there")
 	}
 	if err := WriteResources(root, []Resource{a, a}); err == nil {
@@ -101,7 +103,7 @@ func TestWalkGivesFileAndLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := []string{"records/resources/8F2.jsonl:8F2K1QW7ZJ:1", "records/resources/8F2.jsonl:8F2ZZZZZZ3:2"}; !slices.Equal(where, want) {
+	if want := []string{"records/resources/8F2.md:8F2K1QW7ZJ:1", "records/resources/8F2.md:8F2ZZZZZZ3:2"}; !slices.Equal(where, want) {
 		t.Fatalf("got %v", where)
 	}
 }
@@ -127,9 +129,9 @@ func TestStructureAndCites(t *testing.T) {
 	if err := WriteCites(root, []Cite{{From: "8F2K1QW7ZJ/e3", N: 2}, {From: "8F2K1QW7ZJ/e3", N: 1, To: "9XYAAAAAAT"}}); err != nil {
 		t.Fatal(err)
 	}
-	data, _ := os.ReadFile(filepath.Join(root, CitesDir, "8F2.jsonl"))
-	if !strings.HasPrefix(string(data), `{"from":"8F2K1QW7ZJ/e3","n":1,`) {
-		t.Fatalf("the cites are not sorted: %s", data)
+	recs, err := mdrec.ReadFile(filepath.Join(root, CitesDir, "8F2.md"))
+	if err != nil || len(recs) != 2 || !strings.HasPrefix(string(recs[0]), `{"from":"8F2K1QW7ZJ/e3","n":1,`) {
+		t.Fatalf("the cites are not sorted: %q, %v", recs, err)
 	}
 	rs, err := ReadResources(root)
 	if err != nil || len(rs) != 0 {
@@ -286,8 +288,8 @@ func TestShardsKeepRegisters(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"decisions.jsonl", "venues.jsonl"} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(`{"id":"x","kind":"scope"}`+"\n"), 0o644); err != nil {
+	for _, name := range []string{"decisions.md", "venues.md", "venues.jsonl"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("---\nrecords:\n    - id: x\n      kind: scope\n---\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -297,9 +299,38 @@ func TestShardsKeepRegisters(t *testing.T) {
 	if err := WriteResources(root, nil); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"decisions.jsonl", "venues.jsonl"} {
+	for _, name := range []string{"decisions.md", "venues.md", "venues.jsonl"} {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			t.Errorf("the write removed %s", name)
 		}
+	}
+}
+
+func TestShardOfJSONLinesMoves(t *testing.T) {
+	root := t.TempDir()
+	a := fixture(t)
+	data, err := json.Marshal(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := filepath.Join(root, Dir, "8F2.jsonl")
+	if err := os.MkdirAll(filepath.Dir(old), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(old, append(data, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rs, err := ReadResources(root)
+	if err != nil || len(rs) != 1 || rs[0].ID != a.ID {
+		t.Fatalf("the shard of JSON Lines was not read: %v, %v", rs, err)
+	}
+	if err := WriteResources(root, rs); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(old); !os.IsNotExist(err) {
+		t.Fatal("the shard of JSON Lines is still there")
+	}
+	if b, err := os.ReadFile(filepath.Join(root, Dir, "8F2.md")); err != nil || !strings.HasPrefix(string(b), "---\nrecords:\n") {
+		t.Fatalf("the shard is not Markdown with a YAML header: %q, %v", b, err)
 	}
 }

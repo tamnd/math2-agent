@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/tag"
 )
@@ -88,8 +89,8 @@ func TestResCensus(t *testing.T) {
 	if code, _, _ := run("res", "census"); code != ExitUsage {
 		t.Errorf("exit code %d with no -in", code)
 	}
-	writeFile(t, in, "bad.jsonl", `{"native_id":"1","colour":"red"}`+"\n")
-	if code, _, stderr := run("res", "census", "-in", in, "-root", root); code != ExitFailure || !strings.Contains(stderr, "bad.jsonl:1") {
+	writeFile(t, in, "bad.md", "---\nrecords:\n    - native_id: \"1\"\n      colour: red\n---\n")
+	if code, _, stderr := run("res", "census", "-in", in, "-root", root); code != ExitFailure || !strings.Contains(stderr, "bad.md: record 1") {
 		t.Errorf("exit code %d, stderr %q for an unknown field", code, stderr)
 	}
 }
@@ -105,9 +106,9 @@ func TestResSampleArxiv(t *testing.T) {
 	if code := runRes([]string{"sample", "-catalogue", "arxiv", "-arxiv", ax, "-dir", dir}, &out, &errb); code != ExitOK {
 		t.Fatalf("code = %d, stderr = %s", code, errb.String())
 	}
-	data, err := os.ReadFile(filepath.Join(dir, "arxiv.jsonl"))
-	if err != nil || strings.Count(string(data), "\n") != 1 || !strings.Contains(string(data), "2310.00001") {
-		t.Errorf("arxiv.jsonl = %q, %v", data, err)
+	recs, err := mdrec.ReadFile(filepath.Join(dir, "arxiv.md"))
+	if err != nil || len(recs) != 1 || !strings.Contains(string(recs[0]), "2310.00001") {
+		t.Errorf("arxiv.md = %q, %v", recs, err)
 	}
 	out.Reset()
 	if code := runRes([]string{"census", "-in", dir, "-root", t.TempDir()}, &out, &errb); code != ExitOK {

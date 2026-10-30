@@ -1,17 +1,13 @@
 package audit
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
-	"io/fs"
-	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/ids"
 	"github.com/tamnd/math2-agent/tag"
@@ -48,41 +44,29 @@ func (a *auditor) resources() *resTree {
 	if t.err != nil {
 		return t
 	}
-	dir := filepath.Join(a.root, resource.Dir)
-	entries, err := os.ReadDir(dir)
-	if errors.Is(err, fs.ErrNotExist) {
-		return t
-	}
+	files, err := mdrec.Glob(filepath.Join(a.root, resource.Dir, "*"+mdrec.Ext))
 	if err != nil {
 		t.err = err
 		return t
 	}
-	for _, e := range entries {
-		if e.IsDir() || !resource.IsShard(e.Name()) {
+	for _, path := range files {
+		name := filepath.Base(path)
+		if !resource.IsShard(name) {
 			continue
 		}
-		rel := filepath.ToSlash(filepath.Join(resource.Dir, e.Name()))
-		data, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- the path comes from a listing of the working tree, which the caller owns.
+		rel := filepath.ToSlash(filepath.Join(resource.Dir, filepath.Base(mdrec.Which(path))))
+		recs, err := mdrec.Read(path)
 		if err != nil {
 			t.err = err
 			return t
 		}
-		sc := bufio.NewScanner(bytes.NewReader(data))
-		sc.Buffer(nil, 64<<20)
-		for n := 1; sc.Scan(); n++ {
-			if len(bytes.TrimSpace(sc.Bytes())) == 0 {
-				continue
-			}
-			r, err := resource.Parse(sc.Bytes())
+		for n, rec := range recs {
+			r, err := resource.Parse(rec)
 			if err != nil {
-				t.bad = append(t.bad, resLine{rel, n, err})
+				t.bad = append(t.bad, resLine{rel, n + 1, err})
 				continue
 			}
-			t.recs = append(t.recs, resRecord{r, rel, n})
-		}
-		if err := sc.Err(); err != nil {
-			t.err = err
-			return t
+			t.recs = append(t.recs, resRecord{r, rel, n + 1})
 		}
 	}
 	return t
@@ -155,7 +139,7 @@ func h02(a *auditor) outcome {
 			o.add(r.file, r.line, 1, "the resource %s does not have a resource id with a valid check character", r.ID)
 		case !have[r.ID]:
 			o.add(r.file, r.line, 1, "the resource %s has no line in %s", r.ID, resource.RegisterDir)
-		case resource.Shard(r.ID)+".jsonl" != filepath.Base(r.file):
+		case resource.Shard(r.ID) != strings.TrimSuffix(strings.TrimSuffix(filepath.Base(r.file), mdrec.Ext), mdrec.Old):
 			o.add(r.file, r.line, 1, "the resource %s is in the shard of another id", r.ID)
 		}
 	}

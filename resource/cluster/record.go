@@ -2,7 +2,6 @@
 package cluster
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
 )
 
@@ -59,13 +59,12 @@ func (r *Record) Year() int {
 	return y
 }
 
-// ReadRecords reads each file *.jsonl of the directory of each source under RecordsDir in the tree at root. A tree with no directory has no records.
+// ReadRecords reads each file of records (mdrec.Ext) of the directory of each source under RecordsDir in the tree at root. A tree with no directory has no records. A file of JSON Lines that has no Markdown file is read too.
 func ReadRecords(root string) ([]Record, error) {
-	files, err := filepath.Glob(filepath.Join(root, RecordsDir, "*", "*.jsonl"))
+	files, err := mdrec.Glob(filepath.Join(root, RecordsDir, "*", "*"+mdrec.Ext))
 	if err != nil {
 		return nil, err
 	}
-	slices.Sort(files)
 	var out []Record
 	for _, f := range files {
 		rs, err := readFile(f)
@@ -78,80 +77,59 @@ func ReadRecords(root string) ([]Record, error) {
 }
 
 func readFile(path string) ([]Record, error) {
-	f, err := os.Open(path) // #nosec G304 -- the caller owns the tree.
+	recs, err := mdrec.Read(path)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = f.Close() }()
-	var out []Record
-	sc := bufio.NewScanner(f)
-	sc.Buffer(nil, 64<<20)
-	for n := 1; sc.Scan(); n++ {
-		line := bytes.TrimSpace(sc.Bytes())
-		if len(line) == 0 {
-			continue
-		}
+	out := make([]Record, 0, len(recs))
+	for n, rec := range recs {
 		var r Record
-		dec := json.NewDecoder(bytes.NewReader(line))
+		dec := json.NewDecoder(bytes.NewReader(rec))
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&r); err != nil {
-			return nil, fmt.Errorf("%s:%d: %w", path, n, err)
+			return nil, fmt.Errorf("%s: record %d: %w", path, n+1, err)
 		}
 		out = append(out, r)
 	}
-	return out, sc.Err()
+	return out, nil
 }
 
-// WriteRecords writes the records of one source to RecordsDir/<source>/<name>.jsonl in the tree at root, one record on each line in the order of the native id.
+// WriteRecords writes the records of one source to RecordsDir/<source>/<name>.md in the tree at root, in the order of the native id.
 func WriteRecords(root, source, name string, rs []Record) error {
 	if strings.ContainsAny(source+name, "/\\") || source == "" || name == "" {
 		return fmt.Errorf("cluster: the source %q or the name %q is not a file name", source, name)
 	}
 	slices.SortFunc(rs, func(a, b Record) int { return strings.Compare(a.NativeID, b.NativeID) })
-	var buf bytes.Buffer
-	for i := range rs {
-		data, err := json.Marshal(&rs[i])
-		if err != nil {
-			return err
-		}
-		buf.Write(data)
-		buf.WriteByte('\n')
+	recs, err := mdrec.Marshal(rs)
+	if err != nil {
+		return err
 	}
 	dir := filepath.Join(root, RecordsDir, source)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
-	path := filepath.Join(dir, name+".jsonl")
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, buf.Bytes(), 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return mdrec.Write(filepath.Join(dir, name+mdrec.Ext), recs)
 }
 
-// CrosswalksDir holds the links of the crosswalks of the snapshots, one file *.jsonl for each crosswalk, one Link on each line.
+// CrosswalksDir holds the links of the crosswalks of the snapshots, one file of records for each crosswalk, one Link in each record.
 const CrosswalksDir = "build/resources/crosswalks"
 
-// ReadCrosswalks reads each file *.jsonl of CrosswalksDir in the tree at root. A tree with no directory has no links.
+// ReadCrosswalks reads each file of records of CrosswalksDir in the tree at root. A tree with no directory has no links.
 func ReadCrosswalks(root string) ([]Link, error) {
-	files, err := filepath.Glob(filepath.Join(root, CrosswalksDir, "*.jsonl"))
+	files, err := mdrec.Glob(filepath.Join(root, CrosswalksDir, "*"+mdrec.Ext))
 	if err != nil {
 		return nil, err
 	}
-	slices.Sort(files)
 	var out []Link
 	for _, f := range files {
-		data, err := os.ReadFile(f) // #nosec G304 -- the caller owns the tree.
+		recs, err := mdrec.Read(f)
 		if err != nil {
 			return nil, err
 		}
-		for n, line := range bytes.Split(data, []byte("\n")) {
-			if len(bytes.TrimSpace(line)) == 0 {
-				continue
-			}
+		for n, rec := range recs {
 			var l Link
-			if err := json.Unmarshal(line, &l); err != nil || l.A == "" || l.B == "" {
-				return nil, fmt.Errorf("%s:%d: want a link with the fields a and b", f, n+1)
+			if err := json.Unmarshal(rec, &l); err != nil || l.A == "" || l.B == "" {
+				return nil, fmt.Errorf("%s: record %d: want a link with the fields a and b", f, n+1)
 			}
 			out = append(out, l)
 		}

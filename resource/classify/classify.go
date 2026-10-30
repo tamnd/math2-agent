@@ -24,7 +24,7 @@ import (
 const ModelFile = "build/resources/models/scope.json"
 
 // GoldFile holds the labelled sample of RS9.3 that sets the thresholds.
-const GoldFile = "records/resources/gold/scope.jsonl"
+const GoldFile = "records/resources/gold/scope.md"
 
 // The targets of RS9.3 for the threshold of in.
 const (
