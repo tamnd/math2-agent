@@ -51,6 +51,7 @@ type Source struct {
 	Snapshots      []Snapshot    `yaml:"snapshots,omitempty"`        // the snapshots that math2 used, oldest first
 	Resource       string        `yaml:"resource,omitempty"`         // for a source that is one work, for example an open textbook, the resource id of the work (corpus resources RS8.1)
 	RecordLicence  string        `yaml:"record_licence,omitempty"`   // the SPDX expression of the licence of the bibliographic records, when it is not the licence of the texts (RS8.1)
+	Cadence        string        `yaml:"cadence,omitempty"`          // one of Cadences: the time from one snapshot to the next (corpus resources RS8.4)
 }
 
 // LicenceRead records one reading of the licence at the source itself, never at an aggregator (K5.2.1).
@@ -80,7 +81,27 @@ var (
 	Authorships = []string{"human", "ai", "mixed"}
 	Channels    = []string{"dump", "git", "api", "bulk", "page", "catalogue"}
 	Intakes     = []string{"bind", "crosswalk", "link", "evaluate", "exclude"}
+	Cadences    = []string{"daily", "weekly", "monthly", "quarterly", "yearly", "none"}
 )
+
+// cadenceDays are the days of each cadence. The cadence none has no days, so its snapshots are never stale.
+var cadenceDays = map[string]int{"daily": 1, "weekly": 7, "monthly": 30, "quarterly": 91, "yearly": 365}
+
+// CadenceDays gives the days of the cadence of the source, or 0 when the source has no cadence or the cadence none.
+func (s *Source) CadenceDays() int {
+	return cadenceDays[s.Cadence]
+}
+
+// Latest gives the last snapshot of the source by date, or nil when the source has no snapshot.
+func (s *Source) Latest() *Snapshot {
+	var out *Snapshot
+	for i := range s.Snapshots {
+		if out == nil || s.Snapshots[i].Date > out.Date {
+			out = &s.Snapshots[i]
+		}
+	}
+	return out
+}
 
 // Library is the kind of a formal library, for example Mathlib (corpus K6.3).
 const Library = "library"
@@ -206,6 +227,9 @@ func (s *Source) Problems() []string {
 		// L09 reports it.
 	case s.Class != ClassOf(s.Elected()) && s.Class != RecordOnly:
 		out = append(out, fmt.Sprintf("the licence %s gives the class %s, and the source has the class %s", s.Elected(), ClassOf(s.Elected()), s.Class))
+	}
+	if s.Cadence != "" && !slices.Contains(Cadences, s.Cadence) {
+		out = append(out, fmt.Sprintf("the cadence %q is not one of %v", s.Cadence, Cadences))
 	}
 	if s.Resource != "" && !tag.IsTag(s.Resource) {
 		out = append(out, fmt.Sprintf("the resource %q is not a resource id", s.Resource))

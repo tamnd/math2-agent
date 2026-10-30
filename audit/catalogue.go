@@ -143,5 +143,5 @@ var catalogue = []entry{
 	{Rule{"H14", Resources, false, "a reference of a D3 resource that resolves to no resource after two resolver runs"}, nil},
 	{Rule{"H15", Resources, false, "a work that a curriculum names and that has no resource"}, h15},
 	{Rule{"H16", Resources, true, "no source is a shadow library or a copy of one, and no link points to one"}, h16},
-	{Rule{"H17", Resources, false, "a source of the catalogue whose snapshot is older than its cadence plus 30 days"}, nil},
+	{Rule{"H17", Resources, false, "a source of the catalogue whose last snapshot is older than twice its cadence"}, h17},
 }

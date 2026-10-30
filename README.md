@@ -536,8 +536,9 @@ A source of `manifests/sources.yaml` can have the kind `catalogue` (its records 
 | H13 | A soft rule. It reports each resource in scope that is below the target depth of its tier for more than 180 days. It reads `build/resources/depth.md`, which `m2 res status` writes. |
 | H15 | A soft rule. It reports each text that a curriculum names and that has no live resource: a text with no resource id, a text whose id is not in the catalogue, and a text that names a duplicate. This is the curriculum closure, and the target is 0. |
 | H16 | No source, catalogue record, link or id key points to a shadow library. The ban list is `manifests/banned-domains.txt` and a list in the code. |
+| H17 | A soft rule. It reports each source of `manifests/sources.yaml` whose last snapshot is older than twice its cadence. The field `cadence` of a source is daily, weekly, monthly, quarterly, yearly or none. A source with the cadence none, for example `refs`, is not checked. |
 
-The rules H12, H14 and H17 are in the catalogue and are not written yet.
+The rules H12 and H14 are in the catalogue and are not written yet.
 
 A curriculum of `topics/curricula/` names its books, notes, courses and papers by resource id (change to K5.8). The list `texts` is on the curriculum and on each course. Each text has a `name` for display, a `resource` id when it is known (a work, or an expression as `ID/e3`), and a `kind`: `book`, `notes`, `course` or `paper`. For example:
 

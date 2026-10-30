@@ -1,0 +1,1 @@
+manifests/sources.yaml:0:0: H17: the source crossref has the cadence monthly, and its last snapshot of 2001-01-01 is older than 60 days
