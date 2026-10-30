@@ -174,6 +174,11 @@ func TestProblems(t *testing.T) {
 	if p := good.Problems(); p != nil {
 		t.Errorf("a good entry has the problems %v", p)
 	}
+	work := good
+	work.Kind, work.Resource, work.RecordLicence = "catalogue", "8F2K1QW7ZJ", "CC0-1.0"
+	if p := work.Problems(); p != nil || !slices.Contains(ingest.Kinds, "course-platform") {
+		t.Errorf("a source with a resource and a record licence has the problems %v", p)
+	}
 	stricter := good
 	stricter.Class = ingest.RecordOnly
 	if p := stricter.Problems(); p != nil {
@@ -189,6 +194,7 @@ func TestProblems(t *testing.T) {
 		"hash":     func(s *ingest.Source) { s.Snapshots[0].Hash = "sha256:00" },
 		"date":     func(s *ingest.Source) { s.Snapshots[0].Date = "25 October" },
 		"twice":    func(s *ingest.Source) { s.Snapshots = append(s.Snapshots, s.Snapshots[0]) },
+		"resource": func(s *ingest.Source) { s.Resource = "isbn:9780070542358" },
 	}
 	for name, change := range cases {
 		s := good
