@@ -22,26 +22,28 @@ type Creator struct {
 
 // Book is one book, as one line of the snapshot of an adapter.
 type Book struct {
-	ID        string    `json:"id"` // the control number (001), or the ARK of a record of the BnF
-	LCCN      string    `json:"lccn,omitempty"`
-	ISBN      []string  `json:"isbn,omitempty"`
-	ISSN      []string  `json:"issn,omitempty"`
-	OCLC      []string  `json:"oclc,omitempty"`
-	URN       []string  `json:"urn,omitempty"`
-	LCC       []string  `json:"lcc,omitempty"`
-	DDC       []string  `json:"ddc,omitempty"`
-	UDC       []string  `json:"udc,omitempty"`
-	SDNB      []string  `json:"sdnb,omitempty"` // the subject groups of the DNB (084 with $2 sdnb)
-	BK        []string  `json:"bk,omitempty"`   // the Basisklassifikation (084 with $2 bkl)
-	Title     string    `json:"title"`
-	Edition   string    `json:"edition,omitempty"`
-	Publisher string    `json:"publisher,omitempty"`
-	Date      string    `json:"date,omitempty"`
-	Language  string    `json:"language,omitempty"`
-	Creators  []Creator `json:"creators,omitempty"`
-	Series    []string  `json:"series,omitempty"`
-	Headings  []string  `json:"headings,omitempty"`
-	Contents  []string  `json:"contents,omitempty"`
+	ID         string    `json:"id"` // the control number (001), or the ARK of a record of the BnF
+	LCCN       string    `json:"lccn,omitempty"`
+	ISBN       []string  `json:"isbn,omitempty"`
+	ISSN       []string  `json:"issn,omitempty"`
+	OCLC       []string  `json:"oclc,omitempty"`
+	URN        []string  `json:"urn,omitempty"`
+	LCC        []string  `json:"lcc,omitempty"`
+	DDC        []string  `json:"ddc,omitempty"`
+	UDC        []string  `json:"udc,omitempty"`
+	SDNB       []string  `json:"sdnb,omitempty"` // the subject groups of the DNB (084 with $2 sdnb)
+	BK         []string  `json:"bk,omitempty"`   // the Basisklassifikation (084 with $2 bkl)
+	Title      string    `json:"title"`
+	Edition    string    `json:"edition,omitempty"`
+	Publisher  string    `json:"publisher,omitempty"`
+	Date       string    `json:"date,omitempty"`
+	Language   string    `json:"language,omitempty"`
+	Creators   []Creator `json:"creators,omitempty"`
+	Series     []string  `json:"series,omitempty"`
+	Headings   []string  `json:"headings,omitempty"`
+	Forms      []string  `json:"forms,omitempty"`      // the form subdivisions and the genre terms, as Problems, exercises, etc.
+	Manuscript bool      `json:"manuscript,omitempty"` // the leader gives the type manuscript language material
+	Contents   []string  `json:"contents,omitempty"`
 }
 
 // clean takes the punctuation of ISBD from the end of a value, as the / in Calculus /. It also takes out the marks of the start and the end of the part of a title that is not sorted.
@@ -168,7 +170,13 @@ func FromMARC21(r Record) Book {
 		if h := heading(f); h != "" {
 			b.Headings = append(b.Headings, h)
 		}
+		b.Forms = addForms(b.Forms, f.Sub("v")...)
 	}
+	for _, f := range r.All("655") {
+		b.Forms = addForms(b.Forms, f.Sub("a")...)
+		b.Forms = addForms(b.Forms, f.Sub("v")...)
+	}
+	b.Manuscript = len(r.Leader) > 6 && r.Leader[6] == 't'
 	for _, f := range r.All("505") {
 		if a := strings.TrimSpace(f.First("a")); a != "" {
 			b.Contents = append(b.Contents, a)
@@ -269,7 +277,12 @@ func FromUNIMARC(r Record) Book {
 		if h := heading(f); h != "" {
 			b.Headings = append(b.Headings, h)
 		}
+		b.Forms = addForms(b.Forms, f.Sub("j")...)
 	}
+	for _, f := range r.All("608") {
+		b.Forms = addForms(b.Forms, f.Sub("a")...)
+	}
+	b.Manuscript = len(r.Leader) > 6 && r.Leader[6] == 'b'
 	for _, f := range r.All("327") {
 		for _, a := range f.Sub("a") {
 			if a = cleanEnd(a); a != "" {
@@ -301,8 +314,61 @@ func heading(f Field) string {
 	return h
 }
 
-// Kind gives the kind of a book: an edited volume when the book has no main entry and an added entry is an editor, else a monograph.
+// addForms adds each form term that list does not hold.
+func addForms(list []string, terms ...string) []string {
+	for _, t := range terms {
+		if t = cleanEnd(t); t != "" && !slices.Contains(list, t) {
+			list = append(list, t)
+		}
+	}
+	return list
+}
+
+// forms are the kinds of RS2.3 that a form term gives, with the start of the term in lower case, in English, French and German. The first kind that matches wins.
+var forms = []struct {
+	kind  string
+	words []string
+}{
+	{"problem-book", []string{"problems, exercises", "problèmes et exerc", "aufgabensammlung"}},
+	{"table", []string{"tables", "tables numériques", "tabellen"}},
+	{"encyclopedia", []string{"encyclopedias", "dictionaries", "dictionnaires", "encyclopédies", "wörterbuch", "enzyklopädie"}},
+	{"handbook", []string{"handbooks, manuals", "guides, manuels", "handbuch"}},
+	{"textbook", []string{"textbooks", "manuels d'enseignement", "lehrbuch"}},
+}
+
+// formKind gives the kind that the form terms and the subdivisions of the headings of b give, or an empty string.
+func formKind(b Book) string {
+	var terms []string
+	for _, f := range b.Forms {
+		terms = append(terms, strings.ToLower(f))
+	}
+	for _, h := range b.Headings {
+		for i, part := range strings.Split(h, " -- ") {
+			if i > 0 {
+				terms = append(terms, strings.ToLower(part))
+			}
+		}
+	}
+	for _, f := range forms {
+		for _, t := range terms {
+			for _, w := range f.words {
+				if strings.HasPrefix(t, w) {
+					return f.kind
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// Kind gives the kind of a book. A manuscript is a manuscript. Else a form term or a subdivision of a heading gives the kind, as Problems, exercises, etc. for a problem book. Else the book is an edited volume when it has no main entry and an added entry is an editor, and a monograph when not.
 func Kind(b Book) string {
+	if b.Manuscript {
+		return "manuscript"
+	}
+	if k := formKind(b); k != "" {
+		return k
+	}
 	editor := false
 	for _, c := range b.Creators {
 		if c.Main {

@@ -82,3 +82,38 @@ func TestParseError(t *testing.T) {
 		t.Error("a short record gives no error")
 	}
 }
+
+func TestKindOfForms(t *testing.T) {
+	with := func(leader string, fs ...Field) Record {
+		r := book()
+		r.Leader = leader
+		r.Fields = append(r.Fields, fs...)
+		return r
+	}
+	f650 := func(subs ...[2]string) Field { return Field{Tag: "650", Ind: " 0", Subfields: subs} }
+	cases := []struct {
+		r    Record
+		want string
+	}{
+		{with(""), "monograph"},
+		{with("", f650([2]string{"a", "Calculus"}, [2]string{"v", "Problems, exercises, etc."})), "problem-book"},
+		{with("", f650([2]string{"a", "Logarithms"}, [2]string{"v", "Tables."})), "table"},
+		{with("", f650([2]string{"a", "Mathematics"}, [2]string{"x", "Dictionaries."})), "encyclopedia"},
+		{with("", f650([2]string{"a", "Mathematics"}, [2]string{"v", "Handbooks, manuals, etc."})), "handbook"},
+		{with("", Field{Tag: "655", Ind: " 7", Subfields: [][2]string{{"a", "Textbooks."}}}), "textbook"},
+		{with("00000ctm a2200000 a 4500"), "manuscript"},
+	}
+	for _, c := range cases {
+		if got := Kind(FromMARC21(c.r)); got != c.want {
+			t.Errorf("Kind = %q, want %q", got, c.want)
+		}
+	}
+	u := Record{Leader: "00000cbm  2200000   4500", Fields: []Field{{Tag: "001", Value: "x"}, {Tag: "606", Ind: "  ", Subfields: [][2]string{{"a", "Algèbre"}, {"j", "Problèmes et exerc" + "ices"}}}}}
+	if b := FromUNIMARC(u); !b.Manuscript || Kind(b) != "manuscript" {
+		t.Errorf("UNIMARC manuscript %+v", b)
+	}
+	u.Leader = ""
+	if b := FromUNIMARC(u); Kind(b) != "problem-book" {
+		t.Errorf("UNIMARC kind %q, forms %v", Kind(b), b.Forms)
+	}
+}
