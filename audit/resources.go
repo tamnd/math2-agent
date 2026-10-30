@@ -14,6 +14,7 @@ import (
 	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/cluster"
+	"github.com/tamnd/math2-agent/resource/depth"
 	"github.com/tamnd/math2-agent/resource/ids"
 	"github.com/tamnd/math2-agent/tag"
 )
@@ -413,6 +414,39 @@ func h11(a *auditor) outcome {
 	}
 	if o.checked == 0 {
 		o.reason = "no resource is deferred"
+	}
+	return o
+}
+
+// h13 reports each in-scope resource that stays below the target depth of its tier for more than depth.GapDays days (rule H13, RS1.5). It reads the file of depth that m2 res status writes, and the finding points at the record of the resource.
+func h13(a *auditor) outcome {
+	t := a.resources()
+	if o, done := t.skip(); done {
+		return o
+	}
+	var o outcome
+	rows, err := depth.Read(a.root)
+	if err != nil {
+		o.add(depth.File, 0, 0, "%v", err)
+		return o
+	}
+	if len(rows) == 0 {
+		o.reason = "the tree has no file " + depth.File + ". Run m2 res status"
+		return o
+	}
+	today := time.Now().UTC().Format(time.DateOnly)
+	for _, r := range t.recs {
+		row, ok := rows[r.ID]
+		if !ok || !r.Live() || r.Scope == nil || r.Scope.Value != resource.In {
+			continue
+		}
+		o.checked++
+		if row.Late(today) {
+			o.add(r.file, r.line, 1, "the resource %s of tier %s has the depth %d, and it is below the target %d since %s", r.ID, row.Tier, row.Depth, row.Target, row.Below)
+		}
+	}
+	if o.checked == 0 {
+		o.reason = "no resource in scope has a row in " + depth.File
 	}
 	return o
 }

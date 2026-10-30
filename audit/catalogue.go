@@ -139,7 +139,7 @@ var catalogue = []entry{
 	{Rule{"H10", Resources, true, "each catalogue record names its source and the snapshot of that source"}, h10},
 	{Rule{"H11", Resources, false, "a resource with the outcome deferred whose date has passed"}, h11},
 	{Rule{"H12", Resources, false, "a stratum whose estimated recall is below its target"}, nil},
-	{Rule{"H13", Resources, false, "an in-scope resource below the target depth of its tier for more than 180 days"}, nil},
+	{Rule{"H13", Resources, false, "an in-scope resource below the target depth of its tier for more than 180 days"}, h13},
 	{Rule{"H14", Resources, false, "a reference of a D3 resource that resolves to no resource after two resolver runs"}, nil},
 	{Rule{"H15", Resources, false, "a work that a curriculum names and that has no resource"}, h15},
 	{Rule{"H16", Resources, true, "no source is a shadow library or a copy of one, and no link points to one"}, h16},

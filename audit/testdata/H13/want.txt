@@ -1,0 +1,1 @@
+records/resources/8F2.md:1:1: H13: the resource 8F2K1QW7ZJ of tier T2 has the depth 1, and it is below the target 3 since 2001-01-01
