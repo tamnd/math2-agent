@@ -86,7 +86,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 res cluster` | Group the source records of `build/resources/source-records/` into resources with the passes C1 to C5, write `records/resources/`, write the queue `res-cluster`, and mint the ids of the new resources. | written |
 | `m2 res resolve` | Find the resource of an id or of a reference, from the index of all ids, the crosswalks, the live API of Crossref and the citation matcher. `-index` writes `build/resources/ids.parquet`. | written |
 | `m2 res scope` | Set the scope of each resource from the decisions of people, the tests S1 to S7 and the classifier, and write the queue `res-scope`. `-fit` fits the classifier. | written |
-| `m2 res show` | Print a resource with its expressions, manifestations, relations, catalogue records and history. The argument is a resource id or an external id, as `doi:10.1000/x` or `isbn:9780070542358`, which the resolver finds. `-json` prints the record. | written |
+| `m2 res show` | Print a resource with its expressions, manifestations, relations, catalogue records and history. The argument is a resource id or an external id, as `doi:10.1000/x` or `isbn:9780070542358`, which the resolver finds. `-json` prints the record. `-mentions N` also prints the count of the mentions in the resource, by source, and the first N mentions. | written |
 | `m2 res queue` | List the items of the queue `res-scope`, `res-cluster`, `res-resolve` or `res-structure`, the highest priority first, or write the decision of a person on one item with `-decide`. | written |
 | `m2 res status` | Write `reports/resources.md` and `reports/resources.json`, the report of RS11.8. This version gives the coverage of each source with the rejected records and the records with no resource (RS11.2), the open decisions by reason (RS9.6), and the curriculum closure with each text that has no live resource (RS11.6). The other sections of the report arrive in RS-M4. | written |
 | `m2 res lookup` | Look up the DOIs of a random part of the `in` records of each census file in the other catalogues, so that the census can measure the overlap of a sampled catalogue. | written |
@@ -583,7 +583,7 @@ In one work, a preprint, each edition and each translation is an expression, and
 
 ### Show and queues
 
-`m2 res show -root ../math2 isbn:9780070542358` prints the resource of the ISBN. An id that is not a resource id goes to the resolver, which looks in the index of the live resources and in the crosswalks. A mark shows the expression or the manifestation that has the id. A duplicate resource names its live resource.
+`m2 res show -root ../math2 isbn:9780070542358` prints the resource of the ISBN. An id that is not a resource id goes to the resolver, which looks in the index of the live resources and in the crosswalks. A mark shows the expression or the manifestation that has the id. A duplicate resource names its live resource. With `-mentions N`, the command reads `records/mentions/` and counts each mention whose field `resource` names the resource (RS2.8). It prints the first N of them with their kind, name, expression and structured locator.
 
 `m2 res queue -root ../math2 res-scope` lists the items of the queue, the highest priority first, 50 items by default. An item with a decision of a person has a mark, and the next run of the step takes it. `-decide` writes a decision to `records/resources/decisions.md`, with `-value`, `-reason` and `-by`:
 

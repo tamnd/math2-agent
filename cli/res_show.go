@@ -10,19 +10,21 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/resource"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
 	resresolve "github.com/tamnd/math2-agent/resource/resolve"
 	"github.com/tamnd/math2-agent/tag"
 )
 
-const resShowUsage = "m2 res show [-root DIR] [-json] <resource id or external id>"
+const resShowUsage = "m2 res show [-root DIR] [-json] [-mentions N] <resource id or external id>"
 
 func runResShow(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 res show", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	root := fs.String("root", ".", "the math2 working tree")
 	asJSON := fs.Bool("json", false, "print the record as JSON")
+	mentions := fs.Int("mentions", 0, "also read the mentions of the tree and print the count of the mentions in the resource, by source, and the first N of them")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -81,7 +83,62 @@ func runResShow(args []string, stdout, stderr io.Writer) int {
 		return ExitOK
 	}
 	showResource(stdout, r, at)
+	if *mentions > 0 {
+		if err := showMentions(stdout, *root, r.ID, *mentions); err != nil {
+			return fail(err)
+		}
+	}
 	return ExitOK
+}
+
+// showMentions prints the count of the mentions whose field resource names the resource, by source, and the first n of them in the order of the files (RS2.8).
+func showMentions(w io.Writer, root, id string, n int) error {
+	bySource := map[string]int{}
+	var first []inventory.Mention
+	err := inventory.WalkMentions(root, func(_ string, _ int, m inventory.Mention) error {
+		if r, _, _ := strings.Cut(m.Resource, "/"); r != id {
+			return nil
+		}
+		bySource[m.Source]++
+		if len(first) < n {
+			first = append(first, m)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	total := 0
+	var parts []string
+	for _, s := range slices.Sorted(maps.Keys(bySource)) {
+		total += bySource[s]
+		parts = append(parts, fmt.Sprintf("%s %d", s, bySource[s]))
+	}
+	line := fmt.Sprintf("mentions: %d", total)
+	if total > 0 {
+		line += " (" + strings.Join(parts, ", ") + ")"
+	}
+	fmt.Fprintln(w, line)
+	for _, m := range first {
+		line := "mention: " + m.ID + " " + m.Kind
+		if m.Name != "" {
+			line += " " + m.Name
+		}
+		if _, e, ok := strings.Cut(m.Resource, "/"); ok {
+			line += ", in " + e
+		}
+		if a := m.At; a != nil {
+			for _, v := range [][2]string{{"part", a.Part}, {"section", a.Section}, {a.Kind, a.Number}, {"page", a.Page}} {
+				if v[1] != "" {
+					line += ", " + strings.TrimSpace(v[0]+" "+v[1])
+				}
+			}
+		} else if m.Locator != "" {
+			line += ", " + m.Locator
+		}
+		fmt.Fprintln(w, line)
+	}
+	return nil
 }
 
 // showResource prints a resource as text: the work, its expressions and manifestations, its relations, its catalogue records and its history. The place that the query named has a mark.
