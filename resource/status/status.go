@@ -1,4 +1,4 @@
-// Package status computes the measures of the catalogue of resources and writes the report of RS11.8. This version measures the coverage of each source (RS11.2), the decision open count (RS9.6) and the curriculum closure (RS11.6). It also computes the tier and the depth of each resource with package depth and gives the depth by tier (RS1.6). The recall by stratum and the reference closure come in RS-M4.
+// Package status computes the measures of the catalogue of resources and writes the report of RS11.8. This version measures the coverage of each source (RS11.2), the decision open count (RS9.6) and the curriculum closure (RS11.6). It also computes the tier and the depth of each resource with package depth and gives the depth by tier (RS1.6). It gives the recall by stratum from the capture histories of the catalogues (RS11.4). The reference closure comes in RS-M4.
 package status
 
 import (
@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/cluster"
 	"github.com/tamnd/math2-agent/resource/depth"
@@ -65,6 +66,7 @@ type Report struct {
 	Coverage  []Coverage `json:"coverage"`
 	Open      Open       `json:"open"`
 	Closure   Closure    `json:"closure"`
+	Recall    []Recall   `json:"recall"`
 	Depth     []Tier     `json:"depth"`
 	Late      []string   `json:"late,omitempty"` // the resources more than depth.GapDays below their target (rule H13)
 }
@@ -150,6 +152,11 @@ func Build(root, day string) (*Report, error) {
 		}
 		rep.Coverage = append(rep.Coverage, *c)
 	}
+	cat, err := ingest.ReadCatalogue(root)
+	if err != nil {
+		return nil, err
+	}
+	rep.Recall = recalls(rs, cat)
 	texts, err := resource.ReadTexts(root)
 	if err != nil {
 		return nil, err
@@ -220,7 +227,7 @@ func (rep *Report) Write(root string) error {
 // Markdown gives the report as Markdown, in the sections of RS11.8.
 func (rep *Report) Markdown() []byte {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "# The catalogue of resources\n\nThe report of %s. The catalogue has %d live resources. The sections follow RS11.8. The sections 4, 5, 8 and 9 are not measured yet.\n", rep.Day, rep.Resources)
+	fmt.Fprintf(&b, "# The catalogue of resources\n\nThe report of %s. The catalogue has %d live resources. The sections follow RS11.8. The sections 5, 8 and 9 are not measured yet.\n", rep.Day, rep.Resources)
 	fmt.Fprintf(&b, "\n## 1. The measures\n\n| Measure | Value | Target | State |\n|---|---:|---:|---|\n")
 	gaps := 0
 	for _, c := range rep.Coverage {
@@ -269,6 +276,19 @@ func (rep *Report) Markdown() []byte {
 		fmt.Fprintf(&b, "%d live resources are deferred past their date.\n\n| Reason | Count |\n|---|---:|\n", rep.Open.Total)
 		for _, r := range slices.Sorted(maps.Keys(rep.Open.ByReason)) {
 			fmt.Fprintf(&b, "| %s | %d |\n", r, rep.Open.ByReason[r])
+		}
+	}
+	fmt.Fprintf(&b, "\n## 4. Recall by stratum\n\n")
+	if len(rep.Recall) == 0 {
+		fmt.Fprintf(&b, "No live resource in scope has a date.\n")
+	} else {
+		fmt.Fprintf(&b, "The estimate of each stratum is a log-linear model of the capture histories, with the catalogues that share lineage merged into one capture. The interval is the 95%% interval of a bootstrap. A stratum uses at most %d captures.\n\n| Kind | Decade | Resources | Captures | Model | Estimate | Interval | Recall | Recall at least |\n|---|---|---:|---|---|---:|---|---:|---:|\n", MaxCaptures)
+		for _, r := range rep.Recall {
+			if r.Model == "" {
+				fmt.Fprintf(&b, "| %s | %s | %d | %s | %s | | | | |\n", r.Kind, r.Decade, r.Resources, strings.Join(r.Captures, ", "), r.Reason)
+				continue
+			}
+			fmt.Fprintf(&b, "| %s | %s | %d | %s | %s | %.0f | %.0f to %.0f | %.3f | %.3f |\n", r.Kind, r.Decade, r.Resources, strings.Join(r.Captures, ", "), r.Model, r.N, r.Low, r.High, r.Recall, r.RecallLow)
 		}
 	}
 	fmt.Fprintf(&b, "\n## 6. Curriculum closure\n\nThe curricula name %d texts, and %d of them have no live resource (rule H15).\n", rep.Closure.Texts, len(rep.Closure.Missing))
