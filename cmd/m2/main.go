@@ -27,6 +27,12 @@ import (
 	_ "github.com/tamnd/math2-agent/ingest/wikidata"
 	_ "github.com/tamnd/math2-agent/ingest/wikipedia"
 	_ "github.com/tamnd/math2-agent/ingest/zbmath"
+
+	// The adapters of the catalogues of resources register themselves with m2 ingest and m2 res import.
+	_ "github.com/tamnd/math2-agent/resource/adapters/crossref"
+	_ "github.com/tamnd/math2-agent/resource/adapters/openalex"
+	_ "github.com/tamnd/math2-agent/resource/adapters/openlibrary"
+	_ "github.com/tamnd/math2-agent/resource/adapters/wikidataworks"
 )
 
 // Version is set at build time with -ldflags "-X main.Version=v0.1.0".
