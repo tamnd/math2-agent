@@ -79,6 +79,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. `-mentions` also writes the mentions. | written |
 | `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list, `m2 wp fetch` reads each article of the scope list from a dump, `m2 wp parsoid` fetches the Parsoid HTML of each article, and `m2 wp pointers` collects the incoming pointers of each article. `m2 wp census report` writes the completeness report, and `m2 wp census diff` prints the readings of one article side by side. `refresh` arrives in a later milestone of the Wikipedia roadmap. | written |
+| `m2 res mint` | Change the provisional ids of the resources in `records/resources/` to resource ids, and add the ids to `registers/resources/`. The other subcommands of `m2 res` (`census`, `import`, `resolve`, `cluster`, `scope`, `show`, `queue`, `refs`, `status` and `gaps`) arrive in the milestones RS-M1 to RS-M4. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
@@ -488,6 +489,18 @@ Two rules check the arXiv mentions. D05 reads the checkout again and checks that
 ```
 $ m2 audit -rule D05,D06 -arxiv ../arxiv
 ```
+
+## The catalogue of resources
+
+The catalogue of resources holds each book, paper, course and other work of mathematics (spec corpus resources). The package `resource` has the types of a resource, its expressions and its manifestations. The records are JSON lines in `records/resources/<shard>.jsonl`, the cites edges are in `records/resources/cites/`, and the tables of contents are in `records/resources/structure/<id>/<expression>.json`. The JSON Schemas are in `resource/schema/`. The package `resource/ids` gives the normal form and the check of each external id, for example a DOI, an ISBN, an arXiv id or an ORCID.
+
+An import gives a new resource a provisional id, `~` and eight hex digits. `m2 res mint` changes each provisional id to a resource id before merge. A resource id has the form of a tag, and it is in the same id space as the tags and the inventory ids, so the mint never gives an id that `registers/tags.reg`, `registers/retired.reg`, `registers/inventory/` or `registers/resources/` has.
+
+```sh
+m2 res mint -root ../math2
+```
+
+A source of `manifests/sources.yaml` can have the kind `catalogue` (its records are records of works) or `course-platform` (its records are courses). The field `resource` gives the resource id of a source that is one work, for example an open textbook. The field `record_licence` gives the licence of the records when it is not the licence of the texts.
 
 ## The Wikipedia corpus
 

@@ -14,6 +14,8 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/tamnd/math2-agent/tag"
 )
 
 // The files of an import, relative to the root of the math2 working tree.
@@ -47,6 +49,8 @@ type Source struct {
 	Adapter        string        `yaml:"adapter,omitempty"`          // the importer that reads the source
 	ApprovedBy     string        `yaml:"approved_by,omitempty"`      // the maintainer who approved the entry
 	Snapshots      []Snapshot    `yaml:"snapshots,omitempty"`        // the snapshots that math2 used, oldest first
+	Resource       string        `yaml:"resource,omitempty"`         // for a source that is one work, for example an open textbook, the resource id of the work (corpus resources RS8.1)
+	RecordLicence  string        `yaml:"record_licence,omitempty"`   // the SPDX expression of the licence of the bibliographic records, when it is not the licence of the texts (RS8.1)
 }
 
 // LicenceRead records one reading of the licence at the source itself, never at an aggregator (K5.2.1).
@@ -72,7 +76,7 @@ type Terms struct {
 
 // The values of the fields kind, authored, channel and intake of a source document (corpus K5.2 and K6.2).
 var (
-	Kinds       = []string{"reference", "wiki", "textbook", "paper-index", "extraction", "curriculum", "exercises", "database", Library}
+	Kinds       = []string{"reference", "wiki", "textbook", "paper-index", "extraction", "curriculum", "exercises", "database", Library, "catalogue", "course-platform"}
 	Authorships = []string{"human", "ai", "mixed"}
 	Channels    = []string{"dump", "git", "api", "bulk", "page", "catalogue"}
 	Intakes     = []string{"bind", "crosswalk", "link", "evaluate", "exclude"}
@@ -202,6 +206,9 @@ func (s *Source) Problems() []string {
 		// L09 reports it.
 	case s.Class != ClassOf(s.Elected()) && s.Class != RecordOnly:
 		out = append(out, fmt.Sprintf("the licence %s gives the class %s, and the source has the class %s", s.Elected(), ClassOf(s.Elected()), s.Class))
+	}
+	if s.Resource != "" && !tag.IsTag(s.Resource) {
+		out = append(out, fmt.Sprintf("the resource %q is not a resource id", s.Resource))
 	}
 	seen := map[string]bool{}
 	for i, sn := range s.Snapshots {
