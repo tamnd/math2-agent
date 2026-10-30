@@ -135,7 +135,7 @@ var catalogue = []entry{
 	{Rule{"H06", Resources, true, "each resource has its required fields with valid values, and an access for each manifestation with a link"}, h06},
 	{Rule{"H07", Resources, true, "each duplicate resource points to a live resource, and no chain of duplicates is longer than one"}, h07},
 	{Rule{"H08", Resources, true, "each mention with a resource field points to a live resource, and its locator fits the structure of the resource"}, nil},
-	{Rule{"H09", Resources, true, "no record holds text of a class other than open, and open text is held by reference only"}, nil},
+	{Rule{"H09", Resources, true, "no record holds text of a class other than open, and open text is held by reference only"}, h09},
 	{Rule{"H10", Resources, true, "each catalogue record names its source and the snapshot of that source"}, h10},
 	{Rule{"H11", Resources, false, "a resource with the outcome deferred whose date has passed"}, h11},
 	{Rule{"H12", Resources, false, "a stratum whose estimated recall is below its target"}, nil},

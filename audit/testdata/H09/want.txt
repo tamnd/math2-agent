@@ -1,0 +1,2 @@
+records/resources/cites/8F2.md:1:1: H09: the reference 1 of 8F2K1QW7ZJ/e3 keeps its text, and 8F2K1QW7ZJ/e3 has no manifestation of the class open. Keep the parsed fields only
+records/resources/structure/8F2K1QW7ZJ/e3.json:0:0: H09: the title of the node 3 has 699 characters, more than 500. A record holds facts, not the text of a work
