@@ -1,0 +1,3 @@
+{"id":"m2://rec/rudin/x#1","source":"rudin","snapshot":"blake3:0000000000000000000000000000000000000000000000000000000000000000","kind":"statement","class":"record","by":"textbook/1","resource":"8F2K1QW7ZJ/e3","at":{"section":"3.14","kind":"theorem","number":"3.14"}}
+{"id":"m2://rec/rudin/x#2","source":"rudin","snapshot":"blake3:0000000000000000000000000000000000000000000000000000000000000000","kind":"statement","class":"record","by":"textbook/1","resource":"8F2K1QW7ZJ"}
+{"id":"m2://rec/rudin/x#3","source":"rudin","snapshot":"blake3:0000000000000000000000000000000000000000000000000000000000000000","kind":"statement","class":"record","by":"textbook/1","resource":"8F2K1QW7ZJ/e3","at":{"kind":"theorem"}}

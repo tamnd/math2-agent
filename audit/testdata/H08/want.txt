@@ -1,0 +1,5 @@
+records/mentions/rudin/AAA.jsonl:2:1: H08: the mention m2://rec/rudin/x#2 names the resource 8F2ZZZZZZ3, which is not in the catalogue
+records/mentions/rudin/AAA.jsonl:3:1: H08: the mention m2://rec/rudin/x#3 names the duplicate resource 8F2AAAAAA3. Name the live resource 8F2K1QW7ZJ
+records/mentions/rudin/AAA.jsonl:4:1: H08: the mention m2://rec/rudin/x#4 names the expression e9, which the resource 8F2K1QW7ZJ does not have
+records/mentions/rudin/AAA.jsonl:5:1: H08: the mention m2://rec/rudin/x#5 is at the section 9.9, which the structure of 8F2K1QW7ZJ/e3 does not have
+records/mentions/rudin/AAA.jsonl:6:1: H08: the mention m2://rec/rudin/x#6 is at the number 7.1, which the structure of 8F2K1QW7ZJ/e3 does not have
