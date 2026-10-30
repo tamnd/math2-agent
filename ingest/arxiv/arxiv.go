@@ -44,7 +44,7 @@ func (Adapter) Source() ingest.Source {
 }
 
 // Version returns the version of the adapter.
-func (Adapter) Version() string { return "arxiv/1" }
+func (Adapter) Version() string { return "arxiv/2" }
 
 // Dump returns the URL of the metadata plane on the main branch.
 func (Adapter) Dump() string { return Contents + "?ref=main" }
@@ -153,6 +153,7 @@ type paper struct {
 	DOI        string `json:"doi"`
 	JournalRef string `json:"journal_ref"`
 	MSCClass   string `json:"msc_class"`
+	Comments   string `json:"comments"`
 }
 
 // licences maps the licences of tamnd/arxiv to SPDX ids.

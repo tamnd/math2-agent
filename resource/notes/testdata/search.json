@@ -1,0 +1,12 @@
+{
+  "total_count": 6,
+  "incomplete_results": false,
+  "items": [
+    {"full_name": "dalcde/cam-notes", "html_url": "https://github.com/dalcde/cam-notes", "description": "My Cambridge Lecture Notes", "language": "TeX", "topics": [], "stargazers_count": 1527, "pushed_at": "2024-07-14T00:49:31Z", "fork": false, "license": null},
+    {"full_name": "boazbk/crypto", "html_url": "https://github.com/boazbk/crypto", "description": "Lecture notes for a course on cryptography", "language": "TeX", "topics": [], "stargazers_count": 587, "pushed_at": "2023-12-11T16:01:58Z", "fork": false, "license": {"key": "other", "name": "Other", "spdx_id": "NOASSERTION", "url": null}},
+    {"full_name": "alice/algebraic-topology-notes", "html_url": "https://github.com/alice/algebraic-topology-notes", "description": "Lecture notes for Math 231, algebraic topology", "language": "TeX", "topics": ["homology"], "stargazers_count": 12, "pushed_at": "2025-03-02T10:00:00Z", "fork": false, "license": {"key": "cc-by-4.0", "name": "Creative Commons Attribution 4.0 International", "spdx_id": "CC-BY-4.0", "url": "https://api.github.com/licenses/cc-by-4.0"}},
+    {"full_name": "bob/algebraic-topology-notes", "html_url": "https://github.com/bob/algebraic-topology-notes", "description": "Lecture notes for Math 231, algebraic topology", "language": "TeX", "topics": [], "stargazers_count": 0, "pushed_at": "2025-03-04T10:00:00Z", "fork": true, "license": {"key": "cc-by-4.0", "name": "Creative Commons Attribution 4.0 International", "spdx_id": "CC-BY-4.0", "url": "https://api.github.com/licenses/cc-by-4.0"}},
+    {"full_name": "carol/pde", "html_url": "https://github.com/carol/pde", "description": "Course on PDE", "language": "TeX", "topics": [], "stargazers_count": 3, "pushed_at": "2022-01-01T00:00:00Z", "fork": false, "license": {"key": "mit", "name": "MIT License", "spdx_id": "MIT", "url": "https://api.github.com/licenses/mit"}},
+    {"full_name": "dave/other-notes", "html_url": "https://github.com/dave/other-notes", "description": "Notes in probability and measure", "language": "TeX", "topics": ["lecture-notes"], "stargazers_count": 40, "pushed_at": "2021-06-30T08:00:00Z", "fork": false, "license": {"key": "other", "name": "Other", "spdx_id": "NOASSERTION", "url": null}}
+  ]
+}
