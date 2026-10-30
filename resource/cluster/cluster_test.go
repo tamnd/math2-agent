@@ -171,3 +171,67 @@ func TestMiddleBand(t *testing.T) {
 		t.Errorf("got joins %v and pairs %v", res.Joins, res.Pairs)
 	}
 }
+
+func TestPersonMerge(t *testing.T) {
+	res := run(t, Input{
+		Records: []Record{
+			{Source: "openalex", NativeID: "W1", Kind: "article", Title: "Spectral gaps of random graphs", Creators: author("Erdos, Paul"), Date: "1990"},
+			{Source: "crossref", NativeID: "c1", Kind: "article", Title: "Spectral gaps for random regular graphs", Creators: author("Paul Erdos"), Date: "1990"},
+			{Source: "hal", NativeID: "h1", Kind: "article", Title: "Spectral gaps of random graphs", Creators: author("P. Erdos"), Date: "1991"},
+		},
+		Decisions: []Decision{{Kind: "merge", A: "openalex:W1", B: "crossref:c1"}},
+	})
+	if n := len(live(res)); n != 1 {
+		t.Fatalf("got %d resources, want 1", n)
+	}
+	if res.Joins[Person] != 1 || len(res.Pairs) != 0 {
+		t.Errorf("got joins %v and pairs %v", res.Joins, res.Pairs)
+	}
+}
+
+func TestPersonMergeWinsOverGuard(t *testing.T) {
+	doi := resource.IDs{"doi": {"10.1000/book"}}
+	res := run(t, Input{
+		Records: []Record{
+			{Source: "crossref", NativeID: "a", Kind: "edited-volume", Title: "Topics in Analysis", IDs: doi},
+			{Source: "zbmath", NativeID: "b", Kind: "chapter", Title: "A lemma on measures", Creators: author("Noether, Emmy"), IDs: doi},
+		},
+		Decisions: []Decision{{Kind: "merge", A: "crossref:a", B: "zbmath:b"}},
+	})
+	if n := len(live(res)); n != 1 || len(res.Pairs) != 0 {
+		t.Fatalf("got %d resources and pairs %v, want 1 and none", n, res.Pairs)
+	}
+}
+
+func TestPersonSplit(t *testing.T) {
+	old := resource.Resource{ID: "aaaaaaaa", Kind: "article", Title: "Quadratic forms", History: []resource.Event{{Op: "add", At: "2026-01-01", By: "test"}}, Catalogue: []resource.CatalogueRecord{
+		{Source: "zbmath", Snapshot: "s0", NativeID: "1", Level: "expression"},
+		{Source: "zbmath", Snapshot: "s0", NativeID: "2", Level: "expression"},
+	}}
+	recs := []Record{
+		{Source: "zbmath", NativeID: "1", Kind: "article", Title: "Quadratic forms", Creators: author("Gauss, C. F."), Language: "en", IDs: resource.IDs{"doi": {"10.1000/q"}}},
+		{Source: "zbmath", NativeID: "2", Kind: "article", Title: "Quadratic forms", Creators: author("Gauss, C. F."), Language: "en", IDs: resource.IDs{"doi": {"10.1000/q"}}},
+	}
+	res := run(t, Input{Records: recs, Existing: []resource.Resource{old}, Order: map[string]int{"aaaaaaaa": 1}, Decisions: []Decision{{Kind: "split", A: "zbmath:2", B: "zbmath:1"}}})
+	rs := live(res)
+	if len(rs) != 2 {
+		t.Fatalf("got %d resources, want 2", len(rs))
+	}
+	var keep, split *resource.Resource
+	for i := range rs {
+		if rs[i].ID == "aaaaaaaa" {
+			keep = &rs[i]
+		} else {
+			split = &rs[i]
+		}
+	}
+	if keep == nil || split == nil || keep.Catalogue[0].NativeID != "2" || split.Catalogue[0].NativeID != "1" {
+		t.Fatalf("got %+v", rs)
+	}
+	if last := split.History[len(split.History)-1]; last.Op != "split" || last.Note != "split from aaaaaaaa" {
+		t.Errorf("got history %+v", split.History)
+	}
+	if len(res.Pairs) != 0 {
+		t.Errorf("got pairs %v, want none", res.Pairs)
+	}
+}
