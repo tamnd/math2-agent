@@ -45,7 +45,7 @@ func TestValuesJSON(t *testing.T) {
 }
 
 func TestParseRejectsUnknownField(t *testing.T) {
-	if _, err := Parse([]byte(`{"id":"8F2K1QW7ZB","tier":"T1"}`)); err == nil {
+	if _, err := Parse([]byte(`{"id":"8F2K1QW7ZJ","tier":"T1"}`)); err == nil {
 		t.Fatal("the field tier is computed and is not in the record")
 	}
 }
@@ -54,9 +54,9 @@ func TestWriteRead(t *testing.T) {
 	root := t.TempDir()
 	a := fixture(t)
 	b := fixture(t)
-	b.ID = "8F2AAAAAAA"
+	b.ID = "8F2AAAAAA3"
 	c := fixture(t)
-	c.ID = "9XYAAAAAAA"
+	c.ID = "9XYAAAAAAT"
 	if err := WriteResources(root, []Resource{c, a, b}); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestWriteRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ids := []string{got[0].ID, got[1].ID, got[2].ID}; !slices.Equal(ids, []string{"8F2AAAAAAA", "8F2K1QW7ZB", "9XYAAAAAAA"}) {
+	if ids := []string{got[0].ID, got[1].ID, got[2].ID}; !slices.Equal(ids, []string{"8F2AAAAAA3", "8F2K1QW7ZJ", "9XYAAAAAAT"}) {
 		t.Fatalf("got the order %v", ids)
 	}
 	if !reflect.DeepEqual(got[1], a) {
@@ -89,7 +89,7 @@ func TestWriteRead(t *testing.T) {
 func TestWalkGivesFileAndLine(t *testing.T) {
 	root := t.TempDir()
 	a, b := fixture(t), fixture(t)
-	b.ID = "8F2ZZZZZZZ"
+	b.ID = "8F2ZZZZZZ3"
 	if err := WriteResources(root, []Resource{a, b}); err != nil {
 		t.Fatal(err)
 	}
@@ -101,34 +101,34 @@ func TestWalkGivesFileAndLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := []string{"records/resources/8F2.jsonl:8F2K1QW7ZB:1", "records/resources/8F2.jsonl:8F2ZZZZZZZ:2"}; !slices.Equal(where, want) {
+	if want := []string{"records/resources/8F2.jsonl:8F2K1QW7ZJ:1", "records/resources/8F2.jsonl:8F2ZZZZZZ3:2"}; !slices.Equal(where, want) {
 		t.Fatalf("got %v", where)
 	}
 }
 
 func TestStructureAndCites(t *testing.T) {
 	root := t.TempDir()
-	s := &Structure{Resource: "8F2K1QW7ZB/e3", Source: "publisher-toc", Snapshot: "blake3:00", Nodes: []Node{
+	s := &Structure{Resource: "8F2K1QW7ZJ/e3", Source: "publisher-toc", Snapshot: "blake3:00", Nodes: []Node{
 		{Key: "1", Kind: "chapter", Number: "1", Title: "The Real and Complex Number Systems", Children: []Node{{Key: "1.1", Kind: "section", Title: "Introduction"}}},
 	}}
 	if err := WriteStructure(root, s); err != nil {
 		t.Fatal(err)
 	}
-	got, err := ReadStructure(root, "8F2K1QW7ZB", "e3")
+	got, err := ReadStructure(root, "8F2K1QW7ZJ", "e3")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got.Find("1.1") == nil || got.Find("2") != nil {
 		t.Fatal("Find does not walk the tree")
 	}
-	if none, err := ReadStructure(root, "8F2K1QW7ZB", "e9"); none != nil || err != nil {
+	if none, err := ReadStructure(root, "8F2K1QW7ZJ", "e9"); none != nil || err != nil {
 		t.Fatal("an expression with no file has no structure and no error")
 	}
-	if err := WriteCites(root, []Cite{{From: "8F2K1QW7ZB/e3", N: 2}, {From: "8F2K1QW7ZB/e3", N: 1, To: "9XYAAAAAAA"}}); err != nil {
+	if err := WriteCites(root, []Cite{{From: "8F2K1QW7ZJ/e3", N: 2}, {From: "8F2K1QW7ZJ/e3", N: 1, To: "9XYAAAAAAT"}}); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(filepath.Join(root, CitesDir, "8F2.jsonl"))
-	if !strings.HasPrefix(string(data), `{"from":"8F2K1QW7ZB/e3","n":1,`) {
+	if !strings.HasPrefix(string(data), `{"from":"8F2K1QW7ZJ/e3","n":1,`) {
 		t.Fatalf("the cites are not sorted: %s", data)
 	}
 	rs, err := ReadResources(root)
@@ -139,17 +139,17 @@ func TestStructureAndCites(t *testing.T) {
 
 func TestRegister(t *testing.T) {
 	root := t.TempDir()
-	if err := AppendRegister(root, []Entry{{"8F2K1QW7ZB", "abc123", "textbook"}, {"8F2AAAAAAA", "abc123", "article"}}); err != nil {
+	if err := AppendRegister(root, []Entry{{"8F2K1QW7ZJ", "abc123", "textbook"}, {"8F2AAAAAA3", "abc123", "article"}}); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(filepath.Join(root, RegisterDir, "8F2.reg"))
-	if want := "# id commit kind\n8F2AAAAAAA abc123 article\n8F2K1QW7ZB abc123 textbook\n"; string(data) != want {
+	if want := "# id commit kind\n8F2AAAAAA3 abc123 article\n8F2K1QW7ZJ abc123 textbook\n"; string(data) != want {
 		t.Fatalf("got %q", data)
 	}
-	if err := AppendRegister(root, []Entry{{"8F2AAAAAAA", "def456", "article"}}); err == nil {
+	if err := AppendRegister(root, []Entry{{"8F2AAAAAA3", "def456", "article"}}); err == nil {
 		t.Fatal("an id that the register has must fail")
 	}
-	if err := AppendRegister(root, []Entry{{"9XYAAAAAAA", "", "article"}}); err == nil {
+	if err := AppendRegister(root, []Entry{{"9XYAAAAAAT", "", "article"}}); err == nil {
 		t.Fatal("an entry with no commit must fail")
 	}
 	ls, err := ReadRegister(root)
@@ -206,10 +206,10 @@ func TestSchemaAcceptsFixture(t *testing.T) {
 	if err := Validate(ResourceSchema, []byte(bad)); err == nil {
 		t.Fatal("the schema accepts the kind book")
 	}
-	if err := Validate(CiteSchema, []byte(`{"from":"8F2K1QW7ZB/e3","n":1,"to":"9XYAAAAAAA"}`)); err != nil {
+	if err := Validate(CiteSchema, []byte(`{"from":"8F2K1QW7ZJ/e3","n":1,"to":"9XYAAAAAAT"}`)); err != nil {
 		t.Fatal(err)
 	}
-	if err := Validate(StructureSchema, []byte(`{"resource":"8F2K1QW7ZB/e3","source":"x","snapshot":"blake3:00","nodes":[{"key":"1","kind":"chapter"}]}`)); err != nil {
+	if err := Validate(StructureSchema, []byte(`{"resource":"8F2K1QW7ZJ/e3","source":"x","snapshot":"blake3:00","nodes":[{"key":"1","kind":"chapter"}]}`)); err != nil {
 		t.Fatal(err)
 	}
 }

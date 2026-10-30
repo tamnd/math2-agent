@@ -7,7 +7,7 @@ import (
 )
 
 func ExampleCheck() {
-	r := resource.Resource{ID: "8F2K1QW7ZB", Kind: "book", Title: "Principles of Mathematical Analysis"}
+	r := resource.Resource{ID: "8F2K1QW7ZJ", Kind: "book", Title: "Principles of Mathematical Analysis"}
 	for _, p := range resource.Check(&r) {
 		fmt.Println(p)
 	}
