@@ -72,6 +72,12 @@
             "$ref": "#/$defs/reading"
           }
         },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "children": {
           "type": "array",
           "items": {

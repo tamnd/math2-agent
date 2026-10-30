@@ -309,3 +309,29 @@ func TestCourseOfferings(t *testing.T) {
 		t.Errorf("the relations of the material are %+v, want %+v", material.Relations, want)
 	}
 }
+
+func TestResolveTargets(t *testing.T) {
+	res := run(t, Input{Records: []Record{
+		{Source: "imo", NativeID: "competition", Level: "work", Kind: "competition", Title: "International Mathematical Olympiad", IDs: resource.IDs{"wikidata": {"Q1"}}},
+		{Source: "imo", NativeID: "2024", Level: "work", Kind: "problem-set", Title: "IMO 2024", Date: "2024", Relations: []resource.Relation{{Kind: "part_of", To: "wikidata:Q1", Source: "imo"}}},
+		{Source: "imo", NativeID: "2023", Level: "work", Kind: "problem-set", Title: "IMO 2023", Date: "2023", Relations: []resource.Relation{{Kind: "part_of", To: "wikidata:Q9", Source: "imo"}}},
+		{Source: "wd", NativeID: "Q1", Level: "work", Kind: "competition", Title: "IMO", IDs: resource.IDs{"wikidata": {"Q1"}}, Relations: []resource.Relation{{Kind: "part_of", To: "wikidata:Q1", Source: "wd"}}},
+	}})
+	by := map[string]resource.Resource{}
+	for _, r := range live(res) {
+		by[r.Title] = r
+	}
+	comp, ok := by["International Mathematical Olympiad"]
+	if !ok || len(by) != 3 {
+		t.Fatalf("the resources are %v", by)
+	}
+	if rels := by["IMO 2024"].Relations; len(rels) != 1 || rels[0].Kind != "part_of" || rels[0].To != comp.ID {
+		t.Errorf("the relations of 2024 are %+v, want part_of %s", rels, comp.ID)
+	}
+	if rels := by["IMO 2023"].Relations; len(rels) != 0 {
+		t.Errorf("the relations of 2023 are %+v, but no resource has Q9", rels)
+	}
+	if rels := comp.Relations; len(rels) != 0 {
+		t.Errorf("the competition has the relations %+v to itself", rels)
+	}
+}

@@ -706,6 +706,7 @@ func build(in Input, g *groups) (*Result, error) {
 	for _, id := range sortedKeys(out) {
 		res.Resources = append(res.Resources, out[id])
 	}
+	resolveTargets(res.Resources)
 	res.Pairs = g.pairs
 	slices.SortFunc(res.Pairs, func(a, b Pair) int {
 		return cmp.Or(cmp.Compare(a.Pass, b.Pass), cmp.Compare(a.A, b.A), cmp.Compare(a.B, b.B))
@@ -808,9 +809,7 @@ func assemble(id string, recs []*Record, prev *resource.Resource) resource.Resou
 		for _, rel := range x.Relations {
 			if rel.Kind != "translation_of" && !hasRelation(r.Relations, rel) {
 				rel.Source = Version
-				if !strings.Contains(rel.To, ":") || strings.HasPrefix(rel.To, "offering:") {
-					r.Relations = append(r.Relations, rel)
-				}
+				r.Relations = append(r.Relations, rel)
 			}
 		}
 	}
@@ -828,6 +827,52 @@ func assemble(id string, recs []*Record, prev *resource.Resource) resource.Resou
 		}
 	}
 	return r
+}
+
+// resolveTargets resolves each edge of a catalogue whose target is an external id, as wikidata:Q1 or issn:0072-5285, to the live resource that has the id at any level. An edge whose id no live resource has, or more than one live resource has, is dropped, and so is an edge from a resource to itself. An edge whose target is already a live resource, as an offering that offerings resolved, stays.
+func resolveTargets(rs []resource.Resource) {
+	byID := map[string][]string{}
+	live := map[string]bool{}
+	add := func(id string, ids resource.IDs) {
+		for sys, vs := range ids {
+			for _, v := range vs {
+				if k := sys + ":" + v; !slices.Contains(byID[k], id) {
+					byID[k] = append(byID[k], id)
+				}
+			}
+		}
+	}
+	for i := range rs {
+		r := &rs[i]
+		if !r.Live() {
+			continue
+		}
+		live[r.ID] = true
+		add(r.ID, r.IDs)
+		for _, e := range r.Expressions {
+			add(r.ID, e.IDs)
+			for _, m := range e.Manifestations {
+				add(r.ID, m.IDs)
+			}
+		}
+	}
+	for i := range rs {
+		r := &rs[i]
+		var out []resource.Relation
+		for _, rel := range r.Relations {
+			if target, _, _ := strings.Cut(rel.To, "/"); rel.Source == Version && strings.Contains(rel.To, ":") && !live[target] {
+				to := byID[rel.To]
+				if len(to) != 1 || to[0] == r.ID {
+					continue
+				}
+				rel.To = to[0]
+			}
+			if !hasRelation(out, rel) {
+				out = append(out, rel)
+			}
+		}
+		r.Relations = out
+	}
 }
 
 func hasRelation(rs []resource.Relation, rel resource.Relation) bool {

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -31,6 +32,11 @@ type structurer interface {
 // structures is an adapter that gives the structures of many expressions of its snapshot, as a course platform gives the sessions of each offering (RS5.4). The id names the expression by one of its ids, as offering:<offering id>. A material of a node and the book of a reading can name a resource by an id too, as ocw:<slug> or isbn:<isbn>.
 type structures interface {
 	Structures(r io.Reader, emit func(id string, nodes []resource.Node) error) error
+}
+
+// setStructurer is an adapter whose snapshot holds many sets, as the years of a competition. It gives the structure of each set by the native id of the set, as the problems of a year by number (RS7.2).
+type setStructurer interface {
+	SetStructures(r io.Reader) (map[string][]resource.Node, error)
 }
 
 // sourcers gives the ids of the sources whose adapter gives source records, in the order of Adapters.
@@ -98,7 +104,8 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	}
 	st, ok := a.(structurer)
 	ss, many := a.(structures)
-	if *structure && !ok && !many {
+	sst, sets := a.(setStructurer)
+	if *structure && !ok && !many && !sets {
 		return fail(fmt.Errorf("the adapter of %q gives no table of contents", source))
 	}
 	opt.UserAgent = userAgent()
@@ -149,6 +156,14 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 			return fail(err)
 		}
 		fmt.Fprintf(stdout, "%s: %d structures in %s, %d with no resource\n", source, n, resource.StructureDir, missing)
+		return ExitOK
+	}
+	if sets {
+		n, skipped, err := writeSetStructures(opt.Root, source, path, res.Snapshot.Hash, sst)
+		if err != nil {
+			return fail(err)
+		}
+		fmt.Fprintf(stdout, "%s: the structures of %d sets in %s, %d sets skipped with no single live resource\n", source, n, resource.StructureDir, skipped)
 		return ExitOK
 	}
 	file, nodes, err := writeStructure(opt.Root, source, path, res.Snapshot.Hash, st, rs)
@@ -312,4 +327,58 @@ func writeStructures(root, source, path, hash string, ss structures) (int, int, 
 		return 0, 0, err
 	}
 	return written, missing, nil
+}
+
+// writeSetStructures reads the structure of each set of the snapshot at path. It writes each one to the first expression of the live resource that groups the source record of the set, and the resource gets an expression e1 when it has no expression. A set that no live resource groups, or that more than one live resource groups, is skipped. It gives the number of structures written and the number of sets skipped. It fails when it writes no structure, because then m2 res cluster must run first.
+func writeSetStructures(root, source, path, hash string, st setStructurer) (int, int, error) {
+	f, err := os.Open(path) // #nosec G304 -- the path is in the snapshot cache.
+	if err != nil {
+		return 0, 0, err
+	}
+	defer func() { _ = f.Close() }()
+	snapshot, err := ingest.Uncompressed(f)
+	if err != nil {
+		return 0, 0, err
+	}
+	sets, err := st.SetStructures(snapshot)
+	if err != nil {
+		return 0, 0, fmt.Errorf("%s: %w", source, err)
+	}
+	all, err := resource.ReadResources(root)
+	if err != nil {
+		return 0, 0, err
+	}
+	by := map[string][]int{}
+	for i := range all {
+		if !all[i].Live() {
+			continue
+		}
+		for _, c := range all[i].Catalogue {
+			if _, ok := sets[c.NativeID]; ok && c.Source == source && !slices.Contains(by[c.NativeID], i) {
+				by[c.NativeID] = append(by[c.NativeID], i)
+			}
+		}
+	}
+	ids := slices.Sorted(maps.Keys(sets))
+	written, skipped := 0, 0
+	for _, id := range ids {
+		if len(by[id]) != 1 {
+			skipped++
+			continue
+		}
+		r := &all[by[id][0]]
+		if len(r.Expressions) == 0 {
+			r.Expressions = []resource.Expression{{Key: "e1", Kind: "edition"}}
+		}
+		e := &r.Expressions[0]
+		if err := resource.WriteStructure(root, &resource.Structure{Resource: r.ID + "/" + e.Key, Source: source, Snapshot: hash, Nodes: sets[id]}); err != nil {
+			return written, skipped, err
+		}
+		e.Structure = r.ID + "/" + e.Key + ".json"
+		written++
+	}
+	if written == 0 {
+		return 0, skipped, fmt.Errorf("no live resource groups a set of %s, so no structure is written. Run m2 res cluster first", source)
+	}
+	return written, skipped, resource.WriteResources(root, all)
 }

@@ -31,6 +31,7 @@ import (
 	// The adapters of the catalogues of resources register themselves with m2 ingest and m2 res import.
 	_ "github.com/tamnd/math2-agent/resource/adapters/bnf"
 	_ "github.com/tamnd/math2-agent/resource/adapters/carmin"
+	_ "github.com/tamnd/math2-agent/resource/adapters/contests"
 	_ "github.com/tamnd/math2-agent/resource/adapters/crossref"
 	_ "github.com/tamnd/math2-agent/resource/adapters/cyberleninka"
 	_ "github.com/tamnd/math2-agent/resource/adapters/datacite"
