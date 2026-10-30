@@ -57,3 +57,22 @@ func TestRecalls(t *testing.T) {
 		t.Errorf("the report has no row for the stratum:\n%s", md)
 	}
 }
+
+func TestUnmet(t *testing.T) {
+	rs := []Recall{
+		{Kind: "article", Decade: "2000s", Model: "Mt", RecallLow: 0.95, Target: 0.99, Below: true},
+		{Kind: "article", Decade: "2010s", Model: "Mt", RecallLow: 0.995, Target: 0.99},
+		{Kind: "book", Decade: "1960s", Reason: "fewer than three captures", Target: 0.97},
+		{Kind: "other", Decade: "2000s", Model: "M0", RecallLow: 0.5},
+	}
+	below, unmeasured := Unmet(rs)
+	if len(below) != 1 || below[0].Decade != "2000s" || len(unmeasured) != 1 || unmeasured[0].Kind != "book" {
+		t.Fatalf("below %+v, unmeasured %+v", below, unmeasured)
+	}
+	md := string((&Report{Recall: rs}).Markdown())
+	for _, want := range []string{"| strata below the recall target | 1 | 0 |", "0.99, below", "| none |", "Below the target: article 2000s.", "With no estimate: book 1960s."} {
+		if !strings.Contains(md, want) {
+			t.Errorf("the report has no %q:\n%s", want, md)
+		}
+	}
+}

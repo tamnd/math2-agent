@@ -29,6 +29,22 @@ type Recall struct {
 	Recall    float64  `json:"recall,omitempty"`     // Resources over N, at most 1
 	RecallLow float64  `json:"recall_low,omitempty"` // Resources over High, at most 1
 	Reason    string   `json:"reason,omitempty"`     // why there is no estimate
+	Target    float64  `json:"target,omitempty"`     // the target of RS1.7, or 0 when the stratum has none
+	Below     bool     `json:"below,omitempty"`      // RecallLow is below Target (rule H12)
+}
+
+// Unmet gives the strata with a target that are below it, and the strata with a target that have no estimate.
+func Unmet(rs []Recall) (below, unmeasured []Recall) {
+	for _, r := range rs {
+		switch {
+		case r.Target == 0:
+		case r.Model == "":
+			unmeasured = append(unmeasured, r)
+		case r.Below:
+			below = append(below, r)
+		}
+	}
+	return below, unmeasured
 }
 
 // recalls computes the recall of each stratum of the live resources in scope. A resource with no date is in no stratum, because the census has no decade for it.
@@ -62,7 +78,7 @@ func recalls(rs []resource.Resource, cat *ingest.Catalogue) []Recall {
 		return cmp.Or(cmp.Compare(a.Kind, b.Kind), cmp.Compare(a.Decade, b.Decade))
 	}) {
 		ws := byStratum[s]
-		rec := Recall{Kind: s.Kind, Decade: s.Decade, Resources: len(ws)}
+		rec := Recall{Kind: s.Kind, Decade: s.Decade, Resources: len(ws), Target: census.Target(s.Kind, s.Decade)}
 		held := map[string]int{}
 		for _, w := range ws {
 			seen := map[string]bool{}
@@ -102,6 +118,7 @@ func recalls(rs []resource.Resource, cat *ingest.Catalogue) []Recall {
 		n := float64(rec.Resources)
 		rec.Recall = round(min(1, n/max(est.N, n)))
 		rec.RecallLow = round(min(1, n/max(est.CI.High, n)))
+		rec.Below = rec.Target > 0 && rec.RecallLow < rec.Target
 		out = append(out, rec)
 	}
 	return out
