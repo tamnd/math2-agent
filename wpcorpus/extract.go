@@ -453,6 +453,7 @@ func (x *extractor) templates() {
 				}
 			case "ref":
 				if !n.SelfClosing && n.InnerEnd > n.InnerStart {
+					x.noteMath(n)
 					x.counts.Citations++
 					o := x.add(Object{Kind: "citation", Cue: "ref", Strength: StrengthStrong, Name: n.Attrs["name"]}, n.Start, n.End)
 					o.Fields = x.citeFields(n.Children)
@@ -505,6 +506,7 @@ func (x *extractor) templates() {
 					o.Fields = x.fields(n)
 					x.fill(o)
 				}
+				x.noteMath(n)
 				return false
 			case ClassMeta:
 				if strings.HasPrefix(t.Key, "infobox ") {
@@ -531,6 +533,37 @@ func (x *extractor) templates() {
 				}
 			case ClassItem, ClassTerm:
 				x.itemTemplate(n, t, &term)
+			}
+		}
+		return true
+	})
+}
+
+// noteMath counts the math of a <ref> or of a note template such as
+// {{efn}}. The walk of the templates does not go into a note, but the HTML
+// shows its formulas in the list of the notes, so they are formulas of the
+// page.
+func (x *extractor) noteMath(note *parse.Node) {
+	parse.Walk(note, func(n *parse.Node) bool {
+		switch n.Kind {
+		case parse.KindTag:
+			switch n.Name {
+			case "math":
+				x.counts.Math["math"]++
+				x.tex = append(x.tex, texvc.FromMathTag(x.doc.Inner(n), n.Attrs).TeX)
+			case "chem", "ce":
+				x.counts.Math["chem"]++
+			}
+		case parse.KindTemplate:
+			if t := x.m.Template(parse.TemplateKey(n.Name)); t != nil && t.Class == ClassMath {
+				switch t.Key {
+				case "math":
+					x.counts.Math["template"]++
+					return false
+				case "mvar", "tmath":
+					x.counts.Math[t.Key]++
+					return false
+				}
 			}
 		}
 		return true

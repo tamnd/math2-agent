@@ -351,3 +351,14 @@ func TestExtractPageFault(t *testing.T) {
 		t.Errorf("err %v", err)
 	}
 }
+
+func TestNoteMath(t *testing.T) {
+	r := extractRev(t, "A ring has <math>a+b</math>.<ref>See <math>x^2</math> and {{mvar|y}}.</ref>{{efn|The factor <math>1,329\\text{ km}</math> comes from the Sun.}}\n", 1)
+	m := r.Census.Counts.Math
+	if m["math"] != 3 || m["mvar"] != 1 {
+		t.Errorf("math = %v, want 3 math and 1 mvar", m)
+	}
+	if want := []string{"a+b", "x^2", `1,329\text{ km}`}; !slices.Equal(r.TeX, want) {
+		t.Errorf("TeX = %q, want %q", r.TeX, want)
+	}
+}

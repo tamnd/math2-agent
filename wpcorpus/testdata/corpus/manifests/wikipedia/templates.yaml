@@ -54,6 +54,8 @@ templates:
     class: layout
   sfn:
     class: citation
+  efn:
+    class: citation
   main:
     class: hatnote
     params: {1: link}
