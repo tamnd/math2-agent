@@ -85,7 +85,7 @@ func TestFetchAndRecords(t *testing.T) {
 		t.Fatalf("records %+v", rs)
 	}
 	r := rs[0]
-	if r.NativeID != "12345" || r.Kind != "monograph" || r.Title != "A course of pure mathematics" || r.Date != "1908" || r.Language != "en" || r.Edition != "10th ed." ||
+	if r.NativeID != "12345" || r.Kind != "textbook" || r.Title != "A course of pure mathematics" || r.Date != "1908" || r.Language != "en" || r.Edition != "10th ed." ||
 		r.Publisher != "University Press" || r.Links[0] != "https://lccn.loc.gov/08012345" {
 		t.Errorf("record %+v", r)
 	}
