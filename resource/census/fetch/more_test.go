@@ -178,7 +178,7 @@ const numdamPage2 = `<?xml version="1.0" encoding="UTF-8"?>
 <OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"><ListRecords>
 <record><header><identifier>oai:numdam.org:AIF_2001__51_1_1_0</identifier></header>
 <metadata><article xmlns="http://jats.nlm.nih.gov" xml:lang="en"><front><article-meta>
-<article-id pub-id-type="doi">10.5802/AIF.1</article-id><title-group><article-title>Sheaves</article-title></title-group>
+<article-id pub-id-type="doi">10.5802/AIF.1</article-id><title-group><article-title>Sheaves on G&G spaces &eacute;tale</article-title></title-group>
 </article-meta></front></article></metadata></record>
 <resumptionToken completeListSize="2"></resumptionToken>
 </ListRecords></OAI-PMH>`
@@ -206,7 +206,7 @@ func TestNumdam(t *testing.T) {
 		len(r.IDs["zbl"]) != 1 || r.IDs["eudml"][0] != "94429" || !r.Signals.ZBMath {
 		t.Errorf("record 0 = %+v", r)
 	}
-	if rs[1].IDs["doi"][0] != "10.5802/aif.1" || rs[1].Date != "2001" || rs[1].Signals.ZBMath {
+	if rs[1].IDs["doi"][0] != "10.5802/aif.1" || rs[1].Date != "2001" || rs[1].Signals.ZBMath || rs[1].Title != "Sheaves on G&G spaces étale" {
 		t.Errorf("record 1 = %+v", rs[1])
 	}
 }
