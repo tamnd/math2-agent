@@ -16,6 +16,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/cluster"
 	"github.com/tamnd/math2-agent/resource/depth"
 	"github.com/tamnd/math2-agent/resource/ids"
+	"github.com/tamnd/math2-agent/resource/refs"
 	"github.com/tamnd/math2-agent/tag"
 )
 
@@ -287,8 +288,8 @@ func h04(a *auditor) outcome {
 	return o
 }
 
-// citationOnly is the source of the records that only a reference of another resource gives (RS11.5). Such a record does not count for rule H05.
-const citationOnly = "refs"
+// citationOnly is the source of the records that only a reference of another resource gives (RS11.5). Such a record counts for rule H05 only when its native id names a rule of confirmation.
+const citationOnly = refs.Source
 
 // catalogue reads manifests/sources.yaml the first time that a rule needs it.
 func (t *resTree) catalogue(root string) (*ingest.Catalogue, error) {
@@ -298,7 +299,7 @@ func (t *resTree) catalogue(root string) (*ingest.Catalogue, error) {
 	return t.cat, t.catErr
 }
 
-// h05 checks that each resource has at least one catalogue record from a source that a person approved (rule H05, RS1.2). A record of the source refs does not count, because a citation alone does not confirm a work.
+// h05 checks that each resource has at least one catalogue record from a source that a person approved (rule H05, RS1.2). A record of the source refs counts only when it is confirmed (RS11.5): two or more resources cite the work, a live lookup confirms its id, or a person confirms it. One citation alone does not confirm a work.
 func h05(a *auditor) outcome {
 	t := a.resources()
 	if o, done := t.skip(); done {
@@ -317,7 +318,7 @@ func h05(a *auditor) outcome {
 		o.checked++
 		ok := false
 		for _, c := range r.Catalogue {
-			if s := cat.Source(c.Source); c.Source != citationOnly && s != nil && s.ApprovedBy != "" {
+			if s := cat.Source(c.Source); (c.Source != citationOnly || refs.Confirmed(c.NativeID)) && s != nil && s.ApprovedBy != "" {
 				ok = true
 				break
 			}

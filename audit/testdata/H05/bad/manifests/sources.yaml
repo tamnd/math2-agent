@@ -18,3 +18,13 @@ sources:
       - url: https://api.crossref.org/works
         hash: blake3:0000000000000000000000000000000000000000000000000000000000000000
         date: "2026-10-01"
+  - id: refs
+    name: The references of the resources of the catalogue
+    kind: catalogue
+    licence: LicenseRef-facts
+    class: record
+    approved_by: tamnd
+    snapshots:
+      - url: m2 res import refs
+        hash: blake3:0000000000000000000000000000000000000000000000000000000000000000
+        date: "2026-10-01"

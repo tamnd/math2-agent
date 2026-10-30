@@ -8,14 +8,16 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
+	"github.com/tamnd/math2-agent/resource/refs"
 )
 
-const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-cache DIR] [-structure] <source>"
+const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-cache DIR] [-structure] <source> | m2 res import [-root DIR] [-lookup] [-gap D] refs"
 
 // structurer is an adapter that gives the table of contents of the work of its snapshot (RS4.5), as the adapter of an open textbook does. It also gives the commit of the snapshot.
 type structurer interface {
@@ -42,6 +44,8 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.Snapshot, "snapshot", "", "use again the snapshot with this hash from manifests/sources.yaml. Empty means a new fetch.")
 	fs.StringVar(&opt.Cache, "cache", "", "the directory of the downloaded snapshots. Empty means m2 in the user cache directory.")
 	structure := fs.Bool("structure", false, "also write the table of contents of the snapshot to the first expression of the resource that groups the source records")
+	lookup := fs.Bool("lookup", false, "for the source refs: confirm the ids of the references with a live lookup")
+	gap := fs.Duration("gap", time.Second, "for the source refs: the shortest time between two lookups")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -56,6 +60,9 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "usage: "+resImportUsage)
 		fmt.Fprintf(stderr, "The sources with source records: %v\n", sourcers())
 		return ExitUsage
+	}
+	if source == refs.Source {
+		return runResImportRefs(opt.Root, *lookup, *gap, stdout, stderr)
 	}
 	fail := func(err error) int {
 		fmt.Fprintf(stderr, "m2 res import: %v\n", err)
