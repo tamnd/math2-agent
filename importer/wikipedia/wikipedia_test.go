@@ -86,7 +86,7 @@ func corpus(t *testing.T) string {
 	if err := wpcorpus.WriteEdges(root, &wpcorpus.EdgeFile{Page: 300, Revision: 5, Title: "Sprocket"}); err != nil {
 		t.Fatal(err)
 	}
-	write(wpcorpus.TagsPath(100), []byte("SUBJ,o1\nTHM1,o3\nPRF1,o4\nGONE,o10,gone:r6\n"))
+	write(wpcorpus.TagsPath(100), []byte("---\npage: 100\ntags:\n  - {tag: SUBJ, ref: o1}\n  - {tag: THM1, ref: o3}\n  - {tag: PRF1, ref: o4}\n  - {tag: GONE, ref: o10, gone: r6}\n---\n"))
 	for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}, {"-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "-m", "c"}} {
 		if out, err := exec.Command("git", append([]string{"-C", root}, args...)...).CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v %s", args, err, out)

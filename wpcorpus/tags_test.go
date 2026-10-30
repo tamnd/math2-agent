@@ -3,6 +3,7 @@ package wpcorpus
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -98,12 +99,15 @@ func TestAssignTags(t *testing.T) {
 			t.Errorf("the line %s", l)
 		}
 	}
-	runs, err := os.ReadFile(filepath.Join(root, RunsPath(12345)))
+	tf, err := readTagsFile(root, 12345)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(runs), "-,r1,") || !strings.Contains(string(runs), "r1,r2,"+gone+",gone\n") {
-		t.Errorf("the runs file:\n%s", runs)
+	if len(tf.Runs) != 2 || tf.Runs[0].From != "" || tf.Runs[0].To != "r1" || tf.Runs[1].From != "r1" || tf.Runs[1].To != "r2" {
+		t.Fatalf("the runs: %+v", tf.Runs)
+	}
+	if !slices.Contains(tf.Runs[1].Passes, tagPass{Tag: gone, Pass: PassGone}) {
+		t.Errorf("the second run has no pass gone for %s: %+v", gone, tf.Runs[1].Passes)
 	}
 
 	// The same revision again changes no tag and adds no run.
@@ -122,14 +126,23 @@ func TestAssignTags(t *testing.T) {
 			t.Errorf("the object %s has the tag %s, then %s", c.Objects[i].Ref, b.Objects[i].Tag, c.Objects[i].Tag)
 		}
 	}
-	again, _ := os.ReadFile(filepath.Join(root, RunsPath(12345)))
-	if string(again) != string(runs) {
+	again, err := readTagsFile(root, 12345)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(again.Runs) != len(tf.Runs) {
 		t.Errorf("the same revision added a run")
 	}
 }
 
 func TestReadTagsErrors(t *testing.T) {
-	for _, data := range []string{"03QK\n", "03QK,o1\n03QK,o2\n", "03qk,o1\n", "03QK,o1,lost\n"} {
+	for _, data := range []string{
+		"03QK,o1\n",
+		"---\npage: 1\ntags:\n  - tag: 03QK\n---\n",
+		"---\npage: 1\ntags:\n  - tag: 03QK\n    ref: o1\n  - tag: 03QK\n    ref: o2\n---\n",
+		"---\npage: 1\ntags:\n  - tag: 03qk\n    ref: o1\n---\n",
+		"---\npage: 1\ntags:\n  - tag: 03QK\n    ref: o1\n    gone: lost\n---\n",
+	} {
 		root := t.TempDir()
 		if err := writeFile(filepath.Join(root, TagsPath(1)), []byte(data)); err != nil {
 			t.Fatal(err)
@@ -163,5 +176,27 @@ func TestMatchTagsNear(t *testing.T) {
 	// Two old objects have the same name and hash, so no pass can choose.
 	if tags[2] != "" {
 		t.Errorf("the fact: %s %s", tags[2], passes[2])
+	}
+}
+
+func TestTagsFileRoundTrip(t *testing.T) {
+	root := t.TempDir()
+	f := &tagsFile{Page: 7, Title: "Widget", Tags: []TagLine{{Tag: "03QK", Ref: "o1"}, {Tag: "Z9Z9", Ref: "o2", Gone: "r5"}}, Runs: []runLine{{To: "r4", Passes: []tagPass{{Tag: "03QK", Pass: PassNew}}}}}
+	data, err := marshalTags(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "\n# Tags of Widget\n") || !strings.Contains(string(data), "| Z9Z9 | o2 | r5 |\n") {
+		t.Errorf("the body:\n%s", data)
+	}
+	if err := writeFile(filepath.Join(root, TagsPath(7)), data); err != nil {
+		t.Fatal(err)
+	}
+	got, err := readTagsFile(root, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(got.Tags, f.Tags) || len(got.Runs) != 1 || lastRun(got) != 4 {
+		t.Errorf("readTagsFile gives %+v", got)
 	}
 }
