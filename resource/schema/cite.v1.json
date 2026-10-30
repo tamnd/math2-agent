@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tamnd/math2/blob/main/schema/cite.v1.json",
+  "title": "cite.v1",
+  "description": "One edge from an expression to the resource that one of its references names (corpus resources RS2.7 and RS3.7). One edge is one line of records/resources/cites/<shard>.jsonl.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "from",
+    "n"
+  ],
+  "properties": {
+    "from": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{10}/e[1-9][0-9]*$"
+    },
+    "n": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "to": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string"
+    },
+    "parsed": {
+      "$ref": "#/$defs/parsed"
+    },
+    "score": {
+      "type": "number"
+    },
+    "matcher": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "ids": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 2
+          }
+        ]
+      }
+    },
+    "parsed": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "title": {
+          "type": "string"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "volume": {
+          "type": "string"
+        },
+        "pages": {
+          "type": "string"
+        },
+        "year": {
+          "type": "string"
+        },
+        "edition": {
+          "type": "string"
+        },
+        "ids": {
+          "$ref": "#/$defs/ids"
+        }
+      }
+    }
+  }
+}
