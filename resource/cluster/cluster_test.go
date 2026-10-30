@@ -93,6 +93,18 @@ func TestISBNNeedsTitle(t *testing.T) {
 	}
 }
 
+func TestThesisLevel(t *testing.T) {
+	nnt := resource.IDs{"nnt": {"2020UPASS008"}}
+	res := run(t, Input{Records: []Record{
+		{Source: "thesesfr", NativeID: "2020UPASS008", Kind: "thesis", Thesis: "doctoral", Title: "Limites d'ensembles quasiminimaux", Creators: author("Camille Labourie"), Date: "2020-01-06", IDs: nnt},
+		{Source: "hal", NativeID: "tel-02500000", Kind: "thesis", Title: "Limites d'ensembles quasiminimaux", Creators: author("Camille Labourie"), Date: "2020-01-06", IDs: nnt},
+	}})
+	rs := live(res)
+	if len(rs) != 1 || rs[0].Kind != "thesis" || rs[0].Level != "doctoral" {
+		t.Fatalf("got %+v", rs)
+	}
+}
+
 func TestChapterGuard(t *testing.T) {
 	doi := resource.IDs{"doi": {"10.1000/book"}}
 	res := run(t, Input{Records: []Record{

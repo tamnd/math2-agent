@@ -24,6 +24,7 @@ type Record struct {
 	NativeID  string              `json:"native_id"`           // the id of the record in the source
 	Level     string              `json:"level"`               // work, expression or manifestation
 	Kind      string              `json:"kind"`                // one of resource.Kinds
+	Thesis    string              `json:"thesis,omitempty"`    // of a thesis: the level, one of resource.ThesisLevels
 	Title     string              `json:"title"`               // the title in the original language
 	TitleEn   string              `json:"title_en,omitempty"`  // an English title that the catalogue gives
 	Creators  []resource.Creator  `json:"creators,omitempty"`  // the creators

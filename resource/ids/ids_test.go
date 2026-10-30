@@ -60,6 +60,10 @@ func TestNormalize(t *testing.T) {
 		{"orcid", "https://orcid.org/0000-0002-1825-0097", "0000-0002-1825-0097"},
 		{"orcid", "0000-0002-1694-233x", "0000-0002-1694-233X"},
 		{"mgp", "https://www.mathgenealogy.org/id.php?id=18231", "18231"},
+		{"nnt", "https://theses.fr/2020upass008", "2020UPASS008"},
+		{"nnt", "1965REN0S021", "1965REN0S021"},
+		{"idref", "https://www.idref.fr/072229802", "072229802"},
+		{"idref", "18447518x", "18447518X"},
 	}
 	for _, c := range cases {
 		got, err := Normalize(c.key, c.in)
@@ -109,6 +113,10 @@ func TestInvalid(t *testing.T) {
 		{"offering", "042nb2s44:18.06:spring"},
 		{"numdam", "two words"},
 		{"mgp", "abc"},
+		{"nnt", "2020UPAS008"},
+		{"nnt", "s12345"},
+		{"idref", "072229803"},
+		{"idref", "07222980"},
 	}
 	for _, c := range cases {
 		if got, err := Normalize(c.key, c.in); err == nil {

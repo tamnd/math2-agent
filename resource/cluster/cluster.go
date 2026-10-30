@@ -724,6 +724,10 @@ func assemble(id string, recs []*Record, prev *resource.Resource) resource.Resou
 	} else {
 		r.Kind = recs[0].Kind
 	}
+	// The level of a thesis: a person's value stays.
+	if t := best("kind", recs, func(x *Record) bool { return x.Thesis != "" }, nil); t != nil && r.Kind == "thesis" && r.Level == "" {
+		r.Level = t.Thesis
+	}
 	exprs := expressions(recs)
 	workLang := ""
 	if len(exprs) > 0 {

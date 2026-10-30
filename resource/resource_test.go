@@ -173,6 +173,7 @@ func TestCheck(t *testing.T) {
 		{"title", func(r *Resource) { r.Title = " " }},
 		{"date", func(r *Resource) { r.Date = "1953?" }},
 		{"level", func(r *Resource) { r.Level = "doctoral" }},
+		{"level", func(r *Resource) { r.Kind, r.Level = "thesis", "phd" }},
 		{"genre[0]", func(r *Resource) { r.Genre = []string{"fiction"} }},
 		{"creators[0].role", func(r *Resource) { r.Creators[0].Role = "writer" }},
 		{"msc[0].code", func(r *Resource) { r.MSC[0].Code = "26" + "A" }},
