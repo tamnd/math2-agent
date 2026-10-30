@@ -109,8 +109,9 @@ var systems = map[string]system{
 		strip: []string{"videos:collection:"},
 		re:    carminSlug,
 	},
-	"nnt":   {strip: []string{"https://theses.fr/", "https://www.theses.fr/", "http://www.theses.fr/"}, fold: strings.ToUpper, re: regexp.MustCompile(`^[0-9]{4}[A-Z0-9]{8}$`)},
-	"idref": {strip: []string{"https://www.idref.fr/", "http://www.idref.fr/", "https://idref.fr/"}, fold: strings.ToUpper, re: regexp.MustCompile(`^[0-9]{8}[0-9X]$`), check: idref},
+	"nnt":    {strip: []string{"https://theses.fr/", "https://www.theses.fr/", "http://www.theses.fr/"}, fold: strings.ToUpper, re: regexp.MustCompile(`^[0-9]{4}[A-Z0-9]{8}$`)},
+	"idref":  {strip: []string{"https://www.idref.fr/", "http://www.idref.fr/", "https://idref.fr/"}, fold: strings.ToUpper, re: regexp.MustCompile(`^[0-9]{8}[0-9X]$`), check: idref},
+	"source": {re: regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)}, // the id of a source of manifests/sources.yaml, for a source that is also a work (RS7.6)
 }
 
 // Keys returns the keys of the systems of RS3.2, in sorted order.

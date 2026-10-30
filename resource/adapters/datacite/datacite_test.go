@@ -3,9 +3,11 @@ package datacite
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -77,5 +79,53 @@ func TestFetchAndRecords(t *testing.T) {
 	}
 	if rs[1].Kind != "dataset" || rs[1].Date != "2019" || rs[1].Publisher != "Lab" {
 		t.Errorf("record 2 %+v", rs[1])
+	}
+}
+
+func TestRepository(t *testing.T) {
+	for _, r := range []Repository{Zenodo, Figshare} {
+		a, ok := ingest.Lookup(r.ID)
+		if !ok {
+			t.Fatalf("%s is not registered", r.ID)
+		}
+		if _, ok := a.(cluster.Sourcer); !ok {
+			t.Errorf("%s gives no source records", r.ID)
+		}
+		s := r.Source()
+		if s.ID != r.ID || s.Licence != "CC0-1.0" || s.Class != ingest.RecordOnly || len(s.Lineage) != 1 || s.Lineage[0] != "datacite" || r.Version() != r.ID+"/1" {
+			t.Errorf("source %+v, version %s", s, r.Version())
+		}
+	}
+	u, err := url.Parse(Zenodo.Dump())
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := u.Query()
+	if u.Path != "/dois" || q.Get("query") != Query || q.Get("client-id") != "cern.zenodo" || q.Get("resource-type-id") != "dataset,software" {
+		t.Errorf("dump %s", Zenodo.Dump())
+	}
+	if q := strings.Split(Figshare.Dump(), "?")[1]; !strings.Contains(q, "client-id=figshare.ars") || !strings.Contains(q, "classificationCode%3A49%2A") {
+		t.Errorf("dump %s", Figshare.Dump())
+	}
+}
+
+func TestSourceRecordOfZenodo(t *testing.T) {
+	const line = `{"doi":"10.5281/zenodo.8217","titles":[{"title":"A solver"}],"publisher":"Zenodo","publicationYear":2023,"types":{"resourceTypeGeneral":"Software"},
+"relatedIdentifiers":[{"relatedIdentifier":"https://github.com/owner/solver/tree/v1.2","relatedIdentifierType":"URL","relationType":"IsSupplementTo"},
+{"relatedIdentifier":"https://example.org/solver","relatedIdentifierType":"URL","relationType":"IsDocumentedBy"},
+{"relatedIdentifier":"10.5281/zenodo.8216","relatedIdentifierType":"DOI","relationType":"IsVersionOf"}],"url":"https://zenodo.org/doi/10.5281/zenodo.8217"}`
+	var d DOI
+	if err := json.Unmarshal([]byte(line), &d); err != nil {
+		t.Fatal(err)
+	}
+	r := SourceRecord(d)
+	if r.Kind != "software" || r.IDs.Get("zenodo") != "8217" || r.IDs.Get("doi") != "10.5281/zenodo.8217" {
+		t.Errorf("record %+v", r)
+	}
+	if len(r.Links) != 2 || r.Links[0] != "https://zenodo.org/doi/10.5281/zenodo.8217" || r.Links[1] != "https://github.com/owner/solver/tree/v1.2" {
+		t.Errorf("links %q", r.Links)
+	}
+	if d.DOI = "10.1/zenodo.5"; SourceRecord(d).IDs.Get("zenodo") != "" {
+		t.Error("a DOI with another prefix must give no Zenodo id")
 	}
 }
