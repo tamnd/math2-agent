@@ -166,3 +166,23 @@ func decide(r *resource.Resource, in Input, person map[string]PersonDecision, un
 	}
 	return &resource.Scope{Value: v, Rule: ClassifierRule, Reason: fmt.Sprintf("the classifier score of in is %.3f", score), By: in.Classifier.Version()}
 }
+
+// AppendDecision adds a decision of a person to DecisionsFile in the tree at root. A later decision on the same id and kind wins over an earlier one.
+func AppendDecision(root string, d PersonDecision) error {
+	if d.ID == "" || d.Kind == "" || d.Reason == "" || d.By == "" {
+		return errors.New("scope: a decision needs an id, a kind, a reason and a person")
+	}
+	ds, err := ReadDecisions(root)
+	if err != nil {
+		return err
+	}
+	recs, err := mdrec.Marshal(append(ds, d))
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(root, DecisionsFile)
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		return err
+	}
+	return mdrec.Write(path, recs)
+}
