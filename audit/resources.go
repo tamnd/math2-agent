@@ -447,6 +447,34 @@ func h13(a *auditor) outcome {
 	}
 	if o.checked == 0 {
 		o.reason = "no resource in scope has a row in " + depth.File
+
+// h17 reports each source of the catalogue whose last snapshot is older than twice its cadence (rule H17, RS8.4). A stale snapshot is a warning and not an error, because a source can stop publishing. A source with no cadence, the cadence none or no snapshot is not checked.
+func h17(a *auditor) outcome {
+	var o outcome
+	t := a.resources()
+	cat, err := t.catalogue(a.root)
+	if err != nil {
+		o.add(ingest.CatalogueFile, 0, 0, "%v", err)
+		return o
+	}
+	today := time.Now().UTC()
+	for _, s := range cat.Sources {
+		days, last := s.CadenceDays(), s.Latest()
+		if days == 0 || last == nil {
+			continue
+		}
+		o.checked++
+		on, err := time.Parse(time.DateOnly, last.Date)
+		if err != nil {
+			o.add(ingest.CatalogueFile, 0, 0, "the source %s has a snapshot with the date %q, which is not YYYY-MM-DD", s.ID, last.Date)
+			continue
+		}
+		if today.Sub(on) > time.Duration(2*days)*24*time.Hour {
+			o.add(ingest.CatalogueFile, 0, 0, "the source %s has the cadence %s, and its last snapshot of %s is older than %d days", s.ID, s.Cadence, last.Date, 2*days)
+		}
+	}
+	if o.checked == 0 {
+		o.reason = "no source has a cadence and a snapshot"
 	}
 	return o
 }

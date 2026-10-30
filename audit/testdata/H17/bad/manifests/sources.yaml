@@ -1,0 +1,31 @@
+sources:
+  - id: crossref
+    name: Crossref
+    kind: catalogue
+    licence: LicenseRef-facts
+    class: record
+    cadence: monthly
+    snapshots:
+      - url: https://api.crossref.org/works
+        hash: blake3:0000000000000000000000000000000000000000000000000000000000000000
+        date: "2001-01-01"
+  - id: openlibrary
+    name: Open Library
+    kind: catalogue
+    licence: LicenseRef-unknown
+    class: record
+    cadence: yearly
+    snapshots:
+      - url: https://openlibrary.org/developers/dumps
+        hash: blake3:0000000000000000000000000000000000000000000000000000000000000000
+        date: "2999-01-01"
+  - id: refs
+    name: The references of the catalogue
+    kind: catalogue
+    licence: LicenseRef-facts
+    class: record
+    cadence: none
+    snapshots:
+      - url: https://github.com/tamnd/math2
+        hash: blake3:0000000000000000000000000000000000000000000000000000000000000000
+        date: "2001-01-01"
