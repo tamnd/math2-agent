@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+  <responseDate>2026-10-30T21:24:00+01:00</responseDate>
+  <request verb="ListRecords" metadataPrefix="oai_dc" set="videos:institution:ihes" page="1">https://www.carmin.tv/fr/oai</request>
+  <ListsRecords>
+    <record>
+      <header>
+        <identifier>oai:carmin.tv:complexity-of-lasso-with-normalized-data</identifier>
+        <dateStamp>2026-10-30T18:19:19+01:00</dateStamp>
+        <setSpec>videos:institution:ihes</setSpec>
+        <setSpec>videos:collection:the-pentagram-map-and-ramifications</setSpec>
+        <setSpec>videos:collection:a-collection-with-no-name</setSpec>
+      </header>
+      <metadata>
+        <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc" xmlns:dc="http://purl.org/dc/elements/1.1/">
+          <dc:identifier>oai:carmin.tv:complexity-of-lasso-with-normalized-data</dc:identifier>
+          <dc:identifier>https://www.carmin.tv/fr/video/complexity-of-lasso-with-normalized-data</dc:identifier>
+          <dc:title>Complexity of Lasso with
+ Normalized Data</dc:title>
+          <dc:format>video/mp4</dc:format>
+          <dc:publisher>IHES</dc:publisher>
+          <dc:date>2026-10-15T00:00:00+02:00</dc:date>
+          <dc:contributor>Vladimir Dragovich</dc:contributor>
+          <dc:subject>lasso regularization paths, Hamming bunds, lasso type code, symbolic, Researchers</dc:subject>
+          <dc:description>An abstract that the catalogue does not take.</dc:description>
+          <dc:language>en</dc:language>
+          <dc:coverage>The Pentagram Map and Ramifications / This workshop explores the mathematics connected to the pentagram map.</dc:coverage>
+          <dc:relation>https://www.carmin.tv/uploads/video/video-368451828d4187525403a16474289638.jpg</dc:relation>
+        </oai_dc:dc>
+      </metadata>
+    </record>
+    <resumptionToken expirationDate="2026-10-30T21:24:00+01:00" completeListSize="3" cursor="1">eyJwYWdlIjoxfQ==</resumptionToken>
+  </ListsRecords>
+</OAI-PMH>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">
+  <responseDate>2026-10-30T21:24:05+01:00</responseDate>
+  <request verb="ListRecords">https://www.carmin.tv/fr/oai</request>
+  <ListsRecords>
+    <record>
+      <header status="deleted">
+        <identifier>oai:carmin.tv:a-removed-video</identifier>
+      </header>
+    </record>
+    <record>
+      <header>
+        <identifier>oai:carmin.tv:pentagram-map-and-poncelet-grid</identifier>
+        <setSpec>videos:institution:ihes</setSpec>
+      </header>
+      <metadata>
+        <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc" xmlns:dc="http://purl.org/dc/elements/1.1/">
+          <dc:identifier>oai:carmin.tv:pentagram-map-and-poncelet-grid</dc:identifier>
+          <dc:identifier>https://www.carmin.tv/fr/video/pentagram-map-and-poncelet-grid</dc:identifier>
+          <dc:title>Théorème de Poncelet &amp; réseaux</dc:title>
+          <dc:publisher>IHES</dc:publisher>
+          <dc:date>2026-10-13T00:00:00+02:00</dc:date>
+          <dc:contributor>Sergei Tabachnikov</dc:contributor>
+          <dc:contributor>Sergei Tabachnikov</dc:contributor>
+          <dc:subject>pentagram map, Poncelet porism, Researchers, Graduate Students</dc:subject>
+          <dc:language>fr</dc:language>
+        </oai_dc:dc>
+      </metadata>
+    </record>
+    <resumptionToken completeListSize="3" cursor="3"></resumptionToken>
+  </ListsRecords>
+</OAI-PMH>

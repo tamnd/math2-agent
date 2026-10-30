@@ -28,6 +28,8 @@ var (
 	slug   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:+/-]*$`)
 	term   = regexp.MustCompile(`^[0-9]{4}(-[a-z0-9]+)*$`)
 	rorRE  = regexp.MustCompile(`^0[0-9a-hjkmnp-tv-z]{6}[0-9]{2}$`)
+	// carminSlug is the slug of a video or a collection of Carmin.tv, as the-pentagram-map-and-ramifications. A long slug is cut, and can end in a hyphen.
+	carminSlug = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 )
 
 var systems = map[string]system{
@@ -99,6 +101,14 @@ var systems = map[string]system{
 	"ror":           {strip: []string{"https://ror.org/"}, fold: strings.ToLower, re: rorRE, check: ror},
 	"orcid":         {strip: []string{"https://orcid.org/", "http://orcid.org/"}, fold: strings.ToUpper, re: regexp.MustCompile(`^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$`), check: orcid},
 	"mgp":           {strip: []string{"https://www.mathgenealogy.org/id.php?id=", "https://mathgenealogy.org/id.php?id="}, fold: zeros, re: digits},
+	"carmin": {
+		strip: []string{"oai:carmin.tv:", "https://www.carmin.tv/fr/video/", "https://www.carmin.tv/en/video/"},
+		re:    carminSlug,
+	},
+	"carmin_collection": {
+		strip: []string{"videos:collection:"},
+		re:    carminSlug,
+	},
 }
 
 // Keys returns the keys of the systems of RS3.2, in sorted order.
