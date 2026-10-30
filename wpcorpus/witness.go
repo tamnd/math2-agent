@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/tamnd/wikipedia-cli/wiki/parse"
 	"github.com/tamnd/wikipedia-cli/wiki/parsoid"
@@ -61,18 +62,27 @@ func AddWitness(r *Result, m *Manifests, rd *parsoid.Reading) error {
 		return fmt.Errorf("the Parsoid HTML is of the revision %d, and the census is of the revision %d", rd.Revision, c.Revision)
 	}
 	w := &Witness{Revision: rd.Revision, ItemTemplates: map[string]int{}}
-	have := map[string]int{}
+	have, inTemplates := map[string]int{}, map[string]int{}
 	for _, f := range rd.Math {
-		if !f.Transcluded {
+		if f.Transcluded {
+			inTemplates[NormTeX(f.AltText)]++
+		} else {
 			w.Math++
 			have[NormTeX(f.AltText)]++
 		}
 	}
+	// Parsoid marks a formula in a template parameter as transcluded when
+	// the parameter has the TeX in another form. A transcluded formula with
+	// the TeX of a W-text formula is a formula of the page.
 	for _, tex := range r.TeX {
 		w.TeX++
-		if t := NormTeX(tex); have[t] > 0 {
+		switch t := NormTeX(tex); {
+		case have[t] > 0:
 			have[t]--
-		} else {
+		case inTemplates[t] > 0:
+			inTemplates[t]--
+			w.Math++
+		default:
 			w.TeXMismatches++
 		}
 	}
@@ -256,9 +266,9 @@ func mapKeys(m map[string]bool) func(func(string) bool) {
 }
 
 var (
-	texAliases = strings.NewReplacer(`\ne `, `\neq `, `\le `, `\leq `, `\ge `, `\geq `, "{", "", "}", "")
+	texAliases = strings.NewReplacer(`\ne `, `\neq `, `\le `, `\leq `, `\ge `, `\geq `)
+	texBraces  = strings.NewReplacer("{", "", "}", "")
 	texCommand = regexp.MustCompile(`\\[A-Za-z]+`)
-	texScripts = regexp.MustCompile(`\^(\\[A-Za-z]+|[^\\_^])_(\\[A-Za-z]+|[^\\_^])`)
 )
 
 // NormTeX gives the form of a formula that the comparison of the TeX of
@@ -276,6 +286,78 @@ func NormTeX(s string) string {
 	// A space after each command keeps \le x apart from \lex when the
 	// spaces go.
 	s = texCommand.ReplaceAllString(s, "$0 ")
-	s = strings.Join(strings.Fields(texAliases.Replace(s+" ")), "")
-	return texScripts.ReplaceAllString(s, "_${2}^${1}")
+	s = texAliases.Replace(s + " ")
+	// The scripts change places before the braces go, because a braced
+	// script such as ^{-\infty} is one token only while it has its braces.
+	return texBraces.Replace(strings.Join(strings.Fields(swapScripts(s)), ""))
+}
+
+// swapScripts writes each ^a_b of s as _b^a. A script is a braced group, a
+// command or one character. The scripts in a braced group change places
+// too.
+func swapScripts(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == '^' {
+			a, j := texToken(s, i+1)
+			if k := skipSpace(s, j); a != "" && k < len(s) && s[k] == '_' {
+				if c, l := texToken(s, k+1); c != "" {
+					b.WriteString("_" + c + "^" + a)
+					i = l
+					continue
+				}
+			}
+		}
+		if s[i] == '{' {
+			if g, j := texToken(s, i); g != "" {
+				b.WriteString(g)
+				i = j
+				continue
+			}
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	return b.String()
+}
+
+// texToken gives the token of s that starts at i after the spaces, and the
+// index after it. A braced group comes back with its scripts swapped. The
+// token is empty when s has no full token at i.
+func texToken(s string, i int) (string, int) {
+	i = skipSpace(s, i)
+	switch {
+	case i >= len(s) || s[i] == '}' || s[i] == '^' || s[i] == '_':
+		return "", i
+	case s[i] == '{':
+		depth := 0
+		for j := i; j < len(s); j++ {
+			switch s[j] {
+			case '{':
+				depth++
+			case '}':
+				if depth--; depth == 0 {
+					return "{" + swapScripts(s[i+1:j]) + "}", j + 1
+				}
+			}
+		}
+		return "", i
+	case s[i] == '\\':
+		if m := texCommand.FindString(s[i:]); m != "" {
+			return m, i + len(m)
+		}
+		if i+1 < len(s) {
+			return s[i : i+2], i + 2
+		}
+		return "", i
+	}
+	_, n := utf8.DecodeRuneInString(s[i:])
+	return s[i : i+n], i + n
+}
+
+func skipSpace(s string, i int) int {
+	for i < len(s) && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n') {
+		i++
+	}
+	return i
 }

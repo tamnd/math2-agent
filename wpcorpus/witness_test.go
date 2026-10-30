@@ -54,6 +54,20 @@ func TestAddWitness(t *testing.T) {
 		t.Errorf("differences = %q, strength = %s", d, r.Census.Strength)
 	}
 
+	// A formula of the page that Parsoid marks as transcluded counts when
+	// its TeX is the TeX of a W-text formula.
+	rd = readWitness(t)
+	for i := range rd.Math {
+		rd.Math[i].Transcluded = true
+	}
+	r = extractFile(t, "witness.wiki", "Widget")
+	if err := AddWitness(r, m, rd); err != nil {
+		t.Fatal(err)
+	}
+	if w := r.Census.HTML; w.Math != 5 || w.TeXMismatches != 0 {
+		t.Errorf("all transcluded: math = %d, mismatches = %d, want 5 and 0", w.Math, w.TeXMismatches)
+	}
+
 	rd.Revision = 679
 	if err := AddWitness(r, m, rd); err == nil {
 		t.Error("a reading of another revision gives no error")
@@ -88,6 +102,10 @@ func TestNormTeX(t *testing.T) {
 		{`2^p \equiv 1 \pmod{q}`, `{\displaystyle 2^{p}\equiv 1{\pmod {q}}}`},
 		{`u^2_1`, `{\displaystyle u_{1}^{2}}`},
 		{`x \ne 0`, `{\displaystyle x\neq 0}`},
+		{`\int^{\infty}_{-\infty} f`, `{\displaystyle \int _{-\infty }^{\infty }f}`},
+		{`\sum^{n}_{k=1} a^2_{k}`, `{\displaystyle \sum _{k=1}^{n}a_{k}^{2}}`},
+		{`\frac{x^a_{b}}{2}`, `{\displaystyle {\frac {x_{b}^{a}}{2}}}`},
+		{`e^{x^2_1}_0`, `{\displaystyle e_{0}^{x_{1}^{2}}}`},
 	} {
 		if a, b := NormTeX(c[0]), NormTeX(c[1]); a != b {
 			t.Errorf("NormTeX(%q) = %q, NormTeX(%q) = %q", c[0], a, c[1], b)
