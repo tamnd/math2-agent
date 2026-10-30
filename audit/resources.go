@@ -13,6 +13,7 @@ import (
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
+	"github.com/tamnd/math2-agent/resource/cites"
 	"github.com/tamnd/math2-agent/resource/cluster"
 	"github.com/tamnd/math2-agent/resource/depth"
 	"github.com/tamnd/math2-agent/resource/ids"
@@ -479,6 +480,57 @@ func h17(a *auditor) outcome {
 	}
 	if o.checked == 0 {
 		o.reason = "no source has a cadence and a snapshot"
+	}
+	return o
+}
+
+// h14Depth is the depth from which rule H14 reads the references of a resource, and h14Runs is the count of resolver runs after which a reference that resolves to no resource is reported.
+const (
+	h14Depth = 3
+	h14Runs  = 2
+)
+
+// h14 reports each reference of a live resource at depth D3 or more that resolves to no resource after two resolver runs or more (rule H14, RS3.7). It reads the file of depth that m2 res status writes and the file of the unresolved references that m2 res resolve writes. The finding points at the record of the citing resource.
+func h14(a *auditor) outcome {
+	t := a.resources()
+	if o, done := t.skip(); done {
+		return o
+	}
+	var o outcome
+	rows, err := depth.Read(a.root)
+	if err != nil {
+		o.add(depth.File, 0, 0, "%v", err)
+		return o
+	}
+	if len(rows) == 0 {
+		o.reason = "the tree has no file " + depth.File + ". Run m2 res status"
+		return o
+	}
+	refs, err := cites.ReadUnresolved(a.root)
+	if err != nil {
+		o.add(cites.UnresolvedFile, 0, 0, "%v", err)
+		return o
+	}
+	byResource := map[string][]cites.Unresolved{}
+	for _, k := range slices.Sorted(maps.Keys(refs)) {
+		u := refs[k]
+		id, _, _ := strings.Cut(u.From(), "/")
+		byResource[id] = append(byResource[id], u)
+	}
+	for _, r := range t.recs {
+		row, ok := rows[r.ID]
+		if !ok || !r.Live() || row.Depth < h14Depth {
+			continue
+		}
+		o.checked++
+		for _, u := range byResource[r.ID] {
+			if u.Runs >= h14Runs {
+				o.add(r.file, r.line, 1, "the reference %s of the resource %s at depth %d resolves to no resource after %d resolver runs, since %s", u.Ref, r.ID, row.Depth, u.Runs, u.Since)
+			}
+		}
+	}
+	if o.checked == 0 {
+		o.reason = "no live resource has a row at depth D3 or more in " + depth.File
 	}
 	return o
 }
