@@ -13,7 +13,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/census"
 )
 
-const resCensusUsage = "m2 res census -in DIR [-root DIR] [-env FILE] [-sample N] [-seed N] [-pairs A:B,C:D]"
+const resCensusUsage = "m2 res census -in DIR [-root DIR] [-env FILE] [-sample N] [-seed N] [-pairs A:B,C:D] [-whole A,B]"
 
 func runResCensus(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 res census", flag.ContinueOnError)
@@ -24,6 +24,7 @@ func runResCensus(args []string, stdout, stderr io.Writer) int {
 	sample := fs.Int("sample", 5000, "the size of the sample of in records of each catalogue for the overlap")
 	seed := fs.Uint64("seed", 1, "the seed of the samples and of the bootstrap")
 	pairs := fs.String("pairs", "", "the pairs of independent catalogues, as A:B separated by commas")
+	whole := fs.String("whole", "zbmath", "the catalogues of mathematics alone, separated by commas. A lookup of the DOI in one of them counts for an estimate.")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -47,6 +48,12 @@ func runResCensus(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	c := census.New(env, *sample, *seed)
+	c.Whole = map[string]bool{}
+	for _, n := range strings.Split(*whole, ",") {
+		if n = strings.TrimSpace(n); n != "" {
+			c.Whole[n] = true
+		}
+	}
 	for _, f := range files {
 		name := strings.TrimSuffix(filepath.Base(f), mdrec.Ext)
 		if err := readCensus(c, name, f); err != nil {

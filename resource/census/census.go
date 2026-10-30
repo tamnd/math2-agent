@@ -1,6 +1,6 @@
 // Package census measures the catalogues of resources before the import (corpus resources RS15.2). It counts the records of each catalogue by scope outcome and by stratum, it measures the overlap of each pair of catalogues on a sample, and it gives the Chapman estimate of each independent pair.
 //
-// The input of the census is one file of JSON lines for each catalogue, with one Record on each line. The adapters of the sources make these files from a dump or from a sample of an API. The census does not read a dump itself.
+// The input of the census is one file of records (package mdrec) for each catalogue, with one Record in each entry. The adapters of the sources make these files from a dump or from a sample of an API. The census does not read a dump itself.
 package census
 
 import (
@@ -121,6 +121,8 @@ type Catalogue struct {
 	sample  *Reservoir[Record]
 	looked  []Record        // the in records with a lookup
 	keys    map[string]bool // the match keys of all records
+	inKeys  map[string]bool // the match keys of the in records
+	counts  map[Stratum]int // the in records of each stratum, not weighted
 	weights float64
 }
 
@@ -134,7 +136,9 @@ type Census struct {
 	Env        scope.Env
 	SampleSize int    // the size of the sample of in records of each catalogue
 	Seed       uint64 // the seed of the samples and of the bootstrap
-	cats       map[string]*Catalogue
+	// Whole names the catalogues of mathematics alone, as zbMATH Open. Each work of such a catalogue is in, so a lookup that finds a work in it counts for an estimate. A lookup in another catalogue tells only that it has the work, not that its scope has it. The share of in records of a sample does not tell this, because a sample can come from a subject of the catalogue.
+	Whole map[string]bool
+	cats  map[string]*Catalogue
 }
 
 // New makes an empty census.
@@ -153,6 +157,8 @@ func (c *Census) Add(catalogue string, r Record) {
 			Strata: map[Stratum]float64{},
 			sample: NewReservoir[Record](c.SampleSize, c.Seed^hash(catalogue)),
 			keys:   map[string]bool{},
+			inKeys: map[string]bool{},
+			counts: map[Stratum]int{},
 		}
 		c.cats[catalogue] = cat
 	}
@@ -176,7 +182,12 @@ func (c *Census) Add(catalogue string, r Record) {
 		cat.keys[k] = true
 	}
 	if d.Value == "in" {
-		cat.Strata[Stratum{vals[DimKind], vals[DimDecade]}] += w
+		st := Stratum{vals[DimKind], vals[DimDecade]}
+		cat.Strata[st] += w
+		cat.counts[st]++
+		for _, k := range Keys(&r) {
+			cat.inKeys[k] = true
+		}
 		cat.sample.Add(r)
 		if len(r.Found) > 0 {
 			cat.looked = append(cat.looked, r)
@@ -268,40 +279,59 @@ func (c *Census) Overlaps() []Overlap {
 	cats := c.Catalogues()
 	for _, a := range cats {
 		for _, b := range cats {
-			if a == b {
-				continue
+			if a != b {
+				out = append(out, overlap(a, b, b.keys, true))
 			}
-			o := Overlap{A: a.Name, B: b.Name, Strata: map[Stratum][2]int{}}
-			var looked []Record
-			for _, r := range a.looked {
-				if _, ok := r.Found[b.Name]; ok {
-					looked = append(looked, r)
-				}
-			}
-			o.Lookup = len(looked) > 0
-			recs := a.sample.Items()
-			if o.Lookup {
-				recs = looked
-			}
-			for _, r := range recs {
-				s := Stratum{KindGroup(r.Kind), Decade(r.Date)}
-				n := o.Strata[s]
-				n[0]++
-				o.Sampled++
-				hit := r.Found[b.Name]
-				if !o.Lookup {
-					hit = slices.ContainsFunc(Keys(&r), func(k string) bool { return b.keys[k] })
-				}
-				if hit {
-					n[1]++
-					o.Matched++
-				}
-				o.Strata[s] = n
-			}
-			out = append(out, o)
 		}
 	}
 	return out
+}
+
+// overlap matches the records of A against B: by the answers of the lookup in B when lookup is true and records of A have them, and else by the sample of A and the keys.
+func overlap(a, b *Catalogue, keys map[string]bool, lookup bool) Overlap {
+	o := Overlap{A: a.Name, B: b.Name, Strata: map[Stratum][2]int{}}
+	var looked []Record
+	if lookup {
+		for _, r := range a.looked {
+			if _, ok := r.Found[b.Name]; ok {
+				looked = append(looked, r)
+			}
+		}
+	}
+	o.Lookup = len(looked) > 0
+	recs := a.sample.Items()
+	if o.Lookup {
+		recs = looked
+	}
+	for _, r := range recs {
+		s := Stratum{KindGroup(r.Kind), Decade(r.Date)}
+		n := o.Strata[s]
+		n[0]++
+		o.Sampled++
+		hit := r.Found[b.Name]
+		if !o.Lookup {
+			hit = slices.ContainsFunc(Keys(&r), func(k string) bool { return keys[k] })
+		}
+		if hit {
+			n[1]++
+			o.Matched++
+		}
+		o.Strata[s] = n
+	}
+	return o
+}
+
+// The rules of an estimate.
+const (
+	// MinSampled is the least count of records of the sample of A in a stratum for an estimate.
+	MinSampled = 20
+	// MinMatched is the least count of these records that B has. Below it the Chapman estimate has a large bias (Robson and Regier, 1964).
+	MinMatched = 7
+)
+
+// inOverlap is the overlap that an estimate uses: the share of the in records of A that are in records of B. A lookup tells only that B has the work, so it counts only when B is in Whole. Else the sample of A is matched against the keys of the in records of B.
+func (c *Census) inOverlap(a, b *Catalogue) Overlap {
+	return overlap(a, b, b.inKeys, c.Whole[b.Name])
 }
 
 // StratumEstimate is the Chapman estimate of one stratum for one pair.
@@ -312,19 +342,19 @@ type StratumEstimate struct {
 	RecallA, RecallB float64
 }
 
-// Estimates gives the Chapman estimate of each stratum for each pair of catalogues that the caller names as independent. The count m of the works in both is the count of A in the stratum times the share of the sample of A in the stratum that B has. A stratum with no work in A or in B, or with no sample of A, has no estimate.
+// Estimates gives the Chapman estimate of each stratum for each pair of catalogues that the caller names as independent. The count m of the works in both is the count of A in the stratum times the share of the in records of A in the stratum that are in records of B (inOverlap). A stratum with no work in A or in B, with fewer than MinSampled records of the sample of A, or with fewer than MinMatched of them in B, has no estimate.
 func (c *Census) Estimates(pairs [][2]string) []StratumEstimate {
-	ov := map[[2]string]Overlap{}
-	for _, o := range c.Overlaps() {
-		ov[[2]string{o.A, o.B}] = o
-	}
 	var out []StratumEstimate
 	for _, p := range pairs {
 		a, b := c.cats[p[0]], c.cats[p[1]]
 		if a == nil || b == nil {
 			continue
 		}
-		o := ov[p]
+		o := c.inOverlap(a, b)
+		wB := b.Weight
+		if o.Lookup {
+			wB = 1
+		}
 		var strata []Stratum
 		for s := range a.Strata {
 			strata = append(strata, s)
@@ -333,15 +363,22 @@ func (c *Census) Estimates(pairs [][2]string) []StratumEstimate {
 		for _, s := range strata {
 			nA, nB := a.Strata[s], b.Strata[s]
 			n := o.Strata[s]
-			if nA == 0 || nB == 0 || n[0] == 0 {
+			if nA == 0 || nB == 0 || n[0] < MinSampled || n[1] < MinMatched {
 				continue
 			}
-			m := min(nA, nB, nA*o.strataFraction(s, b.Weight))
-			e := Pair(round(nA), round(nB), round(m), c.Seed^hash(p[0]+"|"+p[1]+"|"+s.Kind+"|"+s.Decade))
+			e := PairSample(Sample{NA: nA, NB: nB, KA: a.drawn(s), KB: b.drawn(s), Sampled: n[0], Matched: n[1], WB: wB}, c.Seed^hash(p[0]+"|"+p[1]+"|"+s.Kind+"|"+s.Decade))
 			out = append(out, StratumEstimate{A: p[0], B: p[1], Stratum: s, Estimate: e, RecallA: Recall(e.NA, e.N), RecallB: Recall(e.NB, e.N)})
 		}
 	}
 	return out
+}
+
+// drawn gives the in records of the stratum when the catalogue is a sample, and 0 when it holds all its records, so its counts have no error of a sample.
+func (cat *Catalogue) drawn(s Stratum) int {
+	if cat.Weight <= 1 {
+		return 0
+	}
+	return cat.counts[s]
 }
 
 // Uncovered gives the strata of in records that no estimate of the pairs covers, in order.
@@ -364,14 +401,6 @@ func (c *Census) Uncovered(est []StratumEstimate) []Stratum {
 	}
 	slices.SortFunc(out, func(x, y Stratum) int { return cmp.Or(cmp.Compare(x.Kind, y.Kind), cmp.Compare(x.Decade, y.Decade)) })
 	return out
-}
-
-func (o Overlap) strataFraction(s Stratum, wB float64) float64 {
-	if o.Lookup {
-		wB = 1
-	}
-	n := o.Strata[s]
-	return fraction(n[1], n[0], wB)
 }
 
 func round(f float64) int { return int(f + 0.5) }

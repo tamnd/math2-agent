@@ -234,7 +234,7 @@ func TestReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := b.String()
-	for _, want := range []string{"# Census of the catalogues of resources", "| a | 50 | 1.00 | 50 | 0 | 0 | 0 | 50 |", "## Counts by MSC2", "| a | b | records | 50 | 25 |", "| a | b | article | 1990s |", "## Strata with no independent pair", "| book | 1950s |"} {
+	for _, want := range []string{"# Census of the catalogues of resources", "| a | 50 | 1.00 | 50 | 0 | 0 | 0 | 50 |", "## Counts by MSC2", "| a | b | records | 50 | 25 |", "| a | b | article | 1990s |", "## Strata with no estimate", "| book | 1950s |"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the report does not have %q:\n%s", want, out)
 		}
@@ -242,5 +242,56 @@ func TestReport(t *testing.T) {
 	var none strings.Builder
 	if err := c.WriteReport(&none, nil); err != nil || !strings.Contains(none.String(), "gives no estimate") {
 		t.Errorf("the report with no pair: %v\n%s", err, none.String())
+	}
+}
+
+func TestLookupNeedsWhole(t *testing.T) {
+	c := New(scope.Env{}, 1000, 1)
+	// A has the works 0 to 299, and a lookup finds each one in B. B has the same works, but only the works below 100 are in. B also has the in works 300 to 599.
+	for i := range 300 {
+		c.Add("b", article(300+i))
+		r := article(i)
+		r.Found = map[string]bool{"b": true}
+		c.Add("a", r)
+		b := article(i)
+		if i >= 100 {
+			b.Signals = scope.Record{MSC: []string{"62F10"}}
+		}
+		c.Add("b", b)
+	}
+	est := c.Estimates([][2]string{{"a", "b"}})
+	if len(est) != 1 || est[0].M != 100 {
+		t.Fatalf("m = %+v, want the 100 in works of b, not the 300 that the lookup finds", est)
+	}
+	c.Whole = map[string]bool{"b": true}
+	if est := c.Estimates([][2]string{{"a", "b"}}); len(est) != 1 || est[0].M != 300 {
+		t.Fatalf("m = %+v, want the 300 works that the lookup finds in a whole catalogue", est)
+	}
+}
+
+func TestThinStratum(t *testing.T) {
+	c := New(scope.Env{}, 1000, 1)
+	for i := range 300 {
+		c.Add("a", article(i))
+	}
+	for i := range 5 {
+		c.Add("b", article(i))
+	}
+	if est := c.Estimates([][2]string{{"a", "b"}}); len(est) != 0 {
+		t.Fatalf("a stratum with %d matches has the estimate %+v", 5, est)
+	}
+}
+
+func TestPairSample(t *testing.T) {
+	full := PairSample(Sample{NA: 400, NB: 300, Sampled: 400, Matched: 120, WB: 1}, 7)
+	if full.N != Chapman(400, 300, 120) || full.CI.Low > full.N || full.CI.High < full.N {
+		t.Fatalf("estimate %+v", full)
+	}
+	sampled := PairSample(Sample{NA: 400, NB: 300, KA: 40, KB: 30, Sampled: 40, Matched: 12, WB: 1}, 7)
+	if sampled.N != full.N || sampled.CI.High-sampled.CI.Low <= full.CI.High-full.CI.Low {
+		t.Errorf("the interval of small samples %v is not wider than %v", sampled.CI, full.CI)
+	}
+	if again := PairSample(Sample{NA: 400, NB: 300, KA: 40, KB: 30, Sampled: 40, Matched: 12, WB: 1}, 7); again != sampled {
+		t.Error("the same seed gives another interval")
 	}
 }

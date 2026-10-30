@@ -43,7 +43,7 @@ func (c *Census) WriteReport(w io.Writer, pairs [][2]string) error {
 	}
 
 	fmt.Fprintf(&b, "## Overlap\n\n")
-	fmt.Fprintf(&b, "Each row gives the share of the sample of in records of A that has a match in B. The match is a lookup of the DOI in the API of B, or else a strong id or the title and the first author in the records of B. A match in the records of B is corrected by the weight of B.\n\n")
+	fmt.Fprintf(&b, "Each row gives the share of the sample of in records of A that has a match in B. The match is a lookup of the DOI in the API of B, or else a strong id or the title and the first author in the records of B. A match in the records of B is corrected by the weight of B. A lookup tells that B has the work, not that B has it in scope.\n\n")
 	fmt.Fprintf(&b, "| A | B | Match | Sampled | Matched | Share |\n|---|---|---|--:|--:|--:|\n")
 	for _, o := range c.Overlaps() {
 		how := "records"
@@ -63,7 +63,7 @@ func (c *Census) WriteReport(w io.Writer, pairs [][2]string) error {
 		for i, p := range pairs {
 			names[i] = p[0] + " and " + p[1]
 		}
-		fmt.Fprintf(&b, "The pairs that are taken as independent are: %s. Each row gives the Chapman estimate of the in works of the stratum, its 95%% interval by the bootstrap over %d samples, and the recall of each catalogue.\n\n", strings.Join(names, "; "), Bootstraps)
+		fmt.Fprintf(&b, "The pairs that are taken as independent are: %s. Each row gives the Chapman estimate of the in works of the stratum, its 95%% interval by a bootstrap of %d rounds over the samples of A, of B and of the match, and the recall of each catalogue. The count m is the in works of A that are in works of B. A lookup counts for m only when B is a catalogue of mathematics alone (%s), and else the sample of A is matched against the in records of B. A stratum needs %d records of the sample of A and %d matches for an estimate.\n\n", strings.Join(names, "; "), Bootstraps, c.wholeNames(), MinSampled, MinMatched)
 		fmt.Fprintf(&b, "| A | B | Kind group | Decade | n A | n B | m | Estimate | Low | High | Recall A | Recall B |\n|---|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|\n")
 		slices.SortStableFunc(est, func(x, y StratumEstimate) int {
 			return cmp.Or(cmp.Compare(x.Stratum.Kind, y.Stratum.Kind), cmp.Compare(x.Stratum.Decade, y.Stratum.Decade))
@@ -74,12 +74,12 @@ func (c *Census) WriteReport(w io.Writer, pairs [][2]string) error {
 		b.WriteString("\n")
 	}
 
-	fmt.Fprintf(&b, "## Strata with no independent pair\n\n")
+	fmt.Fprintf(&b, "## Strata with no estimate\n\n")
 	un := c.Uncovered(est)
 	if len(un) == 0 {
 		b.WriteString("Each stratum with in records has an estimate.\n")
 	} else {
-		b.WriteString("| Kind group | Decade |\n|---|---|\n")
+		b.WriteString("These strata have in records, but no independent pair has enough of them for an estimate.\n\n| Kind group | Decade |\n|---|---|\n")
 		for _, s := range un {
 			fmt.Fprintf(&b, "| %s | %s |\n", s.Kind, s.Decade)
 		}
@@ -101,3 +101,18 @@ func tallyCells(t Tally) string {
 
 // num writes a count with no decimals.
 func num(f float64) string { return fmt.Sprintf("%.0f", f) }
+
+// wholeNames gives the names of Whole, or none.
+func (c *Census) wholeNames() string {
+	var names []string
+	for n, ok := range c.Whole {
+		if ok {
+			names = append(names, n)
+		}
+	}
+	if len(names) == 0 {
+		return "none"
+	}
+	slices.Sort(names)
+	return strings.Join(names, ", ")
+}
