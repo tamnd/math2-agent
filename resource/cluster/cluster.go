@@ -100,6 +100,43 @@ type Result struct {
 	Pairs     []Pair              // the items of the queue res-cluster
 	Joins     map[string]int      // the joins of each pass
 	Skipped   int                 // the blocks of C4 that had more than MaxBlock records
+	Log       []Join              // each join, in the order of the passes
+}
+
+// Join is one join of two groups: the keys of the two records that the pass compared, and the pass.
+type Join struct {
+	A, B string
+	Pass string
+}
+
+// JoinedBy gives, for each pair of record keys, the pass of the join that put the two records in one resource, or "" when the run kept them apart. The log is in the order of the passes, so it replays the log once for each pass.
+func (r *Result) JoinedBy(pairs [][2]string) []string {
+	out := make([]string, len(pairs))
+	parent := map[string]string{}
+	var find func(string) string
+	find = func(x string) string {
+		p, ok := parent[x]
+		if !ok || p == x {
+			return x
+		}
+		root := find(p)
+		parent[x] = root
+		return root
+	}
+	for k := 0; k < len(r.Log); {
+		pass := r.Log[k].Pass
+		for ; k < len(r.Log) && r.Log[k].Pass == pass; k++ {
+			if x, y := find(r.Log[k].A), find(r.Log[k].B); x != y {
+				parent[y] = x
+			}
+		}
+		for i, p := range pairs {
+			if out[i] == "" && find(p[0]) == find(p[1]) {
+				out[i] = pass
+			}
+		}
+	}
+	return out
 }
 
 type groups struct {
@@ -109,6 +146,7 @@ type groups struct {
 	joins  map[string]int
 	pairs  []Pair
 	seen   map[[2]int]bool
+	log    []Join
 	apart  [][2]int     // the pairs of records that a person split
 	lose   map[int]bool // the records of the side B of a split, which do not keep the id of the side A
 }
@@ -138,6 +176,7 @@ func (g *groups) merge(i, j int) {
 		g.kinds[a][k] = true
 	}
 	g.joins[Person]++
+	g.log = append(g.log, Join{g.rs[i].Key(), g.rs[j].Key(), Person})
 }
 
 func (g *groups) find(i int) int {
@@ -170,6 +209,7 @@ func (g *groups) join(i, j int, pass string) bool {
 		g.kinds[a][k] = true
 	}
 	g.joins[pass]++
+	g.log = append(g.log, Join{g.rs[i].Key(), g.rs[j].Key(), pass})
 	return true
 }
 
@@ -244,6 +284,7 @@ func Run(in Input) (*Result, error) {
 		return nil, err
 	}
 	res.Skipped = skipped
+	res.Log = g.log
 	return res, nil
 }
 
