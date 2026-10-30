@@ -79,9 +79,10 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. `-mentions` also writes the mentions. | written |
 | `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list, `m2 wp fetch` reads each article of the scope list from a dump, `m2 wp parsoid` fetches the Parsoid HTML of each article, and `m2 wp pointers` collects the incoming pointers of each article. `m2 wp census report` writes the completeness report, and `m2 wp census diff` prints the readings of one article side by side. `refresh` arrives in a later milestone of the Wikipedia roadmap. | written |
-| `m2 res mint` | Change the provisional ids of the resources in `records/resources/` to resource ids, and add the ids to `registers/resources/`. The other subcommands of `m2 res` (`import`, `resolve`, `cluster`, `scope`, `show`, `queue`, `refs`, `status` and `gaps`) arrive in the milestones RS-M2 to RS-M4. | written |
+| `m2 res mint` | Change the provisional ids of the resources in `records/resources/` to resource ids, and add the ids to `registers/resources/`. The other subcommands of `m2 res` (`import`, `resolve`, `scope`, `show`, `queue`, `refs`, `status` and `gaps`) arrive in the milestones RS-M2 to RS-M4. | written |
 | `m2 res census` | Count the records of each catalogue by scope outcome and by stratum, measure the overlap of each pair of catalogues, and give the Chapman estimate of each independent pair. The report goes to `reports/resources-census.md`. | written |
 | `m2 res sample` | Take a random sample of the API of one catalogue (zbMATH Open, OpenAlex, Crossref, HAL or Open Library), or read the arXiv metadata plane in full, and write the census records to `<catalogue>.jsonl`. | written |
+| `m2 res cluster` | Group the source records of `build/resources/source-records/` into resources with the passes C1 to C5, write `records/resources/`, write the queue `res-cluster`, and mint the ids of the new resources. | written |
 | `m2 res lookup` | Look up the DOIs of a random part of the `in` records of each census file in the other catalogues, so that the census can measure the overlap of a sampled catalogue. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
@@ -535,6 +536,12 @@ m2 res sample -catalogue arxiv -arxiv ../arxiv/metadata -dir census/
 m2 res sample -catalogue zbmath -n 10000 -dir census/
 m2 res lookup -dir census/ -n 2000
 ```
+
+### Clustering
+
+`m2 res cluster -root ../math2` reads the source records of `build/resources/source-records/<source>/*.jsonl` and the links of the crosswalks in `build/resources/crosswalks/*.jsonl`, and groups the records into works (RS10). Pass C1 joins two records with one strong id (DOI, arXiv, Zbl, JFM, MR, Open Library edition, Wikidata, OpenAlex, HAL, course or offering). Pass C2 joins the two ids of a link of a crosswalk. Pass C3 joins two records with one ISBN-13 when the titles agree or the records have one family name. Pass C4 compares the records of one block (the family name of the first creator and the year, or the venue, the volume and the first page) with a score from the title, the creators and the year. A score of 0.9 or more joins, and a score from 0.75 to 0.9 goes to the queue. Pass C5 joins the records with one normal title and one first creator, and the records that an Open Library work or a relation `translation_of` links. A chapter never joins its volume, and such a pair goes to the queue for a person.
+
+In one work, a preprint, each edition and each translation is an expression, and each ISBN is a manifestation. The title, the creators, the MSC codes and the kind come from the record of the source with the highest precedence (`cluster.Precedence`). A work keeps the id of the resource that had its records. When one work has the records of two resources, the older id stays and the other resource gets the scope `duplicate` with the target. A new work gets a provisional id from a hash of its records, and the command mints it unless `-no-mint` is given. The queue goes to `build/resources/queues/res-cluster.jsonl`.
 
 ## The Wikipedia corpus
 
