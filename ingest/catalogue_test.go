@@ -28,3 +28,18 @@ func TestCadence(t *testing.T) {
 		t.Error("the cadence none has days, or a source with no snapshot has a last snapshot")
 	}
 }
+
+func TestLineage(t *testing.T) {
+	s := Source{ID: "openalex", Name: "OpenAlex", Licence: "CC0-1.0", Class: ClassOf("CC0-1.0"), Lineage: []string{"crossref", "pubmed"}}
+	if p := s.Problems(); len(p) != 0 {
+		t.Errorf("Problems = %v, want none", p)
+	}
+	s.Lineage = []string{"crossref", "openalex", "crossref"}
+	if p := s.Problems(); len(p) != 2 {
+		t.Errorf("Problems = %v, want the source itself and the repeat", p)
+	}
+	c := Catalogue{Sources: []Source{s, {ID: "zbmath"}}}
+	if l := c.Lineage(); len(l) != 1 || len(l["openalex"]) != 3 {
+		t.Errorf("Lineage = %v", l)
+	}
+}
