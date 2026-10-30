@@ -99,6 +99,9 @@ func TestEachItemGetsAMention(t *testing.T) {
 	if thm.Number != "1.3" || len(thm.Versions) != 1 || thm.Versions[0] != (inventory.VersionRef{Version: 1, Number: "1.2"}) {
 		t.Errorf("theorem number %q, versions %v", thm.Number, thm.Versions)
 	}
+	if thm.At == nil || thm.At.Kind != "theorem" || thm.At.Number != "1.3" {
+		t.Errorf("theorem at %+v", thm.At)
+	}
 	if len(thm.Also) != 1 || !strings.Contains(thm.Also[0], "2.1") {
 		t.Errorf("theorem also %v", thm.Also)
 	}

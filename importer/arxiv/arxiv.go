@@ -18,6 +18,7 @@
 package arxiv
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -404,6 +405,11 @@ func (vp *versionIn) mention(o Object) inventory.Mention {
 		Flags:       o.Flags,
 		Extractor:   o.Extractor,
 	}
+	at := inventory.At{Kind: cmp.Or(role, kind), Number: o.Number}
+	if sec := vp.byLocal[o.Section]; sec != nil {
+		at.Section = sec.Number
+	}
+	m.At = &at
 	if vp.class != "record" {
 		m.Name = HeadName(o.Name)
 		m.TextRef = vp.file + "#" + o.Local + "@v" + strconv.Itoa(vp.v)
