@@ -10,7 +10,7 @@ import (
 	"github.com/tamnd/math2-agent/resource"
 )
 
-const resUsage = "m2 res mint [-root DIR] [-commit C]\n       " + resCensusUsage + "\n       " + resSampleUsage + "\n       " + resLookupUsage + "\n       " + resClusterUsage + "\n       " + resResolveUsage + "\n       " + resScopeUsage + "\n       " + resImportUsage + "\n       " + resShowUsage + "\n       " + resQueueUsage + "\n       " + resStatusUsage + "\n       " + resGoldUsage + "\n       " + resRefsUsage + "\n       " + resRecordsUsage + "\n       m2 res gaps"
+const resUsage = "m2 res mint [-root DIR] [-commit C]\n       " + resCensusUsage + "\n       " + resSampleUsage + "\n       " + resLookupUsage + "\n       " + resClusterUsage + "\n       " + resResolveUsage + "\n       " + resScopeUsage + "\n       " + resImportUsage + "\n       " + resShowUsage + "\n       " + resQueueUsage + "\n       " + resStatusUsage + "\n       " + resGoldUsage + "\n       " + resRefsUsage + "\n       " + resRecordsUsage + "\n       " + resCompetitionsUsage + "\n       m2 res gaps"
 
 // resLater holds the res subcommands that are not written yet, with the milestone of the resources roadmap (RS15) that delivers each of them.
 var resLater = map[string]string{
@@ -49,6 +49,8 @@ func runRes(args []string, stdout, stderr io.Writer) int {
 		return runResStatus(args[1:], stdout, stderr)
 	case sub == "records":
 		return runResRecords(args[1:], stdout, stderr)
+	case sub == "competitions":
+		return runResCompetitions(args[1:], stdout, stderr)
 	case sub == "gold":
 		return runResGold(args[1:], stdout, stderr)
 	case resLater[sub] != "":
