@@ -68,3 +68,40 @@ func TestResImportRefs(t *testing.T) {
 		t.Errorf("a build with no lookup has other records, and it needs its own snapshot: %+v", cat.Source("refs").Snapshots)
 	}
 }
+
+func TestResImportS2(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("%s %s", r.Method, r.Header.Get("Content-Type"))
+		}
+		_, _ = w.Write([]byte(`[{"corpusId":42,"title":"A","year":2001,"externalIds":{"DOI":"10.1/a"}},null]`))
+	}))
+	defer srv.Close()
+	saved := s2URL
+	t.Cleanup(func() { s2URL = saved })
+	s2URL = srv.URL
+
+	root := t.TempDir()
+	in := &resource.Scope{Value: resource.In}
+	if err := resource.WriteResources(root, []resource.Resource{
+		{ID: "8F2AAAAAA3", Kind: "article", Title: "A", Scope: in, IDs: resource.IDs{"doi": {"10.1/a"}}},
+		{ID: "8F2BBBBBB6", Kind: "article", Title: "B", Scope: in, IDs: resource.IDs{"doi": {"10.1/b"}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := run("res", "import", "-root", root, "-gap", "0", "s2")
+	if code != ExitOK || !strings.Contains(stdout, "s2: asked 2, found 1, records 1, rejected 0, requests 1") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	recs, err := rescluster.ReadRecords(root)
+	if err != nil || len(recs) != 1 || recs[0].IDs["s2"][0] != "42" || recs[0].Source != "s2" {
+		t.Fatalf("records %+v, %v", recs, err)
+	}
+	cat, err := ingest.ReadCatalogue(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if src := cat.Source("s2"); src == nil || len(src.Snapshots) != 1 || src.Licence != "ODC-By-1.0" {
+		t.Fatalf("source %+v", src)
+	}
+}
