@@ -1,0 +1,2 @@
+# the ban list of RS14.5
+shadow.example

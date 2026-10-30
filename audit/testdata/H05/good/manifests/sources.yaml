@@ -1,0 +1,20 @@
+sources:
+  - id: openlibrary
+    name: Open Library
+    kind: catalogue
+    licence: LicenseRef-unknown
+    class: record
+    approved_by: tamnd
+    snapshots:
+      - url: https://openlibrary.org/developers/dumps
+        hash: blake3:0000000000000000000000000000000000000000000000000000000000000000
+        date: "2026-10-01"
+  - id: crossref
+    name: Crossref
+    kind: catalogue
+    licence: LicenseRef-facts
+    class: record
+    snapshots:
+      - url: https://api.crossref.org/works
+        hash: blake3:0000000000000000000000000000000000000000000000000000000000000000
+        date: "2026-10-01"

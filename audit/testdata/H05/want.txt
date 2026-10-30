@@ -1,0 +1,3 @@
+records/resources/8F2.md:2:1: H05: the resource 8F2AAAAAA3 has no catalogue record from a source that a person approved in manifests/sources.yaml
+records/resources/8F2.md:3:1: H05: the resource 8F2BBBBBBT has no catalogue record from a source that a person approved in manifests/sources.yaml
+records/resources/8F2.md:4:1: H05: the resource 8F2CCCCCCH has no catalogue record from a source that a person approved in manifests/sources.yaml
