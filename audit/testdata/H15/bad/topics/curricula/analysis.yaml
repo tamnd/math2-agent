@@ -1,0 +1,14 @@
+curriculum: analysis
+title: Real analysis
+texts:
+  - {name: "Rudin, Principles of Mathematical Analysis", resource: 8F2K1QW7ZJ, kind: book}
+  - {name: "Apostol, Mathematical Analysis", kind: book}
+courses:
+  - course: analysis-1
+    title: Analysis 1
+    year: 1
+    texts:
+      - {name: "Notes of the course", resource: 8F2ZZZZZZ3, kind: notes}
+      - {name: "Rudin, the copy of another edition", resource: 8F2AAAAAA3, kind: book}
+    items:
+      - {name: "limit", kind: definition, wikipedia: Limit (mathematics)}

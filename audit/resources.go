@@ -514,3 +514,40 @@ func h16(a *auditor) outcome {
 	}
 	return o
 }
+
+// h15 reports each work that a curriculum names and that has no resource (rule H15, curriculum closure of RS11.6). A text with no resource id, a text whose id is not in the catalogue and a text that names a duplicate are findings. The target is 0.
+func h15(a *auditor) outcome {
+	var o outcome
+	texts, err := resource.ReadTexts(a.root)
+	if err != nil {
+		o.add(resource.CurriculaDir, 0, 0, "%v", err)
+		return o
+	}
+	if len(texts) == 0 {
+		o.reason = "no curriculum names a text"
+		return o
+	}
+	t := a.resources()
+	if t.err != nil {
+		o.add(resource.Dir, 0, 0, "%v", t.err)
+		return o
+	}
+	byID := map[string]*resRecord{}
+	for i := range t.recs {
+		byID[t.recs[i].ID] = &t.recs[i]
+	}
+	for _, x := range texts {
+		o.checked++
+		id, _, _ := strings.Cut(x.Resource, "/")
+		r, ok := byID[id]
+		switch {
+		case x.Resource == "":
+			o.add(x.File, x.Line, 1, "the text %q has no resource id. Find its resource, or add one at T1", x.Name)
+		case !ok:
+			o.add(x.File, x.Line, 1, "the text %q names the resource %s, which is not in the catalogue", x.Name, id)
+		case !r.Live():
+			o.add(x.File, x.Line, 1, "the text %q names the duplicate %s. Name %s, the live resource", x.Name, id, r.Scope.Target)
+		}
+	}
+	return o
+}
