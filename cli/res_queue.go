@@ -33,7 +33,7 @@ func runResQueue(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	root := fs.String("root", ".", "the math2 working tree")
 	n := fs.Int("n", 50, "the most items to list. 0 means all")
-	decide := fs.String("decide", "", "the target of the item to decide: a resource id, two resource ids for res-cluster, or a reference for res-resolve")
+	decide := fs.String("decide", "", "the target of the item to decide: a resource id for res-scope, two record keys or resource ids for res-cluster, or a reference for res-resolve")
 	value := fs.String("value", "", "the decision: in, border, out or duplicate for res-scope; merge or split for res-cluster; found or not-found for res-resolve")
 	to := fs.String("to", "", "the live resource of a duplicate, or the resource of a reference")
 	reason := fs.String("reason", "", "why the person decided so")
@@ -129,7 +129,7 @@ func queueDecision(name, target, value, to string) (resscope.PersonDecision, err
 	case "res-cluster":
 		a, b, ok := strings.Cut(strings.TrimSpace(target), " ")
 		if !ok || (value != "merge" && value != "split") {
-			return d, errors.New("a decision of res-cluster names two resources in -decide and has the value merge or split")
+			return d, errors.New("a decision of res-cluster names two record keys or resource ids in -decide and has the value merge or split")
 		}
 		return resscope.PersonDecision{ID: a, Kind: value, Target: strings.TrimSpace(b)}, nil
 	case "res-resolve":

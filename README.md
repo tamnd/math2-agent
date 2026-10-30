@@ -593,7 +593,7 @@ m2 res queue -decide 8F2K1QW7ZJ -value in -reason "a textbook of analysis" -by g
 m2 res queue -decide "8F2K1QW7ZJ 8F2AAAAAA3" -value merge -reason "one book" -by github:octocat res-cluster
 ```
 
-A decision of `res-scope` is `in`, `border`, `out` or `duplicate` with `-to`. A decision of `res-cluster` is `merge` or `split` of two resources. A decision of `res-resolve` is `found` with `-to` or `not-found`. The items of `res-structure` are not decided here.
+A decision of `res-scope` is `in`, `border`, `out` or `duplicate` with `-to`. A decision of `res-cluster` is `merge` or `split` of two sides. Each side is the key of a source record, as `crossref:10.1000/x`, or a resource id. A merge puts the records of the two sides into one cluster. A split keeps the records of the second side out of the cluster of the first side. A decision of `res-resolve` is `found` with `-to` or `not-found`. The items of `res-structure` are not decided here.
 
 ## The Wikipedia corpus
 
