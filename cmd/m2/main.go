@@ -53,6 +53,7 @@ import (
 	_ "github.com/tamnd/math2-agent/resource/adapters/ocw"
 	_ "github.com/tamnd/math2-agent/resource/adapters/openalex"
 	_ "github.com/tamnd/math2-agent/resource/adapters/openlibrary"
+	_ "github.com/tamnd/math2-agent/resource/adapters/oyc"
 	_ "github.com/tamnd/math2-agent/resource/adapters/series"
 	_ "github.com/tamnd/math2-agent/resource/adapters/swmath"
 	_ "github.com/tamnd/math2-agent/resource/adapters/thesesfr"

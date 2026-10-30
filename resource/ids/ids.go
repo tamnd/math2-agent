@@ -30,6 +30,8 @@ var (
 	rorRE  = regexp.MustCompile(`^0[0-9a-hjkmnp-tv-z]{6}[0-9]{2}$`)
 	// carminSlug is the slug of a video or a collection of Carmin.tv, as the-pentagram-map-and-ramifications. A long slug is cut, and can end in a hyphen.
 	carminSlug = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
+	// oycPath is the path of the page of an offering of Open Yale Courses, as economics/econ-159: the department, then the course.
+	oycPath = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*$`)
 )
 
 var systems = map[string]system{
@@ -85,6 +87,7 @@ var systems = map[string]system{
 	"course":       {re: regexp.MustCompile(`^[^:\s]+:\S+$`), check: course},
 	"offering":     {re: regexp.MustCompile(`^[^:\s]+:\S+:\S+$`), check: offering},
 	"ocw":          {re: slug},
+	"oyc":          {strip: []string{"https://oyc.yale.edu/", "http://oyc.yale.edu/"}, fold: strings.ToLower, re: oycPath},
 	"coursera":     {re: slug},
 	"edx":          {re: slug},
 	"nptel":        {fold: zeros, re: digits},
