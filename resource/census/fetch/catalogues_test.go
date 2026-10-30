@@ -63,12 +63,14 @@ func TestOAIBooks(t *testing.T) {
 		`<dc:identifier>https://doi.org/10.1515/ABC</dc:identifier><dc:alternateIdentifier type="ISBN">9783110000009</dc:alternateIdentifier><dc:language>ger</dc:language>`)
 	history := dcRec("oai:library.oapen.org:20.500.12657/2", `<dc:title>History</dc:title><dc:subject type="classification">thema EDItEUR::N History and Archaeology</dc:subject>`)
 	chapter := dcRec("oai:library.oapen.org:20.500.12657/3", `<dc:title>Chapter</dc:title><dc:subject type="classification">bic Book Industry Communication::P Mathematics &amp; science::PB Mathematics</dc:subject><oaire:resourceType>chapter</oaire:resourceType>`)
+	doab := dcRec("oai:directory.doabooks.org:20.500.12854/5", `<dc:title>Topology</dc:title><dc:subject>thema EDItEUR::P Mathematics and Science::PB Mathematics::PBP Topology</dc:subject><dc:subject>PB keyword</dc:subject>`)
+	keyword := dcRec("oai:directory.doabooks.org:20.500.12854/6", `<dc:title>Lead</dc:title><dc:subject>PB lead</dc:subject>`)
 	gone := `<record><header status="deleted"><identifier>oai:library.oapen.org:20.500.12657/4</identifier></header></record>`
-	srv := oaiServer(t, "books", oaiPage("t2", book, history, gone), oaiPage("", chapter))
+	srv := oaiServer(t, "books", oaiPage("t2", book, history, gone), oaiPage("", chapter, doab, keyword))
 	defer srv.Close()
 	rs, info := collect(t, OAIBooks{Catalogue: "oapen", Base: srv.URL, Set: "books"}, 10)
-	if info.Total != 2 || len(rs) != 2 {
-		t.Fatalf("info = %+v, records = %+v", info, rs)
+	if info.Total != 3 || len(rs) != 3 {
+		t.Fatalf("info = %+v, records = %+v. A class with no type, as DOAB gives it, counts, and a keyword does not", info, rs)
 	}
 	r := rs[0]
 	if r.NativeID != "20.500.12657/1" || r.Kind != "monograph" || r.Title != "Numerical analysis" || r.Date != "2021" || r.Language != "de" ||

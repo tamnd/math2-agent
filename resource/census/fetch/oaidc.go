@@ -155,6 +155,11 @@ func ThemaMath(class string) bool {
 	return false
 }
 
+// classPrefix reports whether a subject is a class of Thema or BIC by its text. DOAB gives the classes with no type, as "thema EDItEUR::P Mathematics and Science::PB Mathematics".
+func classPrefix(subject string) bool {
+	return strings.HasPrefix(subject, "thema EDItEUR::") || strings.HasPrefix(subject, "bic Book Industry Communication::")
+}
+
 // Sample harvests each record of the set and keeps the books of mathematics.
 func (b OAIBooks) Sample(ctx context.Context, c *Client, n int, seed uint64, emit func(census.Record) error) (Info, error) {
 	info := Info{Filter: "the records with a Thema or BIC class in PB Mathematics, OAI-PMH format oai_dc"}
@@ -162,7 +167,7 @@ func (b OAIBooks) Sample(ctx context.Context, c *Client, n int, seed uint64, emi
 	err := harvestDC(ctx, c, b.Base, b.Set, func(id string, m dcMeta) {
 		math := false
 		for _, s := range m.Subject {
-			if s.Type == "classification" && ThemaMath(s.Value) {
+			if (s.Type == "classification" || classPrefix(s.Value)) && ThemaMath(s.Value) {
 				math = true
 				break
 			}
