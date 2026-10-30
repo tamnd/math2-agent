@@ -244,6 +244,8 @@ func (rep *Report) Markdown() []byte {
 			t1 = t.Below
 		}
 	}
+	below, unmeasured := Unmet(rep.Recall)
+	fmt.Fprintf(&b, "| strata below the recall target | %d | 0 | %s |\n", len(below), state(len(below) == 0 && len(unmeasured) == 0 && len(rep.Recall) > 0))
 	fmt.Fprintf(&b, "| depth gap of tier T1 | %d | 0 | %s |\n", t1, state(t1 == 0))
 	fmt.Fprintf(&b, "\n## 2. Coverage by source\n\n")
 	if len(rep.Coverage) == 0 {
@@ -282,14 +284,22 @@ func (rep *Report) Markdown() []byte {
 	if len(rep.Recall) == 0 {
 		fmt.Fprintf(&b, "No live resource in scope has a date.\n")
 	} else {
-		fmt.Fprintf(&b, "The estimate of each stratum is a log-linear model of the capture histories, with the catalogues that share lineage merged into one capture. The interval is the 95%% interval of a bootstrap. A stratum uses at most %d captures.\n\n| Kind | Decade | Resources | Captures | Model | Estimate | Interval | Recall | Recall at least |\n|---|---|---:|---|---|---:|---|---:|---:|\n", MaxCaptures)
+		fmt.Fprintf(&b, "The estimate of each stratum is a log-linear model of the capture histories, with the catalogues that share lineage merged into one capture. The interval is the 95%% interval of a bootstrap. A stratum uses at most %d captures.\n\n| Kind | Decade | Resources | Captures | Model | Estimate | Interval | Recall | Recall at least | Target |\n|---|---|---:|---|---|---:|---|---:|---:|---:|\n", MaxCaptures)
 		for _, r := range rep.Recall {
 			if r.Model == "" {
-				fmt.Fprintf(&b, "| %s | %s | %d | %s | %s | | | | |\n", r.Kind, r.Decade, r.Resources, strings.Join(r.Captures, ", "), r.Reason)
+				fmt.Fprintf(&b, "| %s | %s | %d | %s | %s | | | | | %s |\n", r.Kind, r.Decade, r.Resources, strings.Join(r.Captures, ", "), r.Reason, target(r))
 				continue
 			}
-			fmt.Fprintf(&b, "| %s | %s | %d | %s | %s | %.0f | %.0f to %.0f | %.3f | %.3f |\n", r.Kind, r.Decade, r.Resources, strings.Join(r.Captures, ", "), r.Model, r.N, r.Low, r.High, r.Recall, r.RecallLow)
+			fmt.Fprintf(&b, "| %s | %s | %d | %s | %s | %.0f | %.0f to %.0f | %.3f | %.3f | %s |\n", r.Kind, r.Decade, r.Resources, strings.Join(r.Captures, ", "), r.Model, r.N, r.Low, r.High, r.Recall, r.RecallLow, target(r))
 		}
+		fmt.Fprintf(&b, "\n%d strata are below their target (rule H12), and %d strata with a target have no estimate.", len(below), len(unmeasured))
+		if len(below) > 0 {
+			fmt.Fprintf(&b, " Below the target: %s.", strings.Join(strata(below), ", "))
+		}
+		if len(unmeasured) > 0 {
+			fmt.Fprintf(&b, " With no estimate: %s.", strings.Join(strata(unmeasured), ", "))
+		}
+		b.WriteString("\n")
 	}
 	fmt.Fprintf(&b, "\n## 6. Curriculum closure\n\nThe curricula name %d texts, and %d of them have no live resource (rule H15).\n", rep.Closure.Texts, len(rep.Closure.Missing))
 	if len(rep.Closure.Missing) > 0 {
@@ -324,6 +334,25 @@ func state(ok bool) string {
 		return "met"
 	}
 	return "not met"
+}
+
+// target gives the target of a stratum for the report, with the mark below when the stratum is below it.
+func target(r Recall) string {
+	switch {
+	case r.Target == 0:
+		return "none"
+	case r.Below:
+		return fmt.Sprintf("%.2f, below", r.Target)
+	}
+	return fmt.Sprintf("%.2f", r.Target)
+}
+
+func strata(rs []Recall) []string {
+	var out []string
+	for _, r := range rs {
+		out = append(out, r.Kind+" "+r.Decade)
+	}
+	return out
 }
 
 func first(xs []string, n int) []string { return xs[:min(n, len(xs))] }
