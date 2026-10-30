@@ -12,7 +12,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/ids"
 )
 
-// Records reads the metadata plane and emits one source record for each mathematics paper (RS13.1). The kind is preprint. The date is the date of the first version, or the month of the id when the plane has no date. The DOI of the published version goes into the ids, because the preprint and the publication are expressions of one work (RS10.4).
+// Records reads the metadata plane and emits one source record for each mathematics paper (RS13.1). The kind is preprint, or lecture-notes when the rule set NotesRules marks the paper (RS7.1). The date is the date of the first version, or the month of the id when the plane has no date. The DOI of the published version goes into the ids, because the preprint and the publication are expressions of one work (RS10.4).
 func (Adapter) Records(r io.Reader, emit func(cluster.Record) error) error {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(nil, 16<<20)
@@ -45,6 +45,9 @@ func sourceRecord(p paper) cluster.Record {
 		MSC:      MSC(p.MSCClass),
 		IDs:      resource.IDs{},
 		Links:    []string{"https://arxiv.org/abs/" + p.ID},
+	}
+	if _, ok := Notes(p.Title, p.Comments, p.Categories); ok {
+		rec.Kind = "lecture-notes"
 	}
 	first := 0
 	for _, v := range p.Versions {
