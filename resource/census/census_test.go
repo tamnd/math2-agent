@@ -3,6 +3,8 @@ package census
 import (
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -293,5 +295,55 @@ func TestPairSample(t *testing.T) {
 	}
 	if again := PairSample(Sample{NA: 400, NB: 300, KA: 40, KB: 30, Sampled: 40, Matched: 12, WB: 1}, 7); again != sampled {
 		t.Error("the same seed gives another interval")
+	}
+}
+
+func TestReadEstimates(t *testing.T) {
+	c := New(scope.Env{}, 100, 1)
+	for i := range 50 {
+		c.Add("a", article(i))
+		c.Add("b", article(i+25))
+	}
+	var b strings.Builder
+	if err := c.WriteReport(&b, [][2]string{{"a", "b"}}); err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	path := filepath.Join(root, ReportFile)
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(b.String()), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := ReadEstimates(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := c.Estimates([][2]string{{"a", "b"}})
+	if len(rows) != len(want) || len(rows) == 0 {
+		t.Fatalf("got %d rows, want %d", len(rows), len(want))
+	}
+	r, e := rows[0], want[0]
+	if r.A != "a" || r.B != "b" || r.Kind != e.Stratum.Kind || r.Decade != e.Stratum.Decade || r.High != math.Round(e.CI.High) || r.Line == 0 {
+		t.Errorf("got %+v, want %+v", r, e)
+	}
+	if rows, err := ReadEstimates(t.TempDir()); rows != nil || err != nil {
+		t.Errorf("a tree with no report: %v %v", rows, err)
+	}
+}
+
+func TestTarget(t *testing.T) {
+	for _, c := range []struct {
+		kind, decade string
+		want         float64
+	}{
+		{"article", "1990s", 0.99}, {"article", "2020s", 0.99}, {"article", "1980s", 0}, {"article", "unknown", 0},
+		{"book", "1950s", 0.97}, {"book", "1940s", 0.90}, {"book", "unknown", 0},
+		{"thesis", "1970s", 0.90}, {"report-notes", "2000s", 0.90}, {"course", "2020s", 0.90}, {"other", "2000s", 0},
+	} {
+		if got := Target(c.kind, c.decade); got != c.want {
+			t.Errorf("Target(%s, %s) = %v, want %v", c.kind, c.decade, got, c.want)
+		}
 	}
 }

@@ -535,13 +535,14 @@ A source of `manifests/sources.yaml` can have the kind `catalogue` (its records 
 | H09 | No record holds text of a work. A title, a label and the title of a node of a structure have at most 500 characters, a note of the history and a reason of a scope have at most 500, and a cites edge keeps the text of a reference only when its citing expression has a manifestation of the class `open`. A record with a field for an abstract, a body or the content does not parse, and H06 reports it. |
 | H10 | Each catalogue record names a source of `manifests/sources.yaml` and one of the snapshots of that source. |
 | H11 | A soft rule. It reports each deferred resource whose date has passed. |
+| H12 | A soft rule. It reports each stratum of kind group and decade whose estimated recall is below its target of RS1.7. The recall is the count of in-scope resources over the high end of the interval of the estimate in `reports/resources-census.md`, which `m2 res census` writes. When two or more pairs give an estimate, the rule takes the least recall. |
 | H13 | A soft rule. It reports each resource in scope that is below the target depth of its tier for more than 180 days. It reads `build/resources/depth.md`, which `m2 res status` writes. |
 | H14 | A soft rule. It reports each reference of a live resource at depth D3 or more that resolves to no resource after two resolver runs or more. It reads `build/resources/depth.md` and `build/resources/unresolved.md`. |
 | H15 | A soft rule. It reports each text that a curriculum names and that has no live resource: a text with no resource id, a text whose id is not in the catalogue, and a text that names a duplicate. This is the curriculum closure, and the target is 0. |
 | H16 | No source, catalogue record, link or id key points to a shadow library. The ban list is `manifests/banned-domains.txt` and a list in the code. |
 | H17 | A soft rule. It reports each source of `manifests/sources.yaml` whose last snapshot is older than twice its cadence. The field `cadence` of a source is daily, weekly, monthly, quarterly, yearly or none. A source with the cadence none, for example `refs`, is not checked. |
 
-The rule H12 is in the catalogue and is not written yet.
+Each H rule of the catalogue is written.
 
 A curriculum of `topics/curricula/` names its books, notes, courses and papers by resource id (change to K5.8). The list `texts` is on the curriculum and on each course. Each text has a `name` for display, a `resource` id when it is known (a work, or an expression as `ID/e3`), and a `kind`: `book`, `notes`, `course` or `paper`. For example:
 

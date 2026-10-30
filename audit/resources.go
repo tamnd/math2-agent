@@ -13,6 +13,7 @@ import (
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
+	"github.com/tamnd/math2-agent/resource/census"
 	"github.com/tamnd/math2-agent/resource/cites"
 	"github.com/tamnd/math2-agent/resource/cluster"
 	"github.com/tamnd/math2-agent/resource/depth"
@@ -416,6 +417,60 @@ func h11(a *auditor) outcome {
 	}
 	if o.checked == 0 {
 		o.reason = "no resource is deferred"
+	}
+	return o
+}
+
+// h12 reports each stratum whose estimated recall is below its target (rule H12, RS11.4.5). It reads the estimates of the census report. The recall of a stratum is the count of its live in-scope resources over the high end of the interval of the estimate, so it is the lower end of the interval of the recall. When more than one pair gives an estimate, the rule takes the highest end, which gives the least recall. A stratum with no target is not checked. The rule is a warning before phase R5.
+func h12(a *auditor) outcome {
+	t := a.resources()
+	if o, done := t.skip(); done {
+		return o
+	}
+	var o outcome
+	rows, err := census.ReadEstimates(a.root)
+	if err != nil {
+		o.add(census.ReportFile, 0, 0, "%v", err)
+		return o
+	}
+	if len(rows) == 0 {
+		o.reason = "the tree has no estimate in " + census.ReportFile + ". Run m2 res census"
+		return o
+	}
+	have := map[census.Stratum]int{}
+	for _, r := range t.recs {
+		if r.Live() && r.Scope != nil && r.Scope.Value == resource.In {
+			have[census.Stratum{Kind: census.KindGroup(r.Kind), Decade: census.Decade(r.Date)}]++
+		}
+	}
+	top := map[census.Stratum]census.ReportRow{}
+	var order []census.Stratum
+	for _, row := range rows {
+		s := census.Stratum{Kind: row.Kind, Decade: row.Decade}
+		if census.Target(s.Kind, s.Decade) == 0 {
+			continue
+		}
+		old, ok := top[s]
+		if !ok {
+			order = append(order, s)
+		}
+		if !ok || row.High > old.High {
+			top[s] = row
+		}
+	}
+	for _, s := range order {
+		row, target := top[s], census.Target(s.Kind, s.Decade)
+		o.checked++
+		recall := 0.0
+		if row.High > 0 {
+			recall = float64(have[s]) / row.High
+		}
+		if recall < target {
+			o.add(census.ReportFile, row.Line, 1, "the stratum %s %s has a recall of at least %.3f, which is below the target %.2f. The count of in-scope resources is %d, and the estimate of %s and %s is at most %.0f", s.Kind, s.Decade, recall, target, have[s], row.A, row.B, row.High)
+		}
+	}
+	if o.checked == 0 {
+		o.reason = "no estimate in " + census.ReportFile + " is of a stratum with a target"
 	}
 	return o
 }

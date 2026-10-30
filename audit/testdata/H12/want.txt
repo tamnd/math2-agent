@@ -1,0 +1,1 @@
+reports/resources-census.md:9:1: H12: the stratum book 1950s has a recall of at least 0.500, which is below the target 0.97. The count of in-scope resources is 1, and the estimate of zbmath and openlibrary is at most 2
