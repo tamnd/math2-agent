@@ -48,6 +48,7 @@ type pretext struct {
 	open  map[string]bool // the files that are being read, against a cycle of includes
 	items []item
 	divs  []string // the titles of the open divisions
+	toc   *toc     // the table of contents, when the reader builds one
 }
 
 // readPreTeXt gives the items of the main file of a PreTeXt book and of the files that it includes, in the order of the book.
@@ -137,11 +138,19 @@ func (p *pretext) node(d *xml.Decoder, file string, se xml.StartElement, line in
 	case divisions[name]:
 		p.divs = append(p.divs, "")
 		defer func() { p.divs = p.divs[:len(p.divs)-1] }()
+		var head *tocNode // the node of the division in the table of contents
+		if _, ok := levels[name]; p.toc != nil && (ok || name == "appendix") {
+			head = p.toc.add(name, false, "", cmpOr(attr(se, xmlSpace, "id"), attr(se, "", "label")))
+			defer p.toc.close(head)
+		}
 		return p.children(d, file, w, func(c xml.StartElement, line int) error {
 			if c.Name.Local == "title" && p.divs[len(p.divs)-1] == "" {
 				var b strings.Builder
 				err := p.children(d, file, &sink{b: &b, refs: new([]string)}, nil)
 				p.divs[len(p.divs)-1] = clean(b.String())
+				if head != nil && head.Title == "" {
+					head.Title = strings.Join(strings.Fields(p.divs[len(p.divs)-1]), " ")
+				}
 				return err
 			}
 			return p.node(d, file, c, line, w)

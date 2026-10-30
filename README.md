@@ -514,6 +514,8 @@ An import gives a new resource a provisional id, `~` and eight hex digits. `m2 r
 m2 res mint -root ../math2
 ```
 
+The tables of contents of the open textbooks come from their source (RS4.5). `m2 res import -structure <book>` reads the snapshot of the book again and takes the parts, the chapters, the sections and the subsections, with their numbers and titles, from the LaTeX headings or the PreTeXt divisions. The numbers are the numbers that LaTeX gives: a Roman number for a part, a letter for an appendix and no number for a starred heading. The key of a node is its number, or its label when it has no number. The text between the headings is not kept. The command writes the tree to `records/resources/structure/<id>/<expression>.json` for the first expression of the live resource that groups the source record of the book, with the book as the source and the hash of the snapshot, and it sets the field `structure` of the expression. It fails when no resource groups the record yet, so `m2 res cluster` runs first.
+
 A source of `manifests/sources.yaml` can have the kind `catalogue` (its records are records of works) or `course-platform` (its records are courses). The field `resource` gives the resource id of a source that is one work, for example an open textbook. Each mention of such a textbook gets the field `resource` with this id, and the field `at` with the environment of the item and the number of its section. The field `record_licence` gives the licence of the records when it is not the licence of the texts.
 
 `m2 audit -group H` runs the rules of the catalogue of resources, in the plane `resources`:
