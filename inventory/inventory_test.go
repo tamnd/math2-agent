@@ -170,6 +170,24 @@ func TestFromRecordsDropsShareAlikeText(t *testing.T) {
 	}
 }
 
+func TestFromRecordsTextbookResource(t *testing.T) {
+	src := &ingest.Source{ID: "apex", Kind: "textbook", Licence: "CC-BY-NC-4.0", Class: ingest.Open, Resource: "8F2K1QW7ZJ/e1"}
+	ms := FromRecords(src, "blake3:00", "textbook/1", []ingest.Record{
+		{ID: "a.tex#thm-1", Kind: "statement", Class: ingest.Open, Meta: map[string]string{"environment": "theorem", "section": "3.14 The mean value theorem"}},
+		{ID: "a.tex#def-1", Kind: "definition", Class: ingest.Open, Meta: map[string]string{"section": "Limits"}},
+	})
+	if ms[1].Resource != "8F2K1QW7ZJ/e1" || ms[1].At == nil || *ms[1].At != (At{Section: "3.14", Kind: "theorem"}) {
+		t.Errorf("the theorem is %+v, at %+v", ms[1], ms[1].At)
+	}
+	if ms[0].Resource != "8F2K1QW7ZJ/e1" || ms[0].At != nil {
+		t.Errorf("the definition is %+v, at %+v", ms[0], ms[0].At)
+	}
+	src.Resource = ""
+	if ms := FromRecords(src, "blake3:00", "textbook/1", []ingest.Record{{ID: "x", Class: ingest.Open}}); ms[0].Resource != "" {
+		t.Errorf("a source with no resource gives the resource %q", ms[0].Resource)
+	}
+}
+
 func TestFromRecordsLibrary(t *testing.T) {
 	src := &ingest.Source{ID: "afp", Kind: ingest.Library, Licence: "BSD-3-Clause", Class: ingest.Open, Intake: "crosswalk", Authored: "mixed",
 		Snapshots: []ingest.Snapshot{{Hash: "blake3:00", Commit: "c0"}, {Hash: "blake3:01", Commit: "c1"}}}

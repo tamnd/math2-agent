@@ -22,6 +22,8 @@ import (
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/queue"
+	"github.com/tamnd/math2-agent/resource"
+	resresolve "github.com/tamnd/math2-agent/resource/resolve"
 	"github.com/tamnd/math2-agent/tag"
 )
 
@@ -74,6 +76,33 @@ func writeMentions(root string, src *ingest.Source) (int, error) {
 		return 0, err
 	}
 	return len(ms), nil
+}
+
+// linkPapers sets the field resource of each mention of a paper whose arXiv id is the id of one live resource (corpus resources RS2.8). The field names the expression when the id is the id of an expression. It returns the number of mentions with a resource.
+func linkPapers(root string, ms []inventory.Mention) (int, error) {
+	rs, err := resource.ReadResources(root)
+	if err != nil || len(rs) == 0 {
+		return 0, err
+	}
+	ix := resresolve.Build(rs)
+	n := 0
+	for i := range ms {
+		paper, _, _ := strings.Cut(ms[i].NativeID, "#")
+		key, err := resresolve.Key("arxiv:" + paper)
+		if err != nil {
+			continue
+		}
+		refs := ix.Lookup(key)
+		if len(refs) == 0 || slices.ContainsFunc(refs, func(r resresolve.Ref) bool { return r.Resource != refs[0].Resource }) {
+			continue // no resource, or two resources, which rule H04 reports
+		}
+		ms[i].Resource = refs[0].Resource
+		if refs[0].Expression != "" {
+			ms[i].Resource += "/" + refs[0].Expression
+		}
+		n++
+	}
+	return n, nil
 }
 
 // runCorpusImport changes the records of the last import of each source to mentions, and groups the mentions into rows.
@@ -131,9 +160,17 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
 		}
+		linked, err := linkPapers(*root, res.Mentions)
+		if err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
 		if err := inventory.WriteMentions(*root, *source, res.Mentions); err != nil {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
+		}
+		if linked > 0 {
+			fmt.Fprintf(stdout, "%s: %d mentions name their resource\n", *source, linked)
 		}
 		fmt.Fprintf(stdout, "%s: %d mentions from %d papers, %d attached, %d retired, %d restated prints, %d cited results to a mention and %d to a work, %d objects with no tag\n", *source, len(res.Mentions), res.Papers, res.Attached, res.Retired, res.Restated, res.CitedMentions, res.CitedWorks, len(res.Untagged))
 		if len(res.Untagged) > 0 {

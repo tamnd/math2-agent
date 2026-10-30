@@ -41,6 +41,9 @@ func FromRecords(src *ingest.Source, snapshot, by string, recs []ingest.Record) 
 		if src.Kind == ingest.Library {
 			m.Pin, m.Intake, m.Authored = pin, src.Intake, src.Authored
 		}
+		if src.Kind == "textbook" && src.Resource != "" {
+			m.Resource, m.At = src.Resource, textbookAt(r.Meta)
+		}
 		for _, k := range slices.Sorted(maps.Keys(r.Meta)) {
 			v := r.Meta[k]
 			switch {
@@ -228,4 +231,16 @@ func NameKind(name string) string {
 		return k
 	}
 	return Unknown
+}
+
+// textbookAt gives the structured locator of an item of a textbook: the environment as the kind, and the section when its heading starts with a number.
+func textbookAt(meta map[string]string) *At {
+	at := At{Kind: meta["environment"]}
+	if sec := strings.Fields(meta["section"]); len(sec) > 0 && sec[0][0] >= '0' && sec[0][0] <= '9' {
+		at.Section = strings.TrimSuffix(sec[0], ".")
+	}
+	if at == (At{}) {
+		return nil
+	}
+	return &at
 }
