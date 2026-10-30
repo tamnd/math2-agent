@@ -41,12 +41,19 @@ const (
 // Strong are the strong ids of RS3.5 that join records in pass C1. ISBN-13 is strong only with a title match, so it is in pass C3. RS3.5 does not name swmath, but swMATH gives one id to one package, and the source swh needs it to put a SWHID on the resource of the package (RS7.5).
 var Strong = []string{"doi", "arxiv", "zbl", "zbl_id", "jfm", "mr", "openlibrary_edition", "wikidata", "openalex", "hal", "course", "offering", "swmath"}
 
-// levels gives the level of a resource where each system of ids goes. A system that is not in the map goes to the expression.
+// levels gives the level of a resource where each system of ids goes. A system that is not in the map goes to the expression. The id of a course platform names the site of an offering, so it goes to the manifestation (RS5.2).
 var levels = map[string]string{
 	"wikidata": "work", "openlibrary_work": "work", "course": "work", "source": "work",
 	"isbn": "manifestation", "oclc": "manifestation", "lccn": "manifestation", "openlibrary_edition": "manifestation",
 	"hathi": "manifestation", "hathi_record": "manifestation", "ia": "manifestation", "gbooks": "manifestation", "gutenberg": "manifestation",
+	"ocw": "manifestation",
 }
+
+// pages are the systems of ids of a manifestation that is a site, not a print.
+var pages = map[string]bool{"ocw": true}
+
+// courses are the kinds of a course and of its materials. Clustering never joins one of them with a resource of another kind, as a course with the book of the same title and author (RS05).
+var courses = map[string]bool{"course": true, "course-material": true}
 
 // Precedence gives the order of the sources for each field of a resource (RS10.1). A source that is not in the list comes after the sources of the list, in the order of the names. For the title, a record in the language of the work comes first.
 var Precedence = map[string][]string{
@@ -225,6 +232,13 @@ func refuse(a, b map[string]bool) string {
 	}
 	if (chapter(a) && whole(b)) || (chapter(b) && whole(a)) {
 		return "a chapter and its volume are two resources (RS10.5)"
+	}
+	for k := range a {
+		for l := range b {
+			if k != l && k != "" && l != "" && (courses[k] || courses[l]) {
+				return "a course, a material of a course and a work of another kind are separate resources (RS05)"
+			}
+		}
 	}
 	return ""
 }
@@ -688,6 +702,7 @@ func build(in Input, g *groups) (*Result, error) {
 			out[id] = *r
 		}
 	}
+	offerings(out)
 	for _, id := range sortedKeys(out) {
 		res.Resources = append(res.Resources, out[id])
 	}
@@ -701,6 +716,37 @@ func build(in Input, g *groups) (*Result, error) {
 		}
 	}
 	return res, nil
+}
+
+// offerings resolves the target of an edge that names an offering by its id, as offering:042nb2s44:18.06:2010-spring, to the expression of the course with that id. A material of a course has this edge to its offering (RS5.1). An edge with no expression for its target is dropped.
+func offerings(out map[string]resource.Resource) {
+	exprs := map[string]string{}
+	for id, r := range out {
+		for _, e := range r.Expressions {
+			for _, v := range e.IDs["offering"] {
+				exprs["offering:"+v] = id + "/" + e.Key
+			}
+		}
+	}
+	for id, r := range out {
+		changed := false
+		var rels []resource.Relation
+		for _, rel := range r.Relations {
+			if strings.HasPrefix(rel.To, "offering:") {
+				changed = true
+				to, ok := exprs[rel.To]
+				if !ok || hasRelation(rels, resource.Relation{Kind: rel.Kind, From: rel.From, To: to}) {
+					continue
+				}
+				rel.To = to
+			}
+			rels = append(rels, rel)
+		}
+		if changed {
+			r.Relations = rels
+			out[id] = r
+		}
+	}
 }
 
 // assemble makes one resource from the records of one group. The fields that a person can set (the scope, the relations that no catalogue gives, the history) come from the existing record.
@@ -762,7 +808,7 @@ func assemble(id string, recs []*Record, prev *resource.Resource) resource.Resou
 		for _, rel := range x.Relations {
 			if rel.Kind != "translation_of" && !hasRelation(r.Relations, rel) {
 				rel.Source = Version
-				if !strings.Contains(rel.To, ":") {
+				if !strings.Contains(rel.To, ":") || strings.HasPrefix(rel.To, "offering:") {
 					r.Relations = append(r.Relations, rel)
 				}
 			}
@@ -803,14 +849,15 @@ func addValues(list resource.Values, vs ...string) resource.Values {
 }
 
 type expr struct {
-	version string // preprint, or empty for the published text
-	edition int
-	lang    string
-	recs    []*Record
-	date    string
+	version  string // preprint, or empty for the published text
+	edition  int
+	lang     string
+	offering string // the offering id of a course offering (RS5.2)
+	recs     []*Record
+	date     string
 }
 
-// expressions puts the records of one work into expressions (RS10.3, RS10.4). A record is in the expression with its version, its edition number and its language. A record with no edition number or no language goes to the one expression that agrees on the rest, when there is one.
+// expressions puts the records of one work into expressions (RS10.3, RS10.4). A record is in the expression with its version, its edition number and its language. A record with no edition number or no language goes to the one expression that agrees on the rest, when there is one. Two records with different offering ids are never in one expression, because each offering of a course is an expression (RS5.1).
 func expressions(recs []*Record) []*expr {
 	var out []*expr
 	key := func(x *Record) (string, int, string) {
@@ -824,6 +871,10 @@ func expressions(recs []*Record) []*expr {
 		}
 		return v, ed, lang(x.Language)
 	}
+	offering := func(e *expr, x *Record) bool {
+		o := x.IDs.Get("offering")
+		return o == "" || e.offering == "" || e.offering == o
+	}
 	var loose []*Record
 	for _, x := range recs {
 		v, ed, l := key(x)
@@ -833,21 +884,21 @@ func expressions(recs []*Record) []*expr {
 		}
 		found := false
 		for _, e := range out {
-			if e.version == v && e.edition == ed && e.lang == l {
+			if e.version == v && e.edition == ed && e.lang == l && offering(e, x) {
 				e.recs = append(e.recs, x)
 				found = true
 				break
 			}
 		}
 		if !found {
-			out = append(out, &expr{version: v, edition: ed, lang: l, recs: []*Record{x}})
+			out = append(out, &expr{version: v, edition: ed, lang: l, offering: x.IDs.Get("offering"), recs: []*Record{x}})
 		}
 	}
 	for _, x := range loose {
 		v, ed, l := key(x)
 		var match []*expr
 		for _, e := range out {
-			if e.version == v && (ed == 0 || e.edition == ed || e.edition == 0) && (l == "" || e.lang == l || e.lang == "") {
+			if e.version == v && (ed == 0 || e.edition == ed || e.edition == 0) && (l == "" || e.lang == l || e.lang == "") && offering(e, x) {
 				match = append(match, e)
 			}
 		}
@@ -859,9 +910,12 @@ func expressions(recs []*Record) []*expr {
 			if match[0].edition == 0 {
 				match[0].edition = ed
 			}
+			if match[0].offering == "" {
+				match[0].offering = x.IDs.Get("offering")
+			}
 			continue
 		}
-		out = append(out, &expr{version: v, edition: ed, lang: l, recs: []*Record{x}})
+		out = append(out, &expr{version: v, edition: ed, lang: l, offering: x.IDs.Get("offering"), recs: []*Record{x}})
 	}
 	for _, e := range out {
 		for _, x := range e.recs {
@@ -909,6 +963,18 @@ func keyed(exprs []*expr, prev []resource.Expression, workLang string) []resourc
 		if e.edition > 0 && x.Kind != "version" {
 			x.Label = ordinal(e.edition) + " edition"
 		}
+		// An offering has the term as its label and the instructors as its contributors. A source gives the term in the field edition.
+		if e.offering != "" {
+			x.Kind, x.Label = "offering", ""
+			for _, r := range e.recs {
+				if x.Label == "" {
+					x.Label = r.Edition
+				}
+				if len(x.Contributors) == 0 {
+					x.Contributors = r.Creators
+				}
+			}
+		}
 		manifs := map[string]*resource.Manifestation{}
 		var order []string
 		for _, r := range e.recs {
@@ -934,6 +1000,11 @@ func keyed(exprs []*expr, prev []resource.Expression, workLang string) []resourc
 				m = &resource.Manifestation{Kind: "print", IDs: resource.IDs{}}
 				manifs[k] = m
 				order = append(order, k)
+			}
+			for sys := range mids {
+				if pages[sys] {
+					m.Kind = "page"
+				}
 			}
 			for sys, vs := range mids {
 				m.IDs[sys] = addValues(m.IDs[sys], vs...)

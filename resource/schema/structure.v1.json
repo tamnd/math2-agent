@@ -83,8 +83,17 @@
     "reading": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "resource"
+      "anyOf": [
+        {
+          "required": [
+            "resource"
+          ]
+        },
+        {
+          "required": [
+            "text"
+          ]
+        }
       ],
       "properties": {
         "resource": {
@@ -95,6 +104,9 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "text": {
+          "type": "string"
         }
       }
     }

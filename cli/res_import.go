@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/tamnd/math2-agent/ingest"
@@ -25,6 +26,11 @@ const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-url URL] [-
 // structurer is an adapter that gives the table of contents of the work of its snapshot (RS4.5), as the adapter of an open textbook does. It also gives the commit of the snapshot.
 type structurer interface {
 	Structure(r io.Reader) ([]resource.Node, string, error)
+}
+
+// structures is an adapter that gives the structures of many expressions of its snapshot, as a course platform gives the sessions of each offering (RS5.4). The id names the expression by one of its ids, as offering:<offering id>. A material of a node and the book of a reading can name a resource by an id too, as ocw:<slug> or isbn:<isbn>.
+type structures interface {
+	Structures(r io.Reader, emit func(id string, nodes []resource.Node) error) error
 }
 
 // sourcers gives the ids of the sources whose adapter gives source records, in the order of Adapters.
@@ -47,7 +53,7 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.Snapshot, "snapshot", "", "use again the snapshot with this hash from manifests/sources.yaml. Empty means a new fetch.")
 	fs.StringVar(&opt.URL, "url", "", "fetch the new snapshot from this URL or local path, and not from the bulk channel of the adapter")
 	fs.StringVar(&opt.Cache, "cache", "", "the directory of the downloaded snapshots. Empty means m2 in the user cache directory.")
-	structure := fs.Bool("structure", false, "also write the table of contents of the snapshot to the first expression of the resource that groups the source records")
+	structure := fs.Bool("structure", false, "also write the table of contents of the snapshot to the first expression of the resource that groups the source records, or the sessions of each offering of a course platform to its expression")
 	lookup := fs.Bool("lookup", false, "for the source refs: confirm the ids of the references with a live lookup")
 	gap := fs.Duration("gap", time.Second, "for the sources refs, s2 and swh: the shortest time between two lookups")
 	limit := fs.Int("n", 0, "for the source swh: ask for at most this number of new origins. 0 means no limit.")
@@ -91,7 +97,8 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 		return fail(fmt.Errorf("the adapter of %q gives no source records. The sources with source records: %v", source, sourcers()))
 	}
 	st, ok := a.(structurer)
-	if *structure && !ok {
+	ss, many := a.(structures)
+	if *structure && !ok && !many {
 		return fail(fmt.Errorf("the adapter of %q gives no table of contents", source))
 	}
 	opt.UserAgent = userAgent()
@@ -134,6 +141,14 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "%s: %d source records from the snapshot %s in %s, %d rejected\n", source, len(rs), res.Snapshot.Hash, filepath.Join(rescluster.RecordsDir, source, rescluster.SourceFile+mdrec.Ext), len(rejects))
 	if !*structure {
+		return ExitOK
+	}
+	if many {
+		n, missing, err := writeStructures(opt.Root, source, path, res.Snapshot.Hash, ss)
+		if err != nil {
+			return fail(err)
+		}
+		fmt.Fprintf(stdout, "%s: %d structures in %s, %d with no resource\n", source, n, resource.StructureDir, missing)
 		return ExitOK
 	}
 	file, nodes, err := writeStructure(opt.Root, source, path, res.Snapshot.Hash, st, rs)
@@ -190,4 +205,111 @@ func writeStructure(root, source, path, hash string, st structurer, rs []resclus
 		return "", 0, err
 	}
 	return e.Structure, len(nodes), nil
+}
+
+// writeStructures reads the structures of the snapshot at path and writes each to the expression that has its id. A material of a node that names a resource by an id gets the resource id. A reading of a book that the tree has gets the expression of the book, and the expression of the course gets a uses_text edge to it. A reading of a book that the tree does not have keeps its text for the reference resolver. It gives the number of structures that it writes and the number with no expression. It fails when no structure has an expression, because then m2 res cluster must run first.
+func writeStructures(root, source, path, hash string, ss structures) (int, int, error) {
+	f, err := os.Open(path) // #nosec G304 -- the path is in the snapshot cache.
+	if err != nil {
+		return 0, 0, err
+	}
+	defer func() { _ = f.Close() }()
+	snapshot, err := ingest.Uncompressed(f)
+	if err != nil {
+		return 0, 0, err
+	}
+	all, err := resource.ReadResources(root)
+	if err != nil {
+		return 0, 0, err
+	}
+	type place struct{ r, e int }
+	exprs := map[string]place{}   // an id of an expression, or of one of its manifestations, as system:value
+	owners := map[string]string{} // an id of any level, as system:value, to the resource id
+	for i := range all {
+		r := &all[i]
+		if !r.Live() {
+			continue
+		}
+		put := func(ids resource.IDs, e int) {
+			for sys, vs := range ids {
+				for _, v := range vs {
+					k := sys + ":" + v
+					if _, ok := owners[k]; !ok {
+						owners[k] = r.ID
+					}
+					if _, ok := exprs[k]; !ok && e >= 0 {
+						exprs[k] = place{i, e}
+					}
+				}
+			}
+		}
+		put(r.IDs, -1)
+		for j := range r.Expressions {
+			put(r.Expressions[j].IDs, j)
+			for _, m := range r.Expressions[j].Manifestations {
+				put(m.IDs, j)
+			}
+		}
+	}
+	written, missing := 0, 0
+	err = ss.Structures(snapshot, func(id string, nodes []resource.Node) error {
+		p, ok := exprs[id]
+		if !ok {
+			missing++
+			return nil
+		}
+		r := &all[p.r]
+		e := &r.Expressions[p.e]
+		var books []string
+		var resolve func(ns []resource.Node)
+		resolve = func(ns []resource.Node) {
+			for i := range ns {
+				n := &ns[i]
+				for k, m := range n.Materials {
+					if rid, ok := owners[m]; ok {
+						n.Materials[k] = rid
+					}
+				}
+				for k := range n.Readings {
+					rd := &n.Readings[k]
+					if rd.Resource == "" || !strings.Contains(rd.Resource, ":") {
+						continue
+					}
+					if b, ok := exprs[rd.Resource]; ok {
+						rd.Resource, rd.Text = all[b.r].ID+"/"+all[b.r].Expressions[b.e].Key, ""
+						if !slices.Contains(books, rd.Resource) {
+							books = append(books, rd.Resource)
+						}
+					} else {
+						rd.Resource = ""
+					}
+				}
+				resolve(n.Children)
+			}
+		}
+		resolve(nodes)
+		s := &resource.Structure{Resource: r.ID + "/" + e.Key, Source: source, Snapshot: hash, Nodes: nodes}
+		if err := resource.WriteStructure(root, s); err != nil {
+			return err
+		}
+		e.Structure = r.ID + "/" + e.Key + ".json"
+		for _, b := range books {
+			rel := resource.Relation{Kind: "uses_text", From: e.Key, To: b, Source: source}
+			if !slices.ContainsFunc(r.Relations, func(x resource.Relation) bool { return x.Kind == rel.Kind && x.From == rel.From && x.To == rel.To }) {
+				r.Relations = append(r.Relations, rel)
+			}
+		}
+		written++
+		return nil
+	})
+	if err != nil {
+		return 0, 0, fmt.Errorf("%s: %w", source, err)
+	}
+	if written == 0 && missing > 0 {
+		return 0, missing, fmt.Errorf("no live resource has the expressions of the %d structures of %s. Run m2 res cluster first", missing, source)
+	}
+	if err := resource.WriteResources(root, all); err != nil {
+		return 0, 0, err
+	}
+	return written, missing, nil
 }
