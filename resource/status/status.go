@@ -15,7 +15,9 @@ import (
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/cluster"
+	"github.com/tamnd/math2-agent/resource/courses"
 	"github.com/tamnd/math2-agent/resource/depth"
+	"github.com/tamnd/math2-agent/resource/institutions"
 )
 
 // The files of the report.
@@ -61,14 +63,15 @@ type Closure struct {
 
 // Report holds the measures of one build.
 type Report struct {
-	Day       string     `json:"day"`
-	Resources int        `json:"resources"` // the live resources
-	Coverage  []Coverage `json:"coverage"`
-	Open      Open       `json:"open"`
-	Closure   Closure    `json:"closure"`
-	Recall    []Recall   `json:"recall"`
-	Depth     []Tier     `json:"depth"`
-	Late      []string   `json:"late,omitempty"` // the resources more than depth.GapDays below their target (rule H13)
+	Day       string          `json:"day"`
+	Resources int             `json:"resources"` // the live resources
+	Coverage  []Coverage      `json:"coverage"`
+	Open      Open            `json:"open"`
+	Closure   Closure         `json:"closure"`
+	Recall    []Recall        `json:"recall"`
+	Depth     []Tier          `json:"depth"`
+	Late      []string        `json:"late,omitempty"` // the resources more than depth.GapDays below their target (rule H13)
+	Courses   courses.Numbers `json:"courses"`        // the four numbers of RS5.8
 }
 
 // Tier is the depth of the resources of one tier. ByDepth counts the resources at each depth from -1 (below D0) to 4, at the index depth+1.
@@ -204,6 +207,11 @@ func Build(root, day string) (*Report, error) {
 	for _, k := range slices.Sorted(maps.Keys(byTier)) {
 		rep.Depth = append(rep.Depth, *byTier[k])
 	}
+	ins, err := institutions.Read(root)
+	if err != nil {
+		return nil, err
+	}
+	rep.Courses = courses.Count(rs, ins)
 	return rep, nil
 }
 
@@ -326,6 +334,12 @@ func (rep *Report) Markdown() []byte {
 		}
 		b.WriteString("\n")
 	}
+	n := rep.Courses
+	fmt.Fprintf(&b, "\n## Courses (RS5.8)\n\n| Number | Value |\n|---|---:|\n")
+	fmt.Fprintf(&b, "| 1. courses of the I1 institutions and platforms | %d |\n| 1. offerings of those courses | %d |\n", n.I1Courses, n.I1Offerings)
+	fmt.Fprintf(&b, "| 2. courses of the I2 and I3 institutions | %d |\n| 3. courses that a resource of another kind names | %d |\n", n.I2I3Courses, n.Named)
+	fmt.Fprintf(&b, "| 4. estimate of the courses of the I4 institutions | %.0f (%.0f to %.0f) |\n", n.I4.Courses, n.I4.Low, n.I4.High)
+	fmt.Fprintf(&b, "\nThe fourth number is an estimate, not a count (RS11.4.4). It is the sum, over the I4 institutions, of the median count of courses of the I2 institutions of the same level and country, and the interval is the sum of the quartiles. %d of the %d I4 institutions have such a group. The register has no student count, so the groups have no size band.\n", n.I4.Estimated, n.I4.Institutions)
 	return b.Bytes()
 }
 

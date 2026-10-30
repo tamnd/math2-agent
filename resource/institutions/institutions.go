@@ -280,18 +280,18 @@ func Units(ctx context.Context, get Getter, endpoint string) (map[string][]Unit,
 	return out, nil
 }
 
-// Platforms are the course platforms of RS5.5. A platform has no ROR id, so that it does not take the record of its university. RS5.3 puts the open course platforms in I1. Terms gives the licence or the terms of RS5.5.
+// Platforms are the course platforms of RS5.5. A platform has no ROR id, so that it does not take the record of its university. RS5.3 puts the open course platforms in I1. A platform whose terms forbid automated reading, or whose site blocks an automated client, is I4, and Terms gives the reason. Format is the source of the adapter that reads the platform. A build sets the tier and the catalogue of each platform from this list.
 var Platforms = []Institution{
 	{Name: "MIT OpenCourseWare", Country: "US", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://ocw.mit.edu/search/?d=Mathematics", Format: "ocw", Terms: "CC BY-NC-SA 4.0"}},
 	{Name: "Open Yale Courses", Country: "US", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://oyc.yale.edu/courses", Format: "html"}},
 	{Name: "FutureLearn", Country: "GB", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://www.futurelearn.com/subjects/science-engineering-and-maths-courses", Format: "futurelearn", Terms: "records only: course pages are closed"}},
 	{Name: "NPTEL", Country: "IN", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://nptel.ac.in/courses", Format: "nptel", Terms: "to read (RQ10)"}},
-	{Name: "Khan Academy", Country: "US", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://www.khanacademy.org/math", Format: "khan", Terms: "to read; much is CC BY-NC-SA"}},
-	{Name: "Coursera", Country: "US", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://www.coursera.org/browse/math-and-logic", Format: "coursera", Terms: "records only: course pages are closed"}},
-	{Name: "edX", Country: "US", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://www.edx.org/learn/math", Format: "edx", Terms: "records only: course pages are closed"}},
-	{Name: "iCourse163", Country: "CN", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://www.icourse163.org/", Format: "icourse163"}},
-	{Name: "XuetangX", Country: "CN", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://www.xuetangx.com/", Format: "xuetangx"}},
-	{Name: "Class Central", Country: "US", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://www.classcentral.com/subject/maths", Format: "classcentral"}},
+	{Name: "Khan Academy", Country: "US", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.khanacademy.org/math", Format: "khan", Terms: "the site answers an automated client with a JavaScript challenge"}},
+	{Name: "Coursera", Country: "US", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.coursera.org/browse/math-and-logic", Format: "coursera", Terms: "the terms forbid data scraping by automated means without written consent"}},
+	{Name: "edX", Country: "US", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.edx.org/learn/math", Format: "edx", Terms: "the terms forbid access with spiders, robots, crawlers and data mining tools"}},
+	{Name: "iCourse163", Country: "CN", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.icourse163.org/", Format: "icourse163", Terms: "no sitemap and no public API; the pages get the course data with scripts"}},
+	{Name: "XuetangX", Country: "CN", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.xuetangx.com/", Format: "xuetangx", Terms: "no robots.txt, no sitemap and no public API; each page has an hCaptcha check"}},
+	{Name: "Class Central", Country: "US", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.classcentral.com/subject/maths", Format: "classcentral", Terms: "the site answers an automated client with a Cloudflare challenge"}},
 }
 
 // Counts are the outcomes of one build.
@@ -327,10 +327,13 @@ func Build(prev []Institution, orgs []Org, units map[string][]Unit) ([]Instituti
 		byKey[o.ID] = in
 	}
 	for _, p := range Platforms {
-		if _, ok := byKey[p.Key()]; !ok {
+		in, ok := byKey[p.Key()]
+		if !ok {
 			c.Added++
-			byKey[p.Key()] = p
+			in = p
 		}
+		in.Tier, in.Catalogue = p.Tier, p.Catalogue
+		byKey[p.Key()] = in
 	}
 	out := make([]Institution, 0, len(byKey))
 	for _, in := range byKey {

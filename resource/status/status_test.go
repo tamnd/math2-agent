@@ -96,7 +96,7 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"## 2. Coverage by source", "| zbmath | 5 | 1 | 3 | 60.00% |", "rejected, no title: 1", "## 3. Open decisions", "| no class | 1 |", "## 6. Curriculum closure", "4 texts, and 3 of them"} {
+	for _, want := range []string{"## 2. Coverage by source", "| zbmath | 5 | 1 | 3 | 60.00% |", "rejected, no title: 1", "## 3. Open decisions", "| no class | 1 |", "## 6. Curriculum closure", "4 texts, and 3 of them", "## Courses (RS5.8)", "| 4. estimate of the courses of the I4 institutions | 0 (0 to 0) |"} {
 		if !strings.Contains(string(md), want) {
 			t.Errorf("the report has no %q:\n%s", want, md)
 		}
