@@ -26,7 +26,7 @@ const (
 	RegisterDir  = "registers/resources"
 )
 
-// The kinds of a work (RS2.3).
+// Kinds are the kinds of a work (RS2.3).
 var Kinds = []string{
 	"monograph", "textbook", "edited-volume", "proceedings", "problem-book", "handbook", "encyclopedia", "table",
 	"chapter", "article", "preprint", "conference-paper", "survey", "thesis", "report", "lecture-notes",
@@ -49,10 +49,10 @@ var Roles = []string{"author", "editor", "translator", "instructor", "contributo
 // Relations are the kinds of an edge between resources that the record holds (RS2.7). The edges cites are in their own files, and same_as is in the field ids.
 var Relations = []string{"part_of", "translation_of", "version_of", "reprint_of", "based_on", "uses_text", "reviews", "solves", "corrects"}
 
-// The access classes of a manifestation (spec 9.3 and RS2.6). The default is record.
+// Classes are the access classes of a manifestation (spec 9.3 and RS2.6). The default is record.
 var Classes = []string{"open", "share-alike-nc", "verbatim", "gfdl", "record"}
 
-// The values of the field text of an access (RS2.6).
+// Texts are the values of the field text of an access (RS2.6).
 var Texts = []string{"open-text", "free-to-read", "closed", "lost"}
 
 // The outcomes of a scope decision (RS9.6).
@@ -67,7 +67,7 @@ const (
 // Outcomes are the values of the field value of a scope.
 var Outcomes = []string{In, Border, Out, Duplicate, Deferred}
 
-// The levels of the record of a catalogue (RS2.2).
+// Levels are the levels of the record of a catalogue (RS2.2).
 var Levels = []string{"work", "expression", "manifestation"}
 
 // Resource is one work of the catalogue (RS2.4). The build computes the tier, the depth and the signals of a resource and writes them to build/resources/, not to the record.
