@@ -6,7 +6,7 @@
 //	metadata/<shard>/<pageid>.md            the metadata of each article
 //	analysis/objects/<shard>/<pageid>-r<revision>.md the objects, with their tags (WP03, WP5.4)
 //	analysis/edges/<shard>/<pageid>.md      the edges of each article (WP06)
-//	tags/<shard>/<pageid>.tags              the tag registers, for the tags that are gone (WP5.4)
+//	tags/<shard>/<pageid>.md                the tag registers, for the tags that are gone (WP5.4)
 //
 // The id of an article mention is wikipedia://en/<pageid>, and the id of an object mention is wikipedia://en/<pageid>#<tag> (WP5.2). The text of the articles is CC BY-SA, and the record plane is CC0. Thus a mention holds no text. The field text_ref names the span of the item in the content plane, and the field hash is its content hash (rule Y05).
 package wikipedia

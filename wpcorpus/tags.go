@@ -1,7 +1,6 @@
 package wpcorpus
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -11,19 +10,18 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"go.yaml.in/yaml/v3"
 )
 
 // TagsDir holds the tag register of each article (WP5.4).
 const TagsDir = "tags"
 
-// TagsPath gives the path of the tag register of a page.
+// TagsPath gives the path of the tags file of a page. The file is Markdown
+// with a YAML header (WP12.1). The header holds the tag register and the
+// runs of the matcher, and the body is a table for the reader.
 func TagsPath(page int) string {
-	return filepath.Join(TagsDir, Shard(page), strconv.Itoa(page)+".tags")
-}
-
-// RunsPath gives the path of the runs file of a page.
-func RunsPath(page int) string {
-	return filepath.Join(TagsDir, Shard(page), strconv.Itoa(page)+".runs")
+	return filepath.Join(TagsDir, Shard(page), strconv.Itoa(page)+".md")
 }
 
 // tagAlphabet is the alphabet of the Stacks Project: the digits and the
@@ -64,12 +62,14 @@ const (
 // nearMin is the least similarity of the texts for the pass near.
 const nearMin = 0.8
 
-// TagLine is one line of a tag register: the tag and the ref of its object
-// in the revision of record. Gone is the revision in which the object went,
-// as r<revision>, or "" while the object is there. A tag is never given to
-// another object.
+// TagLine is one entry of a tag register: the tag and the ref of its
+// object in the revision of record. Gone is the revision in which the object
+// went, as r<revision>, or "" while the object is there. A tag is never given
+// to another object.
 type TagLine struct {
-	Tag, Ref, Gone string
+	Tag  string `yaml:"tag"`
+	Ref  string `yaml:"ref"`
+	Gone string `yaml:"gone,omitempty"`
 }
 
 func (l TagLine) String() string {
@@ -79,43 +79,89 @@ func (l TagLine) String() string {
 	return l.Tag + "," + l.Ref
 }
 
-// ReadTags reads the tag register of a page. A page with no register has
-// no tags.
-func ReadTags(root string, page int) ([]TagLine, error) {
+// tagsFile is the YAML header of a tags file.
+type tagsFile struct {
+	Page  int       `yaml:"page"`
+	Title string    `yaml:"title,omitempty"`
+	Tags  []TagLine `yaml:"tags"`
+	Runs  []runLine `yaml:"runs,omitempty"`
+}
+
+// runLine is one run of the matcher: the old revision, or "" for the first
+// run, the new revision, and the pass of each tag that the run changed.
+type runLine struct {
+	From   string    `yaml:"from,omitempty"`
+	To     string    `yaml:"to"`
+	Passes []tagPass `yaml:"passes"`
+}
+
+type tagPass struct {
+	Tag  string `yaml:"tag"`
+	Pass string `yaml:"pass"`
+}
+
+// readTagsFile reads the tags file of a page. A page with no file has no
+// tags and no runs.
+func readTagsFile(root string, page int) (*tagsFile, error) {
 	data, err := os.ReadFile(filepath.Join(root, TagsPath(page))) // #nosec G304 -- the path is in the corpus that the user names
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
+		return &tagsFile{Page: page}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	var out []TagLine
+	head, _, err := splitFrontMatter(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", TagsPath(page), err)
+	}
+	var f tagsFile
+	if err := yaml.Unmarshal(head, &f); err != nil {
+		return nil, fmt.Errorf("%s: %w", TagsPath(page), err)
+	}
 	seen := map[string]bool{}
-	sc := bufio.NewScanner(bytes.NewReader(data))
-	for n := 1; sc.Scan(); n++ {
-		line := strings.TrimSpace(sc.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		f := strings.Split(line, ",")
-		if len(f) < 2 || len(f) > 3 || !IsWPTag(f[0]) || f[1] == "" {
-			return nil, fmt.Errorf("%s:%d: a line is a tag and a ref, and then gone:r<revision> for an object that went", TagsPath(page), n)
-		}
-		l := TagLine{Tag: f[0], Ref: f[1]}
-		if len(f) == 3 {
-			g, ok := strings.CutPrefix(f[2], "gone:")
-			if !ok || g == "" {
-				return nil, fmt.Errorf("%s:%d: the third field is not gone:r<revision>", TagsPath(page), n)
-			}
-			l.Gone = g
-		}
-		if seen[l.Tag] {
-			return nil, fmt.Errorf("%s:%d: the tag %s is in the register twice", TagsPath(page), n, l.Tag)
+	for i, l := range f.Tags {
+		switch {
+		case !IsWPTag(l.Tag) || l.Ref == "":
+			return nil, fmt.Errorf("%s: tag %d: an entry has a tag of 4 characters and a ref", TagsPath(page), i+1)
+		case l.Gone != "" && !strings.HasPrefix(l.Gone, "r"):
+			return nil, fmt.Errorf("%s: tag %s: gone is not r<revision>", TagsPath(page), l.Tag)
+		case seen[l.Tag]:
+			return nil, fmt.Errorf("%s: the tag %s is in the register twice", TagsPath(page), l.Tag)
 		}
 		seen[l.Tag] = true
-		out = append(out, l)
 	}
-	return out, sc.Err()
+	return &f, nil
+}
+
+// ReadTags reads the tag register of a page. A page with no tags file has
+// no tags.
+func ReadTags(root string, page int) ([]TagLine, error) {
+	f, err := readTagsFile(root, page)
+	if err != nil {
+		return nil, err
+	}
+	return f.Tags, nil
+}
+
+// marshalTags gives the tags file of a page.
+func marshalTags(f *tagsFile) ([]byte, error) {
+	var b bytes.Buffer
+	if err := writeFrontMatter(&b, f); err != nil {
+		return nil, err
+	}
+	name := strconv.Itoa(f.Page)
+	if f.Title != "" {
+		name = f.Title
+	}
+	fmt.Fprintf(&b, "\n# Tags of %s\n\n", name)
+	b.WriteString("Each object of the page has a tag of WP5.4. A tag is never given to another object. A tag whose object went has the revision in which it went.\n")
+	if len(f.Tags) > 0 {
+		b.WriteString("\n| Tag | Ref | Gone |\n|---|---|---|\n")
+		for _, l := range f.Tags {
+			fmt.Fprintf(&b, "| %s | %s | %s |\n", l.Tag, l.Ref, l.Gone)
+		}
+	}
+	return b.Bytes(), nil
 }
 
 // TagRun is the result of AssignTags for one page.
@@ -363,15 +409,16 @@ func previousObjects(root string, page, rev int) ([]Object, int, error) {
 // AssignTags gives a tag to each object of a result (WP5.4). It matches the
 // objects to the tagged objects of the revision that the analysis plane
 // holds, gives a new tag to each object with no match, and gives a
-// tombstone to each tag whose object went. It writes the register, and adds
-// the run to the runs file when a tag is new or went. Call it before
+// tombstone to each tag whose object went. It writes the tags file, and adds
+// the run to it when a tag is new or went. Call it before
 // WriteResult and RemoveStale, while the old objects file is there.
 func AssignTags(root string, r *Result) (*TagRun, error) {
 	c := &r.Census
-	reg, err := ReadTags(root, c.Page)
+	tf, err := readTagsFile(root, c.Page)
 	if err != nil {
 		return nil, err
 	}
+	reg := tf.Tags
 	old, from, err := previousObjects(root, c.Page, c.Revision)
 	if err != nil {
 		return nil, err
@@ -379,11 +426,7 @@ func AssignTags(root string, r *Result) (*TagRun, error) {
 	run := &TagRun{Page: c.Page, From: from, To: c.Revision, Pass: map[string]string{}}
 	tags, passes := MatchTags(old, r.Objects)
 	if old == nil {
-		last, err := lastRun(root, c.Page)
-		if err != nil {
-			return nil, err
-		}
-		if last == c.Revision {
+		if lastRun(tf) == c.Revision {
 			byRef := map[string]string{}
 			for _, l := range reg {
 				if l.Gone == "" {
@@ -449,65 +492,38 @@ func AssignTags(root string, r *Result) (*TagRun, error) {
 			changed = true
 		}
 	}
-	var b bytes.Buffer
-	fmt.Fprintf(&b, "# The tag register of the page %d (WP5.4). Each line is a tag and the ref of its object in the revision of record. A tag whose object went has gone:r<revision>. A tag is never given to another object.\n", c.Page)
-	for _, l := range reg {
-		b.WriteString(l.String() + "\n")
+	tf.Page, tf.Title, tf.Tags = c.Page, c.Title, reg
+	if changed || from != c.Revision {
+		tf.Runs = append(tf.Runs, runOf(run))
 	}
-	if err := writeFile(filepath.Join(root, TagsPath(c.Page)), b.Bytes()); err != nil {
+	data, err := marshalTags(tf)
+	if err != nil {
 		return nil, err
 	}
-	if changed || from != c.Revision {
-		if err := appendRun(root, run); err != nil {
-			return nil, err
-		}
+	if err := writeFile(filepath.Join(root, TagsPath(c.Page)), data); err != nil {
+		return nil, err
 	}
 	return run, nil
 }
 
-// lastRun gives the new revision of the last run of a page, or 0.
-func lastRun(root string, page int) (int, error) {
-	data, err := os.ReadFile(filepath.Join(root, RunsPath(page))) // #nosec G304 -- the path is in the corpus that the user names
-	if errors.Is(err, fs.ErrNotExist) {
-		return 0, nil
+// lastRun gives the new revision of the last run of a tags file, or 0.
+func lastRun(f *tagsFile) int {
+	if len(f.Runs) == 0 {
+		return 0
 	}
-	if err != nil {
-		return 0, err
-	}
-	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
-	f := strings.Split(lines[len(lines)-1], ",")
-	if len(f) != 4 {
-		return 0, nil
-	}
-	n, _ := strconv.Atoi(strings.TrimPrefix(f[1], "r"))
-	return n, nil
+	n, _ := strconv.Atoi(strings.TrimPrefix(f.Runs[len(f.Runs)-1].To, "r"))
+	return n
 }
 
-// appendRun adds a run to the runs file: one line for each tag, with the
-// revisions and the pass.
-func appendRun(root string, run *TagRun) error {
-	path := filepath.Join(root, RunsPath(run.Page))
-	var b bytes.Buffer
-	if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
-		fmt.Fprintf(&b, "# The runs of the matcher of the page %d (WP5.4). Each line is the old revision, the new revision, a tag and the pass that matched it, or new or gone.\n", run.Page)
-	}
-	from := "-"
+// runOf gives the run line of a run: the revisions, and the pass of each
+// tag in the order of the run.
+func runOf(run *TagRun) runLine {
+	l := runLine{To: "r" + strconv.Itoa(run.To)}
 	if run.From != 0 {
-		from = "r" + strconv.Itoa(run.From)
+		l.From = "r" + strconv.Itoa(run.From)
 	}
 	for _, t := range run.Order {
-		fmt.Fprintf(&b, "%s,r%d,%s,%s\n", from, run.To, t, run.Pass[t])
+		l.Passes = append(l.Passes, tagPass{Tag: t, Pass: run.Pass[t]})
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- the corpus is a public repository
-		return err
-	}
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) // #nosec G302 G304 -- the corpus is a public repository, and the path is in it
-	if err != nil {
-		return err
-	}
-	if _, err := f.Write(b.Bytes()); err != nil {
-		_ = f.Close()
-		return err
-	}
-	return f.Close()
+	return l
 }
