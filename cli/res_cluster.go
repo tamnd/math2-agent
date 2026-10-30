@@ -14,6 +14,7 @@ import (
 	"github.com/tamnd/math2-agent/queue"
 	"github.com/tamnd/math2-agent/resource"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
+	resscope "github.com/tamnd/math2-agent/resource/scope"
 )
 
 const resClusterUsage = "m2 res cluster [-root DIR] [-day YYYY-MM-DD] [-commit C] [-no-mint]"
@@ -63,7 +64,17 @@ func runResCluster(args []string, stdout, stderr io.Writer) int {
 	for i, l := range reg {
 		order[l.ID] = i
 	}
-	res, err := rescluster.Run(rescluster.Input{Records: recs, Crosswalks: links, Existing: existing, Order: order, By: "m2 " + version + " " + rescluster.Version, Day: *day})
+	ds, err := resscope.ReadDecisions(*root)
+	if err != nil {
+		return fail(err)
+	}
+	var decisions []rescluster.Decision
+	for _, d := range ds {
+		if d.Kind == "merge" || d.Kind == "split" {
+			decisions = append(decisions, rescluster.Decision{Kind: d.Kind, A: d.ID, B: d.Target})
+		}
+	}
+	res, err := rescluster.Run(rescluster.Input{Records: recs, Crosswalks: links, Existing: existing, Order: order, Decisions: decisions, By: "m2 " + version + " " + rescluster.Version, Day: *day})
 	if err != nil {
 		return fail(err)
 	}

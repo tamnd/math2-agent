@@ -34,6 +34,8 @@ const (
 	C3 = "C3"
 	C4 = "C4"
 	C5 = "C5"
+	// Person is a join that a person decided in the queue res-cluster (RS10.6). It runs before C1, and no guard refuses it.
+	Person = "person"
 )
 
 // Strong are the strong ids of RS3.5 that join records in pass C1. ISBN-13 is strong only with a title match, so it is in pass C3.
@@ -66,12 +68,19 @@ type Link struct {
 	B string `json:"b"`
 }
 
+// Decision is a decision of a person on a pair of the queue res-cluster (RS10.6). Kind is merge or split. A and B are the keys of two records (source:native_id) or two resource ids. A merge joins the records before the passes. A split keeps the records of A and the records of B in two resources, and when they were one resource, A keeps its id and B gets a new id.
+type Decision struct {
+	Kind string
+	A, B string
+}
+
 // Input is what the passes read.
 type Input struct {
 	Records    []Record
 	Crosswalks []Link
 	Existing   []resource.Resource // the resource records of records/resources/
 	Order      map[string]int      // the line of each resource id in the register. A smaller line is older
+	Decisions  []Decision          // the merge and split decisions of people
 	By         string              // the build and its version, for the history
 	Day        string              // the date of the run, YYYY-MM-DD
 }
@@ -100,6 +109,35 @@ type groups struct {
 	joins  map[string]int
 	pairs  []Pair
 	seen   map[[2]int]bool
+	apart  [][2]int     // the pairs of records that a person split
+	lose   map[int]bool // the records of the side B of a split, which do not keep the id of the side A
+}
+
+// split reports whether a person split a record of the group a from a record of the group b.
+func (g *groups) split(a, b int) bool {
+	for _, p := range g.apart {
+		x, y := g.find(p[0]), g.find(p[1])
+		if (x == a && y == b) || (x == b && y == a) {
+			return true
+		}
+	}
+	return false
+}
+
+// merge joins the groups of the records i and j for a person. No guard refuses it.
+func (g *groups) merge(i, j int) {
+	a, b := g.find(i), g.find(j)
+	if a == b {
+		return
+	}
+	if b < a {
+		a, b = b, a
+	}
+	g.parent[b] = a
+	for k := range g.kinds[b] {
+		g.kinds[a][k] = true
+	}
+	g.joins[Person]++
 }
 
 func (g *groups) find(i int) int {
@@ -113,7 +151,7 @@ func (g *groups) find(i int) int {
 // join joins the groups of the records i and j, unless a guard refuses. A refused join becomes a pair once.
 func (g *groups) join(i, j int, pass string) bool {
 	a, b := g.find(i), g.find(j)
-	if a == b {
+	if a == b || g.split(a, b) {
 		return false
 	}
 	if reason := refuse(g.kinds[a], g.kinds[b]); reason != "" {
@@ -160,6 +198,7 @@ func Run(in Input) (*Result, error) {
 		g.kinds[i] = map[string]bool{rs[i].Kind: true}
 	}
 	byID := index(rs)
+	decide(in, g)
 	// C1: a strong id.
 	for _, sys := range Strong {
 		for _, v := range sortedKeys(byID[sys]) {
@@ -192,12 +231,73 @@ func Run(in Input) (*Result, error) {
 	}
 	skipped := blocked(g)
 	works(g)
+	// A pair of the middle band whose records a later join put in one group is no longer a question.
+	byKey := map[string]int{}
+	for i := range rs {
+		byKey[rs[i].Key()] = i
+	}
+	g.pairs = slices.DeleteFunc(g.pairs, func(p Pair) bool {
+		return p.Pass == C4 && g.find(byKey[p.A]) == g.find(byKey[p.B])
+	})
 	res, err := build(in, g)
 	if err != nil {
 		return nil, err
 	}
 	res.Skipped = skipped
 	return res, nil
+}
+
+// decide applies the decisions of people: the merges join their records, and the splits keep their records apart in each later pass.
+func decide(in Input, g *groups) {
+	if len(in.Decisions) == 0 {
+		return
+	}
+	byKey := map[string]int{}
+	for i := range g.rs {
+		byKey[g.rs[i].Key()] = i
+	}
+	byRes := map[string][]int{}
+	for _, r := range in.Existing {
+		for _, c := range r.Catalogue {
+			if i, ok := byKey[c.Source+":"+c.NativeID]; ok {
+				byRes[r.ID] = append(byRes[r.ID], i)
+			}
+		}
+	}
+	records := func(x string) []int {
+		if strings.Contains(x, ":") {
+			if i, ok := byKey[x]; ok {
+				return []int{i}
+			}
+			return nil
+		}
+		return byRes[x]
+	}
+	g.lose = map[int]bool{}
+	for _, d := range in.Decisions {
+		as, bs := records(d.A), records(d.B)
+		if len(as) == 0 || len(bs) == 0 {
+			continue
+		}
+		switch d.Kind {
+		case "merge":
+			for _, i := range as[1:] {
+				g.merge(as[0], i)
+			}
+			for _, j := range bs {
+				g.merge(as[0], j)
+			}
+		case "split":
+			for _, i := range as {
+				for _, j := range bs {
+					g.apart = append(g.apart, [2]int{i, j})
+				}
+			}
+			for _, j := range bs {
+				g.lose[j] = true
+			}
+		}
+	}
 }
 
 // unique keeps the last record of each key, in the order of the keys.
@@ -342,7 +442,7 @@ func blocked(g *groups) int {
 				switch {
 				case s >= High:
 					g.join(i, j, C4)
-				case s >= Middle && !queued[[2]int{min(i, j), max(i, j)}]:
+				case s >= Middle && !queued[[2]int{min(i, j), max(i, j)}] && !g.split(g.find(i), g.find(j)):
 					queued[[2]int{min(i, j), max(i, j)}] = true
 					g.pairs = append(g.pairs, Pair{A: g.rs[i].Key(), B: g.rs[j].Key(), Pass: C4, Score: round(s), Reason: "the score is in the middle band"})
 				}
@@ -490,6 +590,7 @@ func build(in Input, g *groups) (*Result, error) {
 		return a < b
 	}
 	used := map[string]bool{}
+	claimed := map[string]bool{}
 	out := map[string]resource.Resource{}
 	res := &Result{Joins: g.joins}
 	roots := slices.Sorted(maps.Keys(members))
@@ -499,7 +600,7 @@ func build(in Input, g *groups) (*Result, error) {
 		var ids []string
 		for k, i := range idx {
 			recs[k] = &g.rs[i]
-			if id := owner[g.rs[i].Key()]; id != "" && !slices.Contains(ids, id) {
+			if id := owner[g.rs[i].Key()]; id != "" && !g.lose[i] && !claimed[id] && !slices.Contains(ids, id) {
 				ids = append(ids, id)
 			}
 		}
@@ -515,12 +616,21 @@ func build(in Input, g *groups) (*Result, error) {
 		if len(ids) > 0 {
 			id, dups = ids[0], ids[1:]
 			prev = existing[id]
+			for _, x := range ids {
+				claimed[x] = true
+			}
 		} else {
 			id = provisional(recs[0].Key(), used)
 		}
 		r := assemble(id, recs, prev)
 		if prev == nil {
 			r.History = []resource.Event{{Op: "add", At: in.Day, By: in.By}}
+			for _, i := range idx {
+				if from := owner[g.rs[i].Key()]; from != "" && from != id {
+					r.History = append(r.History, resource.Event{Op: "split", At: in.Day, By: in.By, Note: "split from " + from})
+					break
+				}
+			}
 		}
 		for _, dup := range dups {
 			r.History = append(r.History, resource.Event{Op: "merge", At: in.Day, By: in.By, Note: "merged " + dup})
