@@ -421,7 +421,7 @@ func h11(a *auditor) outcome {
 	return o
 }
 
-// h12 reports each stratum whose estimated recall is below its target (rule H12, RS11.4.5). It reads the estimates of the census report. The recall of a stratum is the count of its live in-scope resources over the high end of the interval of the estimate, so it is the lower end of the interval of the recall. When more than one pair gives an estimate, the rule takes the highest end, which gives the least recall. A stratum with no target is not checked. The rule is a warning before phase R5.
+// h12 reports each stratum whose estimated recall is below its target (rule H12, RS11.4.5). It reads the estimates of the census report. The recall of a stratum is the count of its live in-scope resources over the high end of the interval of the estimate, so it is the lower end of the interval of the recall. When more than one pair gives an estimate, the rule takes the highest end, which gives the least recall. A stratum with no target is not checked. The rule is hard from phase R5 (RS15.1), so a stratum below its target blocks a merge or a release.
 func h12(a *auditor) outcome {
 	t := a.resources()
 	if o, done := t.skip(); done {
