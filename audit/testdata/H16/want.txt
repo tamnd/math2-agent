@@ -1,0 +1,6 @@
+manifests/sources.yaml:0:0: H16: the source libgen is a shadow library. math2 never uses one
+manifests/sources.yaml:0:0: H16: the source mirror points to annas-archive.org, a shadow library. math2 never uses one
+records/resources/8F2.md:2:1: H16: the resource 8F2AAAAAA3 has a link to shadow.example, a shadow library
+records/resources/8F2.md:3:1: H16: the resource 8F2BBBBBBT has the id key libgen of a shadow library
+records/resources/8F2.md:4:1: H16: the resource 8F2CCCCCCH has a link to libgen.rs, a shadow library
+records/resources/8F2.md:5:1: H16: the resource 8F2DDDDDD8 has a catalogue record of the shadow library zlibrary

@@ -1,0 +1,3 @@
+records/resources/8F2.md:2:1: H10: the catalogue record 1 of the resource 8F2AAAAAA3 names the snapshot blake3:1111111111111111111111111111111111111111111111111111111111111111, which is not a snapshot of crossref
+records/resources/8F2.md:3:1: H10: the catalogue record 1 of the resource 8F2BBBBBBT names the source bnf, which is not in manifests/sources.yaml
+records/resources/8F2.md:4:1: H10: the catalogue record 1 of the resource 8F2CCCCCCH has no snapshot of openlibrary

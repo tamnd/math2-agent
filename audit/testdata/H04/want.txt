@@ -1,0 +1,3 @@
+records/resources/8F2.md:2:1: H04: the resource 8F2AAAAAA3 has the expression id doi:10.1007/978-3-642-13797-4 of the live resource 8F2K1QW7ZJ. Merge the two resources, or correct the id
+records/resources/8F2.md:3:1: H04: the resource 8F2BBBBBBT has the manifestation id isbn:9780070542358 of the live resource 8F2K1QW7ZJ. Merge the two resources, or correct the id
+records/resources/8F2.md:5:1: H04: the resource 8F2DDDDDD8 has the work id wikidata:Q1 of the live resource 8F2CCCCCCH. Merge the two resources, or correct the id

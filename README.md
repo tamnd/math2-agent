@@ -516,9 +516,15 @@ A source of `manifests/sources.yaml` can have the kind `catalogue` (its records 
 | H01 | The resource register, the tag register and the inventory register have no value in common. |
 | H02 | Each resource id has a valid check character, each record has a line in `registers/resources/`, and no record has a provisional id. |
 | H03 | Each external id of a resource is in the normal form of its system and passes its check digit. |
+| H04 | No strong id belongs to two live resources at the same level. The level is the place of the id in the record: the work, an expression or a manifestation. An ISBN counts only when the two titles match. |
+| H05 | Each live resource has at least one catalogue record from a source with `approved_by` in `manifests/sources.yaml`. A record of the source `refs` does not count. |
 | H06 | Each record parses and has its required fields with valid values, and each manifestation with a link has an access. |
+| H07 | Each duplicate resource points to a live resource. A duplicate that points to a duplicate is a finding. |
+| H10 | Each catalogue record names a source of `manifests/sources.yaml` and one of the snapshots of that source. |
+| H11 | A soft rule. It reports each deferred resource whose date has passed. |
+| H16 | No source, catalogue record, link or id key points to a shadow library. The ban list is `manifests/banned-domains.txt` and a list in the code. |
 
-The rules H04, H05 and H07 to H17 are in the catalogue and are not written yet.
+The rules H08, H09, H12 to H15 and H17 are in the catalogue and are not written yet.
 
 The package `resource/scope` decides if a work is in the scope of the catalogue. It applies the tests S1 to S7 of the spec in order: the MSC code, the arXiv category, the library class (LCC, DDC, UDC, CLC and BK), the venue register, the curricula, the mathematics units of the institutions and the subject in Wikidata or OpenAlex. A work that no test puts in can be `border`, `out` or `deferred`. The decision records the test that gave it. The classifier, test S8, is not written yet.
 
