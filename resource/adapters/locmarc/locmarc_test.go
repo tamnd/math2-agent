@@ -16,7 +16,7 @@ import (
 )
 
 // marc encodes one record in ISO 2709. Each field is a tag and its data: the value of a control field, or the indicators and the subfields with $ for the delimiter.
-func marc(fields ...[2]string) []byte {
+func iso(fields ...[2]string) []byte {
 	var dir, data bytes.Buffer
 	for _, f := range fields {
 		d := strings.ReplaceAll(f[1], "$", "\x1f") + "\x1e"
@@ -41,13 +41,13 @@ func TestInScope(t *testing.T) {
 func TestFetchAndRecords(t *testing.T) {
 	var part bytes.Buffer
 	zw := gzip.NewWriter(&part)
-	_, _ = zw.Write(marc([2]string{"001", "  12345 "}, [2]string{"008", "850101s1908    enk           000 0 eng  "}, [2]string{"010", "  $a   08012345 "},
+	_, _ = zw.Write(iso([2]string{"001", "  12345 "}, [2]string{"008", "850101s1908    enk           000 0 eng  "}, [2]string{"010", "  $a   08012345 "},
 		[2]string{"020", "  $a0521720559 (pbk.)"}, [2]string{"035", "  $a(OCoLC)ocm2779601"}, [2]string{"050", "00$aQA303$b.H3"}, [2]string{"082", "00$a515/.1"},
 		[2]string{"100", "1 $aHardy, G. H.$q(Godfrey Harold),$d1877-1947."}, [2]string{"245", "12$aA course of pure mathematics /$cby G. H. Hardy."}, [2]string{"250", "  $a10th ed."},
 		[2]string{"260", "  $aCambridge :$bUniversity Press,$c1908."}, [2]string{"490", "1 $aCambridge mathematical library ;$v1"}, [2]string{"650", " 0$aCalculus.$xTextbooks."},
 		[2]string{"505", "0 $aReal variables -- Functions."}, [2]string{"700", "1 $aKörner, T. W.,$eeditor."}))
-	_, _ = zw.Write(marc([2]string{"001", "999"}, [2]string{"050", "00$aQA76.73$b.J38"}, [2]string{"245", "10$aJava."}))
-	_, _ = zw.Write(marc([2]string{"001", "777"}, [2]string{"082", "04$a519.2"}, [2]string{"245", "10$aProbability :$bessays."}, [2]string{"700", "1 $aDoob, J. L.,$eed."}))
+	_, _ = zw.Write(iso([2]string{"001", "999"}, [2]string{"050", "00$aQA76.73$b.J38"}, [2]string{"245", "10$aJava."}))
+	_, _ = zw.Write(iso([2]string{"001", "777"}, [2]string{"082", "04$a519.2"}, [2]string{"245", "10$aProbability :$bessays."}, [2]string{"700", "1 $aDoob, J. L.,$eed."}))
 	_ = zw.Close()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -100,11 +100,5 @@ func TestFetchAndRecords(t *testing.T) {
 	}
 	if r := rs[1]; r.NativeID != "777" || r.Kind != "edited-volume" || r.Title != "Probability: essays" {
 		t.Errorf("record %+v", r)
-	}
-}
-
-func TestParseError(t *testing.T) {
-	if _, err := NewReader(strings.NewReader("00010xxxxx")).Read(); err == nil {
-		t.Error("a short record gives no error")
 	}
 }

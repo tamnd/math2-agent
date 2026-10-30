@@ -1,8 +1,10 @@
-package locmarc
+// Package marc reads bibliographic records in MARC 21 and UNIMARC for the adapters of the catalogues of resources (spec corpus resources RS4.1 and RS8.3). It reads the transmission format of ISO 2709 and the XML forms MARCXML and MarcXchange, and it maps a record of MARC 21 or of UNIMARC to a book.
+package marc
 
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -131,4 +133,85 @@ func Parse(b []byte) (Record, error) {
 		rec.Fields = append(rec.Fields, f)
 	}
 	return rec, nil
+}
+
+// Encode writes one record in the transmission format of ISO 2709. It sets the record length and the base address in the leader. A record with no leader of 24 characters gets the leader of a book in MARC 21 with UTF-8. The tests of the adapters use Encode to make their fixtures.
+func Encode(rec Record) []byte {
+	var dir, data bytes.Buffer
+	for _, f := range rec.Fields {
+		var d []byte
+		if f.Tag < "010" {
+			d = []byte(f.Value)
+		} else {
+			ind := f.Ind
+			if len(ind) != 2 {
+				ind = "  "
+			}
+			d = []byte(ind)
+			for _, s := range f.Subfields {
+				d = append(d, subfield)
+				d = append(d, s[0]+s[1]...)
+			}
+		}
+		d = append(d, 0x1e)
+		fmt.Fprintf(&dir, "%-3.3s%04d%05d", f.Tag, len(d), data.Len())
+		data.Write(d)
+	}
+	dir.WriteByte(0x1e)
+	base := 24 + dir.Len()
+	n := base + data.Len() + 1
+	leader := rec.Leader
+	if len(leader) != 24 {
+		leader = "00000cam a2200000 a 4500"
+	}
+	leader = fmt.Sprintf("%05d", n) + leader[5:12] + fmt.Sprintf("%05d", base) + leader[17:]
+	return append([]byte(leader+dir.String()+data.String()), 0x1d)
+}
+
+// Each reads a file of records and calls fn for each record. The file is in ISO 2709 or in MARCXML, and it can be compressed with gzip. Each finds the form from the first bytes.
+func Each(r io.Reader, fn func(Record) error) error {
+	br := bufio.NewReaderSize(r, 1<<20)
+	if head, _ := br.Peek(2); len(head) == 2 && head[0] == 0x1f && head[1] == 0x8b {
+		zr, err := gzip.NewReader(br)
+		if err != nil {
+			return fmt.Errorf("marc: %w", err)
+		}
+		defer func() { _ = zr.Close() }()
+		br = bufio.NewReaderSize(zr, 1<<20)
+	}
+	if xmlStart(br) {
+		return EachXML(br, fn)
+	}
+	rd := &Reader{br: br}
+	for {
+		rec, err := rd.Read()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if err := fn(rec); err != nil {
+			return err
+		}
+	}
+}
+
+// xmlStart reports whether the first byte after the spaces and the byte order mark is <.
+func xmlStart(br *bufio.Reader) bool {
+	for i := 1; i <= 4096; i++ {
+		b, _ := br.Peek(i)
+		if len(b) < i {
+			return false
+		}
+		switch b[i-1] {
+		case '<':
+			return true
+		case ' ', '\t', '\r', '\n', 0xef, 0xbb, 0xbf:
+			continue
+		default:
+			return false
+		}
+	}
+	return false
 }
