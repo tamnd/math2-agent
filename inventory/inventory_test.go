@@ -175,7 +175,11 @@ func TestFromRecordsTextbookResource(t *testing.T) {
 	ms := FromRecords(src, "blake3:00", "textbook/1", []ingest.Record{
 		{ID: "a.tex#thm-1", Kind: "statement", Class: ingest.Open, Meta: map[string]string{"environment": "theorem", "section": "3.14 The mean value theorem"}},
 		{ID: "a.tex#def-1", Kind: "definition", Class: ingest.Open, Meta: map[string]string{"section": "Limits"}},
+		{ID: "index/2.u1/group", Kind: "concept", Title: "group", Class: ingest.Open, Meta: map[string]string{"environment": "index", "node": "2.u1"}},
 	})
+	if ms[2].Kind != "concept" || ms[2].Name != "group" || ms[2].At == nil || *ms[2].At != (At{Section: "2.u1", Kind: "index"}) {
+		t.Errorf("the index term is %+v, at %+v", ms[2], ms[2].At)
+	}
 	if ms[1].Resource != "8F2K1QW7ZJ/e1" || ms[1].At == nil || *ms[1].At != (At{Section: "3.14", Kind: "theorem"}) {
 		t.Errorf("the theorem is %+v, at %+v", ms[1], ms[1].At)
 	}

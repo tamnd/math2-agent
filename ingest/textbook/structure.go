@@ -16,6 +16,7 @@ var (
 	headingCmd = regexp.MustCompile(`\\(part|chapter|section|subsection|olchapter|olsection|olsubsection)(\*?)\s*(?:\[[^\]]*\]\s*)?\{|\\(appendix|frontmatter|mainmatter|backmatter)\b`)
 	beginDoc   = regexp.MustCompile(`\\begin\s*\{document\}`)
 	labelAfter = regexp.MustCompile(`^\s*\\label\s*\{([^{}]+)\}`)
+	indexCmd   = regexp.MustCompile(`\\index\s*(?:\[[^\]]*\]\s*)?\{`)
 )
 
 // Structure reads a git archive of the book and gives the table of contents of the book (RS4.5) and the commit of the archive. The tree has the parts, the chapters, the sections and the subsections, with their numbers and titles. It does not have the text between the headings. It reads the same files as Read, in the same order. It fails when a file does not parse, when the main file of a PreTeXt book is not in the archive, and when the archive has no headings.
@@ -26,7 +27,20 @@ func (b Book) Structure(r io.Reader) ([]resource.Node, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	t := &toc{keys: map[string]bool{}}
+	t, err := b.build(files, order, false)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(t.roots) == 0 {
+		return nil, "", errors.New("the archive has no parts, chapters or sections")
+	}
+	return nodes(t.roots), cmpOr(commit, b.Commit), nil
+}
+
+// build builds the table of contents of the files of the book. When index is true, it also collects the terms of the back-of-book index, each with the node of the table of contents that holds it (RS4.6).
+func (b Book) build(files map[string][]byte, order []string, index bool) (*toc, error) {
+	t := &toc{keys: map[string]bool{}, index: index}
+	var err error
 	switch b.Format {
 	case LaTeX:
 		latexTOC(t, files, order, b.Files, b.Skip)
@@ -35,13 +49,7 @@ func (b Book) Structure(r io.Reader) ([]resource.Node, string, error) {
 	default:
 		err = fmt.Errorf("the format %q is not known", b.Format)
 	}
-	if err != nil {
-		return nil, "", err
-	}
-	if len(t.roots) == 0 {
-		return nil, "", errors.New("the archive has no parts, chapters or sections")
-	}
-	return nodes(t.roots), cmpOr(commit, b.Commit), nil
+	return t, err
 }
 
 // latexTOC adds the headings of the files of order that match matches and skip does not match, in that order. In a file with \begin{document}, the text before it is the preamble, and it has no headings. A heading with # in its title is in the definition of a macro, and it is not a heading of the book.
@@ -54,7 +62,15 @@ func latexTOC(t *toc, files map[string][]byte, order []string, match, skip *rege
 		if m := beginDoc.FindStringIndex(s); m != nil {
 			s = s[m[1]:]
 		}
+		var terms [][]int
+		if t.index {
+			terms = indexCmd.FindAllStringIndex(s, -1)
+		}
 		for _, m := range headingCmd.FindAllStringSubmatchIndex(s, -1) {
+			for len(terms) > 0 && terms[0][0] < m[0] {
+				t.latexTerm(name, s, terms[0])
+				terms = terms[1:]
+			}
 			if m[6] >= 0 {
 				t.mark(s[m[6]:m[7]])
 				continue
@@ -69,6 +85,9 @@ func latexTOC(t *toc, files map[string][]byte, order []string, match, skip *rege
 			}
 			kind := strings.TrimPrefix(s[m[2]:m[3]], "ol")
 			t.add(kind, m[5] > m[4], strings.Join(strings.Fields(title), " "), label)
+		}
+		for _, m := range terms {
+			t.latexTerm(name, s, m)
 		}
 	}
 }
@@ -95,6 +114,8 @@ type toc struct {
 	appendix   bool        // the headings are in the appendices
 	unnumbered bool        // the headings are in the front matter or the back matter
 	keys       map[string]bool
+	index      bool        // collect the terms of the index
+	terms      []indexTerm // the terms of the index, in the order of the book
 }
 
 // tocNode is a node of the tree while the tree grows.

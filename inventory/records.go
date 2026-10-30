@@ -233,10 +233,10 @@ func NameKind(name string) string {
 	return Unknown
 }
 
-// textbookAt gives the structured locator of an item of a textbook: the environment as the kind, and the section when its heading starts with a number.
+// textbookAt gives the structured locator of an item of a textbook: the environment as the kind, and the section. The section is the node of the table of contents when the record has one, as a term of the index has (RS4.6), or else the number at the start of the heading.
 func textbookAt(meta map[string]string) *At {
-	at := At{Kind: meta["environment"]}
-	if sec := strings.Fields(meta["section"]); len(sec) > 0 && sec[0][0] >= '0' && sec[0][0] <= '9' {
+	at := At{Kind: meta["environment"], Section: meta["node"]}
+	if sec := strings.Fields(meta["section"]); at.Section == "" && len(sec) > 0 && sec[0][0] >= '0' && sec[0][0] <= '9' {
 		at.Section = strings.TrimSuffix(sec[0], ".")
 	}
 	if at == (At{}) {

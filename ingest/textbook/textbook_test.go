@@ -157,6 +157,7 @@ var wantIDs = map[string][]string{
 	"austin_ula": {
 		"src/section1-1.xml#exploration-lines exercise", "src/section1-1.xml#definition-linear-system definition",
 		"src/section1-1.xml#proposition-solutions statement", "src/section1-1.xml#activity-planes exercise",
+		"index/1.1/linear-system concept",
 	},
 	"active_calculus": {
 		"source/previews/PA-1-1.xml#PA-1-1 exercise", "source/sec-1-1-vel.xml#def-avg-vel definition",
@@ -173,6 +174,9 @@ func TestRead(t *testing.T) {
 		var got []string
 		for _, r := range recs {
 			got = append(got, r.ID+" "+r.Kind)
+			if r.Meta["environment"] == textbook.IndexEnv {
+				continue // TestIndex checks the terms of the index
+			}
 			file, line, _ := strings.Cut(r.Locator, ":")
 			if !strings.HasPrefix(r.ID, file+"#") || r.URL != b.Repository+"/blob/"+b.Commit+"/"+file+"#L"+line {
 				t.Errorf("%s %s is at %s, %s", b.ID, r.ID, r.Locator, r.URL)
