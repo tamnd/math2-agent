@@ -20,7 +20,7 @@ func TestResInstitutions(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, stdout, stderr := run("res", "institutions", "-root", root, "-ror", dump, "-wikidata", "none")
-	if code != ExitOK || !strings.Contains(stdout, "read 1 organizations of ROR, 1 of them active") || !strings.Contains(stdout, "I4: 7") {
+	if code != ExitOK || !strings.Contains(stdout, "read 1 organizations of ROR, 1 of them active") || !strings.Contains(stdout, "I4: 8") {
 		t.Fatalf("m2 res institutions = %d\n%s\n%s", code, stdout, stderr)
 	}
 	if ins, err := institutions.Read(root); err != nil || len(ins) != 1+len(institutions.Platforms) {

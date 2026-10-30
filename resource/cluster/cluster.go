@@ -46,11 +46,11 @@ var levels = map[string]string{
 	"wikidata": "work", "openlibrary_work": "work", "course": "work", "source": "work",
 	"isbn": "manifestation", "oclc": "manifestation", "lccn": "manifestation", "openlibrary_edition": "manifestation",
 	"hathi": "manifestation", "hathi_record": "manifestation", "ia": "manifestation", "gbooks": "manifestation", "gutenberg": "manifestation",
-	"ocw": "manifestation",
+	"ocw": "manifestation", "oyc": "manifestation", "nptel": "manifestation",
 }
 
 // pages are the systems of ids of a manifestation that is a site, not a print.
-var pages = map[string]bool{"ocw": true}
+var pages = map[string]bool{"ocw": true, "oyc": true, "nptel": true}
 
 // courses are the kinds of a course and of its materials. Clustering never joins one of them with a resource of another kind, as a course with the book of the same title and author (RS05).
 var courses = map[string]bool{"course": true, "course-material": true}
