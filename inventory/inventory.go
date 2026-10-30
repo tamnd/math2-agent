@@ -59,6 +59,8 @@ type Mention struct {
 	TypeHash string              `json:"type_hash,omitempty"` // the hash of the canonical form of the type of a statement of a formal library (pass 2 of K4.3)
 	Class    string              `json:"class"`               // the licence class (spec 9.3)
 	By       string              `json:"by"`                  // the importer and its version, or the run
+	Resource string              `json:"resource,omitempty"`  // the resource and the expression of the work that holds the item, as 8F2K1QW7ZB/e3 (corpus resources RS2.8)
+	At       *At                 `json:"at,omitempty"`        // the structured locator of the item in the resource (RS2.8). The free-text locator stays for display
 
 	// The fields below are for the mentions of the declarations of formal libraries (corpus K6.3 and K6.5). The other sources leave them empty.
 	Pin      string `json:"pin,omitempty"`      // the commit of the library that the importer read
@@ -98,6 +100,15 @@ type Mention struct {
 	Assessment  string   `json:"assessment,omitempty"`   // the class and the importance of the article in the project, as B/High
 	AliasesFrom []string `json:"aliases_from,omitempty"` // where each alias came from, in the order of the aliases: lead, redirect or anchor-redirect
 	MemberOf    string   `json:"member_of,omitempty"`    // of a member mention: the mention of the article that it points to (WP5.1)
+}
+
+// At is the structured locator of a mention in its resource (corpus resources RS2.8). Each field is optional. Page is a page of the manifestation of the resource when the expression has more than one.
+type At struct {
+	Part    string `json:"part,omitempty"`
+	Section string `json:"section,omitempty"` // the number of the section, as 3.14
+	Kind    string `json:"kind,omitempty"`    // the kind of the item in the source, as theorem
+	Number  string `json:"number,omitempty"`  // the number that the source prints, as 3.14
+	Page    string `json:"page,omitempty"`
 }
 
 // Cite is a source that a model names for an item. The clustering does not join mentions by a cite, because a model can give a wrong id. A cite counts only when K9.5 confirms it.
