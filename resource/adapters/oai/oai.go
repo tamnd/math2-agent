@@ -92,3 +92,35 @@ func Unmarshal(data []byte, v any) error {
 	d.Entity = xml.HTMLEntity
 	return d.Decode(v)
 }
+
+// Value is one element of the format oai_dc, with its language and its type.
+type Value struct {
+	Lang  string `xml:"lang,attr"`
+	Type  string `xml:"type,attr"`
+	Value string `xml:",chardata"`
+}
+
+// DC is the metadata of a record in the format oai_dc, which each OAI-PMH endpoint must give. It has no description, because the adapters keep the class record only and do not keep the abstracts.
+type DC struct {
+	Title      []Value `xml:"title"`
+	Creator    []Value `xml:"creator"`
+	Subject    []Value `xml:"subject"`
+	Publisher  []Value `xml:"publisher"`
+	Date       []Value `xml:"date"`
+	Type       []Value `xml:"type"`
+	Identifier []Value `xml:"identifier"`
+	Source     []Value `xml:"source"`
+	Language   []Value `xml:"language"`
+	Relation   []Value `xml:"relation"`
+}
+
+// Texts gives the text of each value that is not empty, with the spaces folded.
+func Texts(vs []Value) []string {
+	var out []string
+	for _, v := range vs {
+		if s := strings.Join(strings.Fields(v.Value), " "); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
