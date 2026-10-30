@@ -56,3 +56,16 @@ func TestHarvest(t *testing.T) {
 		t.Errorf("badArgument gave %v", err)
 	}
 }
+
+func TestDC(t *testing.T) {
+	var m DC
+	err := Unmarshal([]byte(`<oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<dc:title xml:lang="ru">Об  уравнениях</dc:title><dc:title xml:lang="en">On equations</dc:title><dc:creator>Ivanov, I.</dc:creator><dc:creator> </dc:creator>
+<dc:identifier>https://doi.org/10.1/x</dc:identifier></oai_dc:dc>`), &m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Title) != 2 || m.Title[1].Lang != "en" || Texts(m.Title)[0] != "Об уравнениях" || len(Texts(m.Creator)) != 1 || len(m.Identifier) != 1 {
+		t.Errorf("dc %+v", m)
+	}
+}
