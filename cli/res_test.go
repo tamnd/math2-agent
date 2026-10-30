@@ -144,3 +144,41 @@ func TestResCluster(t *testing.T) {
 		t.Fatalf("the second run changed the id: %+v", again)
 	}
 }
+
+func TestResResolve(t *testing.T) {
+	root := t.TempDir()
+	data, err := os.ReadFile(filepath.Join("..", "resource", "testdata", "rudin.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, root, "records/resources/8F2.jsonl", string(data))
+	rs, err := resource.ReadResources(root)
+	if err != nil || len(rs) != 1 {
+		t.Fatalf("got %d resources: %v", len(rs), err)
+	}
+	var id string
+	for _, e := range rs[0].Expressions {
+		for _, m := range e.Manifestations {
+			if v := m.IDs.Get("isbn"); v != "" && id == "" {
+				id = "isbn:" + v
+			}
+		}
+	}
+	if id == "" {
+		t.Fatal("the test record has no ISBN")
+	}
+	code, stdout, stderr := run("res", "resolve", "-root", root, "-index", id, "doi:10.9999/none")
+	if code != ExitOK || !strings.Contains(stdout, `"status":"found"`) || !strings.Contains(stdout, `"status":"not-found"`) || !strings.Contains(stderr, "1 found, 0 with candidates, 1 not found") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(root, "build/resources/ids.parquet")); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, root, "refs.txt", "W. Rudin, Principles of Mathematical Analysis, 3rd ed., McGraw-Hill, 1976.\n")
+	if code, stdout, stderr := run("res", "resolve", "-root", root, "-in", filepath.Join(root, "refs.txt")); code != ExitOK || !strings.Contains(stdout, `"status":"found"`) {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	if code, _, _ := run("res", "resolve", "-root", root); code != ExitUsage {
+		t.Fatalf("no input gave exit code %d", code)
+	}
+}
