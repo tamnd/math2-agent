@@ -234,7 +234,7 @@ func TestReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := b.String()
-	for _, want := range []string{"# Census of the catalogues of resources", "| a | 50 | 1.00 | 50 | 0 | 0 | 0 | 50 |", "## Counts by MSC2", "| a | b | 50 | 25 |", "| a | b | article | 1990s |", "## Strata with no independent pair", "| book | 1950s |"} {
+	for _, want := range []string{"# Census of the catalogues of resources", "| a | 50 | 1.00 | 50 | 0 | 0 | 0 | 50 |", "## Counts by MSC2", "| a | b | records | 50 | 25 |", "| a | b | article | 1990s |", "## Strata with no independent pair", "| book | 1950s |"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the report does not have %q:\n%s", want, out)
 		}

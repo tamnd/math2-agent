@@ -81,6 +81,8 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list, `m2 wp fetch` reads each article of the scope list from a dump, `m2 wp parsoid` fetches the Parsoid HTML of each article, and `m2 wp pointers` collects the incoming pointers of each article. `m2 wp census report` writes the completeness report, and `m2 wp census diff` prints the readings of one article side by side. `refresh` arrives in a later milestone of the Wikipedia roadmap. | written |
 | `m2 res mint` | Change the provisional ids of the resources in `records/resources/` to resource ids, and add the ids to `registers/resources/`. The other subcommands of `m2 res` (`import`, `resolve`, `cluster`, `scope`, `show`, `queue`, `refs`, `status` and `gaps`) arrive in the milestones RS-M2 to RS-M4. | written |
 | `m2 res census` | Count the records of each catalogue by scope outcome and by stratum, measure the overlap of each pair of catalogues, and give the Chapman estimate of each independent pair. The report goes to `reports/resources-census.md`. | written |
+| `m2 res sample` | Take a random sample of the API of one catalogue (zbMATH Open, OpenAlex, Crossref, HAL or Open Library), or read the arXiv metadata plane in full, and write the census records to `<catalogue>.jsonl`. | written |
+| `m2 res lookup` | Look up the DOIs of a random part of the `in` records of each census file in the other catalogues, so that the census can measure the overlap of a sampled catalogue. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
@@ -523,6 +525,16 @@ m2 res census -root ../math2 -in census/ -pairs zbmath:crossref,zbmath:hal -env 
 ```
 
 The file of `-env` is optional. It gives the venue register (`venues`), the Wikidata items of mathematics (`math_items`) and the topic threshold of S7 (`topic_threshold`).
+
+`m2 res sample -catalogue NAME -dir census/` writes the census records of one catalogue. For an API, it reads random pages until it has `-n` records (10000 by default), and each record gets the weight total / n. The command waits `-gap` (1 second by default) between two requests, and it tries again on the statuses 429 and 5xx. For arXiv, `-arxiv DIR` names the metadata plane of a checkout of tamnd/arxiv, and the command reads each mathematics paper with the weight 1. OpenAlex gives a small free budget of requests each day without a key, so keep `-n` low for OpenAlex.
+
+Two samples of two catalogues seldom have the same record, so the match by keys cannot measure their overlap. `m2 res lookup -dir census/` chooses at random up to `-n` records (5000 by default) of each file that are `in` and have a DOI. It asks each catalogue of `-against` (zbMATH Open, OpenAlex, Crossref and HAL by default) which of these DOIs it has, and it writes the answers into the field `found` of each record. When a file has records with `found`, `m2 res census` measures the overlap with these answers, and the report gives `lookup` in the column Match.
+
+```
+m2 res sample -catalogue arxiv -arxiv ../arxiv/metadata -dir census/
+m2 res sample -catalogue zbmath -n 10000 -dir census/
+m2 res lookup -dir census/ -n 2000
+```
 
 ## The Wikipedia corpus
 

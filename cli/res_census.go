@@ -1,9 +1,7 @@
 package cli
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -12,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/tamnd/math2-agent/resource/census"
-	resscope "github.com/tamnd/math2-agent/resource/scope"
 )
 
 const resCensusUsage = "m2 res census -in DIR [-root DIR] [-env FILE] [-sample N] [-seed N] [-pairs A:B,C:D]"
@@ -38,16 +35,10 @@ func runResCensus(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "m2 res census: %v\n", err)
 		return ExitUsage
 	}
-	var env resscope.Env
-	if *envFile != "" {
-		data, err := os.ReadFile(*envFile) // #nosec G304 -- the user names the file.
-		if err == nil {
-			err = json.Unmarshal(data, &env)
-		}
-		if err != nil {
-			fmt.Fprintf(stderr, "m2 res census: %v\n", err)
-			return ExitFailure
-		}
+	env, err := readEnv(*envFile)
+	if err != nil {
+		fmt.Fprintf(stderr, "m2 res census: %v\n", err)
+		return ExitFailure
 	}
 	files, err := filepath.Glob(filepath.Join(*in, "*.jsonl"))
 	if err != nil || len(files) == 0 {
@@ -107,24 +98,12 @@ func parsePairs(s string) ([][2]string, error) {
 }
 
 func readCensus(c *census.Census, name, path string) error {
-	f, err := os.Open(path) // #nosec G304 -- the user names the directory.
+	rs, err := readRecords(path)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
-	sc := bufio.NewScanner(f)
-	sc.Buffer(nil, 64<<20)
-	for n := 1; sc.Scan(); n++ {
-		if len(bytes.TrimSpace(sc.Bytes())) == 0 {
-			continue
-		}
-		var r census.Record
-		dec := json.NewDecoder(bytes.NewReader(sc.Bytes()))
-		dec.DisallowUnknownFields()
-		if err := dec.Decode(&r); err != nil {
-			return fmt.Errorf("%s:%d: %w", path, n, err)
-		}
+	for _, r := range rs {
 		c.Add(name, r)
 	}
-	return sc.Err()
+	return nil
 }
