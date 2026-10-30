@@ -63,7 +63,7 @@ func WalkResources(root string, fn func(file string, line int, r Resource) error
 		return err
 	}
 	for _, e := range entries {
-		if e.IsDir() || filepath.Ext(e.Name()) != ".jsonl" {
+		if e.IsDir() || !IsShard(e.Name()) {
 			continue
 		}
 		path := filepath.Join(dir, e.Name())
@@ -178,7 +178,7 @@ func replaceShards(dir string, files map[string][]byte) error {
 		return err
 	}
 	for _, e := range entries {
-		if !e.IsDir() && filepath.Ext(e.Name()) == ".jsonl" && files[e.Name()] == nil {
+		if !e.IsDir() && IsShard(e.Name()) && files[e.Name()] == nil {
 			if err := os.Remove(filepath.Join(dir, e.Name())); err != nil {
 				return err
 			}
@@ -190,6 +190,12 @@ func replaceShards(dir string, files map[string][]byte) error {
 		}
 	}
 	return nil
+}
+
+// IsShard reports whether a file of records/resources/ is a shard of resources: three characters of an id, or four for a split shard (RS12.1), and .jsonl. The registers beside the shards, as decisions.jsonl and venues.jsonl, have longer names.
+func IsShard(name string) bool {
+	base, ok := strings.CutSuffix(name, ".jsonl")
+	return ok && (len(base) == 3 || len(base) == 4)
 }
 
 // writeFile writes the file through a temporary file in the same directory, so a reader never sees half a file.

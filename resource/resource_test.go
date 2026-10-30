@@ -279,3 +279,27 @@ func TestSchemaEnumsMatchLists(t *testing.T) {
 		t.Fatalf("the kinds of the schema and of Kinds differ")
 	}
 }
+
+func TestShardsKeepRegisters(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, Dir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"decisions.jsonl", "venues.jsonl"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(`{"id":"x","kind":"scope"}`+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if rs, err := ReadResources(root); err != nil || len(rs) != 0 {
+		t.Fatalf("the registers were read as resources: %v, %v", rs, err)
+	}
+	if err := WriteResources(root, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"decisions.jsonl", "venues.jsonl"} {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+			t.Errorf("the write removed %s", name)
+		}
+	}
+}

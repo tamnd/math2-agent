@@ -10,12 +10,11 @@ import (
 	"github.com/tamnd/math2-agent/resource"
 )
 
-const resUsage = "m2 res mint [-root DIR] [-commit C]\n       " + resCensusUsage + "\n       " + resSampleUsage + "\n       " + resLookupUsage + "\n       " + resClusterUsage + "\n       " + resResolveUsage + "\n       m2 res import|scope|show|queue|refs|status|gaps"
+const resUsage = "m2 res mint [-root DIR] [-commit C]\n       " + resCensusUsage + "\n       " + resSampleUsage + "\n       " + resLookupUsage + "\n       " + resClusterUsage + "\n       " + resResolveUsage + "\n       " + resScopeUsage + "\n       m2 res import|show|queue|refs|status|gaps"
 
 // resLater holds the res subcommands that are not written yet, with the milestone of the resources roadmap (RS15) that delivers each of them.
 var resLater = map[string]string{
 	"import": "RS-M2, the core catalogues",
-	"scope":  "RS-M2, the core catalogues",
 	"show":   "RS-M2, the core catalogues",
 	"queue":  "RS-M2, the core catalogues",
 	"refs":   "RS-M3, books and references",
@@ -37,6 +36,8 @@ func runRes(args []string, stdout, stderr io.Writer) int {
 		return runResSample(args[1:], stdout, stderr)
 	case sub == "lookup":
 		return runResLookup(args[1:], stdout, stderr)
+	case sub == "scope":
+		return runResScope(args[1:], stdout, stderr)
 	case sub == "resolve":
 		return runResResolve(args[1:], stdout, stderr)
 	case sub == "cluster":
