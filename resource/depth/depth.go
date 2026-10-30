@@ -15,6 +15,7 @@ import (
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
+	"github.com/tamnd/math2-agent/resource/institutions"
 	"github.com/tamnd/math2-agent/resource/scope"
 )
 
@@ -55,13 +56,14 @@ type Mentions struct {
 
 // Input is what Compute reads.
 type Input struct {
-	Resources []resource.Resource
-	Named     map[string]bool     // the resources that a curriculum names
-	OpenTexts map[string]bool     // the sources of the open textbooks of K5.4 Table A
-	Mentions  map[string]Mentions // by resource id
-	Previous  map[string]Row      // the rows of the last build
-	Decisions map[string]string   // the tier that a person set, by resource id
-	Day       string              // YYYY-MM-DD
+	Resources    []resource.Resource
+	Named        map[string]bool     // the resources that a curriculum names
+	OpenTexts    map[string]bool     // the sources of the open textbooks of K5.4 Table A
+	Mentions     map[string]Mentions // by resource id
+	Previous     map[string]Row      // the rows of the last build
+	Decisions    map[string]string   // the tier that a person set, by resource id
+	Institutions map[string]string   // the tier of each institution of the register, by ROR id (RS5.3)
+	Day          string              // YYYY-MM-DD
 }
 
 // Compute gives the row of each live resource with the scope in or border, in the order of the ids.
@@ -74,6 +76,9 @@ func Compute(in Input) []Row {
 		}
 		prev, had := in.Previous[r.ID]
 		t := Tier(r, in.Named[r.ID], in.OpenTexts)
+		if t == T5 && slices.ContainsFunc(r.IDs["course"], func(id string) bool { return listOnly(in.Institutions, id) }) {
+			t = T4 // RS5.7: a course of an I3 institution has only its record
+		}
 		switch p := in.Decisions[r.ID]; {
 		case p != "":
 			t = p
@@ -108,6 +113,13 @@ func Tier(r *resource.Resource, named bool, openTexts map[string]bool) string {
 		return T3
 	}
 	return T4
+}
+
+// listOnly reports whether the course id <ror>:<code> is of an institution that is I3 or I4. A course of an institution that the register does not have stays T5.
+func listOnly(tiers map[string]string, course string) bool {
+	ror, _, ok := strings.Cut(course, ":")
+	t := tiers[ror]
+	return ok && (t == institutions.I3 || t == institutions.I4)
 }
 
 func open(r *resource.Resource) bool {
@@ -263,6 +275,16 @@ func Build(root, day string, rs []resource.Resource, named map[string]bool) ([]R
 			dec[d.ID] = d.Value
 		}
 	}
-	rows := Compute(Input{Resources: rs, Named: named, OpenTexts: OpenTexts(), Mentions: ms, Previous: prev, Decisions: dec, Day: day})
+	ins, err := institutions.Read(root)
+	if err != nil {
+		return nil, err
+	}
+	tiers := map[string]string{}
+	for _, in := range ins {
+		if in.ROR != "" {
+			tiers[in.ROR] = in.Tier
+		}
+	}
+	rows := Compute(Input{Resources: rs, Named: named, OpenTexts: OpenTexts(), Mentions: ms, Previous: prev, Decisions: dec, Institutions: tiers, Day: day})
 	return rows, Write(root, rows)
 }
