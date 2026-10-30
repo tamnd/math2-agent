@@ -235,3 +235,15 @@ func TestPersonSplit(t *testing.T) {
 		t.Errorf("got pairs %v, want none", res.Pairs)
 	}
 }
+
+func TestJoinedBy(t *testing.T) {
+	res := run(t, Input{Records: []Record{
+		{Source: "arxiv", NativeID: "2301.00001", Kind: "preprint", Title: "On the zeros of zeta", Creators: author("Ada Lovelace"), Date: "2023", IDs: resource.IDs{"arxiv": {"2301.00001"}}},
+		{Source: "zbmath", NativeID: "7700001", Kind: "article", Title: "On the zeros of zeta", Creators: author("Lovelace, Ada"), Date: "2024", IDs: resource.IDs{"arxiv": {"2301.00001"}}},
+		{Source: "crossref", NativeID: "c9", Kind: "article", Title: "Another paper on primes", Creators: author("Gauss, C. F."), Date: "1801"},
+	}})
+	got := res.JoinedBy([][2]string{{"arxiv:2301.00001", "zbmath:7700001"}, {"arxiv:2301.00001", "crossref:c9"}})
+	if got[0] != C1 || got[1] != "" {
+		t.Errorf("JoinedBy gave %q, want C1 and none", got)
+	}
+}

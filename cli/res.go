@@ -10,7 +10,7 @@ import (
 	"github.com/tamnd/math2-agent/resource"
 )
 
-const resUsage = "m2 res mint [-root DIR] [-commit C]\n       " + resCensusUsage + "\n       " + resSampleUsage + "\n       " + resLookupUsage + "\n       " + resClusterUsage + "\n       " + resResolveUsage + "\n       " + resScopeUsage + "\n       " + resImportUsage + "\n       " + resShowUsage + "\n       " + resQueueUsage + "\n       " + resStatusUsage + "\n       m2 res refs|gaps"
+const resUsage = "m2 res mint [-root DIR] [-commit C]\n       " + resCensusUsage + "\n       " + resSampleUsage + "\n       " + resLookupUsage + "\n       " + resClusterUsage + "\n       " + resResolveUsage + "\n       " + resScopeUsage + "\n       " + resImportUsage + "\n       " + resShowUsage + "\n       " + resQueueUsage + "\n       " + resStatusUsage + "\n       " + resGoldUsage + "\n       m2 res refs|gaps"
 
 // resLater holds the res subcommands that are not written yet, with the milestone of the resources roadmap (RS15) that delivers each of them.
 var resLater = map[string]string{
@@ -46,6 +46,8 @@ func runRes(args []string, stdout, stderr io.Writer) int {
 		return runResCluster(args[1:], stdout, stderr)
 	case sub == "status":
 		return runResStatus(args[1:], stdout, stderr)
+	case sub == "gold":
+		return runResGold(args[1:], stdout, stderr)
 	case resLater[sub] != "":
 		fmt.Fprintf(stderr, "m2 res %s: this command is not written yet. It arrives in %s.\n", sub, resLater[sub])
 		return ExitNotWritten
