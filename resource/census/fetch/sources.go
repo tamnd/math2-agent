@@ -2,10 +2,13 @@ package fetch
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/census"
@@ -25,7 +28,10 @@ const (
 const OpenAlexMath = "primary_topic.field.id:26"
 
 // ZBMath samples zbMATH Open and looks up DOIs in it.
-type ZBMath struct{ Base string }
+type ZBMath struct {
+	Base     string
+	LastYear int // the last year of the sample, or 0 for this year
+}
 
 // Name gives zbmath.
 func (ZBMath) Name() string { return "zbmath" }
@@ -73,22 +79,66 @@ type zbPage struct {
 
 var zbKinds = map[string]string{"j": "article", "a": "chapter", "b": "monograph", "p": "preprint", "s": "proceedings"}
 
-// Sample takes random pages of 100 documents.
+// ZBMathWindow is the most results that a search of zbMATH Open gives, over all its pages.
+const ZBMathWindow = 10000
+
+// ZBMathFirstYear is the first year of the documents of zbMATH Open. The Jahrbuch starts in 1868.
+const ZBMathFirstYear = 1860
+
+// Sample takes a sample in strata of the year of publication, because the API pages only inside a window of 10000 results of a search. It reads the count of each year with the search py:Y, gives each year a part of n by its count, and takes random pages of the year inside the window. Each record has the weight of its year, the count of the year divided by the records taken from the year. The order of the results inside a year is the order of the index, so a year with more than 10000 documents is read only in its first 10000.
 func (z ZBMath) Sample(ctx context.Context, c *Client, n int, seed uint64, emit func(census.Record) error) (Info, error) {
-	var first zbPage
-	if err := c.JSON(ctx, z.Base+"/document/_all?page=0&results_per_page=1", &first); err != nil {
-		return Info{}, wrap("zbmath", err)
-	}
-	info := Info{Total: first.Status.Total, Filter: "all documents"}
-	w := weight(info.Total, n)
-	for _, p := range pages(info.Total, 100, (n+99)/100, seed) {
+	count := func(q string) (int, error) {
 		var page zbPage
-		if err := c.JSON(ctx, fmt.Sprintf("%s/document/_all?page=%d&results_per_page=100", z.Base, p), &page); err != nil {
-			return info, wrap("zbmath", err)
+		v := url.Values{"search_string": {q}, "results_per_page": {"1"}, "page": {"0"}}
+		err := c.JSON(ctx, z.Base+"/document/_search?"+v.Encode(), &page)
+		if errors.Is(err, ErrNotFound) {
+			return 0, nil
 		}
-		for _, d := range page.Result {
+		return page.Status.Total, err
+	}
+	last := z.LastYear
+	if last == 0 {
+		last = time.Now().Year()
+	}
+	years := map[int]int{}
+	total := 0
+	for d := ZBMathFirstYear; d <= last; d += 10 {
+		t, err := count(fmt.Sprintf("py:%d-%d", d, d+9))
+		if err != nil {
+			return Info{}, wrap("zbmath", err)
+		}
+		for y := d; t > 0 && y < d+10 && y <= last; y++ {
+			ty, err := count(fmt.Sprintf("py:%d", y))
+			if err != nil {
+				return Info{}, wrap("zbmath", err)
+			}
+			if ty > 0 {
+				years[y] = ty
+				total += ty
+			}
+		}
+	}
+	info := Info{Total: total, Filter: fmt.Sprintf("all documents of %d to %d, in strata of the year", ZBMathFirstYear, last)}
+	for y := ZBMathFirstYear; y <= last; y++ {
+		ty := years[y]
+		if ty == 0 {
+			continue
+		}
+		k := max(1, int(math.Round(float64(n)*float64(ty)/float64(max(total, 1)))))
+		size := min(100, max(10, k))
+		window := min(ty, ZBMathWindow)
+		var docs []zbDoc
+		for _, p := range pages(window, size, (k+size-1)/size, seed+uint64(y)) {
+			var page zbPage
+			v := url.Values{"search_string": {fmt.Sprintf("py:%d", y)}, "results_per_page": {strconv.Itoa(size)}, "page": {strconv.Itoa(p)}}
+			if err := c.JSON(ctx, z.Base+"/document/_search?"+v.Encode(), &page); err != nil {
+				return info, wrap("zbmath", err)
+			}
+			docs = append(docs, page.Result...)
+		}
+		for _, d := range docs {
 			r := zbRecord(d)
-			r.Weight = w
+			r.Weight = float64(ty) / float64(len(docs))
 			if err := emit(r); err != nil {
 				return info, err
 			}
