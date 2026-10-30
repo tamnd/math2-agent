@@ -20,7 +20,7 @@ import (
 	resresolve "github.com/tamnd/math2-agent/resource/resolve"
 )
 
-const resResolveUsage = "m2 res resolve [-root DIR] [-live] [-gap D] [-index] [-cite TEXT | -in FILE | ID ...]"
+const resResolveUsage = "m2 res resolve [-root DIR] [-live] [-gap D] [-index] [-cite TEXT | -in FILE | -source crossref|arxiv [-crossref URL] [-arxiv DIR] [-n N] | ID ...]"
 
 // ResResolveQueue is the file of the queue res-resolve in the tree.
 const ResResolveQueue = "build/resources/queues/res-resolve.md"
@@ -34,16 +34,20 @@ func runResResolve(args []string, stdout, stderr io.Writer) int {
 	index := fs.Bool("index", false, "write the index of all ids to "+resresolve.IndexFile)
 	cite := fs.String("cite", "", "one reference as text")
 	in := fs.String("in", "", "a file with one reference on each line, as text or as a JSON citation. The candidates go to the queue res-resolve.")
+	source := fs.String("source", "", "match the references of the resources in scope from a source, crossref or arxiv, and write the cites edges. The candidates go to the queue res-resolve.")
+	crossrefBase := fs.String("crossref", resresolve.CrossrefBase, "the REST API of Crossref for -source crossref")
+	axDir := fs.String("arxiv", "", "a checkout of tamnd/arxiv for -source arxiv")
+	limit := fs.Int("n", 0, "with -source, read the references of at most N works. 0 means all")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
 	inputs := 0
-	for _, set := range []bool{*cite != "", *in != "", fs.NArg() > 0} {
+	for _, set := range []bool{*cite != "", *in != "", *source != "", fs.NArg() > 0} {
 		if set {
 			inputs++
 		}
 	}
-	if inputs > 1 || (inputs == 0 && !*index) {
+	if inputs > 1 || (inputs == 0 && !*index) || (*source != "" && !citeSources[*source]) {
 		fmt.Fprintln(stderr, "usage: "+resResolveUsage)
 		return ExitUsage
 	}
@@ -94,6 +98,26 @@ func runResResolve(args []string, stdout, stderr io.Writer) int {
 		return enc.Encode(res) // #nosec G117 -- the field pass names a pass of the resolver, not a secret.
 	}
 	switch {
+	case *source == "arxiv":
+		if *axDir == "" {
+			fmt.Fprintln(stderr, "m2 res resolve: -source arxiv needs -arxiv DIR")
+			return ExitUsage
+		}
+		if err := resolveArxiv(ctx, *root, *axDir, r, *limit, stderr); err != nil {
+			return fail(err)
+		}
+		if err := r.Cache.Write(cachePath); err != nil {
+			return fail(err)
+		}
+		return ExitOK
+	case *source != "":
+		if err := resolveCrossref(ctx, *root, rs, r, fetch.NewClient(*gap), strings.TrimSuffix(*crossrefBase, "/"), *limit, stderr); err != nil {
+			return fail(err)
+		}
+		if err := r.Cache.Write(cachePath); err != nil {
+			return fail(err)
+		}
+		return ExitOK
 	case *cite != "":
 		res, err := r.Cite(ctx, resresolve.Parse(*cite))
 		if err != nil {
