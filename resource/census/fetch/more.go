@@ -358,7 +358,7 @@ func gutenbergRecords(body []byte) ([]census.Record, error) {
 		}
 		classes, headings := split("LoCC"), append(split("Subjects"), split("Bookshelves")...)
 		qa := slices.ContainsFunc(classes, func(c string) bool { return strings.HasPrefix(c, "QA") })
-		heading := mathHeading(headings)
+		heading := MathHeading(headings)
 		if !qa && !heading {
 			continue
 		}
@@ -372,8 +372,8 @@ func gutenbergRecords(body []byte) ([]census.Record, error) {
 	}
 }
 
-// mathHeading reports whether a subject heading starts with Mathematics or names a branch of mathematics.
-func mathHeading(subjects []string) bool {
+// MathHeading reports whether a subject heading starts with Mathematics or names a branch of mathematics.
+func MathHeading(subjects []string) bool {
 	for _, s := range subjects {
 		head, _, _ := strings.Cut(strings.ToLower(strings.TrimPrefix(s, "Category: ")), " -- ")
 		switch strings.TrimSpace(head) {
@@ -476,7 +476,7 @@ func archiveRecord(it archiveItem) census.Record {
 			r.Signals.LCC = addUnique(r.Signals.LCC, strings.Fields(strings.ToUpper(cl))[0])
 		}
 	}
-	r.Signals.MathHeading = mathHeading(strs(it.Subject))
+	r.Signals.MathHeading = MathHeading(strs(it.Subject))
 	return r
 }
 

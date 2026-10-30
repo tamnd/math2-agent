@@ -30,6 +30,14 @@ import (
 
 	// The adapters of the catalogues of resources register themselves with m2 ingest and m2 res import.
 	_ "github.com/tamnd/math2-agent/resource/adapters/crossref"
+	_ "github.com/tamnd/math2-agent/resource/adapters/datacite"
+	_ "github.com/tamnd/math2-agent/resource/adapters/doab"
+	_ "github.com/tamnd/math2-agent/resource/adapters/doaj"
+	_ "github.com/tamnd/math2-agent/resource/adapters/gutenberg"
+	_ "github.com/tamnd/math2-agent/resource/adapters/hal"
+	_ "github.com/tamnd/math2-agent/resource/adapters/hathitrust"
+	_ "github.com/tamnd/math2-agent/resource/adapters/locmarc"
+	_ "github.com/tamnd/math2-agent/resource/adapters/numdam"
 	_ "github.com/tamnd/math2-agent/resource/adapters/openalex"
 	_ "github.com/tamnd/math2-agent/resource/adapters/openlibrary"
 	_ "github.com/tamnd/math2-agent/resource/adapters/wikidataworks"
