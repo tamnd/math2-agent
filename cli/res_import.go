@@ -16,9 +16,11 @@ import (
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
 	"github.com/tamnd/math2-agent/resource/refs"
 	"github.com/tamnd/math2-agent/resource/s2"
+	"github.com/tamnd/math2-agent/resource/sourceworks"
+	"github.com/tamnd/math2-agent/resource/swh"
 )
 
-const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-url URL] [-cache DIR] [-structure] <source> | m2 res import [-root DIR] [-lookup] [-gap D] refs | m2 res import [-root DIR] [-gap D] s2"
+const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-url URL] [-cache DIR] [-structure] <source> | m2 res import [-root DIR] [-lookup] [-gap D] refs | m2 res import [-root DIR] [-gap D] s2 | m2 res import [-root DIR] [-gap D] [-n N] swh | m2 res import [-root DIR] source_works"
 
 // structurer is an adapter that gives the table of contents of the work of its snapshot (RS4.5), as the adapter of an open textbook does. It also gives the commit of the snapshot.
 type structurer interface {
@@ -47,7 +49,8 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.Cache, "cache", "", "the directory of the downloaded snapshots. Empty means m2 in the user cache directory.")
 	structure := fs.Bool("structure", false, "also write the table of contents of the snapshot to the first expression of the resource that groups the source records")
 	lookup := fs.Bool("lookup", false, "for the source refs: confirm the ids of the references with a live lookup")
-	gap := fs.Duration("gap", time.Second, "for the sources refs and s2: the shortest time between two lookups")
+	gap := fs.Duration("gap", time.Second, "for the sources refs, s2 and swh: the shortest time between two lookups")
+	limit := fs.Int("n", 0, "for the source swh: ask for at most this number of new origins. 0 means no limit.")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -68,6 +71,12 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	}
 	if source == s2.Source {
 		return runResImportS2(opt.Root, *gap, stdout, stderr)
+	}
+	if source == swh.Source {
+		return runResImportSWH(opt.Root, *gap, *limit, stdout, stderr)
+	}
+	if source == sourceworks.Source {
+		return runResImportSourceWorks(opt.Root, stdout, stderr)
 	}
 	fail := func(err error) int {
 		fmt.Fprintf(stderr, "m2 res import: %v\n", err)

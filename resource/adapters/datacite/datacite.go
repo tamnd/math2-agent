@@ -1,5 +1,7 @@
 // Package datacite is the adapter of DataCite (spec corpus resources RS4.1 and RS8.3, phase R2). It reads the DOIs of DataCite with a subject of mathematics, and it gives an ingest record and a source record for each DOI.
 //
+// The package also gives the sources zenodo and figshare (RS7.5, phase R5). Zenodo and Figshare register their DOIs at DataCite, so each source reads the same API with the client of the repository and the resource types dataset and software. A DOI of Zenodo also gives the Zenodo record id.
+//
 // Fetch reads the REST API in pages of 1000 with a cursor, and writes one JSON object for each DOI and each line, compressed with gzip. The object is the attributes of the DOI as the API gives them. The metadata of DataCite is under CC0. The adapter sends no email and no key.
 //
 // The m2 command imports this package for its side effect:
@@ -16,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -38,7 +41,11 @@ const PageSize = 1000
 // Adapter is the adapter of DataCite.
 type Adapter struct{}
 
-func init() { ingest.Register(Adapter{}) }
+func init() {
+	ingest.Register(Adapter{})
+	ingest.Register(Zenodo)
+	ingest.Register(Figshare)
+}
 
 // Source returns the catalogue entry of DataCite.
 func (Adapter) Source() ingest.Source {
@@ -103,6 +110,45 @@ func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) erro
 		}
 	}
 	return zw.Close()
+}
+
+// Repository is a source whose records are the DOIs of one client of DataCite, as a data repository. It reads and maps the DOIs as the adapter of DataCite does.
+type Repository struct {
+	Adapter
+	ID     string // the source id
+	Name   string
+	Home   string
+	Client string // the client id of the repository at DataCite
+	Query  string // the query of the subject
+}
+
+// Zenodo is the source of the datasets and the software of Zenodo with the subject mathematics. The metadata of Zenodo is under CC0, except the email addresses, and DataCite gives none.
+var Zenodo = Repository{ID: "zenodo", Name: "Zenodo, the datasets and software of mathematics", Home: "https://zenodo.org", Client: "cern.zenodo", Query: Query}
+
+// Figshare is the source of the datasets and the software of Figshare in the division 49 Mathematical sciences of the ANZSRC Fields of Research 2020, which Figshare gives as the classification code of each subject.
+var Figshare = Repository{ID: "figshare", Name: "Figshare, the datasets and software of mathematics", Home: "https://figshare.com", Client: "figshare.ars", Query: "subjects.classificationCode:49*"}
+
+// Source returns the catalogue entry of the repository. The source reads the metadata from DataCite, under CC0, and each item has its own licence.
+func (r Repository) Source() ingest.Source {
+	return ingest.Source{
+		ID:          r.ID,
+		Name:        r.Name,
+		Home:        r.Home,
+		Licence:     "CC0-1.0",
+		Class:       ingest.RecordOnly,
+		Channel:     "api",
+		Lineage:     []string{"datacite"}, // the records are DOIs of DataCite, so the two are one capture (RS11.4.3)
+		Attribution: r.Name + ", " + r.Home + ", through DataCite, https://datacite.org, CC0 1.0",
+	}
+}
+
+// Version returns the version of the source.
+func (r Repository) Version() string { return r.ID + "/1" }
+
+// Dump returns the URL of the datasets and the software of the repository in the API.
+func (r Repository) Dump() string {
+	q := url.Values{"query": {r.Query}, "client-id": {r.Client}, "resource-type-id": {"dataset,software"}}
+	return Base + "/dois?" + q.Encode()
 }
 
 // DOI is the attributes of one DOI, with the fields that the adapter reads.
@@ -187,13 +233,32 @@ var Relations = map[string]string{
 	"IsDerivedFrom": "based_on", "Reviews": "reviews",
 }
 
-// SourceRecord makes the source record of one DOI. The MSC codes go into the field msc, a DDC class goes into the subjects, and a related arXiv id goes into the ids.
+// zenodoDOI is the form of a DOI of Zenodo, with the record id.
+var zenodoDOI = regexp.MustCompile(`^10\.5281/zenodo\.([1-9][0-9]*)$`)
+
+// repository reports whether a related URL is the repository of the source code, as Zenodo gives it for a release of GitHub.
+func repository(link string) bool {
+	u, err := url.Parse(link)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return false
+	}
+	switch strings.TrimPrefix(strings.ToLower(u.Host), "www.") {
+	case "github.com", "gitlab.com", "bitbucket.org", "codeberg.org":
+		return true
+	}
+	return false
+}
+
+// SourceRecord makes the source record of one DOI. The MSC codes go into the field msc, a DDC class goes into the subjects, and a related arXiv id goes into the ids. A DOI of Zenodo gives the Zenodo record id, and a related URL of a repository on a forge goes into the links.
 func SourceRecord(d DOI) cluster.Record {
 	doi, err := ids.Normalize("doi", d.DOI)
 	if err != nil {
 		doi = strings.ToLower(strings.TrimSpace(d.DOI))
 	}
 	rec := cluster.Record{NativeID: doi, Level: "work", Kind: Kinds[d.Types.General], Language: lang(d.Language), Edition: d.Version, IDs: resource.IDs{"doi": {doi}}, Publisher: text(d.Publisher)}
+	if m := zenodoDOI.FindStringSubmatch(doi); m != nil {
+		rec.IDs["zenodo"] = resource.Values{m[1]}
+	}
 	if rec.Kind == "" {
 		rec.Kind = "dataset"
 	}
@@ -232,9 +297,15 @@ func SourceRecord(d DOI) cluster.Record {
 			}
 		}
 	}
+	var repos []string
 	for _, r := range d.Related {
 		var key, v string
 		switch strings.ToLower(r.Type) {
+		case "url":
+			if repository(r.ID) {
+				repos = add(repos, strings.TrimSpace(r.ID))
+			}
+			continue
 		case "arxiv":
 			key, v = "arxiv", strings.TrimPrefix(strings.ToLower(r.ID), "arxiv:")
 		case "doi":
@@ -260,6 +331,7 @@ func SourceRecord(d DOI) cluster.Record {
 	if d.URL != "" {
 		rec.Links = []string{d.URL}
 	}
+	rec.Links = append(rec.Links, repos...)
 	return rec
 }
 

@@ -1,0 +1,36 @@
+# The sources of math2 that are also works: the reference works and wikis of corpus K5.3, the databases of K5.3, and the formal libraries of K06 (spec corpus resources RS7.5 and RS7.6). m2 res import source_works reads this file.
+#
+# Each entry has the source id of manifests/sources.yaml, the kind of the resource, and the Wikidata item when one is known. The name and the home page come from the catalogue or from the adapter first, and from this file only when neither has the source. The items come from the property P856 (official website) of Wikidata, read on 2026-10-31.
+- {id: wikidata, kind: website, qid: Q2013, name: Wikidata, home: https://www.wikidata.org}
+- {id: wikipedia, kind: website, qid: Q328, name: English Wikipedia, home: https://en.wikipedia.org}
+- {id: proofwiki, kind: website, qid: Q60760899, name: ProofWiki, home: https://proofwiki.org}
+- {id: planetmath, kind: website, qid: Q1130535, name: PlanetMath, home: https://planetmath.org}
+- {id: nlab, kind: website, qid: Q6954693, name: nLab, home: https://ncatlab.org}
+- {id: eom, kind: website, qid: Q1340196, name: Encyclopedia of Mathematics, home: https://encyclopediaofmath.org}
+- {id: mathworld, kind: website, qid: Q719112, name: MathWorld, home: https://mathworld.wolfram.com}
+- {id: dlmf, kind: website, qid: Q24534, name: NIST Digital Library of Mathematical Functions, home: https://dlmf.nist.gov}
+- {id: wolfram_functions, kind: website, name: The Wolfram Functions Site, home: https://functions.wolfram.com}
+- {id: groupprops, kind: website, qid: Q92557397, name: Groupprops, the group properties wiki, home: https://groupprops.subwiki.org}
+- {id: manifold_atlas, kind: website, name: The Manifold Atlas, home: https://www.map.mpim-bonn.mpg.de}
+- {id: knot_atlas, kind: website, qid: Q16963570, name: The Knot Atlas, home: https://katlas.org}
+- {id: stacks, kind: website, qid: Q25099801, name: The Stacks Project, home: https://stacks.math.columbia.edu}
+- {id: kerodon, kind: website, qid: Q99732041, name: Kerodon, home: https://kerodon.net}
+- {id: opg, kind: website, name: Open Problem Garden, home: http://www.openproblemgarden.org}
+- {id: erdosproblems, kind: website, name: Erdős problems, home: https://www.erdosproblems.com}
+- {id: mathoverflow, kind: website, qid: Q3298493, name: MathOverflow, home: https://mathoverflow.net}
+- {id: mse, kind: website, name: Mathematics Stack Exchange, home: https://math.stackexchange.com}
+- {id: oeis, kind: dataset, qid: Q728415, name: The On-Line Encyclopedia of Integer Sequences, home: https://oeis.org}
+- {id: lmfdb, kind: dataset, qid: Q130218488, name: The L-functions and modular forms database, home: https://www.lmfdb.org}
+- {id: fungrim, kind: dataset, name: Fungrim, the Mathematical Functions Grimoire, home: https://fungrim.org}
+- {id: pibase, kind: dataset, qid: Q130243720, name: π-Base, home: https://topology.pi-base.org}
+- {id: dart, kind: dataset, name: DaRT, the Database of Ring Theory, home: https://ringtheory.herokuapp.com}
+- {id: house_of_graphs, kind: dataset, qid: Q130219571, name: House of Graphs, home: https://houseofgraphs.org}
+- {id: isgci, kind: dataset, qid: Q130222915, name: ISGCI, the Information System on Graph Classes and their Inclusions, home: https://www.graphclasses.org}
+- {id: knotinfo, kind: dataset, qid: Q96475312, name: KnotInfo, home: https://knotinfo.math.indiana.edu}
+- {id: atlas_groups, kind: dataset, name: ATLAS of Group Representations, version 3, home: https://brauer.maths.qmul.ac.uk/Atlas/v3/}
+- {id: findstat, kind: dataset, qid: Q130220921, name: FindStat, home: https://www.findstat.org}
+- {id: mathlib, kind: software, qid: Q140128421, name: Mathlib, home: https://github.com/leanprover-community/mathlib4}
+- {id: afp, kind: software, qid: Q108305552, name: Archive of Formal Proofs, home: https://www.isa-afp.org}
+- {id: mathcomp, kind: software, name: The Mathematical Components library, home: https://math-comp.github.io}
+- {id: setmm, kind: software, name: Metamath Proof Explorer (set.mm), home: https://us.metamath.org/mpeuni/mmset.html}
+- {id: formal_conjectures, kind: software, name: Formal Conjectures, home: https://github.com/google-deepmind/formal-conjectures}
