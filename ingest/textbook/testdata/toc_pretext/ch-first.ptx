@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chapter xml:id="ch-first">
+  <title>First <m>x</m>
+    steps</title>
+  <section xml:id="sec-start">
+    <title>Start</title>
+    <p>This text is not in the tree.</p>
+    <subsection><title>Sub</title></subsection>
+    <exercises><title>Exercises</title></exercises>
+  </section>
+  <section component="web"><title>Hidden</title></section>
+  <section><title>Next</title></section>
+</chapter>

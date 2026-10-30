@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pretext xmlns:xi="http://www.w3.org/2001/XInclude">
+  <book xml:id="toc">
+    <title>A book for the table of contents</title>
+    <frontmatter>
+      <preface><title>Preface</title><p>Not in the tree.</p></preface>
+    </frontmatter>
+    <part xml:id="part-one">
+      <title>Foundations</title>
+      <xi:include href="ch-first.ptx"/>
+    </part>
+    <chapter xml:id="ch-second">
+      <title>Second</title>
+      <section><title>Only</title></section>
+    </chapter>
+    <backmatter>
+      <appendix xml:id="app-notation">
+        <title>Notation</title>
+        <section><title>Symbols</title></section>
+      </appendix>
+    </backmatter>
+  </book>
+</pretext>

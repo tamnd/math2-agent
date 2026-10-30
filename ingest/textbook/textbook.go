@@ -190,20 +190,7 @@ type item struct {
 
 // Read reads a git archive of the book and emits one record for each item, in the order of the files and of the items in each file. It fails when a file does not parse, when the main file of a PreTeXt book is not in the archive, and when the archive has no items. An item with no text is not read.
 func (b Book) Read(r io.Reader, emit func(ingest.Record) error) error {
-	files := map[string][]byte{}
-	var order []string
-	commit, err := ingest.WalkArchive(r, func(name string, f io.Reader) error {
-		if !b.wants(name) {
-			return nil
-		}
-		data, err := io.ReadAll(f)
-		if err != nil {
-			return err
-		}
-		files[name] = data
-		order = append(order, name)
-		return nil
-	})
+	files, order, commit, err := b.load(r)
 	if err != nil {
 		return err
 	}
@@ -230,6 +217,24 @@ func (b Book) Read(r io.Reader, emit func(ingest.Record) error) error {
 		}
 	}
 	return nil
+}
+
+// load reads the files of a git archive that the book wants, with their paths in the order of the archive and the commit of the archive.
+func (b Book) load(r io.Reader) (files map[string][]byte, order []string, commit string, err error) {
+	files = map[string][]byte{}
+	commit, err = ingest.WalkArchive(r, func(name string, f io.Reader) error {
+		if !b.wants(name) {
+			return nil
+		}
+		data, err := io.ReadAll(f)
+		if err != nil {
+			return err
+		}
+		files[name] = data
+		order = append(order, name)
+		return nil
+	})
+	return files, order, commit, err
 }
 
 // wants reports whether Read keeps a file of the archive: a source of the format, or for LaTeX a file that can define environments.
