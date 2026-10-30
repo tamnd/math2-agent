@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"compress/gzip"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +35,9 @@ func init() { ingest.Register(shelf{}) }
 
 func TestResImport(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = io.WriteString(w, "b2 Topology\nb1 Algebra\n")
+		zw := gzip.NewWriter(w)
+		_, _ = io.WriteString(zw, "b2 Topology\nb1 Algebra\n")
+		_ = zw.Close()
 	}))
 	defer srv.Close()
 	root, cache := t.TempDir(), t.TempDir()
@@ -44,7 +47,7 @@ func TestResImport(t *testing.T) {
 	if code, _, _ := run("res", "import", "-root", root); code != ExitUsage {
 		t.Fatalf("exit code %d with no source", code)
 	}
-	// m2 res import has no -url flag, so the test pins the snapshot with m2 ingest first.
+	// m2 res import has no -url flag, so the test pins the snapshot with m2 ingest first. The snapshot is compressed, as the snapshot of a Fetcher is.
 	if code, _, stderr := run("ingest", "-root", root, "-cache", cache, "-url", srv.URL+"/shelf.txt", "shelf"); code != ExitOK {
 		t.Fatalf("exit code %d, stderr %q", code, stderr)
 	}

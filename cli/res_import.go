@@ -75,8 +75,12 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 		return fail(err)
 	}
 	defer func() { _ = f.Close() }()
+	snapshot, err := ingest.Uncompressed(f)
+	if err != nil {
+		return fail(err)
+	}
 	var rs []rescluster.Record
-	err = sr.Records(f, func(r rescluster.Record) error {
+	err = sr.Records(snapshot, func(r rescluster.Record) error {
 		r.Source, r.Snapshot = source, res.Snapshot.Hash
 		rs = append(rs, r)
 		return nil
