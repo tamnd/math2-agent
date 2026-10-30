@@ -79,13 +79,15 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 graph` | Run a graph query: neighbourhood, closure, reverse dependencies, path or frontier. | written |
 | `m2 ingest <source>` | Get a pinned snapshot of an external source and write its records. `-snapshot HASH` uses a recorded snapshot again. `-mentions` also writes the mentions. | written |
 | `m2 wp extract [title...]` | Fetch Wikipedia articles to the content plane of the Wikipedia corpus (tamnd/wikipedia-math), and write their objects and their census to the analysis plane. With no title, extract again each page of the content plane. `m2 wp scope` and `m2 wp gold` build the scope list, `m2 wp fetch` reads each article of the scope list from a dump, `m2 wp parsoid` fetches the Parsoid HTML of each article, and `m2 wp pointers` collects the incoming pointers of each article. `m2 wp census report` writes the completeness report, and `m2 wp census diff` prints the readings of one article side by side. `refresh` arrives in a later milestone of the Wikipedia roadmap. | written |
-| `m2 res mint` | Change the provisional ids of the resources in `records/resources/` to resource ids, and add the ids to `registers/resources/`. The other subcommands of `m2 res` (`show`, `queue`, `refs`, `status` and `gaps`) arrive in the milestones RS-M2 to RS-M4. | written |
+| `m2 res mint` | Change the provisional ids of the resources in `records/resources/` to resource ids, and add the ids to `registers/resources/`. The other subcommands of `m2 res` (`refs`, `status` and `gaps`) arrive in the milestones RS-M3 and RS-M4. | written |
 | `m2 res import` | Fetch a new snapshot of one source, or use a pinned snapshot with `-snapshot`, and write the source records of the snapshot to `build/resources/source-records/<source>/records.md`. The adapters of arXiv, zbMATH Open, the open textbooks, OpenAlex, Crossref, Open Library and the works of Wikidata give source records. | written |
 | `m2 res census` | Count the records of each catalogue by scope outcome and by stratum, measure the overlap of each pair of catalogues, and give the Chapman estimate of each independent pair. The report goes to `reports/resources-census.md`. | written |
 | `m2 res sample` | Take a random sample of one catalogue (zbMATH Open, OpenAlex, Crossref, HAL, Open Library, DataCite, DOAJ, Project Gutenberg, the Internet Archive, Wikidata or Numdam), or read the arXiv metadata plane in full, and write the census records to `<catalogue>.md`. | written |
 | `m2 res cluster` | Group the source records of `build/resources/source-records/` into resources with the passes C1 to C5, write `records/resources/`, write the queue `res-cluster`, and mint the ids of the new resources. | written |
 | `m2 res resolve` | Find the resource of an id or of a reference, from the index of all ids, the crosswalks, the live API of Crossref and the citation matcher. `-index` writes `build/resources/ids.parquet`. | written |
 | `m2 res scope` | Set the scope of each resource from the decisions of people, the tests S1 to S7 and the classifier, and write the queue `res-scope`. `-fit` fits the classifier. | written |
+| `m2 res show` | Print a resource with its expressions, manifestations, relations, catalogue records and history. The argument is a resource id or an external id, as `doi:10.1000/x` or `isbn:9780070542358`, which the resolver finds. `-json` prints the record. | written |
+| `m2 res queue` | List the items of the queue `res-scope`, `res-cluster`, `res-resolve` or `res-structure`, the highest priority first, or write the decision of a person on one item with `-decide`. | written |
 | `m2 res lookup` | Look up the DOIs of a random part of the `in` records of each census file in the other catalogues, so that the census can measure the overlap of a sampled catalogue. | written |
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
@@ -565,6 +567,19 @@ In one work, a preprint, each edition and each translation is an expression, and
 `m2 res scope -root ../math2` sets the field `scope` of each resource (RS9). A decision of a person in `records/resources/decisions.md` wins over each test, and the build never changes it. Then the tests S1 to S7 and the border rules decide. A resource that no test decides goes to the classifier of RS9.3 (test S8). A score of `in` at or above the high threshold gives `in`, a score below the low threshold gives the best other label, and a score between them defers the resource and puts it in the queue `res-scope`. A deferred resource gets a date 90 days later, and when the date passes it goes to the queue. The queue goes to `build/resources/queues/res-scope.md`.
 
 `m2 res scope -fit` fits the classifier on the resources that S1 or S3 says are `in` and the resources that a rule says are `border` or `out`. The model is a naive Bayes model over the words of the title, the venues, the subjects and the kind, with a second model for the MSC2 class of a work in scope. The thresholds come from the gold set `records/resources/gold/scope.md` when the tree has it, or else from a held-out tenth of the examples. The command prints the precision and the recall of `in` and tells if they meet the targets of 0.98 and 0.95. The model goes to `build/resources/models/scope.json`, and its version is a hash of the file. A class that the classifier gives has the version as its source, and the scope tests do not read it.
+
+### Show and queues
+
+`m2 res show -root ../math2 isbn:9780070542358` prints the resource of the ISBN. An id that is not a resource id goes to the resolver, which looks in the index of the live resources and in the crosswalks. A mark shows the expression or the manifestation that has the id. A duplicate resource names its live resource.
+
+`m2 res queue -root ../math2 res-scope` lists the items of the queue, the highest priority first, 50 items by default. An item with a decision of a person has a mark, and the next run of the step takes it. `-decide` writes a decision to `records/resources/decisions.md`, with `-value`, `-reason` and `-by`:
+
+```sh
+m2 res queue -decide 8F2K1QW7ZJ -value in -reason "a textbook of analysis" -by github:octocat res-scope
+m2 res queue -decide "8F2K1QW7ZJ 8F2AAAAAA3" -value merge -reason "one book" -by github:octocat res-cluster
+```
+
+A decision of `res-scope` is `in`, `border`, `out` or `duplicate` with `-to`. A decision of `res-cluster` is `merge` or `split` of two resources. A decision of `res-resolve` is `found` with `-to` or `not-found`. The items of `res-structure` are not decided here.
 
 ## The Wikipedia corpus
 
