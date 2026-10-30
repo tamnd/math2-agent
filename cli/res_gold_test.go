@@ -52,3 +52,29 @@ func TestResGold(t *testing.T) {
 	}
 	run(ExitUsage, "sample", "-set", "edition")
 }
+
+func TestResGoldCite(t *testing.T) {
+	root := t.TempDir()
+	rs := []resource.Resource{
+		{ID: "8F2K1QW7ZJ", Kind: "textbook", Title: "Principles of Mathematical Analysis", Expressions: []resource.Expression{{Key: "e3", Kind: "edition", Language: "en"}}},
+		{ID: "8F2AAAAAA3", Kind: "article", Title: "On primes", Expressions: []resource.Expression{{Key: "e1", Kind: "version", Language: "de"}}},
+	}
+	if err := resource.WriteResources(root, rs); err != nil {
+		t.Fatal(err)
+	}
+	if err := resource.WriteCites(root, []resource.Cite{{From: "8F2AAAAAA3/e1", N: 1, To: "8F2K1QW7ZJ/e3"}, {From: "8F2AAAAAA3/e1", N: 2}}); err != nil {
+		t.Fatal(err)
+	}
+	if code, stdout, stderr := run("res", "gold", "-root", root, "sample", "-set", "cite"); code != ExitOK || !strings.Contains(stdout, "added 2 references") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	for _, by := range []string{"a", "b"} {
+		if code, _, stderr := run("res", "gold", "-root", root, "label", "-set", "cite", "-ref", "8F2AAAAAA3/e1#1", "-value", "8F2K1QW7ZJ", "-by", by); code != ExitOK {
+			t.Fatalf("exit code %d, stderr %q", code, stderr)
+		}
+	}
+	code, stdout, stderr := run("res", "gold", "-root", root, "eval")
+	if code != ExitOK || !strings.Contains(stdout, "cite: 1 references, precision 1.0000, recall 1.0000") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+}
