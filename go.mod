@@ -5,6 +5,7 @@ go 1.27.3
 require (
 	github.com/anthropics/anthropic-sdk-go v1.84.0
 	github.com/dop251/goja v0.0.0-20261024144015-2a9269b6b6de
+	github.com/klauspost/compress v1.20.3
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/parquet-go/parquet-go v0.32.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
@@ -33,7 +34,6 @@ require (
 	github.com/google/pprof v0.0.0-20261016150608-1facf8f91b50 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/invopop/jsonschema v0.14.0 // indirect
-	github.com/klauspost/compress v1.20.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.1 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
