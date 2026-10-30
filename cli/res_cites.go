@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/queue"
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/census/fetch"
@@ -22,13 +23,23 @@ import (
 )
 
 // citeSources are the sources of references that m2 res resolve -source reads.
-var citeSources = map[string]bool{"crossref": true}
+var citeSources = map[string]bool{"crossref": true, "arxiv": true}
 
-// resolveCrossref reads the open references of Crossref for each DOI of each live resource in scope, matches them, and writes the cites edges (RS3.7, RS6.4). The edges of the other citing expressions stay. The references with candidates replace the items of the same citing expressions in the queue res-resolve.
-func resolveCrossref(ctx context.Context, root string, rs []resource.Resource, r *resresolve.Resolver, client *fetch.Client, base string, limit int, stderr io.Writer) error {
+// citeRun matches the references of the citing expressions of one run and keeps the edges and the weak matches.
+type citeRun struct {
+	m      *cites.Matcher
+	done   map[string]bool
+	edges  []resource.Cite
+	weak   []resresolve.Result
+	works  int
+	found  int
+	source string
+}
+
+func newCiteRun(root, source string, r *resresolve.Resolver) (*citeRun, error) {
 	ds, err := resscope.ReadDecisions(root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	m := &cites.Matcher{Resolver: r, Decisions: map[string]string{}}
 	for _, d := range ds {
@@ -36,26 +47,62 @@ func resolveCrossref(ctx context.Context, root string, rs []resource.Resource, r
 			m.Decisions[d.ID] = d.Target
 		}
 	}
+	return &citeRun{m: m, done: map[string]bool{}, source: source}, nil
+}
+
+// add matches the references of one citing expression.
+func (c *citeRun) add(ctx context.Context, from string, cs []resresolve.Citation, keepText bool) error {
+	es, w, err := c.m.Edges(ctx, from, cs, keepText)
+	if err != nil {
+		return err
+	}
+	c.works++
+	c.done[from] = true
+	for _, e := range es {
+		if e.To != "" {
+			c.found++
+		}
+	}
+	c.edges, c.weak = append(c.edges, es...), append(c.weak, w...)
+	return nil
+}
+
+// write writes the edges and the queue items of the run. The edges of the other citing expressions stay.
+func (c *citeRun) write(root string, stderr io.Writer) error {
 	old, err := resource.ReadCites(root)
 	if err != nil {
 		return err
 	}
-	done := map[string]bool{}
-	var edges []resource.Cite
-	var weak []resresolve.Result
-	works, found := 0, 0
+	if err := resource.WriteCites(root, cites.Merge(old, c.edges, c.done)); err != nil {
+		return err
+	}
+	if err := mergeResolveQueue(root, c.weak, c.done); err != nil {
+		return err
+	}
+	fmt.Fprintf(stderr, "%s: %d works, %d references, %d matched, %d with candidates\n", c.source, c.works, len(c.edges), c.found, len(c.weak))
+	return nil
+}
+
+// inScope reports whether the references of a resource are read: a live resource with the scope in.
+func inScope(r *resource.Resource) bool {
+	return r != nil && r.Live() && r.Scope != nil && r.Scope.Value == resource.In
+}
+
+// resolveCrossref reads the open references of Crossref for each DOI of each live resource in scope, matches them, and writes the cites edges (RS3.7, RS6.4). The references with candidates replace the items of the same citing expressions in the queue res-resolve.
+func resolveCrossref(ctx context.Context, root string, rs []resource.Resource, r *resresolve.Resolver, client *fetch.Client, base string, limit int, stderr io.Writer) error {
+	run, err := newCiteRun(root, "crossref", r)
+	if err != nil {
+		return err
+	}
 	for i := range rs {
 		res := &rs[i]
-		if !res.Live() || res.Scope == nil || res.Scope.Value != resource.In {
+		if !inScope(res) {
 			continue
 		}
 		for _, doi := range resDOIs(res) {
 			from := cites.Citing(res, "doi", doi)
-			if from == "" || done[from] {
+			if from == "" || run.done[from] || (limit > 0 && run.works >= limit) {
 				continue
-			}
-			if limit > 0 && works >= limit {
-				break
 			}
 			var body struct {
 				Message struct {
@@ -69,32 +116,100 @@ func resolveCrossref(ctx context.Context, root string, rs []resource.Resource, r
 			if err != nil {
 				return err
 			}
-			works++
-			done[from] = true
 			var cs []resresolve.Citation
 			for _, ref := range body.Message.Reference {
 				cs = append(cs, cites.FromCrossref(ref))
 			}
-			es, w, err := m.Edges(ctx, from, cs, cites.Open(res, from))
-			if err != nil {
+			if err := run.add(ctx, from, cs, cites.Open(res, from)); err != nil {
 				return err
 			}
-			for _, e := range es {
-				if e.To != "" {
-					found++
-				}
-			}
-			edges, weak = append(edges, es...), append(weak, w...)
 		}
 	}
-	if err := resource.WriteCites(root, cites.Merge(old, edges, done)); err != nil {
+	return run.write(root, stderr)
+}
+
+// resolveArxiv reads the bibliography entries of the analysis plane of a checkout of tamnd/arxiv, the latest version of each paper, and writes the cites edges of each paper that is a live resource in scope (RS6.4). The entries hold no text, so the edges hold the year and the ids only.
+func resolveArxiv(ctx context.Context, root, checkout string, r *resresolve.Resolver, limit int, stderr io.Writer) error {
+	run, err := newCiteRun(root, "arxiv", r)
+	if err != nil {
 		return err
 	}
-	if err := mergeResolveQueue(root, weak, done); err != nil {
+	files, err := mdrec.Glob(filepath.Join(checkout, "analysis", "bib", "*", "*"+mdrec.Ext))
+	if err != nil {
 		return err
 	}
-	fmt.Fprintf(stderr, "crossref: %d works, %d references, %d matched, %d with candidates\n", works, len(edges), found, len(weak))
-	return nil
+	if len(files) == 0 {
+		return fmt.Errorf("%s has no bibliography entries in analysis/bib", checkout)
+	}
+	for _, path := range files {
+		if limit > 0 && run.works >= limit {
+			break
+		}
+		recs, err := mdrec.Read(path)
+		if err != nil {
+			return err
+		}
+		bs, err := mdrec.Unmarshal[axbib](recs)
+		if err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+		if len(bs) == 0 {
+			continue
+		}
+		latest := 0
+		for _, b := range bs {
+			latest = max(latest, b.Version)
+		}
+		paper := bs[0].Paper
+		res, err := r.ID(ctx, "arxiv:"+paper)
+		if err != nil {
+			return err
+		}
+		if res.Status != resresolve.Found {
+			continue
+		}
+		rec := r.Index.Resource(res.Ref.Resource)
+		if !inScope(rec) {
+			continue
+		}
+		id := fmt.Sprintf("%sv%d", paper, latest)
+		if exprOf(rec, "arxiv", id) == "" {
+			id = paper // the catalogue has no expression of the version
+		}
+		from := cites.Citing(rec, "arxiv", id)
+		if from == "" || run.done[from] {
+			continue
+		}
+		var cs []resresolve.Citation
+		for _, b := range bs {
+			if b.Version == latest {
+				cs = append(cs, cites.FromArxiv(b.Year, b.DOI, b.ArXiv))
+			}
+		}
+		if err := run.add(ctx, from, cs, false); err != nil {
+			return err
+		}
+	}
+	return run.write(root, stderr)
+}
+
+// axbib is one bibliography entry of the analysis plane of tamnd/arxiv.
+type axbib struct {
+	Paper   string `json:"paper"`
+	Version int    `json:"version"`
+	ArXiv   string `json:"arxiv"`
+	DOI     string `json:"doi"`
+	Year    int    `json:"year"`
+}
+
+// exprOf gives the key of the expression that has the id, itself or in a manifestation, or an empty string.
+func exprOf(r *resource.Resource, key, value string) string {
+	for _, e := range r.Expressions {
+		if slices.Contains(e.IDs[key], value) || slices.ContainsFunc(e.Manifestations, func(m resource.Manifestation) bool { return slices.Contains(m.IDs[key], value) }) {
+			return e.Key
+		}
+	}
+	return ""
 }
 
 // resDOIs gives the DOIs of a resource at each level, each once.

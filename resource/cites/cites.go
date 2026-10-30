@@ -77,6 +77,20 @@ func FromCrossref(r CrossrefRef) resolve.Citation {
 	return c
 }
 
+// FromArxiv makes the citation of one bibliography entry of the analysis plane of tamnd/arxiv. The entry holds the year and the ids that the bibliography gives, and no text.
+func FromArxiv(year int, doi, arxiv string) resolve.Citation {
+	c := resolve.Citation{Year: year}
+	for _, kv := range [][2]string{{"doi", doi}, {"arxiv", arxiv}} {
+		if kv[1] == "" {
+			continue
+		}
+		if n, err := ids.Normalize(kv[0], kv[1]); err == nil {
+			c.IDs = append(c.IDs, kv[0]+":"+n)
+		}
+	}
+	return c
+}
+
 func nonEmpty(vs ...string) []string {
 	var out []string
 	for _, v := range vs {
