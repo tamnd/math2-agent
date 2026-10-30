@@ -444,7 +444,9 @@ func (a Archive) Sample(ctx context.Context, c *Client, n int, seed uint64, emit
 		if err := c.JSON(ctx, a.Base+"/services/search/v1/scrape?"+v.Encode(), &p); err != nil {
 			return info, wrap("internetarchive", err)
 		}
-		info.Total = p.Total
+		if page == 0 {
+			info.Total = p.Total // a page after the first gives the records after the cursor
+		}
 		for _, it := range p.Items {
 			all = append(all, archiveRecord(it))
 		}
@@ -453,6 +455,7 @@ func (a Archive) Sample(ctx context.Context, c *Client, n int, seed uint64, emit
 		}
 		v.Set("cursor", p.Cursor)
 	}
+	info.Total = max(info.Total, len(all))
 	return info, subsample(all, n, seed, emit)
 }
 

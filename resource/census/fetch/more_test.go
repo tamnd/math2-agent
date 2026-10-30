@@ -123,7 +123,7 @@ func TestArchive(t *testing.T) {
 				`{"identifier":"calculus00spiv","title":["Calculus"],"year":"1967","language":"eng","creator":["Spivak, Michael"],"call_number":"QA303 .S64","isbn":["0805390219"]}],"cursor":"c1","total":3}`)
 			return
 		}
-		fmt.Fprint(w, `{"items":[{"identifier":"x","title":"X","subject":"Education"}],"total":3}`)
+		fmt.Fprint(w, `{"items":[{"identifier":"x","title":"X","subject":"Education"}],"total":1}`)
 	}))
 	defer srv.Close()
 	rs, info := collect(t, Archive{Base: srv.URL}, 10)
