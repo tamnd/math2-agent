@@ -502,6 +502,17 @@ m2 res mint -root ../math2
 
 A source of `manifests/sources.yaml` can have the kind `catalogue` (its records are records of works) or `course-platform` (its records are courses). The field `resource` gives the resource id of a source that is one work, for example an open textbook. The field `record_licence` gives the licence of the records when it is not the licence of the texts.
 
+`m2 audit -group H` runs the rules of the catalogue of resources, in the plane `resources`:
+
+| Rule | What it checks |
+|---|---|
+| H01 | The resource register, the tag register and the inventory register have no value in common. |
+| H02 | Each resource id has a valid check character, each record has a line in `registers/resources/`, and no record has a provisional id. |
+| H03 | Each external id of a resource is in the normal form of its system and passes its check digit. |
+| H06 | Each record parses and has its required fields with valid values, and each manifestation with a link has an access. |
+
+The rules H04, H05 and H07 to H17 are in the catalogue and are not written yet.
+
 ## The Wikipedia corpus
 
 The Wikipedia corpus is the repository tamnd/wikipedia-math. It has the manifests in `manifests/wikipedia/` (the template table, the heading table and the waivers), the content plane in `content/wikitext/` (one wikitext file for each article, with a header that gives the revision, the history link and the licence) and the analysis plane in `analysis/` (the objects and the census of each revision). The files of the analysis plane are Markdown with a YAML header, so that a person can read them on GitHub. The header of an objects file gives the page, the revision, the source link, the licence and the fields of each object, and the body gives the text of each object under a heading with its ref. The header of a census file gives the census, and the body gives a summary table. The content plane also has `content/markdown/`, the Markdown rendering of each article (WP3.12). It has a YAML header with the revision and the licence, the math as `$…$` and `$$…$$`, the links to articles in scope as `wikipedia://en/<pageid>`, the references as footnotes, and a fenced block `::: {#oN .kind}` for each object of the objects file. The `wpcorpus` package reads and writes these files, and it extracts the objects with the parser and the math converter of tamnd/wikipedia-cli.
