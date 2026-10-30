@@ -610,6 +610,14 @@ type numdamPage struct {
 // numdamYear finds the year in an id of Mathdoc, as 1994 in MSH_1994__126__5_0.
 var numdamYear = regexp.MustCompile(`_((?:1[5-9]|20)[0-9]{2})_`)
 
+// laxUnmarshal decodes XML that can have a bad entity, as "&G" with no semicolon in a page of Numdam. The decoder keeps a bad entity as text, and it knows the entities of HTML.
+func laxUnmarshal(data []byte, v any) error {
+	d := xml.NewDecoder(bytes.NewReader(data))
+	d.Strict = false
+	d.Entity = xml.HTMLEntity
+	return d.Decode(v)
+}
+
 // Sample harvests each page until the resumption token ends.
 func (nd Numdam) Sample(ctx context.Context, c *Client, n int, seed uint64, emit func(census.Record) error) (Info, error) {
 	q := url.Values{"verb": {"ListRecords"}, "metadataPrefix": {"eudml-article2"}}
@@ -621,7 +629,7 @@ func (nd Numdam) Sample(ctx context.Context, c *Client, n int, seed uint64, emit
 			return info, wrap("numdam", err)
 		}
 		var p numdamPage
-		if err := xml.Unmarshal(body, &p); err != nil {
+		if err := laxUnmarshal(body, &p); err != nil {
 			return info, fmt.Errorf("numdam: page %d: %w", page, err)
 		}
 		if p.Error != "" {
