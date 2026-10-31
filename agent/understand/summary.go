@@ -38,7 +38,7 @@ var summaryPass = pass{
 	},
 }
 
-func checkSummary(r *Record, p *Paper, it Item, raw json.RawMessage) ([]string, string) {
+func checkSummary(r *Record, _ *Paper, it Item, raw json.RawMessage) ([]string, string) {
 	var in struct{ Summary string }
 	if err := json.Unmarshal(raw, &in); err != nil {
 		return nil, fmt.Sprintf("the result of %s: %v", it.ID, err)

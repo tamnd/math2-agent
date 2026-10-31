@@ -41,7 +41,7 @@ func readClassified(file string, out Classified) error {
 	if err != nil {
 		return err
 	}
-	defer fh.Close()
+	defer func() { _ = fh.Close() }()
 	sc := bufio.NewScanner(fh)
 	sc.Buffer(nil, 1<<20)
 	for n := 1; sc.Scan(); n++ {
