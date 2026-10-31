@@ -50,6 +50,9 @@ const (
 	VenueBorder = "border"
 )
 
+// VenueKinds are the kinds of resource that are venues (RS6.5).
+var VenueKinds = []string{"journal", "series", "competition"}
+
 // MathField is the name of the OpenAlex field of mathematics.
 const MathField = "Mathematics"
 
@@ -299,7 +302,7 @@ func lccClass(c, cls string) bool {
 	return letters == cls
 }
 
-// FromResource makes a Record from the fields of a resource: the MSC codes that a catalogue gave, the subjects, the zbMATH ids and the venues of its part_of relations. The fields Curriculum, MathUnit and MathHeading come from other registers, so the caller sets them.
+// FromResource makes a Record from the fields of a resource: the MSC codes that a catalogue gave, the subjects, the zbMATH ids, the venues of its part_of relations, and its own id when it is a venue. The fields Curriculum, MathUnit and MathHeading come from other registers, so the caller sets them.
 func FromResource(r *resource.Resource) Record {
 	var rec Record
 	for _, c := range r.MSC {
@@ -327,6 +330,9 @@ func FromResource(r *resource.Resource) Record {
 		}
 	}
 	rec.ZBMath = len(r.IDs["zbl"]) > 0 || len(r.IDs["zbl_id"]) > 0
+	if slices.Contains(VenueKinds, r.Kind) {
+		rec.Venues = append(rec.Venues, r.ID) // a venue with scope core is in itself (RS6.5)
+	}
 	for _, rel := range r.Relations {
 		if rel.Kind == "part_of" {
 			id, _, _ := strings.Cut(rel.To, "/")
