@@ -43,3 +43,12 @@ func TestLineage(t *testing.T) {
 		t.Errorf("Lineage = %v", l)
 	}
 }
+
+func TestSourceID(t *testing.T) {
+	for id, ok := range map[string]bool{"springer-series": true, "loc-marc": true, "lebl_ra": true, "Springer": false, "-x": false, "x y": false} {
+		s := Source{ID: id, Name: "X", Licence: "CC0-1.0", Class: ClassOf("CC0-1.0")}
+		if got := len(s.Problems()) == 0; got != ok {
+			t.Errorf("the id %q: no problems is %v, want %v (%v)", id, got, ok, s.Problems())
+		}
+	}
+}
