@@ -21,6 +21,9 @@ var languages = map[string]string{
 	"croatian": "hr", "dutch": "nl", "swedish": "sv", "korean": "ko", "turkish": "tr", "greek": "el", "persian": "fa", "vietnamese": "vi",
 }
 
+// Language gives the BCP 47 tag of a name of a language of zbMATH Open, or "" when the name is not known.
+func Language(name string) string { return languages[strings.ToLower(clean(name))] }
+
 // Records reads a snapshot of pages and emits one source record for each document that is not deleted (RS13.1). The document id goes into the ids as zbl_id, and the Zbl number as zbl. The field author has the names with a semicolon between them, and the author ids are in the same order. A document of an unknown type has the kind article.
 func (Adapter) Records(r io.Reader, emit func(cluster.Record) error) error {
 	d := xml.NewDecoder(r)
@@ -66,7 +69,7 @@ func sourceRecord(rec record) cluster.Record {
 		Kind:     kind,
 		Title:    clean(doc.Title),
 		Date:     clean(doc.Year),
-		Language: languages[strings.ToLower(clean(doc.Language))],
+		Language: Language(doc.Language),
 		IDs:      resource.IDs{},
 		Links:    []string{"https://zbmath.org/?q=an:" + id},
 	}
