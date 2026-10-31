@@ -19,6 +19,7 @@ import (
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/ingest/textbook"
+	"github.com/tamnd/math2-agent/msc"
 	"github.com/tamnd/math2-agent/resource/cluster"
 )
 
@@ -361,6 +362,9 @@ func TestRecords(t *testing.T) {
 		}
 		if len(rs) != 1 || rs[0].NativeID != b.ID || rs[0].Kind != "textbook" || rs[0].Title == "" || len(rs[0].Creators) == 0 {
 			t.Errorf("%s: records = %+v", b.ID, rs)
+		}
+		if r := rs[0]; r.Year() == 0 || r.Language != "en" || len(r.MSC) == 0 || slices.ContainsFunc(r.MSC, func(c string) bool { return !msc.Valid(c) }) {
+			t.Errorf("%s: date %q, language %q, msc %v", b.ID, r.Date, r.Language, r.MSC)
 		}
 	}
 }
