@@ -261,6 +261,28 @@ func TestSchemas(t *testing.T) {
 	if got := s.Properties.Items.Items.Properties.Kind.Enum; !slices.Equal(got, understand.Kinds) {
 		t.Errorf("the kinds of the schema are %v", got)
 	}
+	var ps struct {
+		Properties struct {
+			Items struct {
+				Items struct {
+					Properties struct {
+						Steps struct {
+							Items struct {
+								Properties struct{ Reason struct{ Enum []string } }
+							}
+						}
+						Methods struct{ Items struct{ Enum []string } }
+					}
+				}
+			}
+		}
+	}
+	if err := json.Unmarshal(uschema.Of(understand.Proof), &ps); err != nil {
+		t.Fatal(err)
+	}
+	if got := ps.Properties.Items.Items.Properties; !slices.Equal(got.Steps.Items.Properties.Reason.Enum, understand.Reasons) || !slices.Equal(got.Methods.Items.Enum, understand.Methods) {
+		t.Errorf("the reasons and the methods of the schema of proof are %+v", got)
+	}
 }
 
 func TestConcepts(t *testing.T) {
@@ -445,10 +467,16 @@ const unfoldObjects = `{"tag":"HYP1","kind":"context","paper":"2401.00001","vers
 
 func unfoldPaper(t *testing.T, licence string) *understand.Paper {
 	t.Helper()
+	return paperOf(t, licence, understand.Unfold, unfoldObjects, `{"from":"2401.00001#thm-1","to":"2401.00001#def-1","predicate":"uses","evidence":{"version":1}}`+"\n"+`{"from":"2401.00001#thm-1","to":"2401.00001#hyp-2","predicate":"uses","evidence":{"version":2}}`+"\n")
+}
+
+// paperOf loads the pass from a checkout whose paper has the objects and the edges.
+func paperOf(t *testing.T, licence, pass, objects, edges string) *understand.Paper {
+	t.Helper()
 	root := checkout(t, licence)
 	for name, data := range map[string]string{
-		"analysis/objects/2401/2401.00001.jsonl": unfoldObjects,
-		"analysis/edges/2401/2401.00001.jsonl":   `{"from":"2401.00001#thm-1","to":"2401.00001#def-1","predicate":"uses","evidence":{"version":1}}` + "\n" + `{"from":"2401.00001#thm-1","to":"2401.00001#hyp-2","predicate":"uses","evidence":{"version":2}}` + "\n",
+		"analysis/objects/2401/2401.00001.jsonl": objects,
+		"analysis/edges/2401/2401.00001.jsonl":   edges,
 	} {
 		p := filepath.Join(root, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
@@ -458,7 +486,7 @@ func unfoldPaper(t *testing.T, licence string) *understand.Paper {
 			t.Fatal(err)
 		}
 	}
-	p, err := understand.Load(root, understand.Target{Paper: "2401.00001", Pass: understand.Unfold})
+	p, err := understand.Load(root, understand.Target{Paper: "2401.00001", Pass: pass})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -587,5 +615,103 @@ func TestUnfoldCheck(t *testing.T) {
 	}
 	if r := records(t, ws, "unfold", thm)[0]; r.Queue != understand.UnfoldReview || r.Unfold.Verdict.Verdict != "weaker" {
 		t.Errorf("the record is %+v", r)
+	}
+}
+
+// proofObjects are a definition, a theorem, its proof, and a proof with no item that it proves.
+const proofObjects = `{"tag":"DEF1","kind":"definition","paper":"2401.00001","version":"1","local":"def-1","order":1,"body_md":"A space is \\emph{tame} if it is compact.","path":"source","item":"definition","scope":"paper"}
+{"tag":"THM1","kind":"statement","paper":"2401.00001","version":"1","local":"thm-1","order":2,"number":"1","body_md":"Every tame space is normal.","path":"source","item":"statement/theorem","scope":"paper"}
+{"tag":"PRF1","kind":"proof","paper":"2401.00001","version":"1","local":"proof-1","order":3,"proves":"thm-1","body_md":"Let $X$ be tame. Then $X$ is compact. By \\cite{Ke}, a compact Hausdorff space is normal.\n\nThis ends the proof.","path":"source","item":"proof","scope":"paper"}
+{"tag":"PRF2","kind":"proof","paper":"2401.00001","version":"1","local":"proof-2","order":4,"body_md":"Clear.","path":"source","item":"proof","scope":"paper"}
+`
+
+func TestSentences(t *testing.T) {
+	p := paperOf(t, "cc-by", understand.Proof, proofObjects, "")
+	if p.Steps["ax://paper/2401.00001#PRF1"] != 4 || !strings.Contains(p.Items[0].Body, "[3] By \\cite{Ke}, a compact Hausdorff space is normal.\n[4] This ends") {
+		t.Errorf("the proof is %d sentences:\n%s", p.Steps["ax://paper/2401.00001#PRF1"], p.Items[0].Body)
+	}
+	var cs []string
+	for _, c := range p.Context["ax://paper/2401.00001#PRF1"] {
+		cs = append(cs, strings.TrimPrefix(c.ID, "ax://paper/2401.00001#")+" "+c.Why)
+	}
+	if got := strings.Join(cs, ", "); got != "THM1 proves, DEF1 before" || p.Orphans["ax://paper/2401.00001#PRF1"] || !p.Orphans["ax://paper/2401.00001#PRF2"] {
+		t.Errorf("the context of PRF1 is %s, and the orphans are %v", got, p.Orphans)
+	}
+}
+
+func TestProof(t *testing.T) {
+	prf := func(steps ...map[string]any) map[string]any {
+		return map[string]any{"id": "ax://paper/2401.00001#PRF1", "steps": steps, "methods": []string{"reduction", "magic"}, "inferred": []map[string]any{{"name": "Urysohn lemma", "step": 2}}}
+	}
+	ws := tree(t)
+	p := paperOf(t, "cc-by", understand.Proof, proofObjects, "")
+	for want, in := range map[string]map[string]any{
+		"the proof has the sentences 1 to 4": prf(map[string]any{"from": 1, "to": 5, "reason": "algebra"}),
+		"is not an item of the paper":        prf(map[string]any{"from": 1, "to": 2, "reason": "definition", "ref": "ax://paper/2401.00001#NONE"}),
+		"is not a key as bib:KEY":            prf(map[string]any{"from": 1, "to": 2, "reason": "cited", "ref": "Ke"}),
+		"before the end of the step":         prf(map[string]any{"from": 1, "to": 2, "reason": "algebra"}, map[string]any{"from": 2, "to": 3, "reason": "algebra"}),
+	} {
+		if _, err := call(t, ws, p, "give_proof", in); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%v gives %v", in, err)
+		}
+	}
+	steps := []map[string]any{
+		{"from": 1, "to": 2, "reason": "definition", "ref": "ax://paper/2401.00001#DEF1", "text": "A tame space is compact."},
+		{"from": 3, "to": 3, "reason": "cited", "ref": "bib:Ke"},
+	}
+	res, err := call(t, ws, p, "give_proof", prf(steps...), map[string]any{"id": "ax://paper/2401.00001#PRF2", "steps": []map[string]any{{"from": 1, "to": 1, "reason": "unknown"}}, "target": map[string]any{"item": "ax://paper/2401.00001#THM1", "confidence": 0.6}})
+	if err != nil || !strings.Contains(res.Text, `the method "magic"`) {
+		t.Fatalf("the result is %v, %v", res, err)
+	}
+	for _, r := range records(t, ws, "proof", "ax://paper/2401.00001#PRF1") {
+		switch r.ID {
+		case "ax://paper/2401.00001#PRF1":
+			if pr := r.Proof; len(pr.Steps) != 2 || pr.Steps[0].Text != "A tame space is compact." || pr.Steps[1].Ref != "bib:Ke" || len(pr.Inferred) != 1 || !slices.Equal(pr.Methods, []string{"reduction"}) || r.Queue != "" {
+				t.Errorf("the record of PRF1 is %+v %+v", r, pr)
+			}
+		case "ax://paper/2401.00001#PRF2":
+			if r.Queue != understand.ProofTarget || r.Proof.Target == nil || r.Proof.Target.Item != "ax://paper/2401.00001#THM1" {
+				t.Errorf("the record of PRF2 is %+v %+v", r, r.Proof)
+			}
+		}
+	}
+
+	ws = tree(t)
+	p = paperOf(t, "", understand.Proof, proofObjects, "")
+	res, err = call(t, ws, p, "give_proof", prf(steps...))
+	if err != nil || !strings.Contains(res.Text, "the class record") {
+		t.Fatalf("the result is %v, %v", res, err)
+	}
+	if r := records(t, ws, "proof", "ax://paper/2401.00001#PRF1")[0]; r.Proof.Steps[0].Text != "" {
+		t.Errorf("the record of the class record has the text of a step: %+v", r.Proof.Steps[0])
+	}
+}
+
+func TestSummary(t *testing.T) {
+	ws := tree(t)
+	p := paperOf(t, "cc-by", understand.Summary, proofObjects, "")
+	if len(p.Items) != 2 {
+		t.Fatalf("summary reads %+v", p.Items)
+	}
+	sum := func(s string) map[string]any { return map[string]any{"id": "ax://paper/2401.00001#THM1", "summary": s} }
+	for in, want := range map[string]string{
+		"As Theorem 1 says, it holds.":                   "names an item",
+		"Tame spaces are normal. They are also compact.": "more than one sentence",
+		strings.Repeat("a", 301):                         "more than 300",
+	} {
+		if _, err := call(t, ws, p, "give_summaries", sum(in)); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%q gives %v", in, err)
+		}
+	}
+	if _, err := call(t, ws, p, "give_summaries", sum("Every tame space is normal.")); err != nil {
+		t.Fatal(err)
+	}
+	if r := records(t, ws, "summary", "ax://paper/2401.00001#THM1")[0]; r.Summary != "Every tame space is normal." {
+		t.Errorf("the record is %+v", r)
+	}
+	for _, l := range []string{"", "cc-by-nc-sa", "cc-by-nc-nd"} {
+		if _, err := understand.Load(checkout(t, l), understand.Target{Paper: "2401.00001", Pass: understand.Summary}); err == nil || !strings.Contains(err.Error(), "AX7.7") {
+			t.Errorf("summary on the licence %q gives %v", l, err)
+		}
 	}
 }

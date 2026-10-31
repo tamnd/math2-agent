@@ -1,5 +1,9 @@
 # The understand role
 
+## 0.5.0
+
+The passes proof and summary of tier T4 (corpus arxiv AX7.6 and AX7.7), with their prompts in passes/proof.md and passes/summary.md. A proof job reads each proof as numbered sentences, with the item that it proves, the items that its edges name and the items before it, and gives with give_proof its steps as ranges of sentences with their reasons, the results that it uses and that no reference names, its methods, and for an orphan proof its target, which goes to the queue proof-target. Only a record of the class open holds the text of a step. A summary job gives one sentence of each statement and definition with give_summaries, and runs only on a version of the class open.
+
 ## 0.4.0
 
 The pass unfold of tier T3 (corpus arxiv AX7.5), with its prompt in passes/unfold.md and the prompt of its check in checks/unfold.md. A job reads each statement, definition, conjecture and problem with its context, the standing hypotheses whose scope holds it and the items that it uses or names by reference from the edges plane, and gives its self-contained form in TeX with unfold_items. The tool checks that the inlined items are items of the paper, that the form names no item by its number and that its macros are standard. A model of another family gives a verdict; a verdict other than equivalent goes back to the model once, and a second one, and each unfolding while math2 has no checker of another family, goes to the queue unfold-review. A record of the class verbatim keeps only the hash, the inlined ids and the verdict, and a paper of the class record has no unfolding (AQ08).

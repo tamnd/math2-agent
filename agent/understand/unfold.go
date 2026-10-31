@@ -116,12 +116,12 @@ func loadUnfold(root string, p *Paper, latest []axImport.Object) error {
 	if err != nil {
 		return fmt.Errorf("understand: %w", err)
 	}
-	p.Context, p.Tags = map[string][]Context{}, map[string]bool{}
+	p.Context, p.Tags = map[string][]Context{}, map[string]string{}
 	byLocal := map[string]axImport.Object{}
 	for _, o := range latest {
 		if o.Tag != "" {
 			byLocal[o.Local] = o
-			p.Tags[axImport.MentionID(p.ID, o.Tag)] = true
+			p.Tags[axImport.MentionID(p.ID, o.Tag)] = o.Item
 		}
 	}
 	ctxOf := func(o axImport.Object, why string) Context {
@@ -222,7 +222,7 @@ func checkUnfold(r *Record, p *Paper, it Item, raw json.RawMessage) ([]string, s
 	un := &Unfolding{Inlined: []Inlined{}}
 	for _, x := range in.Inlined {
 		x.Item, x.Part = strings.TrimSpace(x.Item), cut(clean(x.Part), maxUnfoldNote)
-		if x.Item != "" && !p.Tags[x.Item] {
+		if x.Item != "" && p.Tags[x.Item] == "" {
 			return nil, fmt.Sprintf("the item %q that %s inlined is not an item of the paper", x.Item, it.ID)
 		}
 		un.Inlined = append(un.Inlined, x)
