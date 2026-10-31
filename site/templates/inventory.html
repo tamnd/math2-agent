@@ -96,7 +96,7 @@
   {{with .Mentions}}
   <h3>Mentions</h3>
   <ul>
-  {{range .}}<li>{{.Source}}: {{if .Link.URL}}<a href="{{.Link.URL}}">{{.Link.Text}}</a>{{else}}{{.Link.Text}}{{end}}{{with .Name}}, {{.}}{{end}}{{with .Kind}} <span class="muted">({{.}})</span>{{end}}{{with .Same}}. Also {{range $i, $l := .}}{{if $i}}, {{end}}{{if $l.URL}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{else}}{{$l.Text}}{{end}}{{end}}{{end}}</li>
+  {{range .}}<li>{{.Source}}: {{if .Link.URL}}<a href="{{.Link.URL}}">{{.Link.Text}}</a>{{else}}{{.Link.Text}}{{end}}{{with .Name}}, {{.}}{{end}}{{with .Kind}} <span class="muted">({{.}})</span>{{end}}{{with .Same}}. Also {{range $i, $l := .}}{{if $i}}, {{end}}{{if $l.URL}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{else}}{{$l.Text}}{{end}}{{end}}{{end}}{{with .Resource}}. In <a href="{{.URL}}">{{.Text}}</a>{{with .Note}}, {{.}}{{end}}{{end}}</li>
   {{end}}
   </ul>
   {{end}}

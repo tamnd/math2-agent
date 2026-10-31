@@ -456,3 +456,7 @@ ul.bare, .bare > ul { list-style: none; padding-left: 0; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; scroll-behavior: auto !important; }
 }
+.res-toc { list-style: none; padding: 0; }
+.res-toc .d1 { margin-left: 1.2rem; }
+.res-toc .d2 { margin-left: 2.4rem; }
+.res-toc .d3, .res-toc .d4, .res-toc .d5 { margin-left: 3.6rem; }

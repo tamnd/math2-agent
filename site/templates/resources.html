@@ -1,0 +1,190 @@
+{{define "reskinds"}}<ul class="chips">{{range .}}<li><a href="{{.URL}}">{{.Kind}}</a> <span class="count">{{len .Rows}}</span></li>{{end}}</ul>{{end}}
+
+{{define "respages"}}{{if gt (len .) 1}}<nav class="res-pages" aria-label="Pages"><ul class="chips">{{range .}}<li>{{if .Current}}<span aria-current="page">{{.From}} to {{.To}}</span>{{else}}<a href="{{.URL}}">{{.From}} to {{.To}}</a>{{end}}</li>{{end}}</ul></nav>{{end}}{{end}}
+
+{{define "links"}}{{range $i, $l := .}}{{if $i}}, {{end}}{{if $l.URL}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{else}}{{$l.Text}}{{end}}{{with $l.Note}} <span class="muted">({{.}})</span>{{end}}{{end}}{{end}}
+
+{{define "resources"}}
+<header class="page-head">
+  <h1>Resources</h1>
+  <p class="lead">The catalogue of resources is the list of the works that the items of mathematics come from: books, papers, courses, problem collections and other works. Each resource is one work. It has its editions, translations, versions or offerings, and each of them has its prints, files and sites. A mention of an item names the resource that holds it.</p>
+</header>
+<div class="cards">
+  <section class="card">
+    <h2>Counts</h2>
+    <table class="plain">
+      <tr><th scope="row">Resources</th><td class="num">{{.Total}}</td></tr>
+      <tr><th scope="row">Live resources</th><td class="num">{{.Live}}</td></tr>
+    </table>
+  </section>
+  {{with .Tiers}}
+  <section class="card">
+    <h2>Tiers</h2>
+    <table class="plain">
+      <thead class="sr-only"><tr><th scope="col">Tier</th><th scope="col">Resources</th></tr></thead>
+      {{range .}}<tr><th scope="row">{{.Name}}</th><td class="num">{{.Count}}</td></tr>
+      {{end}}
+    </table>
+  </section>
+  {{end}}
+  {{with .Access}}
+  <section class="card">
+    <h2>Access</h2>
+    <table class="plain">
+      <thead class="sr-only"><tr><th scope="col">Class</th><th scope="col">Resources</th></tr></thead>
+      {{range .}}<tr><th scope="row">{{.Name}}</th><td class="num">{{.Count}}</td></tr>
+      {{end}}
+    </table>
+  </section>
+  {{end}}
+  {{with .Languages}}
+  <section class="card">
+    <h2>Languages</h2>
+    <table class="plain">
+      <thead class="sr-only"><tr><th scope="col">Language</th><th scope="col">Resources</th></tr></thead>
+      {{range .}}<tr><th scope="row">{{.Name}}</th><td class="num">{{.Count}}</td></tr>
+      {{end}}
+    </table>
+  </section>
+  {{end}}
+</div>
+{{with .Kinds}}
+<h2>Resources by kind</h2>
+{{template "reskinds" .}}
+{{else}}
+<p class="notice">The catalogue has no resources yet. The import pipeline of the content repository adds them.</p>
+{{end}}
+{{with .Decades}}
+<h2>Resources by decade</h2>
+<table class="list">
+  <thead><tr><th>Decade</th><th>Resources</th></tr></thead>
+  <tbody>
+  {{range .}}<tr><td>{{.Name}}</td><td class="num">{{.Count}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+<p>The records of the resources are in <a href="{{repo}}/tree/main/records/resources">records/resources/</a> of the content repository. The JSON summary is <a href="{{url "api/resources.json"}}">api/resources.json</a>.{{with .SpecURL}} The design is in <a href="{{.}}">the resources spec</a>.{{end}}</p>
+{{end}}
+
+{{define "reslist"}}
+<header class="page-head">
+  <h1>Resources: {{.Kind.Kind}}</h1>
+  <p class="lead">The resources of kind {{.Kind.Kind}} in the <a href="{{url "res/"}}">catalogue</a>, in the order of their titles. Each title links to the page of the resource.</p>
+</header>
+{{template "reskinds" .Kinds}}
+{{template "respages" .Pages}}
+<input class="filter" type="search" placeholder="Filter this list" aria-label="Filter this list">
+<table class="list">
+  <thead><tr><th>Title</th><th>Creators</th><th>Year</th><th>Tier</th><th>Depth</th><th>Id</th></tr></thead>
+  <tbody>
+  {{range .Rows}}<tr id="{{.ID}}"><td><a href="{{.URL}}">{{.Title}}</a>{{if not .Live}} <span class="muted">(duplicate)</span>{{end}}</td><td>{{.Creators}}</td><td>{{.Year}}</td><td>{{.Tier}}</td><td>{{.Depth}}</td><td><a class="tag" href="{{.URL}}">{{.ID}}</a></td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{template "respages" .Pages}}
+{{end}}
+
+{{define "resource"}}
+<header class="page-head">
+  <p class="muted"><a href="{{url "res/"}}">Resources</a> / <a href="{{url (printf "res/kind/%s/" .Kind)}}">{{.Kind}}</a></p>
+  <h1>{{.Title}} <span class="tag">{{.ID}}</span></h1>
+  {{with .TitleEn}}<p class="lead">{{.}}</p>{{end}}
+  {{with .Duplicate}}<p class="notice">This resource is a duplicate. The live resource is {{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}.</p>{{end}}
+</header>
+<section class="card">
+  <table class="plain">
+    <tr><th scope="row">URI</th><td><code>{{.URI}}</code></td></tr>
+    <tr><th scope="row">Kind</th><td>{{.Kind}}{{with .Genre}} <span class="muted">({{range $i, $g := .}}{{if $i}}, {{end}}{{$g}}{{end}})</span>{{end}}</td></tr>
+    {{with .Creators}}<tr><th scope="row">Creators</th><td>{{.}}</td></tr>{{end}}
+    {{with .Date}}<tr><th scope="row">Date</th><td>{{.}}</td></tr>{{end}}
+    {{with .Level}}<tr><th scope="row">Level</th><td>{{.}}</td></tr>{{end}}
+    {{with .MSC}}<tr><th scope="row">MSC</th><td>{{range $i, $c := .}}{{if $i}}, {{end}}<a href="https://zbmath.org/classification/?q=cc:{{$c.Code}}">{{$c.Code}}</a>{{end}}</td></tr>{{end}}
+    {{with .Subjects}}<tr><th scope="row">Subjects</th><td>{{range $i, $s := .}}{{if $i}}, {{end}}{{$s}}{{end}}</td></tr>{{end}}
+    {{with .Tier}}<tr><th scope="row">Tier</th><td>{{.}}</td></tr>{{end}}
+    {{with .Depth}}<tr><th scope="row">Depth</th><td>{{.}}{{with $.Target}} <span class="muted">(target {{.}})</span>{{end}}</td></tr>{{end}}
+    {{with .Scope}}<tr><th scope="row">Scope</th><td>{{.Value}}{{with .Reason}} <span class="muted">({{.}})</span>{{end}}</td></tr>{{end}}
+    {{with .IDs}}<tr><th scope="row">Ids</th><td>{{template "links" .}}</td></tr>{{end}}
+  </table>
+</section>
+{{with .Expressions}}
+<h2>Expressions</h2>
+{{range .}}
+<section class="card" id="{{.Key}}">
+  <h3>{{.Key}}: {{.Kind}}{{with .Label}}, {{.}}{{end}}</h3>
+  <table class="plain">
+    {{with .Language}}<tr><th scope="row">Language</th><td>{{.}}</td></tr>{{end}}
+    {{with .Date}}<tr><th scope="row">Date</th><td>{{.}}</td></tr>{{end}}
+    {{with .Contributors}}<tr><th scope="row">Contributors</th><td>{{.}}</td></tr>{{end}}
+    {{with .IDs}}<tr><th scope="row">Ids</th><td>{{template "links" .}}</td></tr>{{end}}
+  </table>
+  {{$e := .Key}}
+  {{with .Manifestations}}
+  <ul>
+  {{range .}}<li id="{{$e}}-{{.Key}}">{{.Key}}: {{.Kind}}{{with .Publisher}}, {{.}}{{end}}{{with .Place}}, {{.}}{{end}}{{with .Date}}, {{.}}{{end}}{{with .Access}} <span class="muted">({{.}})</span>{{end}}{{with .IDs}}. {{template "links" .}}{{end}}{{range .Links}}. <a href="{{.}}">{{.}}</a>{{end}}</li>
+  {{end}}
+  </ul>
+  {{end}}
+  {{with .Structure}}
+  <details>
+    <summary>Contents</summary>
+    <ul class="res-toc">
+    {{range .}}<li class="d{{.Depth}}">{{.Kind}}{{with .Number}} {{.}}{{end}}{{with .Title}}: {{.}}{{end}}{{with .Page}} <span class="muted">(page {{.}})</span>{{end}}{{with .Date}} <span class="muted">({{.}})</span>{{end}}</li>
+    {{end}}
+    </ul>
+  </details>
+  {{end}}
+</section>
+{{end}}
+{{end}}
+{{with .Relations}}
+<h2>Relations</h2>
+<ul>
+{{range .}}<li>{{with .From}}{{.}} {{end}}{{.Kind}} {{if .To.URL}}<a href="{{.To.URL}}">{{.To.Text}}</a>{{else}}{{.To.Text}}{{end}}{{with .To.Note}} <span class="muted">({{.}})</span>{{end}}{{with .Volume}}, volume {{.}}{{end}}</li>
+{{end}}
+</ul>
+{{end}}
+{{with .RelatedBy}}
+<h2>Related resources</h2>
+<ul>
+{{range .}}<li><a href="{{.To.URL}}">{{.To.Text}}</a> is {{.Kind}} this resource{{with .Volume}}, volume {{.}}{{end}}</li>
+{{end}}
+</ul>
+{{end}}
+{{with .Nodes}}
+<h2>Pages that use this resource</h2>
+<ul class="link-cloud">{{range .}}<li><a href="{{.URL}}">{{.Text}}</a></li>{{end}}</ul>
+{{end}}
+{{with .Mentions}}
+<h2>Items in this resource</h2>
+<p>The mentions of the inventory that name this resource. Each name links to the card of its inventory row.</p>
+<table class="list">
+  <thead><tr><th>Item</th><th>Kind</th><th>Where</th><th>Source</th></tr></thead>
+  <tbody>
+  {{range .}}<tr><td>{{if .Card}}<a href="{{.Card}}">{{.Name}}</a>{{else}}{{.Name}}{{end}}</td><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td><td>{{.At}}</td><td>{{.Source}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+{{with .Cites}}
+<h2>References</h2>
+<ol>
+{{range .}}<li value="{{.N}}">{{with .To}}{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{else}}{{with .Text}}{{.}}{{else}}<span class="muted">not resolved</span>{{end}}{{end}} <span class="muted">({{.From}})</span></li>
+{{end}}
+</ol>
+{{end}}
+{{with .Cited}}
+<h2>Cited by</h2>
+<ul>
+{{range .}}<li><a href="{{.To.URL}}">{{.To.Text}}</a></li>
+{{end}}
+</ul>
+{{end}}
+{{with .Catalogue}}
+<h2>Catalogue records</h2>
+<ul>
+{{range .}}<li>{{.Source}}: {{.NativeID}} <span class="muted">({{.Level}})</span></li>
+{{end}}
+</ul>
+{{end}}
+{{end}}

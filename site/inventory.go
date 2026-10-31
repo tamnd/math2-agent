@@ -33,6 +33,7 @@ type invMention struct {
 	Source, Name, Kind string
 	Link               link   // the item in the source
 	Same               []link // the item in other systems
+	Resource           *link  // the resource that holds the item, with its locator
 }
 
 // invCards is one page of cards: the rows whose ids start with the same two characters. A page for each prefix keeps the number of files of the site small, also for a million rows.
@@ -115,6 +116,8 @@ func (b *builder) loadInventory() error {
 		if r.Outcome != nil && r.Outcome.Value == inventory.OutcomeNode && len(r.Outcome.Target) > 0 {
 			node = b.nodes[r.Outcome.Target[0]]
 		}
+		prefix := r.ID[:min(cardPrefix, len(r.ID))]
+		v.Card = b.url("inventory/row/" + prefix + "/#" + r.ID)
 		seen := map[string]bool{}
 		add := func(l link) {
 			if !seen[l.Text] {
@@ -142,13 +145,20 @@ func (b *builder) loadInventory() error {
 					c.Same = append(c.Same, idLink(sys, x))
 				}
 			}
+			if m.Resource != "" {
+				id, _, _ := strings.Cut(m.Resource, "/")
+				at := atText(m.At)
+				c.Resource = &link{URL: b.resURL(m.Resource), Text: m.Resource, Note: at}
+				if b.resMentions == nil {
+					b.resMentions = map[string][]resMention{}
+				}
+				b.resMentions[id] = append(b.resMentions[id], resMention{Name: cmp.Or(m.Name, v.Name), Kind: m.Kind, Source: m.Source, At: at, Card: v.Card})
+			}
 			v.Mentions = append(v.Mentions, c)
 		}
 		if node != nil {
 			v.Node = &link{URL: node.URL, Text: node.Name, Tag: node.Tag}
 		}
-		prefix := r.ID[:min(cardPrefix, len(r.ID))]
-		v.Card = b.url("inventory/row/" + prefix + "/#" + r.ID)
 		v.URI = uri.Row(r.ID)
 		cp := cards[prefix]
 		if cp == nil {
