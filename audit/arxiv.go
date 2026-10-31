@@ -19,7 +19,12 @@ func d05(a *auditor) outcome {
 		o.add(inventory.MentionsDir, 0, 0, "%v", t.err)
 		return o
 	}
-	wants, err := axImport.Expect(a.arxiv)
+	classified, err := axImport.ReadClassified(a.root)
+	if err != nil {
+		o.add(axImport.ClassifyDir, 0, 0, "%v", err)
+		return o
+	}
+	wants, err := axImport.Expect(a.arxiv, classified)
 	if err != nil {
 		o.add(a.arxiv, 0, 0, "%v", err)
 		return o

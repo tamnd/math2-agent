@@ -137,10 +137,10 @@ type Result struct {
 }
 
 // Import reads the checkout of tamnd/arxiv at root.
-func Import(root string) (*Result, error) { return ImportNames(root, nil) }
+func Import(root string) (*Result, error) { return ImportNames(root, nil, nil) }
 
-// ImportNames reads the checkout of tamnd/arxiv at root, and gives each mention the rows of the named results that its text names (AX6.2, the name method). With no names, it is Import.
-func ImportNames(root string, names *Names) (*Result, error) {
+// ImportNames reads the checkout of tamnd/arxiv at root, and gives each mention the rows of the named results that its text names (AX6.2, the name method). An object of the kind unknown takes the kind of its classification (AX7.2). With no names and no classifications, it is Import.
+func ImportNames(root string, names *Names, classified Classified) (*Result, error) {
 	snapshot, err := commit(root)
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func ImportNames(root string, names *Names) (*Result, error) {
 	}
 	res := &Result{}
 	for _, f := range files {
-		objs, err := readObjects(f)
+		objs, err := readObjects(f, classified)
 		if err != nil {
 			return nil, err
 		}
@@ -528,11 +528,12 @@ func readLines[T any](file string) ([]T, error) {
 	return out, nil
 }
 
-// readObjects reads an objects file of tamnd/arxiv, and gives each object of the kind unknown the kind of ItemOf.
-func readObjects(file string) ([]Object, error) {
+// readObjects reads an objects file of tamnd/arxiv, and gives each object of the kind unknown the kind of ItemOf, and else the kind of its classification.
+func readObjects(file string, classified Classified) ([]Object, error) {
 	objs, err := readLines[Object](file)
 	for i := range objs {
 		objs[i].Item = ItemOf(&objs[i])
+		classified.classify(&objs[i])
 	}
 	return objs, err
 }
@@ -567,15 +568,15 @@ type Want struct {
 	Mention string // the mention that must hold it, or "" when the object has no tag
 }
 
-// Expect returns the objects of an item kind in the latest version of each paper of the checkout at root, with the mention that must hold each one. A restated print is held by the mention of its first print.
-func Expect(root string) ([]Want, error) {
+// Expect returns the objects of an item kind in the latest version of each paper of the checkout at root, with the mention that must hold each one. A restated print is held by the mention of its first print. An object of the kind unknown takes the kind of its classification, as in ImportNames.
+func Expect(root string, classified Classified) ([]Want, error) {
 	files, err := mdrec.Glob(filepath.Join(root, "analysis", "objects", "*", "*"+mdrec.Ext))
 	if err != nil {
 		return nil, err
 	}
 	var out []Want
 	for _, f := range files {
-		objs, err := readObjects(f)
+		objs, err := readObjects(f, classified)
 		if err != nil {
 			return nil, err
 		}
@@ -634,7 +635,7 @@ func ObjectsFile(id string) string {
 
 // ReadPaper reads the metadata record and the object records of one paper from the checkout at root. A paper with no metadata record gives a nil Paper.
 func ReadPaper(root, id string) (*Paper, []Object, error) {
-	objs, err := readObjects(filepath.Join(root, filepath.FromSlash(ObjectsFile(id))))
+	objs, err := readObjects(filepath.Join(root, filepath.FromSlash(ObjectsFile(id))), nil)
 	if err != nil {
 		return nil, nil, err
 	}

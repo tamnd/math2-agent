@@ -224,7 +224,13 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
 		}
-		res, err := axImport.ImportNames(*corpus, axImport.NewNames(rows))
+		// The pass classify gives the kind of an item that code leaves unknown (AX7.2).
+		classified, err := axImport.ReadClassified(*root)
+		if err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		res, err := axImport.ImportNames(*corpus, axImport.NewNames(rows), classified)
 		if err != nil {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
