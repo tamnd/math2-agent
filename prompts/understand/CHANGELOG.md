@@ -1,5 +1,9 @@
 # The understand role
 
+## 0.4.0
+
+The pass unfold of tier T3 (corpus arxiv AX7.5), with its prompt in passes/unfold.md and the prompt of its check in checks/unfold.md. A job reads each statement, definition, conjecture and problem with its context, the standing hypotheses whose scope holds it and the items that it uses or names by reference from the edges plane, and gives its self-contained form in TeX with unfold_items. The tool checks that the inlined items are items of the paper, that the form names no item by its number and that its macros are standard. A model of another family gives a verdict; a verdict other than equivalent goes back to the model once, and a second one, and each unfolding while math2 has no checker of another family, goes to the queue unfold-review. A record of the class verbatim keeps only the hash, the inlined ids and the verdict, and a paper of the class record has no unfolding (AQ08).
+
 ## 0.3.0
 
 The pass prose of tier T2 (corpus arxiv AX7.4), with its prompt in passes/prose.md and the prompt of its check in checks/prose.md. A job reads the running text that ax prose of arxiv-reader prints, as numbered sentences with the cues of step 1, and gives the prose items of each section as ranges of sentence numbers with a kind, with give_prose. A model of another family checks each item; an item that the check does not accept, and each item while math2 has no checker of another family, goes to the queue prose-review.

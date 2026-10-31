@@ -1,6 +1,6 @@
 // Package understand has the goal, the brief and the tools of the understand role (corpus arxiv AX07).
 //
-// A job of the role is one pass on one arXiv paper, thus the paper is the cached part of the prompt and each item of the paper shares it. The target is arxiv:ID/PASS, for example arxiv:2401.00001/classify. The passes of tier T1 are written: classify (AX7.2) and concepts (AX7.3). Each pass has one file, with its tool, what it reads, its part of the brief and the check of each result. The prompt of a pass is passes/PASS.md of the role, and the schema of its tool is schema/understand/PASS.v1.json. The brief gives the items of the latest version that the pass reads, from the analysis plane of a checkout of tamnd/arxiv, in data blocks marked with the licence of the version. The model gives its result with the tool of the pass, and the tool writes one record for each item to records/understand/arxiv/PASS/SHARD.jsonl.
+// A job of the role is one pass on one arXiv paper, thus the paper is the cached part of the prompt and each item of the paper shares it. The target is arxiv:ID/PASS, for example arxiv:2401.00001/classify. The passes that are written: classify (AX7.2) and concepts (AX7.3) of tier T1, prose (AX7.4) of tier T2 and unfold (AX7.5) of tier T3. Each pass has one file, with its tool, what it reads, its part of the brief and the check of each result. The prompt of a pass is passes/PASS.md of the role, and the schema of its tool is schema/understand/PASS.v1.json. The brief gives the items of the latest version that the pass reads, from the analysis plane of a checkout of tamnd/arxiv, in data blocks marked with the licence of the version. The model gives its result with the tool of the pass, and the tool writes one record for each item to records/understand/arxiv/PASS/SHARD.jsonl.
 //
 // A record holds no text of the paper (AX5.4), other than the terms that a definition defines. It holds ids, codes, kinds, flags, a confidence and the names that the model gives for concepts. The defined terms of a definition are words of the paper, thus a record of a version of the class record has none.
 //
@@ -30,14 +30,14 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-// The passes of tier T1. The pass prose of tier T2 is in prose.go.
+// The passes of tier T1. The pass prose of tier T2 is in prose.go, and the pass unfold of tier T3 in unfold.go.
 const (
 	Classify = "classify"
 	Concepts = "concepts"
 )
 
 // Passes are the passes that are written, in the order of AX7.1.
-var Passes = []string{Classify, Concepts, Prose}
+var Passes = []string{Classify, Concepts, Prose, Unfold}
 
 // Dir is the directory of the records of the passes, with one directory for each pass.
 const Dir = agent.UnderstandDir
@@ -54,11 +54,13 @@ type pass struct {
 	reads func(item string) bool
 	brief func(b *strings.Builder, p *Paper)                                                  // the work of the pass, at the start of the brief
 	check func(r *Record, p *Paper, it Item, raw json.RawMessage) (left []string, err string) // fills the record from one result, or gives why the result is not valid
-	after func(ctx context.Context, r *Record, p *Paper) error                                // runs on each valid record before it is stored, or is nil
+	// after runs on each valid record before it is stored, or is nil. A reason sends the result back to the model once, as a result that is not valid; the second time the record is stored as it is.
+	after func(ctx context.Context, r *Record, p *Paper) (why string, err error)
+	load  func(root string, p *Paper, latest []axImport.Object) error // reads what else the pass needs from the checkout, after the items, or is nil
 }
 
 // passes has the code of each pass of Passes.
-var passes = map[string]pass{Classify: classifyPass, Concepts: conceptsPass, Prose: prosePass}
+var passes = map[string]pass{Classify: classifyPass, Concepts: conceptsPass, Prose: prosePass, Unfold: unfoldPass}
 
 // schemaOf returns the schema of the input of the tool of the pass, from schema/understand.
 func schemaOf(name string) json.RawMessage {
@@ -120,6 +122,12 @@ type Paper struct {
 	Sections map[string]Section
 	// Check is the check of the prose items by a model of another family, or nil when math2 has none.
 	Check ProseCheck
+	// Context is what the model reads with each item, by the id of the item, for the pass unfold.
+	Context map[string][]Context
+	// Tags are the ids of the items of the paper with a tag, for the pass unfold.
+	Tags map[string]bool
+	// UnfoldCheck is the check of the unfolded statements by a model of another family, or nil when math2 has none.
+	UnfoldCheck UnfoldCheck
 }
 
 // Reads reports whether the pass reads an object of the item kind.
@@ -154,6 +162,11 @@ func Load(root string, t Target) (*Paper, error) {
 			ID: axImport.MentionID(t.Paper, o.Tag), Ref: fmt.Sprintf("%sv%d#%s", t.Paper, v, o.Local),
 			Item: o.Item, Env: o.Env, Title: o.Title, Number: o.Number, Head: o.Head, Body: cut(o.BodyMD, limit),
 		})
+	}
+	if load := passes[t.Pass].load; load != nil {
+		if err := load(root, p, latest); err != nil {
+			return nil, err
+		}
 	}
 	return p, nil
 }
@@ -206,6 +219,9 @@ func Brief(job *agent.Job, p *Paper, prompt string) string {
 			}
 		}
 		fmt.Fprintf(&b, "Item %s\n%s\n\n", it.ID, tools.Data("arxiv:"+it.Ref, licenceLabel(p), head.String()))
+		for _, c := range p.Context[it.ID] {
+			fmt.Fprintf(&b, "Context of %s: %s, %s\n%s\n\n", it.ID, c.ID, c.Why, tools.Data("arxiv:"+c.Ref, licenceLabel(p), c.String()))
+		}
 	}
 	return b.String()
 }
@@ -230,6 +246,7 @@ type Record struct {
 	Concepts   []Concept   `json:"concepts,omitempty"`
 	Terms      []Term      `json:"terms,omitempty"`
 	Prose      []ProseItem `json:"prose,omitempty"`
+	Unfold     *Unfolding  `json:"unfold,omitempty"`
 }
 
 // Concept is one concept of an item (AX7.3): a row of the inventory, a Wikidata item, or a name with the flag new-concept.
@@ -359,8 +376,16 @@ func Tool(ws *workspace.Workspace, p *Paper, model, by string) agent.Tool {
 					notes = append(notes, fmt.Sprintf("item %d: %s", i+1, why))
 				}
 				if ps.after != nil && r.Failed == "" {
-					if err := ps.after(ctx, r, p); err != nil {
+					again, err := ps.after(ctx, r, p)
+					if err != nil {
 						return agent.Result{}, err
+					}
+					if again != "" {
+						if bad[r.ID]++; bad[r.ID] < 2 && !stored[r.ID] {
+							notes = append(notes, fmt.Sprintf("item %d: %s", i+1, again))
+							continue
+						}
+						notes = append(notes, fmt.Sprintf("item %d: %s, and it is the second time, thus the item is stored in the queue %s", i+1, again, r.Queue))
 					}
 				}
 				done[r.ID] = true
