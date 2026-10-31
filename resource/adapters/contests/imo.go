@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/resource"
 )
 
 // IMOAdapter reads the International Mathematical Olympiad from imo-official.org. The page of the editions gives the years and the host of each year. The page of the problems of a year gives the numbers of the problems and the links to the paper and to the shortlist.
@@ -23,7 +24,7 @@ type IMOAdapter struct {
 var IMO = IMOAdapter{base: base{
 	id: "imo", name: "International Mathematical Olympiad", home: "https://www.imo-official.org/", dump: "https://www.imo-official.org/editions/",
 	competition: "International Mathematical Olympiad", names: []string{"IMO"},
-	cadence: "yearly", gap: Gap,
+	cadence: "yearly", gap: Gap, language: "en", creator: resource.Creator{Name: "IMO Problem Selection Committee", Role: "author"},
 	terms: ingest.Terms{Robots: "no Disallow rule; the file holds only the comment of the Cloudflare content signals", Rate: "one page each 5 s", AI: "none stated"},
 }, Now: time.Now}
 

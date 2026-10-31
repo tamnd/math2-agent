@@ -74,7 +74,12 @@ type base struct {
 	cadence              string
 	terms                ingest.Terms
 	gap                  time.Duration
+	language             string           // the language of the pages that the adapter reads, as BCP 47
+	creator              resource.Creator // the body that sets or edits the problems
 }
+
+// MSC are the MSC codes of each set: problem books, and competitions.
+var MSC = []string{"00A07", "97U40"}
 
 // Source returns the catalogue entry of the source.
 func (b base) Source() ingest.Source {
@@ -310,7 +315,7 @@ func first(vs []string) string {
 	return vs[0]
 }
 
-// Records reads the snapshot and emits the source record of the competition and of each set (RS13.1). The record of the competition has the id of the source, because the source is the work of the competition (RS7.6). A set that is a year of the competition has a part_of edge to the resource of the competition, or to its Wikidata id, or else to the id of the source.
+// Records reads the snapshot and emits the source record of the competition and of each set (RS13.1). Each set has the language of the source, its body as the creator, and the MSC codes of MSC. The record of the competition has the id of the source, because the source is the work of the competition (RS7.6). A set that is a year of the competition has a part_of edge to the resource of the competition, or to its Wikidata id, or else to the id of the source.
 func (b base) Records(r io.Reader, emit func(cluster.Record) error) error {
 	to := "source:" + b.id
 	return each(r, func(c Competition) error {
@@ -326,7 +331,10 @@ func (b base) Records(r io.Reader, emit func(cluster.Record) error) error {
 		}
 		return emit(rec)
 	}, func(s Set) error {
-		rec := cluster.Record{NativeID: s.ID, Level: "work", Kind: "problem-set", Title: s.Title, Date: s.Date, Links: s.Links}
+		rec := cluster.Record{NativeID: s.ID, Level: "work", Kind: "problem-set", Title: s.Title, Date: s.Date, Links: s.Links, Language: b.language, MSC: MSC}
+		if b.creator.Name != "" {
+			rec.Creators = []resource.Creator{b.creator}
+		}
 		if to != "" && !s.Shortlist {
 			rec.Relations = []resource.Relation{{Kind: "part_of", To: to, Source: b.id}}
 		}

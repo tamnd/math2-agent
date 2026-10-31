@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/resource"
 )
 
 // KvantAdapter reads the problem column "Задачник «Кванта»" of the journal Kvant from kvant.digital. The old site kvant.mccme.ru now sends each request to kvant.digital. The front page links each issue, and the table of contents of an issue has an item, as "Задачи М2902 to М2905; Ф2909 to Ф2912" with dashes, for the new problems of the column. The adapter keeps the mathematics problems (the М numbers) and the link to the item. The editors hold the copyright of the journal, so the adapter keeps no text.
@@ -18,7 +19,7 @@ type KvantAdapter struct{ base }
 var Kvant = KvantAdapter{base{
 	id: "kvant", name: "Kvant", home: "https://www.kvant.digital/", dump: "https://www.kvant.digital/",
 	competition: "Kvant problem column", names: []string{"Kvant problems", "Kvant", "Задачник «Кванта»"},
-	cadence: "monthly", gap: Gap,
+	cadence: "monthly", gap: Gap, language: "ru", creator: resource.Creator{Name: "Kvant editorial board", Role: "editor"},
 	terms: ingest.Terms{Robots: "disallows /search, /view and the query parameters; allows /issues/ and /problems/", Rate: "one page each 5 s", AI: "none stated"},
 }}
 

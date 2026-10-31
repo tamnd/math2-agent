@@ -356,6 +356,12 @@ func TestKvant(t *testing.T) {
 	if r := rs["2026-8"]; r.Title != "Kvant 2026, no. 8" || r.Date != "2026" || r.Links[0] != "https://www.kvant.digital/issues/2026/8/" {
 		t.Errorf("2026-8 is %+v", r)
 	}
+	if r := rs["2026-8"]; r.Language != "ru" || len(r.Creators) != 1 || r.Creators[0].Name != "Kvant editorial board" || r.Creators[0].Role != "editor" || !slices.Equal(r.MSC, MSC) {
+		t.Errorf("the facts of 2026-8 are %+v", r)
+	}
+	if r := rs[NativeID]; r.Language != "" || len(r.Creators) != 0 || len(r.MSC) != 0 {
+		t.Errorf("the competition has the facts of a set: %+v", r)
+	}
 	st := structures(t, a, snap)
 	if got := keys(st["2026-8"]); !slices.Equal(got, []string{"M2902", "M2903", "M2904", "M2905"}) {
 		t.Errorf("the problems of 2026-8 are %v", got)

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/resource"
 )
 
 // PutnamAdapter reads the William Lowell Putnam Mathematical Competition from the Putnam archive of Kiran Kedlaya. The archive is one page with a row for each year and the links to the TeX and PDF files of that year. The MAA holds the copyright of the problems, so the adapter keeps the links only. It reads the index page and no linked file, because the page asks robots not to follow its links.
@@ -18,7 +19,7 @@ type PutnamAdapter struct{ base }
 var Putnam = PutnamAdapter{base{
 	id: "putnam", name: "The William Lowell Putnam Mathematical Competition archive", home: "https://kskedlaya.org/putnam-archive/", dump: "https://kskedlaya.org/putnam-archive/",
 	competition: "William Lowell Putnam Mathematical Competition", names: []string{"Putnam Competition", "Putnam Mathematical Competition", "Putnam"},
-	cadence: "yearly", gap: Gap,
+	cadence: "yearly", gap: Gap, language: "en", creator: resource.Creator{Name: "Mathematical Association of America", Role: "author"},
 	terms: ingest.Terms{Robots: "disallows /papers/, /photos/ and *.jpg; the index has the robots meta nofollow, so only the index is read", Rate: "one page for each fetch", AI: "none stated"},
 }}
 
