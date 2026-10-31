@@ -1,5 +1,9 @@
 # The understand role
 
+## 0.3.0
+
+The pass prose of tier T2 (corpus arxiv AX7.4), with its prompt in passes/prose.md and the prompt of its check in checks/prose.md. A job reads the running text that ax prose of arxiv-reader prints, as numbered sentences with the cues of step 1, and gives the prose items of each section as ranges of sentence numbers with a kind, with give_prose. A model of another family checks each item; an item that the check does not accept, and each item while math2 has no checker of another family, goes to the queue prose-review.
+
 ## 0.2.0
 
 Each pass has its prompt in passes/PASS.md, which comes at the start of the brief, and the schema of the input of its tool in schema/understand/PASS.v1.json of math2-agent. The system prompt has only the rules of each pass. A second result of an item that is not valid gives the item a record with the mark model-failed: PASS, and the job goes on (corpus arxiv AX7.1).

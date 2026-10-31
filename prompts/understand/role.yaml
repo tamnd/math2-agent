@@ -1,6 +1,6 @@
 role: understand
-version: 0.2.0
-tools: [classify_items, tag_concepts]
+version: 0.3.0
+tools: [classify_items, tag_concepts, give_prose]
 ladder:
   - model: claude-haiku-5-5
     effort: low
