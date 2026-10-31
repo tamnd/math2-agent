@@ -740,6 +740,7 @@ func build(in Input, g *groups) (*Result, error) {
 		}
 	}
 	offerings(out)
+	defaultAccess(out)
 	for _, id := range sortedKeys(out) {
 		res.Resources = append(res.Resources, out[id])
 	}
@@ -754,6 +755,32 @@ func build(in Input, g *groups) (*Result, error) {
 		}
 	}
 	return res, nil
+}
+
+// defaultAccess gives the access class record to each manifestation of a live resource that has no access. The class record is the default of RS2.6: math2 keeps the metadata and a link, and no text.
+func defaultAccess(out map[string]resource.Resource) {
+	for id, r := range out {
+		if !r.Live() {
+			continue
+		}
+		changed := false
+		for i := range r.Expressions {
+			for j := range r.Expressions[i].Manifestations {
+				if r.Expressions[i].Manifestations[j].Access == nil {
+					if !changed {
+						r.Expressions = slices.Clone(r.Expressions)
+						changed = true
+					}
+					ms := slices.Clone(r.Expressions[i].Manifestations)
+					ms[j].Access = &resource.Access{Class: "record"}
+					r.Expressions[i].Manifestations = ms
+				}
+			}
+		}
+		if changed {
+			out[id] = r
+		}
+	}
 }
 
 // offerings resolves the target of an edge that names an offering by its id, as offering:042nb2s44:18.06:2010-spring, to the expression of the course with that id. A material of a course has this edge to its offering (RS5.1). An edge with no expression for its target is dropped.
