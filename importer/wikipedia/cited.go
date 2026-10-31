@@ -70,7 +70,7 @@ func citedFile(p string, add func(string)) (bool, error) {
 	if ext != ".md" && ext != ".yaml" && ext != ".yml" && ext != ".json" && ext != ".jsonl" {
 		return true, nil
 	}
-	b, err := os.ReadFile(p)
+	b, err := os.ReadFile(p) // #nosec G304 -- the walk of the tree gives the path.
 	if err != nil {
 		return false, err
 	}
@@ -129,8 +129,8 @@ func citedWalk(v any, add func(string)) {
 	switch v := v.(type) {
 	case map[string]any:
 		for k, x := range v {
-			switch {
-			case k == "wikipedia":
+			switch k {
+			case "wikipedia":
 				if s, ok := x.(string); ok {
 					add(s)
 				}
@@ -141,7 +141,7 @@ func citedWalk(v any, add func(string)) {
 						}
 					}
 				}
-			case k == "close_to":
+			case "close_to":
 				if l, ok := x.([]any); ok {
 					for _, c := range l {
 						if m, ok := c.(map[string]any); ok && m["system"] == "wikipedia" {
