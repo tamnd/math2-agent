@@ -56,7 +56,7 @@ func readPreTeXt(files map[string][]byte, main string) ([]item, error) {
 	if _, ok := files[main]; !ok {
 		return nil, fmt.Errorf("the main file %s is not in the archive", main)
 	}
-	p := &pretext{files: files, open: map[string]bool{}}
+	p := &pretext{files: files, open: map[string]bool{}, toc: &toc{keys: map[string]bool{}}}
 	if err := p.file(main, nil); err != nil {
 		return nil, err
 	}
@@ -196,6 +196,9 @@ func (p *pretext) item(d *xml.Decoder, file string, se xml.StartElement, line in
 		label: cmpOr(attr(se, xmlSpace, "id"), attr(se, "", "label")),
 		line:  line,
 	})
+	if p.toc != nil {
+		p.items[i].node = p.toc.here()
+	}
 	for j := len(p.divs) - 1; j >= 0; j-- {
 		if p.divs[j] != "" {
 			p.items[i].section = p.divs[j]
