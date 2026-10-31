@@ -1,0 +1,2 @@
+analysis/census/0000/100-r7.md:0:0: Y12: the redirect "Widget statement" to the anchor "widget" of "Widget theorem (group theory)" is the name or an alias of no mention
+metadata/0000/100.md:0:0: Y12: the redirect "Widget proposition" to "Widget theorem (group theory)" is the name or an alias of no mention
