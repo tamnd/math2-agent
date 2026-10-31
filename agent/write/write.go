@@ -4,7 +4,7 @@
 //
 // The provenance log marks each section that the run writes as the work of an agent (spec 04.8). The run can change a section of the target only when the log shows that write wrote it and that no person confirmed it.
 //
-// [Goal] runs the gates of corpus K9.2 that need no model in the loop: m2 check (G1), the card (G2), the house style (G3, hard only for a W3 job) and the copy check (G4, when the run has a reference corpus). It also checks the form of two sections: a proof is a list of numbered steps (corpus K8.5), and a definition names the defined term in bold. [Brief] gives the first message of a run.
+// [Goal] runs the gates of corpus K9.2 that need no model in the loop: m2 check (G1), the card (G2), the house style (G3, hard only for a W3 job) and the copy check (G4, when the run has a reference corpus). It also checks the form of two sections: a proof is a list of numbered steps (corpus K8.5), and a definition names the defined term in bold. [Brief] gives the first message of a run, with the proofs of the target that arXiv papers have (corpus arxiv AX9.4).
 package write
 
 import (
@@ -335,8 +335,8 @@ func union[V any](a, b map[string]V) map[string]V {
 	return u
 }
 
-// Brief returns the first message of a write run: the job, the level that it takes the target to, the work that the card asks for, and the target node from the work tree in a data block.
-func Brief(ws *workspace.Workspace, job *agent.Job, cards *card.Cards) (string, error) {
+// Brief returns the first message of a write run: the job, the level that it takes the target to, the work that the card asks for, the proofs from papers of the target (corpus arxiv AX9.4), and the target node from the work tree in a data block. arxiv is the checkout of tamnd/arxiv, or "" when the run has none, and then the brief has no text of a proof.
+func Brief(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, arxiv string) (string, error) {
 	p := tools.NodePath(job.Target)
 	if p == "" {
 		return "", fmt.Errorf("write: the target %q is not a tag or a provisional id", job.Target)
@@ -374,6 +374,11 @@ func Brief(ws *workspace.Workspace, job *agent.Job, cards *card.Cards) (string, 
 		}
 		b.WriteString("\n")
 	}
+	ps, err := PaperProofs(ws, n, arxiv)
+	if err != nil {
+		return "", err
+	}
+	briefProofs(&b, ps)
 	fmt.Fprintf(&b, "Write the sections in %s. Do not change the sections that a person wrote, the explanations or the front matter other than notation and uses.\n\n", p)
 	fmt.Fprintf(&b, "The target node:\n\n%s\n", tools.Data(p, tools.Licence(p), string(text)))
 	return b.String(), nil

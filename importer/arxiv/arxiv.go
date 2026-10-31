@@ -89,12 +89,31 @@ type Edge struct {
 type Paper struct {
 	ID         string   `json:"id"`
 	Title      string   `json:"title"`
+	Authors    []Author `json:"authors"`
 	Categories []string `json:"categories"`
 	MSCClass   string   `json:"msc_class"`
 	Versions   []struct {
 		Version int    `json:"version"`
 		Licence string `json:"licence"`
 	} `json:"versions"`
+}
+
+// Author is one author of a paper.
+type Author struct {
+	Surname  string `json:"surname"`
+	Forename string `json:"forename"`
+	Suffix   string `json:"suffix"`
+}
+
+// AuthorNames returns the names of the authors, as Forename Surname Suffix, joined by commas.
+func (p *Paper) AuthorNames() string {
+	var out []string
+	for _, a := range p.Authors {
+		if n := strings.Join(strings.Fields(a.Forename+" "+a.Surname+" "+a.Suffix), " "); n != "" {
+			out = append(out, n)
+		}
+	}
+	return strings.Join(out, ", ")
 }
 
 // Licence returns the licence of the version, or of the latest earlier version that states one.

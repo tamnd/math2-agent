@@ -135,7 +135,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	native := flags.Bool("native-decide", false, "permit a proof that uses native_decide. Rule F04 records each use.")
 	typeChange := flags.Bool("type-change", false, "permit a bump rebind to a declaration with another type hash")
 	web := flags.Bool("web", false, "with explore, the novelty check also searches zbMATH Open, arXiv, MathOverflow and the OEIS on the web")
-	arxiv := flags.String("arxiv", os.Getenv("ARXIV_CORPUS"), "with understand, the checkout of tamnd/arxiv with the analysis plane; with write, the checkout whose content plane and fingerprints are the reference corpus of the copy check. The default is $ARXIV_CORPUS.")
+	arxiv := flags.String("arxiv", os.Getenv("ARXIV_CORPUS"), "with understand, the checkout of tamnd/arxiv with the analysis plane; with write, the checkout whose content plane and fingerprints are the reference corpus of the copy check, and whose open proofs the brief gives. The default is $ARXIV_CORPUS.")
 	asJSON := flags.Bool("json", false, "write the summary of the run as JSON")
 	box := sandboxFlags(flags)
 	if err := flags.Parse(args[1:]); err != nil {
@@ -441,7 +441,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		if err != nil {
 			return nil, ws, nil, err
 		}
-		if brief, err = write.Brief(ws, job, cards); err != nil {
+		if brief, err = write.Brief(ws, job, cards, rs.arxiv); err != nil {
 			return nil, ws, nil, err
 		}
 		// With -arxiv, the copy check runs in the loop against the arXiv reference corpus (corpus arxiv AX9.5). Otherwise the tree has no reference corpus yet, thus the copy check runs in CI and not in the loop.
