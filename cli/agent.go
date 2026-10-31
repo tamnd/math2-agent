@@ -397,7 +397,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 			return nil, ws, nil, err
 		}
 		by := "agent:m2-agent/understand@" + r.Version
-		brief = understand.Brief(job, p)
+		brief = understand.Brief(job, p, r.Passes[t.Pass])
 		check = understand.Goal(ws, job, p, by)
 		extra = understand.Tools(ws, p, r.Ladder[rung].Model, by)
 	case "explore":

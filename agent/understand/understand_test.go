@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/llm/llmtest"
 	"github.com/tamnd/math2-agent/prompts"
+	uschema "github.com/tamnd/math2-agent/schema/understand"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
@@ -121,8 +123,8 @@ func TestLoad(t *testing.T) {
 
 func TestBrief(t *testing.T) {
 	p := load(t, "", "arxiv:2401.00001/classify")
-	b := understand.Brief(&agent.Job{ID: "j-1", Goal: "classify the items."}, p)
-	for _, want := range []string{"the pass classify on the arXiv paper 2401.00001v1", "The goal of the job: classify the items.", "each of the 2 items", "statement/lemma", "Item ax://paper/2401.00001#UNK1", "environment: point", "Then $X$ is compact.", "54D30", "no licence"} {
+	b := understand.Brief(&agent.Job{ID: "j-1", Goal: "classify the items."}, p, "The prompt of the pass.")
+	for _, want := range []string{"the pass classify on the arXiv paper 2401.00001v1", "classify the items.\n\nThe prompt of the pass.\n\nGive the item kind", "The goal of the job: classify the items.", "each of the 2 items", "statement/lemma", "Item ax://paper/2401.00001#UNK1", "environment: point", "Then $X$ is compact.", "54D30", "no licence"} {
 		if !strings.Contains(b, want) {
 			t.Errorf("the brief has no %q:\n%s", want, b)
 		}
@@ -194,6 +196,72 @@ func TestClassify(t *testing.T) {
 	}
 }
 
+// TestModelFailed checks that the second result of an item that is not valid in a run gives the item the mark model-failed, and that a valid result is not replaced by the mark (AX7.1).
+func TestModelFailed(t *testing.T) {
+	ws := tree(t)
+	p := load(t, "cc-by", "arxiv:2401.00001/classify")
+	ts := understand.Tools(ws, p, "claude-haiku-5-5", by)
+	job := &agent.Job{ID: "j-1", Role: "understand", Target: "arxiv:2401.00001/classify"}
+	give := func(items ...map[string]any) (agent.Result, error) {
+		in, _ := json.Marshal(map[string]any{"items": items})
+		return ts[0].Call(context.Background(), job, in)
+	}
+	rmk := map[string]any{"id": "ax://paper/2401.00001#RMK1", "kind": "remark", "confidence": 0.9}
+	if _, err := give(rmk, map[string]any{"id": "ax://paper/2401.00001#UNK1", "kind": "theorem", "confidence": 0.9}); err != nil {
+		t.Fatal(err)
+	}
+	if rs := records(t, ws, "classify", "ax://paper/2401.00001#RMK1"); len(rs) != 1 || rs[0].Failed != "" {
+		t.Fatalf("after one result that is not valid the records are %+v", rs)
+	}
+	res, err := give(map[string]any{"id": "ax://paper/2401.00001#UNK1", "kind": "statement/theorem"}, map[string]any{"id": "ax://paper/2401.00001#RMK1", "kind": "lemma", "confidence": 0.9}, map[string]any{"id": "ax://paper/2401.00001#RMK1", "kind": "lemma", "confidence": 0.9})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(res.Text, "stored as model-failed: classify") {
+		t.Errorf("the result is %s", res.Text)
+	}
+	for _, id := range []string{"ax://paper/2401.00001#UNK1", "ax://paper/2401.00001#RMK1"} {
+		for _, r := range records(t, ws, "classify", id) {
+			switch {
+			case r.ID == "ax://paper/2401.00001#UNK1" && (r.Failed != "model-failed: classify" || r.Kind != ""):
+				t.Errorf("the record of UNK1 is %+v", r)
+			case r.ID == "ax://paper/2401.00001#RMK1" && (r.Failed != "" || r.Kind != "remark"):
+				t.Errorf("the valid record of RMK1 is %+v", r)
+			}
+		}
+	}
+	ok, why, err := understand.Goal(ws, job, p, by)(context.Background())
+	if err != nil || !ok {
+		t.Errorf("the goal gives %v, %q, %v", ok, why, err)
+	}
+}
+
+// TestSchemas checks that the tool of each pass gives the schema of schema/understand, and that the kinds of the schema of classify are Kinds.
+func TestSchemas(t *testing.T) {
+	for _, pass := range understand.Passes {
+		p := &understand.Paper{ID: "2401.00001", Pass: pass}
+		tool := understand.Tool(tree(t), p, "m", by)
+		if string(tool.Spec().Schema) != string(uschema.Of(pass)) {
+			t.Errorf("the tool of %s has another schema than %s", pass, uschema.File(pass))
+		}
+	}
+	var s struct {
+		Properties struct {
+			Items struct {
+				Items struct {
+					Properties struct{ Kind struct{ Enum []string } }
+				}
+			}
+		}
+	}
+	if err := json.Unmarshal(uschema.Of(understand.Classify), &s); err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Properties.Items.Items.Properties.Kind.Enum; !slices.Equal(got, understand.Kinds) {
+		t.Errorf("the kinds of the schema are %v", got)
+	}
+}
+
 func TestConcepts(t *testing.T) {
 	ws := tree(t)
 	p := load(t, "", "arxiv:2401.00001/concepts")
@@ -244,7 +312,7 @@ func TestRun(t *testing.T) {
 		llmtest.Call("classify_items", map[string]any{"items": []any{map[string]any{"id": "ax://paper/2401.00001#UNK1", "kind": "statement/theorem", "confidence": 0.9}}}, u),
 		llmtest.Call("classify_items", map[string]any{"items": []any{map[string]any{"id": "ax://paper/2401.00001#RMK1", "kind": "remark", "confidence": 0.8, "flags": []string{"claim-in-remark"}}}}, u),
 	), Tools: ts, Goal: understand.Goal(ws, j, p, b)}
-	rec, err := rn.Run(context.Background(), j, 0, understand.Brief(j, p))
+	rec, err := rn.Run(context.Background(), j, 0, understand.Brief(j, p, role.Passes[p.Pass]))
 	if err != nil {
 		t.Fatal(err)
 	}

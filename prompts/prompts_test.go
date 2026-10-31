@@ -43,6 +43,9 @@ func TestRoles(t *testing.T) {
 		for name, text := range r.Checks {
 			prompts["check "+name] = text
 		}
+		for name, text := range r.Passes {
+			prompts["pass "+name] = text
+		}
 		for name, text := range prompts {
 			if strings.Contains(text, "—") {
 				t.Errorf("%s: the %s prompt has an em dash", r.Name, name)
