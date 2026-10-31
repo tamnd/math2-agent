@@ -28,6 +28,7 @@
     <a href="{{url "msc/"}}"{{if or (eq .Section "msc") (eq .Section "nodes")}} aria-current="page"{{end}}>Learn</a>
     <a href="{{url "latest/"}}"{{if eq .Section "latest"}} aria-current="page"{{end}}>Latest</a>
     <a href="{{url "discover/"}}"{{if eq .Section "discover"}} aria-current="page"{{end}}>Discover</a>
+    <a href="{{url "res/"}}"{{if eq .Section "res"}} aria-current="page"{{end}}>Resources</a>
   </nav>
   <form class="search-box" action="{{url "search/"}}" role="search">
     <input type="search" name="q" placeholder="Search ideas" aria-label="Search" autocomplete="off">
@@ -61,6 +62,7 @@
         <li><a href="{{url "contribute/"}}">Contribute</a></li>
         <li><a href="{{url "spec/"}}">Specification</a></li>
         <li><a href="{{url "inventory/"}}">Inventory</a></li>
+        <li><a href="{{url "res/"}}">Resources</a></li>
         <li><a href="{{url "explore/frontier/"}}">Frontier</a></li>
         <li><a href="{{url "reviewers/"}}">Reviewers</a></li>
         <li><a href="{{url "projects/"}}">Projects</a></li>

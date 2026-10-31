@@ -175,6 +175,10 @@ type builder struct {
 	invSummary *inventory.Summary
 	invLetters []*invLetter
 	invCards   []*invCards
+
+	res         map[string]*resView
+	resOrder    []*resView
+	resMentions map[string][]resMention // the mentions of each resource, by the resource id
 }
 
 // Build writes the site to opt.Out.
@@ -198,7 +202,7 @@ func Build(opt Options) error {
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeLevels, b.writeWikipedia, b.writeFeeds}
+	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeResources, b.writeLevels, b.writeWikipedia, b.writeFeeds}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
@@ -285,6 +289,9 @@ func (b *builder) load() error {
 		return err
 	}
 	if err := b.loadInventory(); err != nil {
+		return err
+	}
+	if err := b.loadResources(); err != nil {
 		return err
 	}
 	return b.loadSpec()
