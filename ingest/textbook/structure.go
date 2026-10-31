@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -39,7 +40,7 @@ func (b Book) Structure(r io.Reader) ([]resource.Node, string, error) {
 
 // build builds the table of contents of the files of the book. When index is true, it also collects the terms of the back-of-book index, each with the node of the table of contents that holds it (RS4.6).
 func (b Book) build(files map[string][]byte, order []string, index bool) (*toc, error) {
-	t := &toc{keys: map[string]bool{}, index: index}
+	t := &toc{keys: map[string]bool{}, index: index, places: map[string][]place{}}
 	var err error
 	switch b.Format {
 	case LaTeX:
@@ -59,9 +60,13 @@ func latexTOC(t *toc, files map[string][]byte, order []string, match, skip *rege
 			continue
 		}
 		s := stripComments(string(files[name]))
+		base := 0 // the lines before s in the file
 		if m := beginDoc.FindStringIndex(s); m != nil {
+			base = strings.Count(s[:m[1]], "\n")
 			s = s[m[1]:]
 		}
+		t.at(name, 0)
+		line := func(at int) int { return base + 1 + strings.Count(s[:at], "\n") }
 		var terms [][]int
 		if t.index {
 			terms = indexCmd.FindAllStringIndex(s, -1)
@@ -73,6 +78,7 @@ func latexTOC(t *toc, files map[string][]byte, order []string, match, skip *rege
 			}
 			if m[6] >= 0 {
 				t.mark(s[m[6]:m[7]])
+				t.at(name, line(m[0]))
 				continue
 			}
 			title, ok := braced(s[m[1]-1:])
@@ -85,6 +91,7 @@ func latexTOC(t *toc, files map[string][]byte, order []string, match, skip *rege
 			}
 			kind := strings.TrimPrefix(s[m[2]:m[3]], "ol")
 			t.add(kind, m[5] > m[4], strings.Join(strings.Fields(title), " "), label)
+			t.at(name, line(m[0]))
 		}
 		for _, m := range terms {
 			t.latexTerm(name, s, m)
@@ -114,8 +121,30 @@ type toc struct {
 	appendix   bool        // the headings are in the appendices
 	unnumbered bool        // the headings are in the front matter or the back matter
 	keys       map[string]bool
-	index      bool        // collect the terms of the index
-	terms      []indexTerm // the terms of the index, in the order of the book
+	index      bool               // collect the terms of the index
+	terms      []indexTerm        // the terms of the index, in the order of the book
+	places     map[string][]place // for each file of a LaTeX book, the node that is open from each line
+}
+
+// place is a line of a file and the key of the deepest open node of the table of contents from that line, or "".
+type place struct {
+	line int
+	key  string
+}
+
+// at records that the node open now is open from the line of the file.
+func (t *toc) at(file string, line int) {
+	t.places[file] = append(t.places[file], place{line, t.here()})
+}
+
+// nodeAt gives the key of the node of the table of contents that holds the line of the file, or "" when the walk did not read the file.
+func (t *toc) nodeAt(file string, line int) string {
+	ps := t.places[file]
+	i := sort.Search(len(ps), func(i int) bool { return ps[i].line > line })
+	if i == 0 {
+		return ""
+	}
+	return ps[i-1].key
 }
 
 // tocNode is a node of the tree while the tree grows.

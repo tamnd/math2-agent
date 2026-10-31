@@ -186,6 +186,7 @@ func (b Book) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) error
 // item is one environment that a reader found, before Read gives it an id.
 type item struct {
 	file, env, kind, label, title, section, text string
+	node                                         string // the key of the node of the table of contents that holds the item, or ""
 	line                                         int
 	refs                                         []string // the labels that the item refers to
 }
@@ -216,6 +217,12 @@ func (b Book) Read(r io.Reader, emit func(ingest.Record) error) error {
 	t, err := b.build(files, order, true)
 	if err != nil {
 		return err
+	}
+	// The PreTeXt reader gives each item its node. The LaTeX reader reads each file alone, so the node comes from the walk of the table of contents.
+	for i := range items {
+		if n := t.nodeAt(items[i].file, items[i].line); n != "" {
+			items[i].node = n
+		}
 	}
 	for _, rec := range append(b.records(items, commit), b.termRecords(t.terms, commit)...) {
 		if err := emit(rec); err != nil {
@@ -286,6 +293,9 @@ func (b Book) records(items []item, commit string) []ingest.Record {
 			URL:     b.blob(commit, it.file, it.line),
 			Text:    it.text,
 			Meta:    map[string]string{"environment": it.env, "label": it.label, "section": it.section},
+		}
+		if it.node != "" {
+			rec.Meta["node"] = it.node
 		}
 		proves := -1
 		if j, ok := last[it.file]; ok && it.kind == "proof" {
