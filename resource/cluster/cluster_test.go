@@ -352,6 +352,34 @@ func TestExpressionGetsLanguage(t *testing.T) {
 	}
 }
 
+func TestDefaultAccess(t *testing.T) {
+	open := &resource.Access{Class: "open", Licence: "CC-BY-4.0"}
+	old := resource.Resource{ID: "OLD", Kind: "monograph", Title: "Old", Scope: &resource.Scope{Value: resource.In}, Catalogue: []resource.CatalogueRecord{{Source: "x", NativeID: "o"}},
+		Expressions: []resource.Expression{{Key: "e1", Kind: "edition", Manifestations: []resource.Manifestation{{Key: "m1", Kind: "print"}, {Key: "m2", Kind: "pdf", Access: open}}}}}
+	res := run(t, Input{
+		Records: []Record{
+			{Source: "springer-series", NativeID: "b", Level: "expression", Kind: "monograph", Title: "Random Walk", Date: "2010", IDs: resource.IDs{"doi": {"10.1/b"}, "isbn": {"9780821848296"}}},
+		},
+		Existing: []resource.Resource{old},
+	})
+	for _, r := range live(res) {
+		for _, e := range r.Expressions {
+			for _, m := range e.Manifestations {
+				want := "record"
+				if m.Key == "m2" && r.ID == "OLD" {
+					want = "open"
+				}
+				if m.Access == nil || m.Access.Class != want {
+					t.Errorf("%s %s %s: access %+v", r.ID, e.Key, m.Key, m.Access)
+				}
+			}
+		}
+	}
+	if old.Expressions[0].Manifestations[0].Access != nil {
+		t.Errorf("the input changed")
+	}
+}
+
 func TestFillerJoinsNothing(t *testing.T) {
 	res := run(t, Input{
 		Records: []Record{
