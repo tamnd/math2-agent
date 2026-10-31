@@ -122,6 +122,7 @@ type nodeView struct {
 	Refs, Backlinks                        []refGroup
 	Formal                                 []link
 	Sources, SameAs                        []link
+	Resources                              []link // the resources of the catalogue that the sources name
 	Retired                                map[string]any
 	Status                                 *status.Status // nil when the site has no build
 	Writing                                *card.Result   // the writing level and the work list

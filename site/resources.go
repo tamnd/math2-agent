@@ -11,6 +11,7 @@ import (
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/depth"
+	"github.com/tamnd/math2-agent/resource/ids"
 )
 
 // resPerPage is the number of resources on one page of a list. A list of more resources has more pages.
@@ -33,6 +34,7 @@ type resView struct {
 	RelatedBy    []resRel // the edges from other resources to this one
 	Cites, Cited []resCite
 	Mentions     []resMention
+	Nodes        []link // the nodes whose sources name the resource
 }
 
 // resExpr is one expression on the page of its resource.
@@ -219,7 +221,72 @@ func (b *builder) loadResources() error {
 			v.Mentions = ms
 		}
 	}
+	b.linkNodes()
 	return nil
+}
+
+// nodeSystems maps the keys of the sources of a node to the id systems of the catalogue.
+var nodeSystems = map[string]string{"arxiv": "arxiv", "doi": "doi", "zbmath": "zbl", "mr": "mr", "book": "isbn"}
+
+// linkNodes gives each node the live resources that its sources name by an external id, and each resource the nodes that name it.
+func (b *builder) linkNodes() {
+	byID := map[string]*resView{}
+	add := func(sys string, vals resource.Values, v *resView) {
+		for _, x := range vals {
+			if n, err := ids.Normalize(sys, x); err == nil && byID[sys+" "+n] == nil {
+				byID[sys+" "+n] = v
+			}
+		}
+	}
+	for _, v := range b.resOrder {
+		if !v.Live() {
+			continue
+		}
+		for sys, vals := range v.Resource.IDs {
+			add(sys, vals, v)
+		}
+		for _, e := range v.Resource.Expressions {
+			for sys, vals := range e.IDs {
+				add(sys, vals, v)
+			}
+			for _, m := range e.Manifestations {
+				for sys, vals := range m.IDs {
+					add(sys, vals, v)
+				}
+			}
+		}
+	}
+	if len(byID) == 0 {
+		return
+	}
+	for _, n := range b.order {
+		items, _ := n.Meta["sources"].([]any)
+		seen := map[string]bool{}
+		for _, item := range items {
+			m, _ := item.(map[string]any)
+			for key, val := range m {
+				sys, ok := nodeSystems[key]
+				x, _ := val.(string)
+				if !ok || x == "" {
+					continue
+				}
+				if sys == "isbn" {
+					var isbn bool
+					if x, isbn = strings.CutPrefix(x, "isbn:"); !isbn {
+						continue
+					}
+				}
+				id, err := ids.Normalize(sys, x)
+				r := byID[sys+" "+id]
+				if err != nil || r == nil || seen[r.ID] {
+					continue
+				}
+				seen[r.ID] = true
+				n.Resources = append(n.Resources, link{URL: r.URL, Text: r.Title, Note: r.Creators})
+				r.Nodes = append(r.Nodes, link{URL: n.URL, Text: n.Name, Tag: n.Tag})
+			}
+		}
+	}
 }
 
 // flatten gives the nodes of a structure in the order of the tree, each with its depth.

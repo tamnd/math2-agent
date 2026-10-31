@@ -37,6 +37,7 @@ func TestResources(t *testing.T) {
 	if err := inventory.WriteRows(root, []inventory.Row{{ID: "7K3QX2M9R2", Mentions: []string{ms[0].ID}, Kind: "statement", Name: "Heine-Borel theorem", Layer: inventory.Textbook, Spread: 1}}); err != nil {
 		t.Fatal(err)
 	}
+	writeFile(t, root, "nodes/1H8/1H8D2C.md", "---\ntag: 1H8D2C\nkind: statement\nrole: theorem\nname: Heine-Borel theorem\nmsc: [26A03]\nsources:\n  - book: isbn:0-07-054235-X\n    locator: theorem 2.41\n---\n\n## Statement\n\nA subset of $\\mathbb{R}^n$ is compact when it is closed and bounded.\n")
 	out := buildSite(t, root, "")
 	index := readFile(t, out, "res/index.html")
 	for _, want := range []string{`href="/math2/res/kind/textbook/"`, "Live resources", "1950s"} {
@@ -55,6 +56,12 @@ func TestResources(t *testing.T) {
 		if !strings.Contains(page, want) {
 			t.Errorf("res/8F2K1QW7ZB/index.html has no %q", want)
 		}
+	}
+	if !strings.Contains(page, `<a href="/math2/wiki/heine-borel-theorem/">Heine-Borel theorem</a>`) {
+		t.Error("the page of a resource does not link to the node that names it")
+	}
+	if n := readFile(t, out, "wiki/heine-borel-theorem/index.html"); !strings.Contains(n, `<a href="/math2/res/8F2K1QW7ZB/">Principles of Mathematical Analysis</a>, Walter Rudin`) {
+		t.Error("the page of a node does not link to the resource that its sources name")
 	}
 	if d := readFile(t, out, "res/8F3AAAAAAA/index.html"); !strings.Contains(d, `The live resource is <a href="/math2/res/8F2K1QW7ZB/">`) {
 		t.Error("the page of a duplicate does not link to the live resource")

@@ -74,6 +74,12 @@
   <ol>{{range .}}<li>{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{with .Note}}, {{.}}{{end}}</li>{{end}}</ol>
 </section>
 {{end}}
+{{with .Resources}}
+<section class="sources">
+  <h2>In the catalogue</h2>
+  <ul>{{range .}}<li><a href="{{.URL}}">{{.Text}}</a>{{with .Note}}, {{.}}{{end}}</li>{{end}}</ul>
+</section>
+{{end}}
 <details class="about">
   <summary>About this page</summary>
   <div class="about-body">

@@ -151,6 +151,10 @@
 {{end}}
 </ul>
 {{end}}
+{{with .Nodes}}
+<h2>Pages that use this resource</h2>
+<ul class="link-cloud">{{range .}}<li><a href="{{.URL}}">{{.Text}}</a></li>{{end}}</ul>
+{{end}}
 {{with .Mentions}}
 <h2>Items in this resource</h2>
 <p>The mentions of the inventory that name this resource. Each name links to the card of its inventory row.</p>
