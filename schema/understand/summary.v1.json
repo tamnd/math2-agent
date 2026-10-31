@@ -1,0 +1,21 @@
+{
+  "title": "understand summary v1",
+  "description": "The results of the pass summary (corpus arxiv AX7.7): a summary of one sentence in plain words of each statement and definition of a version of the class open.",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "the id of the item, as ax://paper/2401.00001#A1B2"},
+          "summary": {"type": "string", "maxLength": 300, "description": "one sentence in plain words"}
+        },
+        "required": ["id", "summary"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}

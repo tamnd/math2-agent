@@ -1,0 +1,67 @@
+{
+  "title": "understand proof v1",
+  "description": "The results of the pass proof (corpus arxiv AX7.6): the steps of each proof as ranges of its numbered sentences with their reasons, the results that a step uses and that no reference names, the methods, and the target of an orphan proof. The text of a step is only for a version of the class open.",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "the id of the proof, as ax://paper/2401.00001#A1B2"},
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {"type": "integer", "minimum": 1, "description": "the number of the first sentence of the step"},
+                "to": {"type": "integer", "minimum": 1, "description": "the number of the last sentence"},
+                "reason": {"type": "string", "enum": ["item", "cited", "named", "definition", "algebra", "hypothesis", "unknown"]},
+                "ref": {"type": "string", "description": "the item id for item and definition, bib:KEY for cited, the name of the result for named, the label for hypothesis"},
+                "text": {"type": "string", "description": "the step in one line, only for a paper of the class open"}
+              },
+              "required": ["from", "to", "reason"],
+              "additionalProperties": false
+            }
+          },
+          "inferred": {
+            "type": "array",
+            "description": "the results that a step uses and that no reference names",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string", "description": "the name of the result, as Cauchy-Schwarz inequality"},
+                "step": {"type": "integer", "minimum": 1, "description": "the number of the step in steps, from 1"}
+              },
+              "required": ["name", "step"],
+              "additionalProperties": false
+            }
+          },
+          "methods": {
+            "type": "array",
+            "items": {"type": "string", "enum": [
+              "induction", "strong-induction", "structural-induction", "transfinite-induction", "contradiction", "contrapositive", "case-analysis", "construction",
+              "compactness", "diagonal-argument", "probabilistic-method", "pigeonhole", "double-counting", "extremal-principle", "averaging", "bijection",
+              "generating-function", "fixed-point", "zorn-lemma", "density-argument", "approximation", "localization", "duality", "exact-sequence", "spectral-sequence",
+              "change-of-variables", "integration-by-parts", "estimate", "variational", "potential-function", "symmetry", "reduction", "other"
+            ]}
+          },
+          "target": {
+            "type": "object",
+            "description": "only for a proof with no item that it proves: the statement that it most likely proves",
+            "properties": {
+              "item": {"type": "string", "description": "the id of the statement"},
+              "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+            },
+            "required": ["item", "confidence"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "steps"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}

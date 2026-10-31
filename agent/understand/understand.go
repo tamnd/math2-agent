@@ -1,6 +1,6 @@
 // Package understand has the goal, the brief and the tools of the understand role (corpus arxiv AX07).
 //
-// A job of the role is one pass on one arXiv paper, thus the paper is the cached part of the prompt and each item of the paper shares it. The target is arxiv:ID/PASS, for example arxiv:2401.00001/classify. The passes that are written: classify (AX7.2) and concepts (AX7.3) of tier T1, prose (AX7.4) of tier T2 and unfold (AX7.5) of tier T3. Each pass has one file, with its tool, what it reads, its part of the brief and the check of each result. The prompt of a pass is passes/PASS.md of the role, and the schema of its tool is schema/understand/PASS.v1.json. The brief gives the items of the latest version that the pass reads, from the analysis plane of a checkout of tamnd/arxiv, in data blocks marked with the licence of the version. The model gives its result with the tool of the pass, and the tool writes one record for each item to records/understand/arxiv/PASS/SHARD.jsonl.
+// A job of the role is one pass on one arXiv paper, thus the paper is the cached part of the prompt and each item of the paper shares it. The target is arxiv:ID/PASS, for example arxiv:2401.00001/classify. The passes that are written: classify (AX7.2) and concepts (AX7.3) of tier T1, prose (AX7.4) of tier T2, unfold (AX7.5) of tier T3, and proof (AX7.6) and summary (AX7.7) of tier T4. Each pass has one file, with its tool, what it reads, its part of the brief and the check of each result. The prompt of a pass is passes/PASS.md of the role, and the schema of its tool is schema/understand/PASS.v1.json. The brief gives the items of the latest version that the pass reads, from the analysis plane of a checkout of tamnd/arxiv, in data blocks marked with the licence of the version. The model gives its result with the tool of the pass, and the tool writes one record for each item to records/understand/arxiv/PASS/SHARD.jsonl.
 //
 // A record holds no text of the paper (AX5.4), other than the terms that a definition defines. It holds ids, codes, kinds, flags, a confidence and the names that the model gives for concepts. The defined terms of a definition are words of the paper, thus a record of a version of the class record has none.
 //
@@ -30,14 +30,14 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-// The passes of tier T1. The pass prose of tier T2 is in prose.go, and the pass unfold of tier T3 in unfold.go.
+// The passes of tier T1. The pass prose of tier T2 is in prose.go, the pass unfold of tier T3 in unfold.go, and the passes proof and summary of tier T4 in proof.go and summary.go.
 const (
 	Classify = "classify"
 	Concepts = "concepts"
 )
 
 // Passes are the passes that are written, in the order of AX7.1.
-var Passes = []string{Classify, Concepts, Prose, Unfold}
+var Passes = []string{Classify, Concepts, Prose, Unfold, Proof, Summary}
 
 // Dir is the directory of the records of the passes, with one directory for each pass.
 const Dir = agent.UnderstandDir
@@ -60,7 +60,7 @@ type pass struct {
 }
 
 // passes has the code of each pass of Passes.
-var passes = map[string]pass{Classify: classifyPass, Concepts: conceptsPass, Prose: prosePass, Unfold: unfoldPass}
+var passes = map[string]pass{Classify: classifyPass, Concepts: conceptsPass, Prose: prosePass, Unfold: unfoldPass, Proof: proofPass, Summary: summaryPass}
 
 // schemaOf returns the schema of the input of the tool of the pass, from schema/understand.
 func schemaOf(name string) json.RawMessage {
@@ -124,8 +124,11 @@ type Paper struct {
 	Check ProseCheck
 	// Context is what the model reads with each item, by the id of the item, for the pass unfold.
 	Context map[string][]Context
-	// Tags are the ids of the items of the paper with a tag, for the pass unfold.
-	Tags map[string]bool
+	// Tags are the item kinds of the items of the paper with a tag, by their id, for the passes unfold and proof.
+	Tags map[string]string
+	// Steps is the number of sentences of each proof, by its id, and Orphans are the proofs with no item that they prove, for the pass proof.
+	Steps   map[string]int
+	Orphans map[string]bool
 	// UnfoldCheck is the check of the unfolded statements by a model of another family, or nil when math2 has none.
 	UnfoldCheck UnfoldCheck
 }
@@ -230,23 +233,25 @@ func licenceLabel(p *Paper) string { return cmp.Or(p.Licence, "no licence: the a
 
 // Record is the stored result of a pass on one item.
 type Record struct {
-	ID         string      `json:"id"`  // the item, ax://paper/ID#TAG
-	Ref        string      `json:"ref"` // the object in its version, IDvN#LOCAL
-	Pass       string      `json:"pass"`
-	By         string      `json:"by"`    // the role at its version, as agent:m2-agent/understand@0.1.0
-	Model      string      `json:"model"` // the model of the rung
-	Class      string      `json:"class"` // the licence class of the version
-	Was        string      `json:"was,omitempty"`
-	Kind       string      `json:"kind,omitempty"`
-	Confidence float64     `json:"confidence,omitempty"`
-	Flags      []string    `json:"flags,omitempty"`
-	Queue      string      `json:"queue,omitempty"`
-	Failed     string      `json:"failed,omitempty"` // Failed and the pass, when the result of the model was not valid twice
-	MSC        []string    `json:"msc,omitempty"`
-	Concepts   []Concept   `json:"concepts,omitempty"`
-	Terms      []Term      `json:"terms,omitempty"`
-	Prose      []ProseItem `json:"prose,omitempty"`
-	Unfold     *Unfolding  `json:"unfold,omitempty"`
+	ID         string       `json:"id"`  // the item, ax://paper/ID#TAG
+	Ref        string       `json:"ref"` // the object in its version, IDvN#LOCAL
+	Pass       string       `json:"pass"`
+	By         string       `json:"by"`    // the role at its version, as agent:m2-agent/understand@0.1.0
+	Model      string       `json:"model"` // the model of the rung
+	Class      string       `json:"class"` // the licence class of the version
+	Was        string       `json:"was,omitempty"`
+	Kind       string       `json:"kind,omitempty"`
+	Confidence float64      `json:"confidence,omitempty"`
+	Flags      []string     `json:"flags,omitempty"`
+	Queue      string       `json:"queue,omitempty"`
+	Failed     string       `json:"failed,omitempty"` // Failed and the pass, when the result of the model was not valid twice
+	MSC        []string     `json:"msc,omitempty"`
+	Concepts   []Concept    `json:"concepts,omitempty"`
+	Terms      []Term       `json:"terms,omitempty"`
+	Prose      []ProseItem  `json:"prose,omitempty"`
+	Unfold     *Unfolding   `json:"unfold,omitempty"`
+	Proof      *ProofResult `json:"proof,omitempty"`
+	Summary    string       `json:"summary,omitempty"`
 }
 
 // Concept is one concept of an item (AX7.3): a row of the inventory, a Wikidata item, or a name with the flag new-concept.
