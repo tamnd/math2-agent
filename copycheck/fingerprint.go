@@ -67,7 +67,7 @@ func itemSignature(normalized string) [itemSize]uint16 {
 	}
 	var out [itemSize]uint16
 	for k, v := range mins {
-		out[k] = uint16(v)
+		out[k] = uint16(v) // #nosec G115 -- the fingerprint keeps the low 16 bits of each minimum
 	}
 	return out
 }
@@ -118,11 +118,11 @@ func itemSimilarity(a, b *[itemSize]uint16) float64 {
 
 // itemBand is the key of the band b of a fingerprint in the index of stage 3.
 func itemBand(b int, sig *[itemSize]uint16) uint64 {
-	k := uint64(b) << 48
+	k := uint64(b) << 48 // #nosec G115 -- a band is not negative
 	for _, v := range sig[b*itemRows : (b+1)*itemRows] {
 		k = k<<16 ^ uint64(v)
 	}
-	return k ^ uint64(b)<<56
+	return k ^ uint64(b)<<56 // #nosec G115 -- a band is not negative
 }
 
 // addItem adds the fingerprint of the text t to the index of stage 3.

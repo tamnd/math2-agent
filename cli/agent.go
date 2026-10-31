@@ -635,7 +635,7 @@ func arxivCorpus(root string) (*copycheck.Corpus, error) {
 // proseText runs ax prose of arxiv-reader on the version, with the checkout of tamnd/arxiv as its corpus, and reads the running text that it prints. ax prose reads the e-print that the pipeline cached and never fetches from arXiv. The binary is $AX, or ax on the path.
 func proseText(ctx context.Context, corpus, id string, version int) (*understand.Text, error) {
 	bin := cmp.Or(os.Getenv("AX"), "ax")
-	cmd := exec.CommandContext(ctx, bin, "prose", fmt.Sprintf("%sv%d", id, version)) // #nosec G204 -- the binary is the one that the operator names, and the arguments are an arXiv id
+	cmd := exec.CommandContext(ctx, bin, "prose", fmt.Sprintf("%sv%d", id, version)) // #nosec G204 G702 -- the binary is the one that the operator names, and the arguments are an arXiv id
 	cmd.Env = append(os.Environ(), "ARXIV_CORPUS="+corpus)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
