@@ -18,6 +18,7 @@ import (
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/arxivtext"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
+	"github.com/tamnd/math2-agent/resource/crlang"
 	"github.com/tamnd/math2-agent/resource/refs"
 	"github.com/tamnd/math2-agent/resource/s2"
 	"github.com/tamnd/math2-agent/resource/sourceworks"
@@ -25,7 +26,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/zbsearch"
 )
 
-const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-url URL] [-cache DIR] [-structure] [-held] <source> | m2 res import [-root DIR] [-lookup] [-gap D] refs | m2 res import [-root DIR] [-gap D] s2 | m2 res import [-root DIR] [-gap D] zbmath_search | m2 res import [-root DIR] -url CHECKOUT arxiv_text | m2 res import [-root DIR] [-gap D] [-n N] swh | m2 res import [-root DIR] source_works"
+const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-url URL] [-cache DIR] [-structure] [-held] <source> | m2 res import [-root DIR] [-lookup] [-gap D] refs | m2 res import [-root DIR] [-gap D] s2 | m2 res import [-root DIR] [-gap D] zbmath_search | m2 res import [-root DIR] [-gap D] crossref_language | m2 res import [-root DIR] -url CHECKOUT arxiv_text | m2 res import [-root DIR] [-gap D] [-n N] swh | m2 res import [-root DIR] source_works"
 
 // structurer is an adapter that gives the table of contents of the work of its snapshot (RS4.5), as the adapter of an open textbook does. It also gives the commit of the snapshot.
 type structurer interface {
@@ -65,7 +66,7 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	structure := fs.Bool("structure", false, "also write the table of contents of the snapshot to the first expression of the resource that groups the source records, or the sessions of each offering of a course platform to its expression")
 	held := fs.Bool("held", false, "keep only the source records of the papers that the corpus holds: the records whose native id is the paper of a mention in records/mentions/<source>/")
 	lookup := fs.Bool("lookup", false, "for the source refs: confirm the ids of the references with a live lookup")
-	gap := fs.Duration("gap", time.Second, "for the sources refs, s2, swh and zbmath_search: the shortest time between two lookups")
+	gap := fs.Duration("gap", time.Second, "for the sources refs, s2, swh, zbmath_search and crossref_language: the shortest time between two lookups")
 	limit := fs.Int("n", 0, "for the source swh: ask for at most this number of new origins. 0 means no limit.")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
@@ -90,6 +91,9 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	}
 	if source == zbsearch.Source {
 		return runResImportZbsearch(opt.Root, *gap, stdout, stderr)
+	}
+	if source == crlang.Source {
+		return runResImportCrlang(opt.Root, *gap, stdout, stderr)
 	}
 	if source == arxivtext.Source {
 		return runResImportArxivText(opt.Root, opt.URL, stdout, stderr)

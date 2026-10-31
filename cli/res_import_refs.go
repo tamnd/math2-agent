@@ -14,6 +14,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/arxivtext"
 	"github.com/tamnd/math2-agent/resource/census/fetch"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
+	"github.com/tamnd/math2-agent/resource/crlang"
 	"github.com/tamnd/math2-agent/resource/refs"
 	"github.com/tamnd/math2-agent/resource/s2"
 	resscope "github.com/tamnd/math2-agent/resource/scope"
@@ -188,6 +189,38 @@ func runResImportZbsearch(root string, gap time.Duration, stdout, stderr io.Writ
 	return ExitOK
 }
 
+func runResImportCrlang(root string, gap time.Duration, stdout, stderr io.Writer) int {
+	fail := func(err error) int {
+		fmt.Fprintf(stderr, "m2 res import: %s: %v\n", crlang.Source, err)
+		return ExitFailure
+	}
+	rs, err := resource.ReadResources(root)
+	if err != nil {
+		return fail(err)
+	}
+	c := fetch.NewClient(gap)
+	lookup := func(ctx context.Context, doi string) (*crlang.Work, error) {
+		var body struct {
+			Message crlang.Work `json:"message"`
+		}
+		err := c.JSON(ctx, crlang.URL(crlangURL, doi), &body)
+		if errors.Is(err, fetch.ErrNotFound) {
+			return nil, nil
+		}
+		return &body.Message, err
+	}
+	recs, n, err := crlang.Build(context.Background(), rs, lookup)
+	if err != nil {
+		return fail(err)
+	}
+	kept, rejected, hash, err := saveBuilt(root, crlang.Entry(), crlang.Snapshot, recs)
+	if err != nil {
+		return fail(err)
+	}
+	fmt.Fprintf(stdout, "%s: asked %d, found %d, records %d, rejected %d, snapshot %s\n", crlang.Source, n.Asked, n.Found, kept, rejected, hash)
+	return ExitOK
+}
+
 func runResImportArxivText(root, checkout string, stdout, stderr io.Writer) int {
 	fail := func(err error) int {
 		fmt.Fprintf(stderr, "m2 res import: %s: %v\n", arxivtext.Source, err)
@@ -211,6 +244,9 @@ func runResImportArxivText(root, checkout string, stdout, stderr io.Writer) int 
 	fmt.Fprintf(stdout, "%s: read %d, found %d, records %d, rejected %d, snapshot %s\n", arxivtext.Source, n.Asked, n.Found, kept, rejected, hash)
 	return ExitOK
 }
+
+// crlangURL is the works route of Crossref. A test sets it to a local server.
+var crlangURL = crlang.WorksURL
 
 // zbsearchURL is the search of zbMATH Open. A test sets it to a local server.
 var zbsearchURL = zbsearch.SearchURL

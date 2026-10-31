@@ -64,7 +64,7 @@ var Precedence = map[string][]string{
 }
 
 // Fillers are the sources whose records give a field of a resource only when no other record of the resource has the field. A search that matches a resource by its title fills the fields that the catalogues do not give, and does not change the others. A record of a filler takes no part in the passes: it goes to the group of a record with one of its join ids, and it is dropped when no record has one. Its date does not set the date of an expression, because the date of a catalogue can be more exact than the year of a search.
-var Fillers = map[string]bool{"zbmath_search": true, "arxiv_text": true}
+var Fillers = map[string]bool{"zbmath_search": true, "arxiv_text": true, "crossref_language": true}
 
 // wholes are the kinds of a volume, a journal or a series. Clustering never joins a chapter with one of them (RS10.5).
 var wholes = map[string]bool{"edited-volume": true, "proceedings": true, "journal": true, "series": true, "monograph": true, "textbook": true, "handbook": true, "encyclopedia": true}
