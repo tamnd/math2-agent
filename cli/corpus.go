@@ -28,7 +28,7 @@ import (
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -source wikipedia -corpus DIR [-type T] [-msc CODE] [-since DATE] [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -source wikipedia -corpus DIR [-type T] [-msc CODE] [-since DATE] [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus link [-root DIR]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -40,6 +40,8 @@ func runCorpus(args []string, stdout, stderr io.Writer) int {
 		return runCorpusImport(args[1:], stdout, stderr)
 	case "cluster":
 		return runCorpusCluster(args[1:], stdout, stderr)
+	case "link":
+		return runCorpusLink(args[1:], stdout, stderr)
 	case "gold":
 		return runCorpusGold(args[1:], stdout, stderr)
 	case "recall":
@@ -104,6 +106,56 @@ func linkPapers(root string, ms []inventory.Mention) (int, error) {
 		n++
 	}
 	return n, nil
+}
+
+// runCorpusLink sets the field resource of the mentions of the arXiv papers in the tree again, as m2 corpus import -source arxiv does, with no checkout of the corpus. It writes the mentions of arXiv again when a field changes.
+func runCorpusLink(args []string, stdout, stderr io.Writer) int {
+	const name = "m2 corpus link"
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	root := fs.String("root", ".", "the math2 working tree")
+	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "usage: "+corpusUsage)
+		return ExitUsage
+	}
+	all, err := inventory.ReadMentions(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	var ms []inventory.Mention
+	for _, m := range all {
+		if m.Source == axImport.Source {
+			ms = append(ms, m)
+		}
+	}
+	before := make([]string, len(ms))
+	for i, m := range ms {
+		before[i] = m.Resource
+		ms[i].Resource = ""
+	}
+	linked, err := linkPapers(*root, ms)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: %v\n", name, err)
+		return ExitFailure
+	}
+	changed := 0
+	for i, m := range ms {
+		if m.Resource != before[i] {
+			changed++
+		}
+	}
+	if changed > 0 {
+		if err := inventory.WriteMentions(*root, axImport.Source, ms); err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+	}
+	fmt.Fprintf(stdout, "%s: %d mentions, %d name their resource, %d changed\n", axImport.Source, len(ms), linked, changed)
+	return ExitOK
 }
 
 // runCorpusImport changes the records of the last import of each source to mentions, and groups the mentions into rows.
