@@ -71,10 +71,19 @@ func Write(root string, cs []Competition) error {
 // Endpoint is the SPARQL service of Wikidata.
 const Endpoint = "https://query.wikidata.org/sparql"
 
-// Query asks Wikidata for the competitions with their country, site, first year and last year.
+// Classes are the classes of the competitions: a mathematics competition (Q1572106) and a mathematical olympiad (Q131830746).
+var Classes = []string{"Q1572106", "Q131830746"}
+
+// ClassQuery asks Wikidata for the classes and each of their subclasses. The path P31/P279* in one query is too slow for the service, which stops it with 504, thus FromWikidata asks for the subclasses first and then for the instances of each of them.
+const ClassQuery = `SELECT ?sub WHERE {
+  VALUES ?class { %s }
+  ?sub wdt:P279* ?class .
+}`
+
+// Query asks Wikidata for the instances of the classes, with their country, site, first year and last year. The %s is the list of the classes.
 const Query = `SELECT ?c ?cLabel ?iso ?site ?inception ?dissolved WHERE {
-  VALUES ?class { wd:Q1572106 wd:Q131830746 }
-  ?c wdt:P31/wdt:P279* ?class .
+  VALUES ?class { %s }
+  ?c wdt:P31 ?class .
   OPTIONAL { ?c wdt:P17 ?country . ?country wdt:P297 ?iso }
   OPTIONAL { ?c wdt:P856 ?site }
   OPTIONAL { ?c wdt:P571 ?inception }
@@ -82,29 +91,63 @@ const Query = `SELECT ?c ?cLabel ?iso ?site ?inception ?dissolved WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul" }
 }`
 
+// entity is the prefix of the URI of an item of Wikidata.
+const entity = "http://www.wikidata.org/entity/"
+
 // Getter gets the body of a URL.
 type Getter func(ctx context.Context, url string) ([]byte, error)
 
-// FromWikidata asks the service at endpoint for the competitions. An item with more than one row keeps the first value of each field. It gives the competitions in the order of their QIDs.
-func FromWikidata(ctx context.Context, get Getter, endpoint string) ([]Competition, error) {
-	q := url.Values{"query": {Query}, "format": {"json"}}
+// binding is one row of an answer of the SPARQL service.
+type binding map[string]struct {
+	Value string `json:"value"`
+}
+
+// sparql asks the service at endpoint and gives the rows of the answer.
+func sparql(ctx context.Context, get Getter, endpoint, query string) ([]binding, error) {
+	q := url.Values{"query": {query}, "format": {"json"}}
 	body, err := get(ctx, endpoint+"?"+q.Encode())
 	if err != nil {
 		return nil, err
 	}
 	var res struct {
 		Results struct {
-			Bindings []map[string]struct {
-				Value string `json:"value"`
-			} `json:"bindings"`
+			Bindings []binding `json:"bindings"`
 		} `json:"results"`
 	}
 	if err := json.Unmarshal(body, &res); err != nil {
 		return nil, fmt.Errorf("competitions: the answer of Wikidata: %w", err)
 	}
+	return res.Results.Bindings, nil
+}
+
+// values gives the QIDs as the items of a VALUES clause, as wd:Q1 wd:Q2.
+func values(qids []string) string {
+	out := make([]string, len(qids))
+	for i, q := range qids {
+		out[i] = "wd:" + q
+	}
+	return strings.Join(out, " ")
+}
+
+// FromWikidata asks the service at endpoint for the subclasses of Classes, then for the instances of the classes and the subclasses. An item with more than one row keeps the first value of each field. It gives the competitions in the order of their QIDs.
+func FromWikidata(ctx context.Context, get Getter, endpoint string) ([]Competition, error) {
+	subs, err := sparql(ctx, get, endpoint, fmt.Sprintf(ClassQuery, values(Classes)))
+	if err != nil {
+		return nil, err
+	}
+	classes := slices.Clone(Classes)
+	for _, b := range subs {
+		if q := strings.TrimPrefix(b["sub"].Value, entity); q != "" && !slices.Contains(classes, q) {
+			classes = append(classes, q)
+		}
+	}
+	rows, err := sparql(ctx, get, endpoint, fmt.Sprintf(Query, values(classes)))
+	if err != nil {
+		return nil, err
+	}
 	by := map[string]*Competition{}
-	for _, b := range res.Results.Bindings {
-		qid := strings.TrimPrefix(b["c"].Value, "http://www.wikidata.org/entity/")
+	for _, b := range rows {
+		qid := strings.TrimPrefix(b["c"].Value, entity)
 		c := by[qid]
 		if c == nil {
 			c = &Competition{Wikidata: qid, Name: cmp.Or(b["cLabel"].Value, qid)}
