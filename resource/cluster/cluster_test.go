@@ -352,6 +352,30 @@ func TestExpressionGetsLanguage(t *testing.T) {
 	}
 }
 
+func TestFillerJoinsNothing(t *testing.T) {
+	res := run(t, Input{
+		Records: []Record{
+			{Source: "springer-series", NativeID: "a", Level: "expression", Kind: "monograph", Title: "Convex Functions", Creators: author("Phelps, R."), Date: "1989-05-01", IDs: resource.IDs{"doi": {"10.1007/a"}}},
+			{Source: "springer-series", NativeID: "b", Level: "expression", Kind: "monograph", Title: "Banach Spaces of Analytic Functions", Creators: author("Hoffman, K."), Date: "1993", IDs: resource.IDs{"doi": {"10.1007/b"}}},
+			{Source: "zbmath_search", NativeID: "1", Level: "work", Kind: "monograph", Title: "Convex functions", Date: "1989", Language: "en", MSC: []string{"46-02"}, IDs: resource.IDs{"doi": {"10.1007/a"}, "zbl_id": {"1"}}},
+			{Source: "zbmath_search", NativeID: "1b", Level: "work", Kind: "monograph", Title: "Convex functions", Language: "en", MSC: []string{"46-02"}, IDs: resource.IDs{"doi": {"10.1007/b"}, "zbl_id": {"1"}}},
+			{Source: "zbmath_search", NativeID: "2", Level: "work", Kind: "monograph", Title: "Other", MSC: []string{"46-02"}, IDs: resource.IDs{"doi": {"10.1007/c"}, "zbl_id": {"2"}}},
+		},
+	})
+	rs := live(res)
+	if len(rs) != 2 {
+		t.Fatalf("got %d resources: %+v", len(rs), rs)
+	}
+	for _, r := range rs {
+		if len(r.MSC) != 1 || len(r.Expressions) != 1 || r.Expressions[0].Language != "en" {
+			t.Errorf("got %+v", r)
+		}
+	}
+	if rs[0].Date != "1989-05-01" && rs[1].Date != "1989-05-01" {
+		t.Errorf("dates %q %q", rs[0].Date, rs[1].Date)
+	}
+}
+
 func TestFillerFillsOnly(t *testing.T) {
 	res := run(t, Input{
 		Records: []Record{
