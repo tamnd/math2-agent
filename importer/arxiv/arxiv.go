@@ -69,6 +69,7 @@ type Object struct {
 	Restates    string   `json:"restates"`
 	Flags       []string `json:"flags"`
 	Hash        string   `json:"hash"`
+	MinHash     string   `json:"minhash"` // the b-bit MinHash of the normalized body, of AX3.8
 	Extractor   string   `json:"extractor"`
 }
 

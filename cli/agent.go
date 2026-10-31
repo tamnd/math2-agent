@@ -42,6 +42,9 @@ import (
 	"github.com/tamnd/math2-agent/card"
 	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/compute"
+	"github.com/tamnd/math2-agent/copycheck"
+	axImport "github.com/tamnd/math2-agent/importer/arxiv"
+	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/lean"
 	"github.com/tamnd/math2-agent/llm"
@@ -132,7 +135,7 @@ func runAgent(args []string, stdout, stderr io.Writer) int {
 	native := flags.Bool("native-decide", false, "permit a proof that uses native_decide. Rule F04 records each use.")
 	typeChange := flags.Bool("type-change", false, "permit a bump rebind to a declaration with another type hash")
 	web := flags.Bool("web", false, "with explore, the novelty check also searches zbMATH Open, arXiv, MathOverflow and the OEIS on the web")
-	arxiv := flags.String("arxiv", os.Getenv("ARXIV_CORPUS"), "with understand, the checkout of tamnd/arxiv with the analysis plane. The default is $ARXIV_CORPUS.")
+	arxiv := flags.String("arxiv", os.Getenv("ARXIV_CORPUS"), "with understand, the checkout of tamnd/arxiv with the analysis plane; with write, the checkout whose content plane and fingerprints are the reference corpus of the copy check. The default is $ARXIV_CORPUS.")
 	asJSON := flags.Bool("json", false, "write the summary of the run as JSON")
 	box := sandboxFlags(flags)
 	if err := flags.Parse(args[1:]); err != nil {
@@ -441,8 +444,14 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		if brief, err = write.Brief(ws, job, cards); err != nil {
 			return nil, ws, nil, err
 		}
-		// The tree has no reference corpus yet, thus the copy check runs in CI and not in the loop.
-		check = write.Goal(ws, job, cards, nil)
+		// With -arxiv, the copy check runs in the loop against the arXiv reference corpus (corpus arxiv AX9.5). Otherwise the tree has no reference corpus yet, thus the copy check runs in CI and not in the loop.
+		var corpus *copycheck.Corpus
+		if rs.arxiv != "" {
+			if corpus, err = arxivCorpus(rs.arxiv); err != nil {
+				return nil, ws, nil, err
+			}
+		}
+		check = write.Goal(ws, job, cards, corpus)
 	case "exercise":
 		if brief, err = exercise.Brief(ws, job); err != nil {
 			return nil, ws, nil, err
@@ -608,6 +617,19 @@ func sandboxFlags(flags *flag.FlagSet) func(root string) (*tools.Box, error) {
 		}
 		return &tools.Box{Docker: &sandbox.Docker{}, Image: *image, Packages: packages, CPU: boxCPU, Memory: boxMemory}, nil
 	}
+}
+
+// arxivCorpus reads the reference corpus of the copy check from the checkout of tamnd/arxiv: the texts of the content plane, and the fingerprint of each item, which is the only trace of the text of a closed version (corpus arxiv AX9.5).
+func arxivCorpus(root string) (*copycheck.Corpus, error) {
+	refs, err := axImport.References(root)
+	if err != nil {
+		return nil, err
+	}
+	texts := make([]copycheck.Text, 0, len(refs))
+	for _, r := range refs {
+		texts = append(texts, copycheck.Text{Source: "arxiv", URI: r.URI, Licence: r.Licence, Class: ingest.Class(r.Class), Text: r.Text, MinHash: r.MinHash})
+	}
+	return copycheck.New(texts, nil), nil
 }
 
 // proseText runs ax prose of arxiv-reader on the version, with the checkout of tamnd/arxiv as its corpus, and reads the running text that it prints. ax prose reads the e-print that the pipeline cached and never fetches from arXiv. The binary is $AX, or ax on the path.

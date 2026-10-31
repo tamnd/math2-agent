@@ -54,7 +54,7 @@ type CopyMatch struct {
 	Field   string `json:"field"`             // the body field, for example body.proof
 	Start   int    `json:"start"`             // the first byte of the copy in the field
 	End     int    `json:"end"`               // the byte after the copy
-	Stage   int    `json:"stage"`             // 1 for an exact run, 2 for a near copy
+	Stage   int    `json:"stage"`             // 1 for an exact run, 2 for a near copy, 3 for a fingerprint of an item of the arXiv corpus
 	Source  string `json:"source"`            // the reference text, for example wikipedia
 	URI     string `json:"uri,omitempty"`     // the page or the item in the source
 	Licence string `json:"licence,omitempty"` // the SPDX identifier of the licence of the source
