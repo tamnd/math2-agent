@@ -120,3 +120,41 @@ func TestPin(t *testing.T) {
 		t.Errorf("the pin is %+v, %v, %v", got, ok, err)
 	}
 }
+
+func TestUnpack(t *testing.T) {
+	root, out := tree(t), t.TempDir()
+	if _, err := Export(root, out); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := WritePin(root, out, "0123abcd"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := Keep(root); err != nil {
+		t.Fatal(err)
+	}
+	// A change in the math2 tree stays.
+	rs, _ := resource.ReadResources(root)
+	rs[0].Title = "A2"
+	if err := resource.WriteResources(root, rs); err != nil {
+		t.Fatal(err)
+	}
+	n, err := Unpack(root, out)
+	if err != nil || n != 1 {
+		t.Fatalf("Unpack added %d, %v, want 1", n, err)
+	}
+	rs, _ = resource.ReadResources(root)
+	cs, _ := resource.ReadCites(root)
+	if len(rs) != 3 || rs[0].Title != "A2" || rs[1].ID != "8F3BBBBBBT" || len(cs) != 2 {
+		t.Errorf("the tree has %+v and the cites %+v", rs, cs)
+	}
+	if n, err := Unpack(root, out); err != nil || n != 0 {
+		t.Errorf("a second Unpack added %d, %v", n, err)
+	}
+	// An index that is not the index of the pin is an error.
+	if err := os.WriteFile(filepath.Join(out, IndexFile), []byte("---\nrecords: []\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Unpack(root, out); err == nil || !strings.Contains(err.Error(), "hash") {
+		t.Errorf("a changed index gives %v", err)
+	}
+}
