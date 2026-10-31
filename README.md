@@ -656,6 +656,12 @@ $ wiki assess Mathematics Statistics "Philosophy/Logic" Cryptography "Computer s
 $ m2 wp scope -corpus ../wikipedia-math -store scope.sqlite -dump 20261001 -assess assess.tsv -cited cited.txt
 ```
 
+`m2 wp cited` writes the titles that a math2 tree cites, one on each line. Its output is the file for `-cited`. It reads the YAML files, the front matter of the Markdown files and the JSON and JSONL files under nodes, topics, registers, manifests and records. A title comes from a key `wikipedia`, from a `close_to` entry with the system `wikipedia`, and from a link to en.wikipedia.org. The command parses each file, so a title keeps its apostrophes and parentheses. It skips the directories with the name `wikipedia`, because the importer writes them.
+
+```
+$ m2 wp cited -root ../math2 > cited.txt
+```
+
 `m2 wp gold draw` draws gold set S of WP11.2 from `candidates.tsv`: 500 candidates with S1 or S2, 500 candidates with S4 and no project tag, and 1,000 candidates with one weak signal. It writes `manifests/wikipedia/gold/scope.tsv`, and `-seed N` sets the sample. A reviewer writes `math`, `uses-math` or `not-math` in the column `mark` of each row. `m2 wp gold measure` then compares the marks with the scope list and writes `reports/gold-s.md`. The precision and the recall are weighted by the population of each stratum, so they estimate the measures over all the candidates.
 
 ```
