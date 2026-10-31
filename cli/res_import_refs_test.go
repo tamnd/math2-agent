@@ -147,6 +147,41 @@ func TestResImportZbsearch(t *testing.T) {
 	}
 }
 
+func TestResImportCrlang(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.EscapedPath() {
+		case "/10.1090%2Fstml%2F055":
+			_, _ = w.Write([]byte(`{"message":{"DOI":"10.1090/stml/055","language":"en"}}`))
+		case "/10.1007%2Fbfb0059573":
+			_, _ = w.Write([]byte(`{"message":{"DOI":"10.1007/bfb0059573"}}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	saved := crlangURL
+	t.Cleanup(func() { crlangURL = saved })
+	crlangURL = srv.URL + "/"
+
+	root := t.TempDir()
+	in := &resource.Scope{Value: resource.In}
+	if err := resource.WriteResources(root, []resource.Resource{
+		{ID: "8F2AAAAAA3", Kind: "monograph", Title: "A", Scope: in, IDs: resource.IDs{"doi": {"10.1090/stml/055"}}},
+		{ID: "8F2BBBBBB6", Kind: "monograph", Title: "B", Scope: in, IDs: resource.IDs{"doi": {"10.1007/bfb0059573"}}},
+		{ID: "8F2CCCCCC9", Kind: "monograph", Title: "C", Scope: in, IDs: resource.IDs{"doi": {"10.1007/none"}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := run("res", "import", "-root", root, "-gap", "0", "crossref_language")
+	if code != ExitOK || !strings.Contains(stdout, "crossref_language: asked 3, found 1, records 1, rejected 0") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	recs, err := rescluster.ReadRecords(root)
+	if err != nil || len(recs) != 1 || recs[0].Source != "crossref_language" || recs[0].IDs["doi"][0] != "10.1090/stml/055" || recs[0].Language != "en" {
+		t.Fatalf("records %+v, %v", recs, err)
+	}
+}
+
 func TestResImportArxivText(t *testing.T) {
 	checkout := t.TempDir()
 	p := filepath.Join(checkout, "analysis", "objects", "2101", "2101.00001.md")
