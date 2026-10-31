@@ -194,7 +194,7 @@ func zbRecord(d zbDoc) census.Record {
 // Batch gives 20.
 func (ZBMath) Batch() int { return 20 }
 
-// Lookup asks for the DOIs with one query doi:(a | b | ...). A DOI with a character of the query syntax is not asked.
+// Lookup asks for the DOIs with one query doi:(a | b | ...). A DOI with a character of the query syntax is not asked. A search with no result has the status 404, which means that zbMATH Open has none of the DOIs.
 func (z ZBMath) Lookup(ctx context.Context, c *Client, dois []string) (map[string]bool, error) {
 	var ask []string
 	for _, d := range dois {
@@ -208,7 +208,11 @@ func (z ZBMath) Lookup(ctx context.Context, c *Client, dois []string) (map[strin
 	}
 	q := url.Values{"search_string": {"doi:(" + strings.Join(ask, " | ") + ")"}, "results_per_page": {"100"}}
 	var page zbPage
-	if err := c.JSON(ctx, z.Base+"/document/_search?"+q.Encode(), &page); err != nil {
+	err := c.JSON(ctx, z.Base+"/document/_search?"+q.Encode(), &page)
+	if errors.Is(err, ErrNotFound) {
+		return found, nil // the API answers a search with no result with status 404
+	}
+	if err != nil {
 		return nil, wrap("zbmath", err)
 	}
 	for _, d := range page.Result {
