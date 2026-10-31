@@ -169,7 +169,7 @@ type Catalogue struct {
 var (
 	hashPattern = regexp.MustCompile(`^blake3:[0-9a-f]{64}$`)
 	datePattern = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}$`)
-	idPattern   = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+	idPattern   = regexp.MustCompile(`^[a-z][a-z0-9_-]*$`)
 )
 
 // ReadCatalogue reads manifests/sources.yaml in the tree at root. A tree without the file has an empty catalogue.
@@ -225,7 +225,7 @@ func (s *Source) Snapshot(hash string) *Snapshot {
 func (s *Source) Problems() []string {
 	var out []string
 	if !idPattern.MatchString(s.ID) {
-		out = append(out, fmt.Sprintf("the id %q is not lowercase letters, digits and _", s.ID))
+		out = append(out, fmt.Sprintf("the id %q is not lowercase letters, digits, _ and -", s.ID))
 	}
 	if s.Name == "" {
 		out = append(out, "the source has no name")
