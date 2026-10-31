@@ -18,6 +18,7 @@ import (
 	"github.com/tamnd/math2-agent/resource"
 	resclassify "github.com/tamnd/math2-agent/resource/classify"
 	resscope "github.com/tamnd/math2-agent/resource/scope"
+	"github.com/tamnd/math2-agent/resource/venues"
 )
 
 const resScopeUsage = "m2 res scope [-root DIR] [-env FILE] [-day YYYY-MM-DD] [-fit] [-no-model]"
@@ -50,6 +51,9 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 		if env, err = readEnv(*envPath); err != nil {
 			return fail(err)
 		}
+	}
+	if err := addVenues(*root, &env); err != nil {
+		return fail(err)
 	}
 	rs, err := resource.ReadResources(*root)
 	if err != nil {
@@ -188,4 +192,21 @@ func curriculumSignal(texts []resource.Text) func(*resource.Resource, *resscope.
 			rec.Curriculum = true
 		}
 	}
+}
+
+// addVenues adds the scopes of the venue register of the tree to the environment. A venue that the environment file names keeps the scope of the file.
+func addVenues(root string, env *resscope.Env) error {
+	vs, err := venues.Read(root)
+	if err != nil {
+		return err
+	}
+	for id, sc := range venues.Scopes(vs) {
+		if env.Venues == nil {
+			env.Venues = map[string]string{}
+		}
+		if _, ok := env.Venues[id]; !ok {
+			env.Venues[id] = sc
+		}
+	}
+	return nil
 }
