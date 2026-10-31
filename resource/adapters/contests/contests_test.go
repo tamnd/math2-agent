@@ -152,10 +152,13 @@ func TestIMO(t *testing.T) {
 	if len(rs) != 5 {
 		t.Errorf("got %d records, want the competition, 1979, 2023, 2024 and 2024-sl", len(rs))
 	}
-	if r := rs["2024"]; r.Kind != "problem-set" || r.Title != "IMO 2024" || r.Date != "2024" || len(r.Relations) != 0 || r.Links[0] != srv.URL+"/editions/2024/" {
+	if r := rs["2024"]; r.Kind != "problem-set" || r.Title != "IMO 2024" || r.Date != "2024" || len(r.Relations) != 1 || r.Relations[0].To != "source:imo" || r.Links[0] != srv.URL+"/editions/2024/" {
 		t.Errorf("2024 is %+v", r)
 	}
-	if r := rs["2024-sl"]; r.Links[0] != srv.URL+"/problems/IMO2024SL.pdf" {
+	if r := rs[NativeID]; r.Kind != "competition" || !slices.Equal(r.IDs["source"], resource.Values{"imo"}) {
+		t.Errorf("the competition is %+v", r)
+	}
+	if r := rs["2024-sl"]; len(r.Relations) != 0 || r.Links[0] != srv.URL+"/problems/IMO2024SL.pdf" {
 		t.Errorf("the shortlist is %+v", r)
 	}
 	if r := rs[NativeID]; r.Kind != "competition" || r.Title != "International Mathematical Olympiad" {
