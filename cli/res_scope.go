@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/tamnd/math2-agent/queue"
 	"github.com/tamnd/math2-agent/resource"
 	resclassify "github.com/tamnd/math2-agent/resource/classify"
+	"github.com/tamnd/math2-agent/resource/depth"
 	"github.com/tamnd/math2-agent/resource/institutions"
 	resscope "github.com/tamnd/math2-agent/resource/scope"
 	"github.com/tamnd/math2-agent/resource/venues"
@@ -87,7 +89,7 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day, Signals: signals(curriculumSignal(texts), courseSignal(ins))}
+	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day, Signals: signals(curriculumSignal(texts), openTextSignal(depth.OpenTexts()), courseSignal(ins))}
 	if model != nil && !*noModel {
 		in.Classifier = resclassify.Scope{Model: model}
 	}
@@ -195,6 +197,15 @@ func curriculumSignal(texts []resource.Text) func(*resource.Resource, *resscope.
 	return func(r *resource.Resource, rec *resscope.Record) {
 		if named[r.ID] {
 			rec.Curriculum = true
+		}
+	}
+}
+
+// openTextSignal sets the signal of test S5 on each resource with a catalogue record of an open textbook of K5.4.1 Table A. These are the sources that give tier T1 in package depth.
+func openTextSignal(open map[string]bool) func(*resource.Resource, *resscope.Record) {
+	return func(r *resource.Resource, rec *resscope.Record) {
+		if slices.ContainsFunc(r.Catalogue, func(c resource.CatalogueRecord) bool { return open[c.Source] }) {
+			rec.OpenText = true
 		}
 	}
 }

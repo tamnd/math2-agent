@@ -31,3 +31,18 @@ func TestCourseSignal(t *testing.T) {
 		}
 	}
 }
+
+func TestOpenTextSignal(t *testing.T) {
+	fn := openTextSignal(map[string]bool{"napkin": true})
+	for _, c := range []struct {
+		src  string
+		want bool
+	}{{"napkin", true}, {"springer-series", false}} {
+		r := resource.Resource{Kind: "textbook", Catalogue: []resource.CatalogueRecord{{Source: c.src}}}
+		var rec resscope.Record
+		fn(&r, &rec)
+		if rec.OpenText != c.want || resscope.S5(rec) != c.want {
+			t.Errorf("%s: OpenText = %v, want %v", c.src, rec.OpenText, c.want)
+		}
+	}
+}
