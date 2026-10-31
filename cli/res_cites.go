@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -114,6 +116,8 @@ func resolveCrossref(ctx context.Context, root string, rs []resource.Resource, r
 			}
 			var body struct {
 				Message struct {
+					Type      string              `json:"type"`
+					ISBN      []string            `json:"ISBN"`
 					Reference []cites.CrossrefRef `json:"reference"`
 				} `json:"message"`
 			}
@@ -124,8 +128,14 @@ func resolveCrossref(ctx context.Context, root string, rs []resource.Resource, r
 			if err != nil {
 				return err
 			}
+			refs := body.Message.Reference
+			if len(refs) == 0 && bookTypes[body.Message.Type] && len(body.Message.ISBN) > 0 {
+				if refs, err = chapterRefs(ctx, client, base, body.Message.ISBN[0]); err != nil {
+					return err
+				}
+			}
 			var cs []resresolve.Citation
-			for _, ref := range body.Message.Reference {
+			for _, ref := range refs {
 				cs = append(cs, cites.FromCrossref(ref))
 			}
 			if err := run.add(ctx, from, cs, cites.Open(res, from)); err != nil {
@@ -134,6 +144,58 @@ func resolveCrossref(ctx context.Context, root string, rs []resource.Resource, r
 		}
 	}
 	return run.write(root, stderr)
+}
+
+// bookTypes are the types of Crossref of a book. A publisher often deposits the references of a book in its chapters and not in the book.
+var bookTypes = map[string]bool{"book": true, "monograph": true, "edited-book": true, "reference-book": true}
+
+// chapter is one chapter of a book in a search of Crossref.
+type chapter struct {
+	DOI       string              `json:"DOI"`
+	Reference []cites.CrossrefRef `json:"reference"`
+}
+
+// chapterRefs gives the references of the chapters of the book with the ISBN, in the order of the DOIs of the chapters. A DOI that ends with _<n> sorts by n, so chapter 10 comes after chapter 9.
+func chapterRefs(ctx context.Context, client *fetch.Client, base, isbn string) ([]cites.CrossrefRef, error) {
+	var body struct {
+		Message struct {
+			Items []chapter `json:"items"`
+		} `json:"message"`
+	}
+	q := url.Values{"filter": {"isbn:" + strings.ReplaceAll(isbn, "-", "") + ",type:book-chapter"}, "rows": {"1000"}, "select": {"DOI,reference"}}
+	err := client.JSON(ctx, base+"/works?"+q.Encode(), &body)
+	if errors.Is(err, fetch.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	items := body.Message.Items
+	slices.SortFunc(items, func(a, b chapter) int { return chapterOrder(a.DOI, b.DOI) })
+	var out []cites.CrossrefRef
+	for _, it := range items {
+		out = append(out, it.Reference...)
+	}
+	return out, nil
+}
+
+// chapterOrder compares two DOIs of chapters: by the part before the last _, then by the number after it.
+func chapterOrder(a, b string) int {
+	pa, na := chapterNumber(a)
+	pb, nb := chapterNumber(b)
+	return cmp.Or(cmp.Compare(pa, pb), cmp.Compare(na, nb), cmp.Compare(a, b))
+}
+
+func chapterNumber(doi string) (string, int) {
+	i := strings.LastIndex(doi, "_")
+	if i < 0 {
+		return doi, 0
+	}
+	n, err := strconv.Atoi(doi[i+1:])
+	if err != nil {
+		return doi, 0
+	}
+	return doi[:i], n
 }
 
 // resolveArxiv reads the bibliography entries of the analysis plane of a checkout of tamnd/arxiv, the latest version of each paper, and writes the cites edges of each paper that is a live resource in scope (RS6.4). The entries hold no text, so the edges hold the year and the ids only.
