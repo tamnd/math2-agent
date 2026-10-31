@@ -2,6 +2,7 @@ package competitions
 
 import (
 	"context"
+	"net/url"
 	"slices"
 	"strings"
 	"testing"
@@ -14,16 +15,38 @@ const answer = `{"results":{"bindings":[
 {"c":{"value":"http://www.wikidata.org/entity/Q1"},"cLabel":{"value":"Olympiad A"},"site":{"value":"https://a2.example"}},
 {"c":{"value":"http://www.wikidata.org/entity/Q2"},"cLabel":{"value":"Contest B"},"iso":{"value":"VN"},"inception":{"value":"1990-01-01T00:00:00Z"},"dissolved":{"value":"1995-06-01T00:00:00Z"}}]}}`
 
+const classes = `{"results":{"bindings":[
+{"sub":{"value":"http://www.wikidata.org/entity/Q1572106"}},
+{"sub":{"value":"http://www.wikidata.org/entity/Q7"}}]}}`
+
 func wd(t *testing.T) []Competition {
 	t.Helper()
-	var asked string
-	get := func(_ context.Context, u string) ([]byte, error) { asked = u; return []byte(answer), nil }
+	var asked []string
+	get := func(_ context.Context, u string) ([]byte, error) {
+		asked = append(asked, u)
+		if len(asked) == 1 {
+			return []byte(classes), nil
+		}
+		return []byte(answer), nil
+	}
 	cs, err := FromWikidata(context.Background(), get, Endpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(asked, Endpoint+"?") || strings.Contains(asked, "mailto") {
-		t.Errorf("the request was %s", asked)
+	if len(asked) != 2 {
+		t.Fatalf("FromWikidata made %d requests, want 2", len(asked))
+	}
+	for _, u := range asked {
+		if !strings.HasPrefix(u, Endpoint+"?") || strings.Contains(u, "mailto") {
+			t.Errorf("the request was %s", u)
+		}
+	}
+	q, err := url.Parse(asked[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if main := q.Query().Get("query"); !strings.Contains(main, "VALUES ?class { wd:Q1572106 wd:Q131830746 wd:Q7 }") || strings.Contains(main, "P279") {
+		t.Errorf("the second query is %s", main)
 	}
 	return cs
 }
