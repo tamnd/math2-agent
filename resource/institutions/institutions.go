@@ -59,7 +59,11 @@ type Catalogue struct {
 	URL    string `json:"url"`
 	Format string `json:"format,omitempty"` // for example html, json, pdf, or the name of the platform
 	Terms  string `json:"terms,omitempty"`  // the terms of use, as a URL or a short note
+	Math   string `json:"math,omitempty"`   // the prefix of the codes of the courses of the mathematics unit, or All when the adapter keeps only those courses
 }
+
+// All is the value of Catalogue.Math when the adapter of the catalogue keeps only the courses of the mathematics unit.
+const All = "*"
 
 // Institution is one record of the register.
 type Institution struct {
@@ -282,10 +286,10 @@ func Units(ctx context.Context, get Getter, endpoint string) (map[string][]Unit,
 
 // Platforms are the course platforms of RS5.5. A platform has no ROR id, so that it does not take the record of its university. RS5.3 puts the open course platforms in I1. A platform whose terms forbid automated reading, or whose site blocks an automated client, is I4, and Terms gives the reason. Format is the source of the adapter that reads the platform. A build sets the tier and the catalogue of each platform from this list.
 var Platforms = []Institution{
-	{Name: "MIT OpenCourseWare", Country: "US", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://ocw.mit.edu/search/?d=Mathematics", Format: "ocw", Terms: "CC BY-NC-SA 4.0"}},
+	{Name: "MIT OpenCourseWare", Country: "US", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://ocw.mit.edu/search/?d=Mathematics", Format: "ocw", Terms: "CC BY-NC-SA 4.0", Math: "18."}},
 	{Name: "Open Yale Courses", Country: "US", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://oyc.yale.edu/courses", Format: "oyc", Terms: "CC BY-NC-SA 3.0"}},
 	{Name: "FutureLearn", Country: "GB", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.futurelearn.com/subjects/science-engineering-and-maths-courses", Format: "futurelearn", Terms: "the terms forbid access with robots, spiders or scripts"}},
-	{Name: "NPTEL", Country: "IN", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://nptel.ac.in/courses", Format: "nptel", Terms: "to read (RQ10)"}},
+	{Name: "NPTEL", Country: "IN", Level: Platform, Tier: I1, Catalogue: &Catalogue{URL: "https://nptel.ac.in/courses", Format: "nptel", Terms: "to read (RQ10)", Math: All}},
 	{Name: "Khan Academy", Country: "US", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.khanacademy.org/math", Format: "khan", Terms: "the site answers an automated client with a JavaScript challenge"}},
 	{Name: "Coursera", Country: "US", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.coursera.org/browse/math-and-logic", Format: "coursera", Terms: "the terms forbid data scraping by automated means without written consent"}},
 	{Name: "edX", Country: "US", Level: Platform, Tier: I4, Catalogue: &Catalogue{URL: "https://www.edx.org/learn/math", Format: "edx", Terms: "the terms forbid access with spiders, robots, crawlers and data mining tools"}},
@@ -351,4 +355,31 @@ func Build(prev []Institution, orgs []Org, units map[string][]Unit) ([]Instituti
 	}
 	slices.SortFunc(out, func(a, b Institution) int { return cmp.Compare(a.Key(), b.Key()) })
 	return out, c
+}
+
+// MathCourses gives, for each source of an I1, I2 or I3 catalogue that names its mathematics unit, the prefix of the codes of the courses of that unit (RS5.3). Test S6 reads it.
+func MathCourses(ins []Institution) map[string]string {
+	out := map[string]string{}
+	for _, in := range ins {
+		if in.Status != "" || in.Catalogue == nil || in.Catalogue.Format == "" || in.Catalogue.Math == "" {
+			continue
+		}
+		if in.Tier == I1 || in.Tier == I2 || in.Tier == I3 {
+			out[in.Catalogue.Format] = in.Catalogue.Math
+		}
+	}
+	return out
+}
+
+// MathCourse tells if a course with the given course id, in the form <ror>:<code>, from the given source is a course of the mathematics unit, by the prefixes of MathCourses.
+func MathCourse(math map[string]string, source, course string) bool {
+	p, ok := math[source]
+	if !ok {
+		return false
+	}
+	if p == All {
+		return true
+	}
+	_, code, found := strings.Cut(course, ":")
+	return found && strings.HasPrefix(code, p)
 }
