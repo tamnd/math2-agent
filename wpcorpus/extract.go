@@ -285,7 +285,7 @@ func (x *extractor) lead() {
 		return
 	}
 	for _, c := range l.Children {
-		if c.Kind == parse.KindParagraph && x.doc.Plain(c.Children) != "" {
+		if c.Kind == parse.KindParagraph && strings.TrimSpace(behaviourSwitch.ReplaceAllString(x.doc.Plain(c.Children), "")) != "" {
 			o := x.item("lead", "", "", Object{Kind: "subject", Cue: "lead", Strength: StrengthNormal, Name: baseTitle(x.page.Title)}, c.Start, c.End)
 			if o != nil && len(o.Math) == 0 {
 				o.Flags = append(o.Flags, "informal")
@@ -294,6 +294,10 @@ func (x *extractor) lead() {
 		}
 	}
 }
+
+// behaviourSwitch is a magic word such as __NOTOC__. It changes the page
+// and is not text, so a paragraph with only switches is not the lead.
+var behaviourSwitch = regexp.MustCompile(`__[A-Z]+__`)
 
 // blocks reads the blocks of each section: inline heads, glossary and list
 // entries, and table rows.
@@ -893,6 +897,12 @@ func (x *extractor) fill(r *object) {
 		text = strings.Join(keys, "\n")
 	}
 	r.Hash = hash(text)
+	if r.Kind != "citation" && onlyHeadings(text) {
+		// A heading with no body, or with only templates such as a
+		// hatnote, has no content of its own. The hash of the heading
+		// alone would join the same heading in other articles.
+		r.Hash = ""
+	}
 	switch r.Kind {
 	case "section":
 		// A section holds its subsections, so its math and its links are
@@ -1115,6 +1125,17 @@ func linkTarget(target string) *Link {
 		title = strings.ToUpper(string(r[0])) + string(r[1:])
 	}
 	return &Link{Title: title, Anchor: strings.ReplaceAll(strings.TrimSpace(anchor), " ", "_")}
+}
+
+// onlyHeadings reports whether a rendered text has no line other than
+// headings.
+func onlyHeadings(text string) bool {
+	for _, l := range strings.Split(text, "\n") {
+		if l != "" && !strings.HasPrefix(l, "#") {
+			return false
+		}
+	}
+	return true
 }
 
 func appendOnce(s []string, v string) []string {
