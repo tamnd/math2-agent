@@ -15,8 +15,8 @@ import (
 
 	"github.com/tamnd/math2-agent/audit"
 	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/importer/wikipedia"
 	"github.com/tamnd/math2-agent/ingest"
-	"github.com/tamnd/math2-agent/ingest/wikipedia"
 	"github.com/tamnd/math2-agent/inventory"
 )
 

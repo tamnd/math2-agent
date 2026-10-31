@@ -1,4 +1,4 @@
-// Package wikipedia is the ingest adapter of the English Wikipedia (spec 09.2, corpus K5.3). It gives one record for each article that the math2 tree names, from the monthly multistream XML dump.
+// This file is the ingest adapter of the English Wikipedia (spec 09.2, corpus K5.3), with the version wikipedia/1. It came from the package ingest/wikipedia (corpus wikipedia WP12.4). It gives one record for each article that the math2 tree names, from the monthly multistream XML dump. The weekly refresh of one page uses its range read, and the copy check uses its text.
 //
 // The dump has all the articles of the wiki, 27 GB with compression. The adapter does not download it. A multistream dump is a list of bzip2 streams of 100 pages each, and its index gives the offset of the stream of each title. Fetch downloads the index, finds the titles that the tree names, and gets only their streams with HTTP range requests, one at a time, with a pause between them. The tree names a title in the same_as or close_to edges of a node under wikipedia, or in the crosswalk ids of a mention, for example of a theorem of the 1000+ list. A title that is a redirect gets the page that it redirects to, in a second pass over the index. The snapshot is the XML of the pages that Fetch found, in the export format of MediaWiki. Fetch does not read the live site (corpus K5.10).
 //
@@ -13,9 +13,8 @@
 //	date         the date of the revision, for example 2026-09-30
 //	contributor  the author of the revision. The history of the article names all the authors.
 //
-// The m2 command imports this package for its side effect:
-//
-//	import _ "github.com/tamnd/math2-agent/ingest/wikipedia"
+// The package cli imports this package, so the init of this file registers the adapter in the m2 command.
+
 package wikipedia
 
 import (

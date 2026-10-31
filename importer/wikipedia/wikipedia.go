@@ -1,4 +1,4 @@
-// Package wikipedia is the importer of the articles of Wikipedia (corpus wikipedia WP05 and WP12.4). It reads a checkout of the corpus repository tamnd/wikipedia-math and gives the mentions of WP5.1 and the edges of WP6.4. It replaces the adapter ingest/wikipedia (wikipedia/1).
+// Package wikipedia is the importer of the articles of Wikipedia (corpus wikipedia WP05 and WP12.4). It reads a checkout of the corpus repository tamnd/wikipedia-math and gives the mentions of WP5.1 and the edges of WP6.4. It replaces the package ingest/wikipedia. The ingest adapter wikipedia/1 of that package is now in dump.go.
 //
 // The importer reads these files of the checkout:
 //
