@@ -2,6 +2,7 @@ package arxiv
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/tamnd/math2-agent/resource/cluster"
@@ -32,6 +33,20 @@ func TestRecords(t *testing.T) {
 	}
 	if len(r.Subjects) != 1 || r.Subjects[0].Code != "math.DG" {
 		t.Errorf("subjects = %v", r.Subjects)
+	}
+	if len(r.MSC) != 1 || r.MSC[0] != "53-XX" {
+		t.Errorf("msc = %v", r.MSC)
+	}
+}
+
+func TestRecordsMSCClass(t *testing.T) {
+	in := `{"id":"2101.00001","title":"T","categories":["math.NT"],"msc_class":"11N05 (Primary)"}` + "\n"
+	var rs []cluster.Record
+	if err := (Adapter{}).Records(strings.NewReader(in), func(r cluster.Record) error { rs = append(rs, r); return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if len(rs) != 1 || len(rs[0].MSC) != 1 || rs[0].MSC[0] != "11N05" {
+		t.Errorf("records = %+v", rs)
 	}
 }
 
