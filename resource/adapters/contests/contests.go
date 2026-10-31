@@ -310,13 +310,13 @@ func first(vs []string) string {
 	return vs[0]
 }
 
-// Records reads the snapshot and emits the source record of the competition and of each set (RS13.1). A set that is a year of the competition has a part_of edge to the resource of the competition, or to its Wikidata id.
+// Records reads the snapshot and emits the source record of the competition and of each set (RS13.1). The record of the competition has the id of the source, because the source is the work of the competition (RS7.6). A set that is a year of the competition has a part_of edge to the resource of the competition, or to its Wikidata id, or else to the id of the source.
 func (b base) Records(r io.Reader, emit func(cluster.Record) error) error {
-	var to string
+	to := "source:" + b.id
 	return each(r, func(c Competition) error {
-		rec := cluster.Record{NativeID: NativeID, Level: "work", Kind: "competition", Title: c.Name, Links: []string{c.Site}}
+		rec := cluster.Record{NativeID: NativeID, Level: "work", Kind: "competition", Title: c.Name, Links: []string{c.Site}, IDs: resource.IDs{"source": {b.id}}}
 		if c.Wikidata != "" {
-			rec.IDs = resource.IDs{"wikidata": {c.Wikidata}}
+			rec.IDs["wikidata"] = resource.Values{c.Wikidata}
 		}
 		switch {
 		case c.Resource != "":
