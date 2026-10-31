@@ -235,3 +235,53 @@ func TestKinds(t *testing.T) {
 		t.Error("name")
 	}
 }
+
+func TestImportPart(t *testing.T) {
+	root := corpus(t)
+	old := []inventory.Mention{
+		{ID: wpcorpus.MentionID(100, "GONE"), Source: "wikipedia", Kind: "example", By: wikipedia.Version, Page: 100},
+		{ID: wpcorpus.MentionID(400, ""), Source: "wikipedia", Kind: "definition", By: wikipedia.Version, Page: 400},
+	}
+	res, err := wikipedia.ImportPart(root, old, wikipedia.Filter{Type: wpcorpus.TypeConcept})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, m := range res.Mentions {
+		ids = append(ids, strings.TrimPrefix(m.ID, "wikipedia://en/"))
+	}
+	// The article 100 is a statement, so its mention of the earlier import
+	// stays as it is, with no retirement.
+	if want := []string{"100#GONE", "300", "400"}; !slices.Equal(ids, want) {
+		t.Fatalf("mentions %v, want %v", ids, want)
+	}
+	if res.Articles != 1 || res.Retired != 0 || res.Stopped != 1 || res.Mentions[0].Retired != 0 {
+		t.Errorf("articles %d, retired %d, stopped %d", res.Articles, res.Retired, res.Stopped)
+	}
+	res.KeepEdges([]inventory.Edge{
+		{From: wpcorpus.MentionID(100, "THM1"), To: wpcorpus.MentionID(100, "")},
+		{From: wpcorpus.MentionID(300, ""), To: wpcorpus.MentionID(100, "")},
+		{From: wpcorpus.MentionID(400, ""), To: wpcorpus.MentionID(100, "")},
+	})
+	if len(res.Edges) != 1 || res.Edges[0].From != wpcorpus.MentionID(100, "THM1") {
+		t.Errorf("kept edges %+v, want the edge from 100#THM1 only", res.Edges)
+	}
+
+	for _, c := range []struct {
+		f    wikipedia.Filter
+		want int
+	}{
+		{wikipedia.Filter{MSC: "20"}, 1},
+		{wikipedia.Filter{MSC: "05"}, 0},
+		{wikipedia.Filter{Since: "2026-01-01"}, 0},
+		{wikipedia.Filter{}, 2},
+	} {
+		res, err := wikipedia.ImportPart(root, nil, c.f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Articles != c.want {
+			t.Errorf("filter %+v: %d articles, want %d", c.f, res.Articles, c.want)
+		}
+	}
+}
