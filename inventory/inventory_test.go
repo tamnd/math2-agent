@@ -424,12 +424,22 @@ func TestClusterJoinsByCitedResult(t *testing.T) {
 		ax("1701.00523#R1", "statement", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"}),  // a new result
 	}
 	ms[6].Origin = "own"
+	ms = append(ms, ax("1701.00524#R1", "statement", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"})) // the judge says different
+	// With no judge, the cited results join nothing.
 	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Cited != 2 || len(res.Rows) != 5 {
-		t.Fatalf("got %d joins by cited result and %d rows, want 2 and 5", res.Cited, len(res.Rows))
+	if res.Cited != 0 {
+		t.Fatalf("got %d joins by cited result with no judge, want 0", res.Cited)
+	}
+	judge := func(m, _ *Mention) bool { return m.ID != ms[7].ID }
+	res, err = Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter(), Judge: judge})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Cited != 2 || len(res.Rows) != 6 {
+		t.Fatalf("got %d joins by cited result and %d rows, want 2 and 6", res.Cited, len(res.Rows))
 	}
 	for _, r := range res.Rows {
 		if r.Mentions[0] == ms[0].ID && !slices.Equal(r.Mentions, []string{ms[0].ID, ms[1].ID, ms[2].ID}) {
@@ -467,7 +477,7 @@ func TestClusterJoinsByName(t *testing.T) {
 		t.Fatalf("got %d joins by name with no judge, want 0", res.Named)
 	}
 	judge := func(m, _ *Mention) bool { return m.ID != ms[13].ID }
-	res, err = Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter(), NameJudge: judge})
+	res, err = Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter(), Judge: judge})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -480,7 +490,7 @@ func TestClusterJoinsByName(t *testing.T) {
 		}
 	}
 	// A run on rows that kept the paper apart merges its row into the row of the other source, by the rule name.
-	again, err := Cluster([]Row{{ID: "AB00000017", Mentions: []string{ms[0].ID}, Layer: Textbook}, {ID: "AB00000025", Mentions: []string{ms[6].ID}, Layer: Research, Outcome: &Outcome{Value: OutcomeRecord}}}, ms[:7], Options{Day: day, By: "test", Mint: counter(), NameJudge: judge})
+	again, err := Cluster([]Row{{ID: "AB00000017", Mentions: []string{ms[0].ID}, Layer: Textbook}, {ID: "AB00000025", Mentions: []string{ms[6].ID}, Layer: Research, Outcome: &Outcome{Value: OutcomeRecord}}}, ms[:7], Options{Day: day, By: "test", Mint: counter(), Judge: judge})
 	if err != nil {
 		t.Fatal(err)
 	}
