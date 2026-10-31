@@ -25,7 +25,6 @@ import (
 	_ "github.com/tamnd/math2-agent/ingest/stacks"
 	_ "github.com/tamnd/math2-agent/ingest/textbook"
 	_ "github.com/tamnd/math2-agent/ingest/wikidata"
-	_ "github.com/tamnd/math2-agent/ingest/wikipedia"
 	_ "github.com/tamnd/math2-agent/ingest/zbmath"
 
 	// The adapters of the catalogues of resources register themselves with m2 ingest and m2 res import.
