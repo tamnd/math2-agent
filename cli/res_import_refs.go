@@ -11,6 +11,7 @@ import (
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/resource"
+	"github.com/tamnd/math2-agent/resource/arxivtext"
 	"github.com/tamnd/math2-agent/resource/census/fetch"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
 	"github.com/tamnd/math2-agent/resource/refs"
@@ -184,6 +185,30 @@ func runResImportZbsearch(root string, gap time.Duration, stdout, stderr io.Writ
 		return fail(err)
 	}
 	fmt.Fprintf(stdout, "%s: asked %d, found %d, records %d, rejected %d, snapshot %s\n", zbsearch.Source, n.Asked, n.Found, kept, rejected, hash)
+	return ExitOK
+}
+
+func runResImportArxivText(root, checkout string, stdout, stderr io.Writer) int {
+	fail := func(err error) int {
+		fmt.Fprintf(stderr, "m2 res import: %s: %v\n", arxivtext.Source, err)
+		return ExitFailure
+	}
+	if checkout == "" {
+		return fail(errors.New("give the local checkout of tamnd/arxiv with -url"))
+	}
+	rs, err := resource.ReadResources(root)
+	if err != nil {
+		return fail(err)
+	}
+	recs, n, err := arxivtext.Build(checkout, rs)
+	if err != nil {
+		return fail(err)
+	}
+	kept, rejected, hash, err := saveBuilt(root, arxivtext.Entry(), arxivtext.Snapshot, recs)
+	if err != nil {
+		return fail(err)
+	}
+	fmt.Fprintf(stdout, "%s: read %d, found %d, records %d, rejected %d, snapshot %s\n", arxivtext.Source, n.Asked, n.Found, kept, rejected, hash)
 	return ExitOK
 }
 

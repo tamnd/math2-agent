@@ -3,6 +3,8 @@ package cli
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -142,5 +144,34 @@ func TestResImportZbsearch(t *testing.T) {
 	}
 	if src := cat.Source("zbmath_search"); src == nil || len(src.Snapshots) != 1 || src.Licence != "CC-BY-SA-4.0" {
 		t.Fatalf("source %+v", src)
+	}
+}
+
+func TestResImportArxivText(t *testing.T) {
+	checkout := t.TempDir()
+	p := filepath.Join(checkout, "analysis", "objects", "2101", "2101.00001.md")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(strings.Repeat("Let the map be open. Then we have that this is the claim of the theorem, and it is true for each point. ", 5)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	in := &resource.Scope{Value: resource.In}
+	if err := resource.WriteResources(root, []resource.Resource{
+		{ID: "8F2AAAAAA3", Kind: "preprint", Title: "A", Date: "2021", Scope: in, IDs: resource.IDs{"arxiv": {"2101.00001"}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, _ := run("res", "import", "-root", root, "arxiv_text"); code != ExitFailure {
+		t.Errorf("no -url: exit code %d", code)
+	}
+	code, stdout, stderr := run("res", "import", "-root", root, "-url", checkout, "arxiv_text")
+	if code != ExitOK || !strings.Contains(stdout, "arxiv_text: read 1, found 1, records 1, rejected 0") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	recs, err := rescluster.ReadRecords(root)
+	if err != nil || len(recs) != 1 || recs[0].Language != "en" || recs[0].IDs["arxiv"][0] != "2101.00001" {
+		t.Fatalf("records %+v, %v", recs, err)
 	}
 }
