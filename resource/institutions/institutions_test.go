@@ -123,3 +123,32 @@ func TestRegister(t *testing.T) {
 		t.Errorf("the problems are %v", p)
 	}
 }
+
+func TestMathCourses(t *testing.T) {
+	ins, _ := Build(nil, nil, nil)
+	math := MathCourses(ins)
+	if math["nptel"] != All || math["ocw"] != "18." {
+		t.Fatalf("MathCourses = %v", math)
+	}
+	if _, ok := math["oyc"]; ok {
+		t.Error("oyc has no mathematics unit")
+	}
+	if _, ok := math["coursera"]; ok {
+		t.Error("an I4 platform gives no prefix")
+	}
+	for _, c := range []struct {
+		source, course string
+		want           bool
+	}{
+		{"nptel", "03v0r5n49:111106929", true},
+		{"nptel", "", true},
+		{"ocw", "042nb2s44:18.06", true},
+		{"ocw", "042nb2s44:6.042J", false},
+		{"ocw", "", false},
+		{"oyc", "03v76x132:ECON159", false},
+	} {
+		if got := MathCourse(math, c.source, c.course); got != c.want {
+			t.Errorf("MathCourse(%s, %s) = %v, want %v", c.source, c.course, got, c.want)
+		}
+	}
+}

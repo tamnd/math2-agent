@@ -17,6 +17,7 @@ import (
 	"github.com/tamnd/math2-agent/queue"
 	"github.com/tamnd/math2-agent/resource"
 	resclassify "github.com/tamnd/math2-agent/resource/classify"
+	"github.com/tamnd/math2-agent/resource/institutions"
 	resscope "github.com/tamnd/math2-agent/resource/scope"
 	"github.com/tamnd/math2-agent/resource/venues"
 )
@@ -82,7 +83,11 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day, Signals: curriculumSignal(texts)}
+	ins, err := institutions.Read(*root)
+	if err != nil {
+		return fail(err)
+	}
+	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day, Signals: signals(curriculumSignal(texts), courseSignal(ins))}
 	if model != nil && !*noModel {
 		in.Classifier = resclassify.Scope{Model: model}
 	}
@@ -190,6 +195,47 @@ func curriculumSignal(texts []resource.Text) func(*resource.Resource, *resscope.
 	return func(r *resource.Resource, rec *resscope.Record) {
 		if named[r.ID] {
 			rec.Curriculum = true
+		}
+	}
+}
+
+// courseSignal sets the signal of test S6 on each course that a catalogue of the institution register gives as a course of its mathematics unit (RS5.3). It gives nil when no catalogue names its mathematics unit.
+func courseSignal(ins []institutions.Institution) func(*resource.Resource, *resscope.Record) {
+	math := institutions.MathCourses(ins)
+	if len(math) == 0 {
+		return nil
+	}
+	return func(r *resource.Resource, rec *resscope.Record) {
+		if r.Kind != "course" {
+			return
+		}
+		course := ""
+		if v := r.IDs["course"]; len(v) > 0 {
+			course = v[0]
+		}
+		for _, c := range r.Catalogue {
+			if institutions.MathCourse(math, c.Source, course) {
+				rec.MathUnit = true
+				return
+			}
+		}
+	}
+}
+
+// signals joins the signal functions that are not nil into one. It gives nil when all are nil.
+func signals(fns ...func(*resource.Resource, *resscope.Record)) func(*resource.Resource, *resscope.Record) {
+	var live []func(*resource.Resource, *resscope.Record)
+	for _, fn := range fns {
+		if fn != nil {
+			live = append(live, fn)
+		}
+	}
+	if len(live) == 0 {
+		return nil
+	}
+	return func(r *resource.Resource, rec *resscope.Record) {
+		for _, fn := range live {
+			fn(r, rec)
 		}
 	}
 }
