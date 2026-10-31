@@ -181,7 +181,7 @@ func spanText(at map[int]Sentence, from, to int) string {
 }
 
 // afterProse runs the check of each prose item of the record. With no check, each item goes to prose-review, because no model of another family has read it.
-func afterProse(ctx context.Context, r *Record, p *Paper) error {
+func afterProse(ctx context.Context, r *Record, p *Paper) (string, error) {
 	sec := p.Sections[r.ID]
 	at := map[int]Sentence{}
 	for _, x := range sec.Sentences {
@@ -199,14 +199,14 @@ func afterProse(ctx context.Context, r *Record, p *Paper) error {
 		}
 		c, err := p.Check(ctx, p, at[pi.From-1].Text, span, at[pi.To+1].Text)
 		if err != nil {
-			return err
+			return "", err
 		}
 		pi.Check = c
 		if c == nil || c.Kind != pi.Kind || !c.Complete {
 			pi.Queue = ProseReview
 		}
 	}
-	return nil
+	return "", nil
 }
 
 // checkTool is the tool of the check of a prose item.

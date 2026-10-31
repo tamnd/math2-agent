@@ -1,0 +1,36 @@
+{
+  "title": "understand unfold v1",
+  "description": "The results of the pass unfold (corpus arxiv AX7.5): the self-contained form of each item, in TeX, with what it inlined from the context, the terms it left as standard background and the places where it had to choose.",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "the id of the item, as ax://paper/2401.00001#A1B2"},
+          "unfolded": {"type": "string", "description": "the item as one self-contained text in TeX, with no item named by its number and no macro of the paper"},
+          "inlined": {
+            "type": "array",
+            "description": "each part of the context that the unfolded form took",
+            "items": {
+              "type": "object",
+              "properties": {
+                "item": {"type": "string", "description": "the id of the item that the part is from, or empty for a part with no item"},
+                "part": {"type": "string", "description": "which part, as the hypotheses (a) and (b), or the term tame"}
+              },
+              "required": ["part"],
+              "additionalProperties": false
+            }
+          },
+          "assumed": {"type": "array", "items": {"type": "string"}, "description": "the terms left as standard background, as Noetherian ring"},
+          "notes": {"type": "array", "items": {"type": "string"}, "description": "each place where the unfolding had to choose"}
+        },
+        "required": ["id", "unfolded", "inlined", "assumed"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}

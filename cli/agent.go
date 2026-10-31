@@ -408,6 +408,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 			}
 			// The check must be a model of a family other than the family of the pass (rule X09), and the model register has no such model yet. Thus p.Check stays nil, and each prose item goes to prose-review.
 		}
+		// The pass unfold has the same rule for its check, thus p.UnfoldCheck stays nil, and each unfolding goes to unfold-review.
 		by := "agent:m2-agent/understand@" + r.Version
 		brief = understand.Brief(job, p, r.Passes[t.Pass])
 		check = understand.Goal(ws, job, p, by)

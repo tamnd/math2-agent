@@ -662,3 +662,17 @@ func Latest(objs []Object) ([]Object, int) {
 	}
 	return out, latest
 }
+
+// EdgesFile returns the edges file of a paper, relative to the checkout.
+func EdgesFile(id string) string {
+	return filepath.ToSlash(filepath.Join("analysis", "edges", Month(id), PathForm(id)+mdrec.Ext))
+}
+
+// ReadEdges reads the edge records of one paper from the checkout at root. A paper with no edges file has none.
+func ReadEdges(root, id string) ([]Edge, error) {
+	es, err := readLines[Edge](filepath.Join(root, filepath.FromSlash(EdgesFile(id))))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	return es, err
+}

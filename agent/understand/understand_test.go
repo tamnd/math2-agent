@@ -435,3 +435,157 @@ func TestProseCheck(t *testing.T) {
 		t.Errorf("the first request of the check is %+v", reqs[0])
 	}
 }
+
+// unfoldObjects are the objects of a synthetic paper for the pass unfold: a standing hypothesis, a definition, a theorem that uses the definition, and a hypothesis of a section that the theorem is not in.
+const unfoldObjects = `{"tag":"HYP1","kind":"context","paper":"2401.00001","version":"1","local":"hyp-1","order":1,"section":"sec-1","body_md":"Throughout, every space is Hausdorff.","path":"source","item":"context/hypothesis","scope":"paper"}
+{"tag":"DEF1","kind":"definition","paper":"2401.00001","version":"1","local":"def-1","order":2,"section":"sec-1","number":"1.1","env":"definition","body_md":"A space is \\emph{tame} if it is compact.","path":"source","item":"definition","scope":"paper"}
+{"tag":"HYP2","kind":"context","paper":"2401.00001","version":"1","local":"hyp-2","order":3,"section":"sec-2","body_md":"In this section every space is metric.","path":"source","item":"context/hypothesis","scope":"local"}
+{"tag":"THM1","kind":"statement","paper":"2401.00001","version":"1","local":"thm-1","order":4,"section":"sec-1","number":"1.2","env":"theorem","body_md":"Every tame space is normal.","path":"source","item":"statement/theorem","scope":"paper"}
+`
+
+func unfoldPaper(t *testing.T, licence string) *understand.Paper {
+	t.Helper()
+	root := checkout(t, licence)
+	for name, data := range map[string]string{
+		"analysis/objects/2401/2401.00001.jsonl": unfoldObjects,
+		"analysis/edges/2401/2401.00001.jsonl":   `{"from":"2401.00001#thm-1","to":"2401.00001#def-1","predicate":"uses","evidence":{"version":1}}` + "\n" + `{"from":"2401.00001#thm-1","to":"2401.00001#hyp-2","predicate":"uses","evidence":{"version":2}}` + "\n",
+	} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p, err := understand.Load(root, understand.Target{Paper: "2401.00001", Pass: understand.Unfold})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+const thm = "ax://paper/2401.00001#THM1"
+
+func TestUnfoldLoad(t *testing.T) {
+	p := unfoldPaper(t, "cc-by")
+	var ids []string
+	for _, it := range p.Items {
+		ids = append(ids, strings.TrimPrefix(it.ID, "ax://paper/2401.00001#"))
+	}
+	if got := strings.Join(ids, " "); got != "DEF1 THM1" {
+		t.Errorf("unfold reads %s", got)
+	}
+	var cs []string
+	for _, c := range p.Context[thm] {
+		cs = append(cs, strings.TrimPrefix(c.ID, "ax://paper/2401.00001#")+" "+c.Why)
+	}
+	if got := strings.Join(cs, ", "); got != "HYP1 scope, DEF1 uses" {
+		t.Errorf("the context of THM1 is %s", got)
+	}
+	b := understand.Brief(&agent.Job{ID: "j-1", Goal: "unfold the items."}, p, "")
+	for _, want := range []string{"Unfold each of the 2 items", "Context of " + thm + ": ax://paper/2401.00001#DEF1, uses", "Throughout, every space is Hausdorff."} {
+		if !strings.Contains(b, want) {
+			t.Errorf("the brief has no %q:\n%s", want, b)
+		}
+	}
+	_, err := understand.Load(checkout(t, ""), understand.Target{Paper: "2401.00001", Pass: understand.Unfold})
+	if err == nil || !strings.Contains(err.Error(), "AQ08") {
+		t.Errorf("a paper of the class record gives %v", err)
+	}
+}
+
+func unfolded(text string, inlined ...map[string]any) map[string]any {
+	return map[string]any{"id": thm, "unfolded": text, "inlined": inlined, "assumed": []string{"normal space"}, "notes": []string{"a choice"}}
+}
+
+const good = `Let $X$ be a compact Hausdorff space. Then $X$ is normal: for disjoint closed $A, B \subseteq X$ there are disjoint open $U \supseteq A$ and $V \supseteq B$.`
+
+func TestUnfold(t *testing.T) {
+	ws := tree(t)
+	p := unfoldPaper(t, "cc-by")
+	for text, want := range map[string]string{
+		"Under the hypotheses of Theorem 1.1, every space is normal.": "names an item by its number",
+		`Every space as in \eqref{e} is normal.`:                      "names an item by its number",
+		`Every $\Tame$ space is normal.`:                              `\Tame`,
+	} {
+		res, err := call(t, ws, p, "unfold_items", unfolded(text))
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%q gives %v, %v", text, res, err)
+		}
+	}
+	if _, err := call(t, ws, p, "unfold_items", unfolded(good, map[string]any{"item": "ax://paper/2401.00001#NONE", "part": "x"})); err == nil || !strings.Contains(err.Error(), "not an item of the paper") {
+		t.Errorf("an inlined item that is not of the paper gives %v", err)
+	}
+	ws = tree(t)
+	if _, err := call(t, ws, p, "unfold_items", unfolded(good, map[string]any{"item": "ax://paper/2401.00001#DEF1", "part": "the term tame"}, map[string]any{"part": "the standing hypothesis"})); err != nil {
+		t.Fatal(err)
+	}
+	rs := records(t, ws, "unfold", thm)
+	if len(rs) != 1 || rs[0].Unfold == nil {
+		t.Fatalf("the records are %+v", rs)
+	}
+	r, u := rs[0], rs[0].Unfold
+	if r.Queue != understand.UnfoldReview || u.Unfolded != good || !strings.HasPrefix(u.Hash, "sha256:") || len(u.Inlined) != 2 || u.Assumed[0] != "normal space" || u.Verdict != nil {
+		t.Errorf("the record is %+v %+v", r, u)
+	}
+
+	ws = tree(t)
+	p = unfoldPaper(t, "cc-by-nc-nd")
+	if p.Class != "verbatim" {
+		t.Fatalf("the class is %s", p.Class)
+	}
+	if _, err := call(t, ws, p, "unfold_items", unfolded(good, map[string]any{"item": "ax://paper/2401.00001#DEF1", "part": "the term tame"}, map[string]any{"part": "the standing hypothesis"})); err != nil {
+		t.Fatal(err)
+	}
+	u = records(t, ws, "unfold", thm)[0].Unfold
+	if u.Unfolded != "" || u.Hash == "" || len(u.Inlined) != 1 || u.Inlined[0].Part != "" || u.Assumed != nil || u.Notes != nil {
+		t.Errorf("the record of the class verbatim is %+v", u)
+	}
+}
+
+func TestUnfoldCheck(t *testing.T) {
+	ws := tree(t)
+	p := unfoldPaper(t, "cc-by")
+	m := llmtest.New(
+		llmtest.Call("check_unfold", map[string]any{"verdict": "stronger", "reason": "it drops Hausdorff"}, llm.Usage{}),
+		llmtest.Call("check_unfold", map[string]any{"verdict": "equivalent", "reason": "the same"}, llm.Usage{}),
+		llmtest.Call("check_unfold", map[string]any{"verdict": "weaker", "reason": "it adds metric"}, llm.Usage{}),
+		llmtest.Call("check_unfold", map[string]any{"verdict": "weaker", "reason": "it adds metric"}, llm.Usage{}),
+	)
+	p.UnfoldCheck = understand.UnfoldCheckWith(m, "other-model", "the check prompt")
+	_, err := call(t, ws, p, "unfold_items", unfolded("Every compact space is normal."))
+	if err == nil || !strings.Contains(err.Error(), "the verdict stronger: it drops Hausdorff") {
+		t.Fatalf("the first verdict gives %v", err)
+	}
+	if _, err := call(t, ws, p, "unfold_items", unfolded(good)); err != nil {
+		t.Fatal(err)
+	}
+	r := records(t, ws, "unfold", thm)[0]
+	if r.Queue != "" || r.Unfold.Verdict == nil || r.Unfold.Verdict.Verdict != understand.Equivalent || r.Unfold.Verdict.Model != "other-model" {
+		t.Errorf("the record is %+v %+v", r, r.Unfold.Verdict)
+	}
+	reqs := m.Requests()
+	if text := reqs[0].Messages[0].Content[0].Text; reqs[0].System != "the check prompt" || !strings.Contains(text, "Every tame space is normal.") || !strings.Contains(text, "Throughout, every space is Hausdorff.") || !strings.Contains(text, "Every compact space is normal.") {
+		t.Errorf("the request of the check is %+v", reqs[0])
+	}
+
+	ws = tree(t)
+	p = unfoldPaper(t, "cc-by")
+	p.UnfoldCheck = understand.UnfoldCheckWith(m, "other-model", "the check prompt")
+	tool := understand.Tool(ws, p, "claude-haiku-5-5", by) // one tool for the job, which counts the verdicts of each item
+	give := func() (agent.Result, error) {
+		in, _ := json.Marshal(map[string]any{"items": []any{unfolded(good)}})
+		return tool.Call(context.Background(), &agent.Job{ID: "j-1", Role: "understand", Target: "arxiv:2401.00001/unfold"}, in)
+	}
+	if _, err := give(); err == nil {
+		t.Fatal("the first weaker verdict gives no error")
+	}
+	res, err := give()
+	if err != nil || !strings.Contains(res.Text, "second time") {
+		t.Fatalf("the second weaker verdict gives %v, %v", res, err)
+	}
+	if r := records(t, ws, "unfold", thm)[0]; r.Queue != understand.UnfoldReview || r.Unfold.Verdict.Verdict != "weaker" {
+		t.Errorf("the record is %+v", r)
+	}
+}
