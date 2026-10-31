@@ -63,7 +63,7 @@ var Precedence = map[string][]string{
 	"kind":     {"zbmath", "crossref", "openalex", "loc", "openlibrary", "hal", "wikidata", "arxiv"},
 }
 
-// Fillers are the sources whose records give a field of a resource only when no other record of the resource has the field. A search that matches a resource by its title fills the fields that the catalogues do not give, and does not change the others.
+// Fillers are the sources whose records give a field of a resource only when no other record of the resource has the field. A search that matches a resource by its title fills the fields that the catalogues do not give, and does not change the others. A record of a filler takes no part in the passes: it goes to the group of a record with one of its join ids, and it is dropped when no record has one. Its date does not set the date of an expression, because the date of a catalogue can be more exact than the year of a search.
 var Fillers = map[string]bool{"zbmath_search": true}
 
 // wholes are the kinds of a volume, a journal or a series. Clustering never joins a chapter with one of them (RS10.5).
@@ -246,9 +246,19 @@ func refuse(a, b map[string]bool) string {
 	return ""
 }
 
+// FillerJoins are the ids that put a record of a filler on a group.
+var FillerJoins = []string{"doi", "isbn", "arxiv"}
+
 // Run runs the passes C1 to C5 and builds the resource records.
 func Run(in Input) (*Result, error) {
-	rs := unique(in.Records)
+	var fill []Record
+	rs := slices.DeleteFunc(unique(in.Records), func(r Record) bool {
+		if Fillers[r.Source] {
+			fill = append(fill, r)
+			return true
+		}
+		return false
+	})
 	g := &groups{parent: make([]int, len(rs)), kinds: make([]map[string]bool, len(rs)), rs: rs, joins: map[string]int{}, seen: map[[2]int]bool{}}
 	for i := range rs {
 		g.parent[i] = i
@@ -296,6 +306,7 @@ func Run(in Input) (*Result, error) {
 	g.pairs = slices.DeleteFunc(g.pairs, func(p Pair) bool {
 		return p.Pass == C4 && g.find(byKey[p.A]) == g.find(byKey[p.B])
 	})
+	attach(g, byID, fill)
 	res, err := build(in, g)
 	if err != nil {
 		return nil, err
@@ -303,6 +314,26 @@ func Run(in Input) (*Result, error) {
 	res.Skipped = skipped
 	res.Log = g.log
 	return res, nil
+}
+
+// attach puts each record of a filler in the group of the first record that has one of its join ids. A record of a filler with no such record is dropped.
+func attach(g *groups, byID map[string]map[string][]int, fill []Record) {
+	for _, f := range fill {
+		at := -1
+		for _, sys := range FillerJoins {
+			for _, v := range f.IDs[sys] {
+				if idx := byID[sys][v]; at < 0 && len(idx) > 0 {
+					at = idx[0]
+				}
+			}
+		}
+		if at < 0 {
+			continue
+		}
+		g.rs = append(g.rs, f)
+		g.parent = append(g.parent, g.find(at))
+		g.kinds = append(g.kinds, map[string]bool{f.Kind: true})
+	}
 }
 
 // decide applies the decisions of people: the merges join their records, and the splits keep their records apart in each later pass.
@@ -953,6 +984,9 @@ func expressions(recs []*Record) []*expr {
 				match = append(match, e)
 			}
 		}
+		if len(match) > 1 && Fillers[x.Source] {
+			match = match[:1]
+		}
 		if len(match) == 1 {
 			match[0].recs = append(match[0].recs, x)
 			if match[0].lang == "" {
@@ -970,7 +1004,7 @@ func expressions(recs []*Record) []*expr {
 	}
 	for _, e := range out {
 		for _, x := range e.recs {
-			if d := date(x.Date); d != "" && (e.date == "" || d < e.date) {
+			if d := date(x.Date); d != "" && !Fillers[x.Source] && (e.date == "" || d < e.date) {
 				e.date = d
 			}
 		}
