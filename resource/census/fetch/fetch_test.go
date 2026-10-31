@@ -163,6 +163,17 @@ func TestZBMath(t *testing.T) {
 	}
 }
 
+func TestZBMathLookupNone(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, `{"result":[],"status":{"nr_total_results":0}}`, http.StatusNotFound)
+	}))
+	defer srv.Close()
+	found, err := ZBMath{Base: srv.URL}.Lookup(context.Background(), client(), []string{"10.5281/zenodo.1"})
+	if err != nil || len(found) != 0 {
+		t.Errorf("Lookup = %v, %v, want no DOI and no error", found, err)
+	}
+}
+
 func TestHAL(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
