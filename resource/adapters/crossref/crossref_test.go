@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -117,5 +118,11 @@ func TestFetchDOIs(t *testing.T) {
 	}
 	if strings.Join(filters, " ") != "doi:10.1000/abc,doi:10.1000/xyz" {
 		t.Errorf("filters %v", filters)
+	}
+}
+
+func TestSelectHasNoLanguage(t *testing.T) {
+	if slices.Contains(strings.Split(Select, ","), "language") {
+		t.Fatal("Select has language, which the works API rejects with status 400")
 	}
 }
