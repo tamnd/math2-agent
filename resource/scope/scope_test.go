@@ -122,6 +122,7 @@ func TestDecide(t *testing.T) {
 		{"out cs alone", Record{Arxiv: []string{"cs.CV"}}, Decision{resource.Out, ""}},
 		{"out ddc", Record{DDC: []string{"530.1"}}, Decision{resource.Out, ""}},
 		{"deferred", Record{}, Decision{resource.Deferred, ""}},
+		{"deferred with a venue not in the register", Record{Venues: []string{"PCP2HG7X5G"}}, Decision{resource.Deferred, ""}},
 		{"deferred with flags only", Record{MathHeading: true}, Decision{resource.Deferred, ""}},
 	}
 	for _, c := range cases {
