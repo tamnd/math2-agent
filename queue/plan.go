@@ -27,6 +27,8 @@ var Estimates = map[string]Estimate{
 	Align:     {},
 	// AX13.3: $10,000 to $60,000 for 100,000 to 500,000 research nodes, before the acceptance rate. The spec gives no token count for one job.
 	WriteResearch: {Tier: 2, CostLow: 0.02, CostHigh: 0.6, CostKnown: true},
+	// AX10 gives no cost for a formalize job on a research node.
+	FormalResearch: {},
 }
 
 // Plan is the estimate for the first jobs of a queue. It is a plan only: no model run starts without a budget that a person approved (K12.6).

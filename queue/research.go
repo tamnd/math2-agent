@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 	"strings"
@@ -36,46 +37,14 @@ func writeResearchItems(in Input) []Item {
 			asked[c[:2]] = true
 		}
 	}
-	byID := make(map[string]*inventory.Mention, len(in.Mentions))
-	for i := range in.Mentions {
-		byID[in.Mentions[i].ID] = &in.Mentions[i]
-	}
-	rowOf := map[string]string{}
-	for i := range in.Rows {
-		for _, m := range in.Rows[i].Mentions {
-			rowOf[m] = in.Rows[i].ID
-		}
-	}
-	// citers holds, for each row, the papers whose items name it (the name method of AX6.2) or state it as a cited result.
-	citers := map[string]map[string]bool{}
-	cite := func(row, paper string) {
-		if row == "" || paper == "" {
-			return
-		}
-		if citers[row] == nil {
-			citers[row] = map[string]bool{}
-		}
-		citers[row][paper] = true
-	}
-	for i := range in.Mentions {
-		m := &in.Mentions[i]
-		p := paperOf(m)
-		if m.Structure != nil {
-			for _, r := range m.Structure.Names {
-				cite(r, p)
-			}
-		}
-		for _, c := range m.CitesResult {
-			cite(rowOf[c.To], p)
-		}
-	}
+	byID, rowOf := index(in)
+	citers := citersOf(in, rowOf)
 	out := []Item{}
 	for i := range in.Rows {
 		r := &in.Rows[i]
 		if r.Layer != inventory.Research || !writtenKinds[r.Kind] || r.Outcome != nil && r.Outcome.Value != inventory.OutcomeRecord {
 			continue
 		}
-		own := map[string]bool{}
 		named := map[string]bool{}
 		formal, listed := false, false
 		for _, id := range r.Mentions {
@@ -83,23 +52,14 @@ func writeResearchItems(in Input) []Item {
 			if m == nil {
 				continue
 			}
-			doc := m.Source
-			if p := paperOf(m); p != "" {
-				doc = p
-				own[p] = true
-			}
+			doc := cmp.Or(paperOf(m), m.Source)
 			if r.Name != "" && strings.EqualFold(m.Name, r.Name) {
 				named[doc] = true
 			}
-			formal = formal || inventory.IsFormal(m.Source) || strings.HasPrefix(m.Source, "mathlib")
+			formal = formal || formalSource(m.Source)
 			listed = listed || problemSources[m.Source]
 		}
-		spread := 0
-		for p := range citers[r.ID] {
-			if !own[p] {
-				spread++
-			}
-		}
+		spread := spreadOf(r, byID, citers)
 		reason := 0
 		switch {
 		case slices.ContainsFunc(areas(r), func(a string) bool { return asked[a] }):
@@ -122,6 +82,70 @@ func writeResearchItems(in Input) []Item {
 		out = append(out, Item{Target: r.ID, Name: r.Name, Kind: r.Kind, Goal: goal + ")", Priority: float64(10-reason)*1e6 + priority(spread)})
 	}
 	return out
+}
+
+// index returns each mention by its id, and the row of each mention.
+func index(in Input) (map[string]*inventory.Mention, map[string]string) {
+	byID := make(map[string]*inventory.Mention, len(in.Mentions))
+	for i := range in.Mentions {
+		byID[in.Mentions[i].ID] = &in.Mentions[i]
+	}
+	rowOf := map[string]string{}
+	for i := range in.Rows {
+		for _, m := range in.Rows[i].Mentions {
+			rowOf[m] = in.Rows[i].ID
+		}
+	}
+	return byID, rowOf
+}
+
+// citersOf returns, for each row, the papers whose items name it (the name method of AX6.2) or state it as a cited result.
+func citersOf(in Input, rowOf map[string]string) map[string]map[string]bool {
+	citers := map[string]map[string]bool{}
+	cite := func(row, paper string) {
+		if row == "" || paper == "" {
+			return
+		}
+		if citers[row] == nil {
+			citers[row] = map[string]bool{}
+		}
+		citers[row][paper] = true
+	}
+	for i := range in.Mentions {
+		m := &in.Mentions[i]
+		p := paperOf(m)
+		if m.Structure != nil {
+			for _, r := range m.Structure.Names {
+				cite(r, p)
+			}
+		}
+		for _, c := range m.CitesResult {
+			cite(rowOf[c.To], p)
+		}
+	}
+	return citers
+}
+
+// spreadOf returns the number of papers that cite the row, other than the papers of its own mentions.
+func spreadOf(r *inventory.Row, byID map[string]*inventory.Mention, citers map[string]map[string]bool) int {
+	own := map[string]bool{}
+	for _, id := range r.Mentions {
+		if m := byID[id]; m != nil {
+			own[paperOf(m)] = true
+		}
+	}
+	n := 0
+	for p := range citers[r.ID] {
+		if !own[p] {
+			n++
+		}
+	}
+	return n
+}
+
+// formalSource reports whether a source states its items in a formal language.
+func formalSource(source string) bool {
+	return inventory.IsFormal(source) || strings.HasPrefix(source, "mathlib")
 }
 
 // paperOf returns the arXiv id of the paper of a mention of the research layer, or "" for a mention of another source.
