@@ -23,6 +23,8 @@ type Options struct {
 	Mint func(used func(string) bool) (string, error) // gives a new row identifier. Nil means tag.Mint with crypto/rand.
 	// Signals are the facts outside the mentions for the formal rules of corpus K4.5 and the rule research-aligned. The zero value means that only the mentions of a row decide.
 	Signals Signals
+	// NameJudge is the dedup judge of the name pass (corpus arxiv AX8.2): it reports whether the research mention and the mention of another source with its name are not different. Nil means that the name pass joins nothing, and its matches stay candidates for the judge.
+	NameJudge func(mention, target *Mention) bool
 }
 
 // Result is what one run of Cluster did.
@@ -88,7 +90,7 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 	hashed := u.roots(ms)
 	res.Equivalent = joinEquivalent(u, ms)
 	equivalent := u.roots(ms)
-	res.Named = joinNames(u, ms)
+	res.Named = joinNames(u, ms, opt.NameJudge)
 	groups := map[string][]string{}
 	for i := range ms {
 		if ms[i].Attached() {
@@ -238,12 +240,12 @@ func joinIdentifiers(u unionFind, ms []Mention) {
 	}
 }
 
-// joinCited joins a mention to the mention whose result it states, when the cited result has the confidence high and the target is a mention of this run (corpus arxiv AX5.7 and AX8.2). The kinds must agree, or be statement and conjecture, which share a block (AX8.1). It returns the number of joins.
+// joinCited joins a mention to the mention whose result it states, when the cited result has the confidence high and the target is a mention of this run (corpus arxiv AX5.7 and AX8.2). Only a mention with the origin cited states the result: a result of the paper that cites one in its body is a new result. The kinds must agree, or be statement and conjecture, which share a block (AX8.1). It returns the number of joins.
 func joinCited(u unionFind, ms []Mention, byID map[string]*Mention) int {
 	n := 0
 	for i := range ms {
 		m := &ms[i]
-		if m.Attached() {
+		if m.Attached() || m.Origin != "cited" {
 			continue
 		}
 		for _, c := range m.CitesResult {
@@ -264,10 +266,10 @@ func sameBlockKind(a, b string) bool {
 	return a == b || claim(a) && claim(b)
 }
 
-// joinHash joins the mentions of one kind and one block with the same content hash. It returns the number of joins.
+// joinHash joins the mentions of one kind and one block with the same content hash. Two mentions of one paper never join by hash: two items of a paper with one text, as "Conjecture 1 implies Conjecture 2" with other targets, are two items. It returns the number of joins.
 func joinHash(u unionFind, ms []Mention) int {
 	n := 0
-	owner := map[string]string{}
+	owner := map[string][]*Mention{} // the first mention of each paper with the key
 	for i := range ms {
 		m := &ms[i]
 		if m.Hash == "" || m.Attached() {
@@ -275,10 +277,19 @@ func joinHash(u unionFind, ms []Mention) int {
 		}
 		for _, b := range Blocks(m) {
 			k := m.Kind + " " + b + " " + m.Hash
-			if o, ok := owner[k]; !ok {
-				owner[k] = m.ID
-			} else if u.union(o, m.ID) {
-				n++
+			joined := false
+			for _, o := range owner[k] {
+				if IsResearch(m.Source) && IsResearch(o.Source) && paperOf(o) == paperOf(m) {
+					continue
+				}
+				if u.union(o.ID, m.ID) {
+					n++
+				}
+				joined = true
+				break
+			}
+			if !joined {
+				owner[k] = append(owner[k], m)
 			}
 		}
 	}

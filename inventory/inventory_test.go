@@ -372,14 +372,15 @@ func TestClusterJoinsByHash(t *testing.T) {
 		ax("1701.00522#R1", "unknown", "sha256:bb"),             // no code and no class yet
 		ax("1701.00523#R1", "context", "sha256:cc", "54E35"),    // a context item
 		ax("1701.00524#P1", "proof", "sha256:aa", "54E35"),      // attached, below
+		ax("1701.00517#R2", "statement", "sha256:aa", "54E35"),  // the same paper
 	}
 	ms[7].AttachedTo = ms[0].ID
 	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Hashed != 1 || len(res.Rows) != 6 {
-		t.Fatalf("got %d joins by hash and %d rows, want 1 and 6", res.Hashed, len(res.Rows))
+	if res.Hashed != 1 || len(res.Rows) != 7 {
+		t.Fatalf("got %d joins by hash and %d rows, want 1 and 7", res.Hashed, len(res.Rows))
 	}
 	rules := map[string]string{}
 	for _, r := range res.Rows {
@@ -392,7 +393,7 @@ func TestClusterJoinsByHash(t *testing.T) {
 			t.Errorf("the row of the copied statement is %+v", r)
 		}
 	}
-	want := map[string]string{ms[0].ID: "research-default", ms[2].ID: "research-default", ms[3].ID: "research-default", ms[4].ID: "research-exercise", ms[5].ID: "open", ms[6].ID: "research-context"}
+	want := map[string]string{ms[0].ID: "research-default", ms[2].ID: "research-default", ms[3].ID: "research-default", ms[4].ID: "research-exercise", ms[5].ID: "open", ms[6].ID: "research-context", ms[8].ID: "research-default"}
 	if !maps.Equal(rules, want) {
 		t.Errorf("the rules are %v, want %v", rules, want)
 	}
@@ -411,7 +412,7 @@ func TestClusterJoinsByHash(t *testing.T) {
 
 func TestClusterJoinsByCitedResult(t *testing.T) {
 	ax := func(id, kind string, cites ...CitedResult) Mention {
-		return Mention{ID: "ax://paper/" + id, Source: "arxiv", NativeID: id, Kind: kind, MSC: []string{"14J60"}, Class: "record", By: "m2/arxiv", CitesResult: cites}
+		return Mention{ID: "ax://paper/" + id, Source: "arxiv", NativeID: id, Kind: kind, MSC: []string{"14J60"}, Class: "record", By: "m2/arxiv", Origin: "cited", CitesResult: cites}
 	}
 	ms := []Mention{
 		ax("1701.00517#R1", "statement"),
@@ -420,13 +421,15 @@ func TestClusterJoinsByCitedResult(t *testing.T) {
 		ax("1701.00520#R1", "statement", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "1", Confidence: "medium"}),        // not high
 		ax("1701.00521#R1", "definition", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"}), // another kind
 		ax("1701.00522#R1", "statement", CitedResult{To: "doi:10.1/x", Locator: "Theorem 2", Confidence: "high"}),                // a work, not a mention
+		ax("1701.00523#R1", "statement", CitedResult{To: "ax://paper/1701.00517#R1", Locator: "Theorem 1", Confidence: "high"}),  // a new result
 	}
+	ms[6].Origin = "own"
 	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Cited != 2 || len(res.Rows) != 4 {
-		t.Fatalf("got %d joins by cited result and %d rows, want 2 and 4", res.Cited, len(res.Rows))
+	if res.Cited != 2 || len(res.Rows) != 5 {
+		t.Fatalf("got %d joins by cited result and %d rows, want 2 and 5", res.Cited, len(res.Rows))
 	}
 	for _, r := range res.Rows {
 		if r.Mentions[0] == ms[0].ID && !slices.Equal(r.Mentions, []string{ms[0].ID, ms[1].ID, ms[2].ID}) {
@@ -453,8 +456,18 @@ func TestClusterJoinsByName(t *testing.T) {
 		ax("1701.00521#R1", "statement", "Perron-Frobenius theorem for cones"), // a variant
 		ax("1701.00522#R1", "definition", "Perron–Frobenius theorem"),          // another kind
 		ax("1701.00523#R1", "statement", "Hahn-Banach theorem"),                // two groups
+		ax("1701.00524#R1", "definition", "Stopping time", "60G40"),            // the judge says different
 	}
+	// With no judge, the name pass joins nothing.
 	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Named != 0 {
+		t.Fatalf("got %d joins by name with no judge, want 0", res.Named)
+	}
+	judge := func(m, _ *Mention) bool { return m.ID != ms[13].ID }
+	res, err = Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter(), NameJudge: judge})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -467,7 +480,7 @@ func TestClusterJoinsByName(t *testing.T) {
 		}
 	}
 	// A run on rows that kept the paper apart merges its row into the row of the other source, by the rule name.
-	again, err := Cluster([]Row{{ID: "AB00000017", Mentions: []string{ms[0].ID}, Layer: Textbook}, {ID: "AB00000025", Mentions: []string{ms[6].ID}, Layer: Research, Outcome: &Outcome{Value: OutcomeRecord}}}, ms[:7], Options{Day: day, By: "test", Mint: counter()})
+	again, err := Cluster([]Row{{ID: "AB00000017", Mentions: []string{ms[0].ID}, Layer: Textbook}, {ID: "AB00000025", Mentions: []string{ms[6].ID}, Layer: Research, Outcome: &Outcome{Value: OutcomeRecord}}}, ms[:7], Options{Day: day, By: "test", Mint: counter(), NameJudge: judge})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -58,8 +58,15 @@ func nameJoins(m *Mention) (string, bool) {
 	return k, true
 }
 
-// joinNames is the name pass of corpus arxiv AX8.2: a mention of the research layer joins the row of a mention of another source when its own name is a name of that mention, the kinds agree, the blocks meet, and the name gives no other group. It is a rule of code: two names that are equal after NameKey, and no judge. The name must be the whole name, so "the Hahn–Banach theorem for modules" does not join "Hahn–Banach theorem", and a name that gives two groups, as "chain rule" for a statement of calculus and one of probability, joins neither. It returns the number of joins.
-func joinNames(u unionFind, ms []Mention) int {
+// joinNames is the name pass of corpus arxiv AX8.2: a mention of the research layer joins the row of a mention of another source when its own name is a name of that mention, the kinds agree, the blocks meet, and the name gives no other group. The names must be equal after NameKey, and the judge must not say different: a paper that calls its variant "the central limit theorem" does not state the theorem of the textbook. A nil judge joins nothing. The name must be the whole name, so "the Hahn–Banach theorem for modules" does not join "Hahn–Banach theorem", and a name that gives two groups, as "chain rule" for a statement of calculus and one of probability, joins neither. It returns the number of joins.
+func joinNames(u unionFind, ms []Mention, judge func(mention, target *Mention) bool) int {
+	if judge == nil {
+		return 0
+	}
+	byID := map[string]*Mention{}
+	for i := range ms {
+		byID[ms[i].ID] = &ms[i]
+	}
 	type named struct {
 		id     string
 		kind   string
@@ -101,7 +108,7 @@ func joinNames(u unionFind, ms []Mention) int {
 				roots, target = append(roots, r), c.id
 			}
 		}
-		if len(roots) == 1 && u.union(m.ID, target) {
+		if len(roots) == 1 && judge(m, byID[target]) && u.union(m.ID, target) {
 			n++
 		}
 	}
