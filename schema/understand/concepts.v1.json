@@ -1,0 +1,47 @@
+{
+  "title": "understand concepts v1",
+  "description": "The results of the pass concepts (corpus arxiv AX7.3): the MSC2020 codes and the concepts of each item, and the terms of a definition.",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "the id of the item, as ax://paper/2401.00001#K3F9"},
+          "msc": {"type": "array", "items": {"type": "string"}, "maxItems": 3, "description": "MSC2020 codes at five characters, such as 14J60, the first one first"},
+          "concepts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "wikidata": {"type": "string", "description": "the Wikidata item, such as Q193297, only when you know it exactly"},
+                "name": {"type": "string", "description": "the common name of the concept"},
+                "role": {"type": "string", "enum": ["about", "uses", "defines"]}
+              },
+              "required": ["name", "role"],
+              "additionalProperties": false
+            }
+          },
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "term": {"type": "string"},
+                "symbol": {"type": "string", "description": "the macro or the symbol, as \\mathcal{M}_g"}
+              },
+              "required": ["term"],
+              "additionalProperties": false
+            },
+            "description": "for a definition only: the terms that it defines"
+          }
+        },
+        "required": ["id", "msc", "concepts"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}

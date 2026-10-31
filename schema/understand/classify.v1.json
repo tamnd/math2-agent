@@ -1,0 +1,28 @@
+{
+  "title": "understand classify v1",
+  "description": "The results of the pass classify (corpus arxiv AX7.2): the item kind of each item, with a confidence and the flags.",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "the id of the item, as ax://paper/2401.00001#K3F9"},
+          "kind": {"type": "string", "enum": [
+            "statement/theorem", "statement/lemma", "statement/proposition", "statement/corollary", "statement/claim", "statement/fact", "statement/axiom", "statement/criterion",
+            "definition", "definition/notation", "definition/terminology", "definition/convention", "definition/construction", "definition/algorithm",
+            "example", "example/non-example", "counterexample", "conjecture", "problem", "exercise", "proof",
+            "context/hypothesis", "remark", "other"
+          ]},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "flags": {"type": "array", "items": {"type": "string", "enum": ["claim-in-remark", "conjecture-candidate"]}}
+        },
+        "required": ["id", "kind", "confidence"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}
