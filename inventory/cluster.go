@@ -23,8 +23,8 @@ type Options struct {
 	Mint func(used func(string) bool) (string, error) // gives a new row identifier. Nil means tag.Mint with crypto/rand.
 	// Signals are the facts outside the mentions for the formal rules of corpus K4.5 and the rule research-aligned. The zero value means that only the mentions of a row decide.
 	Signals Signals
-	// NameJudge is the dedup judge of the name pass (corpus arxiv AX8.2): it reports whether the research mention and the mention of another source with its name are not different. Nil means that the name pass joins nothing, and its matches stay candidates for the judge.
-	NameJudge func(mention, target *Mention) bool
+	// Judge is the dedup judge of the passes of cited results and names (corpus arxiv AX8.2): it reports whether a mention and the mention that it cites, or that has its name, are not different. Nil means that these passes join nothing. On gold set K v1 a cited result with the confidence high states the cited result in 3 of 7 pairs: the others generalize it or are a variant, so the citation alone does not join.
+	Judge func(mention, target *Mention) bool
 }
 
 // Result is what one run of Cluster did.
@@ -84,13 +84,13 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 		}
 	}
 	joinIdentifiers(u, ms)
-	cited := joinCited(u, ms, byID)
+	cited := joinCited(u, ms, byID, opt.Judge)
 	pass1 := u.roots(ms)
 	res := &Result{Cited: cited, Hashed: joinHash(u, ms)}
 	hashed := u.roots(ms)
 	res.Equivalent = joinEquivalent(u, ms)
 	equivalent := u.roots(ms)
-	res.Named = joinNames(u, ms, opt.NameJudge)
+	res.Named = joinNames(u, ms, opt.Judge)
 	groups := map[string][]string{}
 	for i := range ms {
 		if ms[i].Attached() {
@@ -240,8 +240,11 @@ func joinIdentifiers(u unionFind, ms []Mention) {
 	}
 }
 
-// joinCited joins a mention to the mention whose result it states, when the cited result has the confidence high and the target is a mention of this run (corpus arxiv AX5.7 and AX8.2). Only a mention with the origin cited states the result: a result of the paper that cites one in its body is a new result. The kinds must agree, or be statement and conjecture, which share a block (AX8.1). It returns the number of joins.
-func joinCited(u unionFind, ms []Mention, byID map[string]*Mention) int {
+// joinCited joins a mention to the mention whose result it states, when the cited result has the confidence high, the target is a mention of this run and the judge does not say different (corpus arxiv AX5.7 and AX8.2). Only a mention with the origin cited states the result: a result of the paper that cites one in its body is a new result. The kinds must agree, or be statement and conjecture, which share a block (AX8.1). It returns the number of joins.
+func joinCited(u unionFind, ms []Mention, byID map[string]*Mention, judge func(mention, target *Mention) bool) int {
+	if judge == nil {
+		return 0
+	}
 	n := 0
 	for i := range ms {
 		m := &ms[i]
@@ -250,7 +253,7 @@ func joinCited(u unionFind, ms []Mention, byID map[string]*Mention) int {
 		}
 		for _, c := range m.CitesResult {
 			t := byID[c.To]
-			if c.Confidence != "high" || t == nil || t == m || t.Attached() || !sameBlockKind(m.Kind, t.Kind) {
+			if c.Confidence != "high" || t == nil || t == m || t.Attached() || !sameBlockKind(m.Kind, t.Kind) || !judge(m, t) {
 				continue
 			}
 			if u.union(m.ID, t.ID) {
@@ -331,12 +334,7 @@ func joinEquivalent(u unionFind, ms []Mention) int {
 // Passes returns the group of each mention after each pass of Cluster, with no rows, in the order of PassNames: after the identifiers, after the hashes too, and after the formal statements too. A group is named by its smallest mention.
 func Passes(ms []Mention) []map[string]string {
 	u := unionFind{}
-	joinIdentifiers(u, ms)
-	byID := map[string]*Mention{}
-	for i := range ms {
-		byID[ms[i].ID] = &ms[i]
-	}
-	joinCited(u, ms, byID)
+	joinIdentifiers(u, ms) // the cited results need the judge, which Passes does not have
 	p1 := u.roots(ms)
 	joinHash(u, ms)
 	p2 := u.roots(ms)
