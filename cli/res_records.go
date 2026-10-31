@@ -8,7 +8,7 @@ import (
 	resrecords "github.com/tamnd/math2-agent/resource/records"
 )
 
-const resRecordsUsage = "m2 res records export [-root DIR] -out DIR | m2 res records keep [-root DIR] | m2 res records pin [-root DIR] -out DIR -commit C"
+const resRecordsUsage = "m2 res records export [-root DIR] -out DIR | m2 res records keep [-root DIR] | m2 res records pin [-root DIR] -out DIR -commit C | m2 res records unpack [-root DIR] -out DIR"
 
 func runResRecords(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -55,6 +55,16 @@ func runResRecords(args []string, stdout, stderr io.Writer) int {
 			return fail(err)
 		}
 		fmt.Fprintf(stdout, "wrote %s: %s at %s, %d shards\n", resrecords.PinFile, p.Repo, p.Commit, p.Shards)
+	case "unpack":
+		if *out == "" {
+			fmt.Fprintln(stderr, "usage: "+resRecordsUsage)
+			return ExitUsage
+		}
+		n, err := resrecords.Unpack(*root, *out)
+		if err != nil {
+			return fail(err)
+		}
+		fmt.Fprintf(stdout, "added %d resources from %s\n", n, *out)
 	default:
 		fmt.Fprintln(stderr, "usage: "+resRecordsUsage)
 		return ExitUsage

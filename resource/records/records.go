@@ -1,4 +1,4 @@
-// Package records moves the full catalogue of resources to the repository tamnd/math2-records (RS12.3). Export writes each shard of records/resources/, of its cites/ and of its structure/ to a second tree, compressed with zstd, with an index of the shards and a Parquet file of the resources. Keep removes from the math2 tree each resource that is not in the tiers T1, T2 and T5, and the cites of those resources. WritePin writes the pin of the commit of math2-records to the math2 tree. The id registers stay in the math2 tree.
+// Package records moves the full catalogue of resources to the repository tamnd/math2-records (RS12.3). Export writes each shard of records/resources/, of its cites/ and of its structure/ to a second tree, compressed with zstd, with an index of the shards and a Parquet file of the resources. Keep removes from the math2 tree each resource that is not in the tiers T1, T2 and T5, and the cites of those resources. WritePin writes the pin of the commit of math2-records to the math2 tree. Unpack adds the records of math2-records back to a math2 tree for a build. The id registers stay in the math2 tree.
 package records
 
 import (
@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -295,4 +296,79 @@ func prune(dir string, keep map[string]bool) error {
 		}
 	}
 	return nil
+}
+
+// Unpack adds to the math2 tree at root the resources and the cites of the records tree at out that the math2 tree does not have, so that a build can read the full catalogue after Keep. A resource that the math2 tree has stays as the tree has it, with its cites. When the tree has a pin, the index of out must have the hash of the pin. It gives the count of the resources that it added.
+func Unpack(root, out string) (int, error) {
+	data, err := os.ReadFile(filepath.Join(out, IndexFile)) // #nosec G304 -- the caller owns the tree.
+	if err != nil {
+		return 0, err
+	}
+	p, ok, err := ReadPin(root)
+	if err != nil {
+		return 0, err
+	}
+	if ok && hash(data) != p.Index {
+		return 0, fmt.Errorf("records: the index of %s has the hash %s, and %s gives %s", out, hash(data), PinFile, p.Index)
+	}
+	shards, err := ReadIndex(out)
+	if err != nil {
+		return 0, err
+	}
+	rs, err := resource.ReadResources(root)
+	if err != nil {
+		return 0, err
+	}
+	cs, err := resource.ReadCites(root)
+	if err != nil {
+		return 0, err
+	}
+	have := map[string]bool{}
+	for _, r := range rs {
+		have[r.ID] = true
+	}
+	added, cites := 0, false
+	for _, s := range shards {
+		dir := path.Dir(s.File)
+		if dir != resource.Dir && dir != resource.CitesDir {
+			continue
+		}
+		recs, err := ReadShard(out, s)
+		if err != nil {
+			return 0, err
+		}
+		if dir == resource.CitesDir {
+			more, err := mdrec.Unmarshal[resource.Cite](recs)
+			if err != nil {
+				return 0, fmt.Errorf("%s: %w", s.File, err)
+			}
+			for _, c := range more {
+				if id, _, _ := strings.Cut(c.From, "/"); !have[id] {
+					cs, cites = append(cs, c), true
+				}
+			}
+			continue
+		}
+		more, err := mdrec.Unmarshal[resource.Resource](recs)
+		if err != nil {
+			return 0, fmt.Errorf("%s: %w", s.File, err)
+		}
+		for _, r := range more {
+			if !have[r.ID] {
+				rs = append(rs, r)
+				added++
+			}
+		}
+	}
+	if added > 0 {
+		if err := resource.WriteResources(root, rs); err != nil {
+			return 0, err
+		}
+	}
+	if cites {
+		if err := resource.WriteCites(root, cs); err != nil {
+			return 0, err
+		}
+	}
+	return added, nil
 }
