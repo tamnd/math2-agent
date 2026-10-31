@@ -40,7 +40,7 @@ func TestResVenues(t *testing.T) {
 		t.Fatalf("m2 res venues = %d\n%s\n%s", code, stdout, stderr)
 	}
 	code, stdout, stderr = run("res", "scope", "-root", root, "-no-model")
-	if code != ExitOK || !strings.Contains(stdout, "in 1,") {
+	if code != ExitOK || !strings.Contains(stdout, "in 2,") {
 		t.Fatalf("m2 res scope = %d\n%s\n%s", code, stdout, stderr)
 	}
 	back, err := resource.ReadResources(root)

@@ -1,6 +1,6 @@
-// Package venues builds the venue register of RS6.5, records/resources/venues.md. A venue is a resource of kind journal or series. The register is an index of the venue resources: each record has the id of the resource, its title and ISSNs, and the scope of the venue (core, mixed or border). Test S4 of the scope predicate reads the scope: each paper or book of a venue with the scope core is in scope (RS09).
+// Package venues builds the venue register of RS6.5, records/resources/venues.md. A venue is a resource of kind journal, series or competition. The register is an index of the venue resources: each record has the id of the resource, its title and ISSNs, and the scope of the venue (core, mixed or border). Test S4 of the scope predicate reads the scope: each paper or book of a venue with the scope core is in scope (RS09).
 //
-// Build adds each live venue resource of the tree to the register. A venue has a scope when a person set it in the register, or when a list of known venues, such as the lists of mathematics series of the series adapters, has one of its ISSNs. A venue with no scope is in the register, but it is not a signal of scope.
+// Build adds each live venue resource of the tree to the register. A competition has the scope core. A venue has a scope when a person set it in the register, or when a list of known venues, such as the lists of mathematics series of the series adapters, has one of its ISSNs. A venue with no scope is in the register, but it is not a signal of scope.
 package venues
 
 import (
@@ -21,8 +21,11 @@ import (
 // File is the venue register.
 const File = resource.Dir + "/venues.md"
 
-// Kinds are the kinds of resource that are venues.
-var Kinds = []string{"journal", "series"}
+// Kinds are the kinds of resource that are venues. A competition is a venue too (RS6.5).
+var Kinds = scope.VenueKinds
+
+// Competition is the kind of a competition (RS7.2). Each competition of the catalogue is a competition of mathematics, so its scope is core.
+const Competition = "competition"
 
 // Venue is one record of the register.
 type Venue struct {
@@ -126,6 +129,9 @@ func Build(prev []Venue, rs []resource.Resource, known map[string]Known) ([]Venu
 		}
 		v.ID, v.Kind, v.Title, v.Status = r.ID, r.Kind, r.Title, ""
 		v.ISSN = issns(r)
+		if v.Scope == "" && r.Kind == Competition {
+			v.Scope, v.From = scope.VenueCore, "RS7.2"
+		}
 		if v.Scope == "" {
 			for _, n := range v.ISSN {
 				if k, ok := known[n]; ok {

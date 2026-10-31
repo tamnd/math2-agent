@@ -158,3 +158,18 @@ func TestFromResource(t *testing.T) {
 		t.Errorf("Decide = %+v", d)
 	}
 }
+
+func TestFromResourceVenue(t *testing.T) {
+	r := &resource.Resource{ID: "8F2AAAAAA3", Kind: "competition", Title: "Putnam"}
+	rec := FromResource(r)
+	if len(rec.Venues) != 1 || rec.Venues[0] != "8F2AAAAAA3" {
+		t.Fatalf("Venues = %v", rec.Venues)
+	}
+	e := Env{Venues: map[string]string{"8F2AAAAAA3": VenueCore}}
+	if d := Decide(rec, e); d != (Decision{resource.In, "S4"}) {
+		t.Errorf("Decide = %+v", d)
+	}
+	if len(FromResource(&resource.Resource{ID: "8F2AAAAAA3", Kind: "book"}).Venues) != 0 {
+		t.Error("a book is its own venue")
+	}
+}
