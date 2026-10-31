@@ -49,6 +49,8 @@ type Book struct {
 	Repository  string   // the repository of the source, for example https://github.com/HoTT/book
 	Commit      string   // the pinned commit
 	Edition     string   // the pinned edition, where the editions differ in licence
+	Date        string   // the date of the pinned commit, which is the date of the edition that math2 reads
+	MSC         []string // the MSC2020 codes of the subject of the book
 	Licence     string   // the SPDX expression of the licence, as the source states it
 	Election    string   // the option that math2 takes from a choice of licences
 	Attribution string   // the attribution line that the licence asks for
@@ -68,73 +70,73 @@ func re(s string) *regexp.Regexp { return regexp.MustCompile(s) }
 var Books = []Book{
 	{
 		ID: "open_logic", Name: "The Open Logic Project", Authors: []string{"The Open Logic Project"},
-		Home: "https://openlogicproject.org", Repository: "https://github.com/OpenLogicProject/OpenLogic", Commit: "1e960beff9ed7835bf3e3f1335e21af3439cd107",
+		Home: "https://openlogicproject.org", Repository: "https://github.com/OpenLogicProject/OpenLogic", Commit: "1e960beff9ed7835bf3e3f1335e21af3439cd107", Date: "2026-08-14", MSC: []string{"03-01"},
 		Licence: "CC-BY-4.0", Attribution: "The Open Logic Project, The Open Logic Text, https://openlogicproject.org, CC BY 4.0",
 		Format: LaTeX, Files: re(`^content/.*\.tex$`),
 	},
 	{
 		ID: "hott_book", Name: "Homotopy Type Theory: Univalent Foundations of Mathematics", Authors: []string{"The Univalent Foundations Program"},
-		Home: "https://homotopytypetheory.org/book/", Repository: "https://github.com/HoTT/book", Commit: "578b85cc8d586b1677ec4335148adeb443057d24",
+		Home: "https://homotopytypetheory.org/book/", Repository: "https://github.com/HoTT/book", Commit: "578b85cc8d586b1677ec4335148adeb443057d24", Date: "2026-05-12", MSC: []string{"03B38", "55U35"},
 		Licence:     "CC-BY-SA-3.0",
 		Attribution: "The Univalent Foundations Program, Homotopy Type Theory: Univalent Foundations of Mathematics, https://homotopytypetheory.org/book/, CC BY-SA 3.0",
 		Format:      LaTeX, Files: re(`^[a-z]+\.tex$`), Skip: re(`^(errata|exercise_solutions)\.tex$`), Macros: []string{"defthm"},
 	},
 	{
 		ID: "lebl_ra", Name: "Basic Analysis I and II: Introduction to Real Analysis", Authors: []string{"Jiří Lebl"},
-		Home: "https://www.jirka.org/ra/", Repository: "https://github.com/jirilebl/ra", Commit: "e21ec524ca7d54f800c693b948020c188d21d01f",
+		Home: "https://www.jirka.org/ra/", Repository: "https://github.com/jirilebl/ra", Commit: "e21ec524ca7d54f800c693b948020c188d21d01f", Date: "2026-07-24", MSC: []string{"26-01"},
 		Licence: "CC-BY-NC-SA-4.0 OR CC-BY-SA-4.0", Election: "CC-BY-SA-4.0",
 		Attribution: "Jiří Lebl, Basic Analysis I and II: Introduction to Real Analysis, https://www.jirka.org/ra/, CC BY-SA 4.0",
 		Format:      LaTeX, Files: re(`^(ch|frag)-[^/]*\.tex$`),
 	},
 	{
 		ID: "lebl_diffyqs", Name: "Notes on Diffy Qs: Differential Equations for Engineers", Authors: []string{"Jiří Lebl"},
-		Home: "https://www.jirka.org/diffyqs/", Repository: "https://github.com/jirilebl/diffyqs", Commit: "658bcae9fb710f3fae2c9da4ca4524ce157453af",
+		Home: "https://www.jirka.org/diffyqs/", Repository: "https://github.com/jirilebl/diffyqs", Commit: "658bcae9fb710f3fae2c9da4ca4524ce157453af", Date: "2026-07-12", MSC: []string{"34-01"},
 		Licence: "CC-BY-NC-SA-4.0 OR CC-BY-SA-4.0", Election: "CC-BY-SA-4.0",
 		Attribution: "Jiří Lebl, Notes on Diffy Qs: Differential Equations for Engineers, https://www.jirka.org/diffyqs/, CC BY-SA 4.0",
 		Format:      LaTeX, Files: re(`^(ch|ap)-[^/]*\.tex$`),
 	},
 	{
 		ID: "lebl_scv", Name: "Tasty Bits of Several Complex Variables", Authors: []string{"Jiří Lebl"},
-		Home: "https://www.jirka.org/scv/", Repository: "https://github.com/jirilebl/scv", Commit: "78d7d41554695c389552c301398803d4633b9208",
+		Home: "https://www.jirka.org/scv/", Repository: "https://github.com/jirilebl/scv", Commit: "78d7d41554695c389552c301398803d4633b9208", Date: "2026-09-28", MSC: []string{"32-01"},
 		Licence: "CC-BY-NC-SA-4.0 OR CC-BY-SA-4.0", Election: "CC-BY-SA-4.0",
 		Attribution: "Jiří Lebl, Tasty Bits of Several Complex Variables, https://www.jirka.org/scv/, CC BY-SA 4.0",
 		Format:      LaTeX, Files: re(`^scv\.tex$`),
 	},
 	{
 		ID: "napkin", Name: "An Infinitely Large Napkin", Authors: []string{"Evan Chen"},
-		Home: "https://web.evanchen.cc/napkin.html", Repository: "https://github.com/vEnhance/napkin", Commit: "2bdf25b3bc8c9e9d1043bcbc495bff4c7d10f586",
+		Home: "https://web.evanchen.cc/napkin.html", Repository: "https://github.com/vEnhance/napkin", Commit: "2bdf25b3bc8c9e9d1043bcbc495bff4c7d10f586", Date: "2026-10-23", MSC: []string{"00-01"},
 		// The text is under CC BY-SA 4.0 and the source files are under the GPL v3. math2 takes the text only.
 		Licence: "CC-BY-SA-4.0", Attribution: "Evan Chen, An Infinitely Large Napkin, https://web.evanchen.cc/napkin.html, CC BY-SA 4.0",
 		Format: LaTeX, Files: re(`^tex/.*\.tex$`), Skip: re(`^tex/(preamble|macros|Qcircuit)\.tex$|^tex/backmatter/`),
 	},
 	{
 		ID: "levin_dmoi", Name: "Discrete Mathematics: An Open Introduction", Authors: []string{"Oscar Levin"}, Edition: "3rd edition",
-		Home: "https://discrete.openmathbooks.org/dmoi3.html", Repository: "https://github.com/oscarlevin/discrete-book", Commit: "a8e4949bc45daf100930c1182983778f56ab689f",
+		Home: "https://discrete.openmathbooks.org/dmoi3.html", Repository: "https://github.com/oscarlevin/discrete-book", Commit: "a8e4949bc45daf100930c1182983778f56ab689f", Date: "2019-03-27", MSC: []string{"05-01"},
 		// The tag 3rd-ed. The 4th edition is under CC BY-NC-SA 4.0.
 		Licence: "CC-BY-SA-4.0", Attribution: "Oscar Levin, Discrete Mathematics: An Open Introduction, 3rd edition, https://discrete.openmathbooks.org/dmoi3.html, CC BY-SA 4.0",
 		Format: PreTeXt, Main: "ptx/dmoi.ptx",
 	},
 	{
 		ID: "applied_combinatorics", Name: "Applied Combinatorics", Authors: []string{"Mitchel T. Keller", "William T. Trotter"},
-		Home: "https://appliedcombinatorics.org/appcomb/", Repository: "https://github.com/mitchkeller/applied-combinatorics", Commit: "ebd95d6bd59e23c633c65cf560bcb93efa912aae",
+		Home: "https://appliedcombinatorics.org/appcomb/", Repository: "https://github.com/mitchkeller/applied-combinatorics", Commit: "ebd95d6bd59e23c633c65cf560bcb93efa912aae", Date: "2026-10-26", MSC: []string{"05-01"},
 		Licence: "CC-BY-SA-4.0", Attribution: "Mitchel T. Keller and William T. Trotter, Applied Combinatorics, https://appliedcombinatorics.org/appcomb/, CC BY-SA 4.0",
 		Format: PreTeXt, Main: "source/main.ptx",
 	},
 	{
 		ID: "ernst_ibl", Name: "An Introduction to Proof via Inquiry-Based Learning", Authors: []string{"Dana C. Ernst"},
-		Home: "https://github.com/dcernst/IBL-IntroToProof", Repository: "https://github.com/dcernst/IBL-IntroToProof", Commit: "2315fb79ee07cd541dcb7de084d3ca9921dfae74",
+		Home: "https://github.com/dcernst/IBL-IntroToProof", Repository: "https://github.com/dcernst/IBL-IntroToProof", Commit: "2315fb79ee07cd541dcb7de084d3ca9921dfae74", Date: "2026-09-17", MSC: []string{"97E50", "03-01"},
 		Licence: "CC-BY-SA-4.0", Attribution: "Dana C. Ernst, An Introduction to Proof via Inquiry-Based Learning, https://github.com/dcernst/IBL-IntroToProof, CC BY-SA 4.0",
 		Format: LaTeX, Files: re(`^MAAPressVersion/[^/]*\.tex$`),
 	},
 	{
 		ID: "austin_ula", Name: "Understanding Linear Algebra", Authors: []string{"David Austin"},
-		Home: "https://understandinglinearalgebra.org", Repository: "https://github.com/davidaustinm/ula", Commit: "b6ea263ef23703072b7007485bb7a2d89c5f399b",
+		Home: "https://understandinglinearalgebra.org", Repository: "https://github.com/davidaustinm/ula", Commit: "b6ea263ef23703072b7007485bb7a2d89c5f399b", Date: "2026-09-18", MSC: []string{"15-01"},
 		Licence: "CC-BY-4.0", Attribution: "David Austin, Understanding Linear Algebra, https://understandinglinearalgebra.org, CC BY 4.0",
 		Format: PreTeXt, Main: "src/ula.xml",
 	},
 	{
 		ID: "active_calculus", Name: "Active Calculus", Authors: []string{"Matthew Boelkins", "David Austin", "Steven Schlicker"},
-		Home: "https://activecalculus.org", Repository: "https://github.com/active-calculus/active-calculus-single-mbx", Commit: "e597daa657ba5ec0953157aa8c44834dceb63eb2",
+		Home: "https://activecalculus.org", Repository: "https://github.com/active-calculus/active-calculus-single-mbx", Commit: "e597daa657ba5ec0953157aa8c44834dceb63eb2", Date: "2026-10-26", MSC: []string{"26A06"},
 		Licence: "CC-BY-SA-4.0", Attribution: "Matthew Boelkins, David Austin and Steven Schlicker, Active Calculus, https://activecalculus.org, CC BY-SA 4.0",
 		Format: PreTeXt, Main: "source/main.ptx",
 	},
