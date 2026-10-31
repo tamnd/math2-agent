@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/resource"
 )
 
 // BMOAdapter reads the British Mathematical Olympiad from the page of past papers of the BMO site of the UKMT. The page links the paper of each round of each year and gives the date of the paper. The site states no licence, so the adapter keeps the links only.
@@ -19,7 +20,7 @@ type BMOAdapter struct{ base }
 var BMO = BMOAdapter{base{
 	id: "bmo", name: "British Mathematical Olympiad", home: "https://bmos.ukmt.org.uk/", dump: "https://bmos.ukmt.org.uk/home/bmo.shtml",
 	competition: "British Mathematical Olympiad", names: []string{"BMO"},
-	cadence: "yearly", gap: Gap,
+	cadence: "yearly", gap: Gap, language: "en", creator: resource.Creator{Name: "UK Mathematics Trust", Role: "author"},
 	terms: ingest.Terms{Robots: "n/a (robots.txt gives 404)", Rate: "one page for each fetch", AI: "none stated"},
 }}
 

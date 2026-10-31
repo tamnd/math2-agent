@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/resource"
 )
 
 // KoMaLAdapter reads the problems in mathematics of KöMaL, the Hungarian journal for secondary schools. The journal gives new problems each month from September to May. The page of a month links each problem to its own page. The site states no licence, so the adapter keeps the ids and the links only.
@@ -24,7 +25,7 @@ type KoMaLAdapter struct {
 var KoMaL = KoMaLAdapter{base: base{
 	id: "komal", name: "KöMaL, Mathematical and Physical Journal for Secondary Schools", home: "https://www.komal.hu/", dump: "https://www.komal.hu/feladat?a=honap&t=mat&l=en",
 	competition: "KöMaL Problem Solving Competition", names: []string{"KöMaL", "KöMaL Competition", "KöMaL Points Competition"},
-	cadence: "monthly", gap: Gap,
+	cadence: "monthly", gap: Gap, language: "en", creator: resource.Creator{Name: "KöMaL editorial board", Role: "editor"},
 	terms: ingest.Terms{Robots: "disallows /dir1 and /dir2/ only", Rate: "one page each 5 s", AI: "none stated"},
 }, Start: 2000, Now: time.Now}
 
