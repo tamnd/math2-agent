@@ -34,8 +34,8 @@ const Rows = 1000
 // Group is the number of DOIs in one request of the DOI mode.
 const Group = 50
 
-// Select names the fields of a work that Fetch asks for.
-const Select = "DOI,title,subtitle,type,ISSN,ISBN,author,editor,issued,language,volume,page,publisher,container-title,relation,URL"
+// Select names the fields of a work that Fetch asks for. The works API does not accept language in select (it answers 400), thus Fetch does not ask for it, and Language is empty when the API does not send it.
+const Select = "DOI,title,subtitle,type,ISSN,ISBN,author,editor,issued,volume,page,publisher,container-title,relation,URL"
 
 // Adapter is the adapter of Crossref.
 type Adapter struct{}

@@ -173,31 +173,56 @@ func rangeGetter(opt Options) RangeGetter {
 	}
 }
 
-// fetch gets one URL with the Range header r when r is not empty, and fails when the status is not want.
+// Retries is the number of times that fetch tries a URL again when the server answers 429 Too Many Requests or 503 Service Unavailable.
+const Retries = 6
+
+// MaxWait is the longest wait of fetch before it tries a URL again.
+const MaxWait = 2 * time.Minute
+
+// fetch gets one URL with the Range header r when r is not empty, and fails when the status is not want. When the server answers 429 or 503, fetch waits and tries again, at most Retries times. The wait is the Retry-After of the answer, or 2, 4, 8 and more seconds when the answer has no Retry-After, and at most MaxWait.
 func fetch(ctx context.Context, opt Options, url, r string, want int) (io.ReadCloser, error) {
 	client := opt.Client
 	if client == nil {
 		client = http.DefaultClient
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	if opt.UserAgent != "" {
-		req.Header.Set("User-Agent", opt.UserAgent)
-	}
-	if r != "" {
-		req.Header.Set("Range", r)
-	}
-	resp, err := client.Do(req) // #nosec G107 -- the URL is the bulk channel of the source, from the adapter, the catalogue or the user.
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != want {
+	for try := 0; ; try++ {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return nil, err
+		}
+		if opt.UserAgent != "" {
+			req.Header.Set("User-Agent", opt.UserAgent)
+		}
+		if r != "" {
+			req.Header.Set("Range", r)
+		}
+		resp, err := client.Do(req) // #nosec G107 -- the URL is the bulk channel of the source, from the adapter, the catalogue or the user.
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode == want {
+			return resp.Body, nil
+		}
 		_ = resp.Body.Close()
-		return nil, &StatusError{URL: url, Code: resp.StatusCode, Status: resp.Status}
+		busy := resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusServiceUnavailable
+		if !busy || try >= Retries {
+			return nil, &StatusError{URL: url, Code: resp.StatusCode, Status: resp.Status}
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(retryWait(resp.Header.Get("Retry-After"), try)):
+		}
 	}
-	return resp.Body, nil
+}
+
+// retryWait is the wait before the next try: the seconds of the Retry-After header when it has them, or else 2 seconds doubled for each try. It is at most MaxWait.
+func retryWait(after string, try int) time.Duration {
+	d := time.Duration(2<<min(try, 10)) * time.Second
+	if n, err := strconv.Atoi(strings.TrimSpace(after)); err == nil && n >= 0 {
+		d = time.Duration(n) * time.Second
+	}
+	return min(d, MaxWait)
 }
 
 // download gets the bulk channel at url into the cache and returns the path, the hash of the bytes and the commit of the source when the adapter gives one. When the adapter is a Fetcher, Fetch makes the snapshot, and base is the m2 cache directory of the request. When want is not empty, the hash must be want.
