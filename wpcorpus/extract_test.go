@@ -362,3 +362,32 @@ func TestNoteMath(t *testing.T) {
 		t.Errorf("TeX = %q, want %q", r.TeX, want)
 	}
 }
+
+// TestLeadAndEmptyHash checks that a paragraph with only a behaviour switch
+// and an image is not the lead, and that a heading with only a hatnote has
+// no hash.
+func TestLeadAndEmptyHash(t *testing.T) {
+	src := "{{Short description|A thing}}\n__NOTOC__\n[[File:Widget.png|thumb|A widget]]\n\nIn algebra, a '''widget''' is a gadget.\n\n== Example ==\n{{Main|Widget examples}}\n\n== Properties ==\nA widget is small.\n"
+	r := extractRev(t, src, 1)
+	var subj, ex *Object
+	for i := range r.Objects {
+		switch o := &r.Objects[i]; {
+		case o.Kind == "subject":
+			subj = o
+		case o.Name == "Example":
+			ex = o
+		}
+	}
+	if subj == nil || subj.Span[0] != strings.Index(src, "In algebra") {
+		t.Fatalf("subject %+v, want the paragraph In algebra", subj)
+	}
+	if subj.Hash != hash("In algebra, a widget is a gadget.") {
+		t.Errorf("subject hash %s", subj.Hash)
+	}
+	if ex == nil || ex.Hash != "" {
+		t.Errorf("Example %+v, want an object with no hash", ex)
+	}
+	if !onlyHeadings("## Examples") || onlyHeadings("## Examples\nA widget.") {
+		t.Error("onlyHeadings")
+	}
+}
