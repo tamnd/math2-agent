@@ -25,9 +25,10 @@ import (
 	"github.com/tamnd/math2-agent/resource"
 	resresolve "github.com/tamnd/math2-agent/resource/resolve"
 	"github.com/tamnd/math2-agent/tag"
+	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -source wikipedia -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -source wikipedia -corpus DIR [-type T] [-msc CODE] [-since DATE] [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -117,7 +118,23 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 	summary := fs.String("summary", "", "with -plan, also write the summary in Markdown to this file, for the body of a pull request")
 	source := fs.String("source", "", "a source with its own importer, which reads a checkout and not build/records/. The sources are arxiv and wikipedia.")
 	corpus := fs.String("corpus", "", "with -source, the checkout that the importer reads, for example a checkout of tamnd/arxiv or tamnd/wikipedia-math")
+	var part wpImport.Filter
+	fs.StringVar(&part.Type, "type", "", "with -source wikipedia, import only the articles of this type: "+strings.Join(wpcorpus.Types, ", "))
+	fs.StringVar(&part.MSC, "msc", "", "with -source wikipedia, import only the articles with an MSC code that starts with this code, such as 05 or 05C")
+	fs.StringVar(&part.Since, "since", "", "with -source wikipedia, import only the articles whose revision of record is of this date or later, as 2026-10-01")
 	if err := fs.Parse(args); err != nil {
+		return ExitUsage
+	}
+	if part != (wpImport.Filter{}) && *source != wpImport.Source {
+		fmt.Fprintf(stderr, "%s: -type, -msc and -since need -source wikipedia\n", name)
+		return ExitUsage
+	}
+	if part.Type != "" && !wpcorpus.IsType(part.Type) {
+		fmt.Fprintf(stderr, "%s: %q is not an article type. The types are %s.\n", name, part.Type, strings.Join(wpcorpus.Types, ", "))
+		return ExitUsage
+	}
+	if _, err := time.Parse(time.DateOnly, part.Since); part.Since != "" && err != nil {
+		fmt.Fprintf(stderr, "%s: -since %q is not a date as 2026-10-01\n", name, part.Since)
 		return ExitUsage
 	}
 	switch *source {
@@ -146,7 +163,7 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 		return ExitOK
 	}
 	if *source == wpImport.Source {
-		return importWikipedia(*root, *commit, *corpus, stdout, stderr)
+		return importWikipedia(*root, *commit, *corpus, part, stdout, stderr)
 	}
 	if *source != "" {
 		// The rows of the last clustering give the named results of the name method (AX6.2).
@@ -220,7 +237,7 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 }
 
 // importWikipedia runs importer/wikipedia on the checkout of the corpus repository, writes the mentions and the edges, and groups the mentions into rows.
-func importWikipedia(root, commit, corpus string, stdout, stderr io.Writer) int {
+func importWikipedia(root, commit, corpus string, part wpImport.Filter, stdout, stderr io.Writer) int {
 	const name = "m2 corpus import"
 	fail := func(err error) int {
 		fmt.Fprintf(stderr, "%s: %v\n", name, err)
@@ -230,9 +247,16 @@ func importWikipedia(root, commit, corpus string, stdout, stderr io.Writer) int 
 	if err != nil {
 		return fail(err)
 	}
-	res, err := wpImport.Import(corpus, old)
+	res, err := wpImport.ImportPart(corpus, old, part)
 	if err != nil {
 		return fail(err)
+	}
+	if part != (wpImport.Filter{}) {
+		oldEdges, err := inventory.ReadEdges(root, wpImport.Source)
+		if err != nil {
+			return fail(err)
+		}
+		res.KeepEdges(oldEdges)
 	}
 	if err := inventory.WriteMentions(root, wpImport.Source, res.Mentions); err != nil {
 		return fail(err)

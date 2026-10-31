@@ -97,6 +97,9 @@ func TestCorpusImportPlanErrors(t *testing.T) {
 		{"corpus", "import", "-plan", plan, "-root", root, "words"},
 		{"corpus", "import", "-root", root, "-summary", "x.md"},
 		{"corpus", "import", "-root", root, "-cache", dir},
+		{"corpus", "import", "-root", root, "-type", "statement"},
+		{"corpus", "import", "-root", root, "-source", "wikipedia", "-corpus", dir, "-type", "theorem"},
+		{"corpus", "import", "-root", root, "-source", "wikipedia", "-corpus", dir, "-since", "October"},
 	} {
 		if code, _, _ := run(args...); code != ExitUsage {
 			t.Errorf("%q gave %d, want %d", args, code, ExitUsage)

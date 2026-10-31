@@ -56,10 +56,54 @@ type Result struct {
 	Stopped int
 	// RedLinks is the edges to a page that does not exist. They are not imported.
 	RedLinks int
+	// other is the articles in scope that the filter did not select.
+	other map[int]bool
+}
+
+// KeepEdges adds the edges of an earlier import whose source article is in scope and not selected by the filter, so that an import of a part of the scope keeps the edges of the other articles.
+func (res *Result) KeepEdges(old []inventory.Edge) {
+	for _, e := range old {
+		if res.other[edgePage(e.From)] {
+			res.Edges = append(res.Edges, e)
+		}
+	}
+}
+
+// edgePage gives the page id of a mention id of this source, or 0.
+func edgePage(id string) int {
+	s, ok := strings.CutPrefix(id, "wikipedia://en/")
+	if !ok {
+		return 0
+	}
+	s, _, _ = strings.Cut(s, "#")
+	p, _ := strconv.Atoi(s)
+	return p
 }
 
 // Import reads the checkout of the corpus repository at root. The mentions of an earlier import, in old, keep their ids: a mention whose tag is gone is retired, and a mention whose article is not in this import gets the flag stopped.
 func Import(root string, old []inventory.Mention) (*Result, error) {
+	return ImportPart(root, old, Filter{})
+}
+
+// Filter selects a part of the scope for an import (WP12.6). An empty field selects each article.
+type Filter struct {
+	Type  string // the article type of WP1.5, such as statement
+	MSC   string // the start of an MSC code of the article, such as 05 or 05C
+	Since string // a date as 2026-10-01. The article is selected when its revision of record is of this day or later.
+}
+
+func (f Filter) takes(md *wpcorpus.Metadata) bool {
+	if f.Type != "" && articleType(md) != f.Type {
+		return false
+	}
+	if f.MSC != "" && !slices.ContainsFunc(md.MSC, func(c string) bool { return strings.HasPrefix(c, f.MSC) }) {
+		return false
+	}
+	return f.Since == "" || md.Timestamp >= f.Since
+}
+
+// ImportPart is Import for the articles that the filter selects. A mention of an earlier import whose article is in scope and not selected stays as it is.
+func ImportPart(root string, old []inventory.Mention, f Filter) (*Result, error) {
 	snapshot, err := commit(root)
 	if err != nil {
 		return nil, err
@@ -75,13 +119,17 @@ func Import(root string, old []inventory.Mention) (*Result, error) {
 			kinds[p], _ = ArticleKind(articleType(md), md.Title, md.Categories)
 		}
 	}
-	res := &Result{}
+	res := &Result{other: map[int]bool{}}
 	done := map[int]bool{}
 	gone := map[string]int{}
 	for _, p := range pages {
 		md := meta[p]
 		if md == nil {
 			res.NotExtracted = append(res.NotExtracted, p)
+			continue
+		}
+		if !f.takes(md) {
+			res.other[p] = true
 			continue
 		}
 		objs, err := wpcorpus.ReadObjects(root, p, md.Revision)
@@ -213,6 +261,7 @@ func (res *Result) keep(old []inventory.Mention, done map[int]bool, gone map[str
 			continue
 		}
 		switch {
+		case res.other[m.Page]:
 		case !done[m.Page]:
 			if !slices.Contains(m.Flags, "stopped") {
 				m.Flags = append(m.Flags, "stopped")
