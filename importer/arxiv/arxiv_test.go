@@ -19,7 +19,7 @@ const objectsV = `{"tag":"S1C1","kind":"section","paper":"2401.00001","version":
 {"tag":"LEM1","kind":"statement","subkind":"lemma","paper":"2401.00001","version":"VER","local":"lem-1","label":"lem:a","number":"1.1","section":"sec-1","title":"Lemma","name":"Key estimate","path":"source","item":"statement/lemma","scope":"paper","env":"lemma","head":"environment","proof_status":"proved","origin":"own","body_md":"For each $\\varepsilon > 0$ there is a constant $C$ with $|f| \\le C$.","hash":"sha256:aa"}
 {"tag":"THM1","kind":"statement","subkind":"theorem","paper":"2401.00001","version":"VER","local":"thm-1","number":"1.2","section":"sec-1","title":"Theorem","path":"source","item":"statement/theorem","scope":"paper","hash":"sha256:bb"}
 {"tag":"PRF1","kind":"proof","paper":"2401.00001","version":"VER","local":"proof-1","path":"source","item":"proof","scope":"paper","proves":"thm-1","hash":"sha256:cc"}
-{"tag":"CLM1","kind":"statement","subkind":"claim","paper":"2401.00001","version":"VER","local":"claim-1","path":"source","item":"statement/claim","scope":"local","parent":"proof-1","hash":"sha256:dd"}
+{"tag":"CLM1","kind":"statement","subkind":"claim","paper":"2401.00001","version":"VER","local":"claim-1","path":"source","item":"statement/claim","scope":"local","parent":"proof-1","body_md":"Conjecture~\\ref{conj:a} implies Conjecture~\\eqref{conj:b} \\cite[Theorem~2]{Ser}, page~\\pageref*{lem:a}.","hash":"sha256:dd"}
 {"tag":"RMK1","kind":"remark","paper":"2401.00001","version":"VER","local":"remark-1","path":"source","item":"remark","scope":"paper"}
 {"tag":"PRF2","kind":"proof","paper":"2401.00001","version":"VER","local":"proof-2","path":"source","item":"proof","scope":"paper","proves":"remark-1"}
 {"tag":"THM2","kind":"statement","subkind":"theorem","paper":"2401.00001","version":"VER","local":"thm-2","number":"2.1","title":"Theorem","path":"source","item":"statement/theorem","scope":"paper","origin":"restated","restates":"thm-1","hash":"sha256:bb"}
@@ -171,6 +171,10 @@ func TestAShortBodyGivesNoHash(t *testing.T) {
 	ms := byID(res)
 	if ms["LEM1"].Hash != "sha256:aa" || ms["THM1"].Hash != "" {
 		t.Errorf("the hashes are %q and %q, want sha256:aa and none", ms["LEM1"].Hash, ms["THM1"].Hash)
+	}
+	// A body of references only says nothing of its own: many items have it.
+	if ms["CLM1"].Hash != "" {
+		t.Errorf("a body of references has the hash %q, want none", ms["CLM1"].Hash)
 	}
 }
 

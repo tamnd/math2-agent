@@ -454,14 +454,14 @@ func (vp *versionIn) mention(o Object) inventory.Mention {
 	return m
 }
 
-// MinHashText is the shortest text of a body, with no labels and no space, that gives the mention its content hash. A short body, such as an empty one or one label, has the same hash in many papers, and the hash pass of AX8.2 must not join these items.
+// MinHashText is the shortest text of a body, with no labels, references, citations and space, that gives the mention its content hash. A short body, such as an empty one, one label, or "Conjecture 1 implies Conjecture 2" with references, has the same hash in many items, since the hash of the extractor reads no targets, and the hash pass of AX8.2 must not join these items.
 const MinHashText = 40
 
-var labelCmd = regexp.MustCompile(`\\label\{[^}]*\}`)
+var refCmd = regexp.MustCompile(`\\label\{[^}]*\}|\\(?:eq|page|auto|c|C|name)?ref\*?\{[^}]*\}|\\cite[a-zA-Z]*\*?(?:\[[^\]]*\])*\{[^}]*\}`)
 
 // hashOf returns the content hash of the object, or "" when its body is too short to tell one item from another.
 func hashOf(o Object) string {
-	text := strings.Join(strings.Fields(labelCmd.ReplaceAllString(o.BodyMD, "")), "")
+	text := strings.Join(strings.Fields(refCmd.ReplaceAllString(o.BodyMD, "")), "")
 	if utf8.RuneCountInString(text) < MinHashText {
 		return ""
 	}
