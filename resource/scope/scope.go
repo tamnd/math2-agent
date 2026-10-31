@@ -76,7 +76,7 @@ var Tests = []Test{
 	{"S7", S7},
 }
 
-// Decide applies the tests S1 to S7 in order, then the border rules. A record that no rule decides is out when it has a class, a venue or a subject, because a test would have read it. It is deferred when it has none of them, because only the classifier of RS9.3 can decide it.
+// Decide applies the tests S1 to S7 in order, then the border rules. A record that no rule decides is out when it has a class, a venue of the venue register or a subject, because a test would have read it. It is deferred when it has none of them, because only the classifier of RS9.3 can decide it. A venue that the register does not have, for example the course of a lecture, tells nothing about the scope, so it is not a signal.
 func Decide(r Record, env Env) Decision {
 	for _, t := range Tests {
 		if t.Run(r, env) {
@@ -86,14 +86,15 @@ func Decide(r Record, env Env) Decision {
 	if rule := BorderRule(r, env); rule != "" {
 		return Decision{resource.Border, rule}
 	}
-	if hasSignal(r) {
+	if hasSignal(r, env) {
 		return Decision{resource.Out, ""}
 	}
 	return Decision{resource.Deferred, ""}
 }
 
-func hasSignal(r Record) bool {
-	return len(r.MSC)+len(r.Arxiv)+len(r.LCC)+len(r.DDC)+len(r.UDC)+len(r.CLC)+len(r.BK)+len(r.Venues)+len(r.MainSubjects)+len(r.Topics) > 0 || r.ZBMath
+func hasSignal(r Record, env Env) bool {
+	venue := slices.ContainsFunc(r.Venues, func(v string) bool { return env.Venues[v] != "" })
+	return len(r.MSC)+len(r.Arxiv)+len(r.LCC)+len(r.DDC)+len(r.UDC)+len(r.CLC)+len(r.BK)+len(r.MainSubjects)+len(r.Topics) > 0 || r.ZBMath || venue
 }
 
 // S1 is the test MSC: a primary MSC2020 code in 00 to 58, 60, 65 or 97, or 91A, or 68Q to 68W with a code of mathematics among the other codes; or a record in zbMATH Open.
