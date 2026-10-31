@@ -1,6 +1,6 @@
 // Package copycheck finds the parts of a body that copy a reference text (corpus K9.4).
 //
-// Models reproduce text that they saw in training, even when nobody asks them to. Thus the copy check compares each body that an agent wrote with a reference corpus, and not only with the sources of the node: a model that writes from memory cites nothing. The check has two stages. Stage 1 finds the exact runs. A run of [FlagRun] normalized characters or more is a flag. A run of [MatchRun] characters or more in one source, or flags that cover [MatchCover] of a section or more, is a match. Stage 2 finds the near copies of each paragraph with MinHash on word 5-grams. A pair with an estimated Jaccard similarity of [NearJaccard] or more is a match when it also has a common block of [NearBlock] words or more, or a ROUGE-L of [NearRouge] or more. Stage 2 skips a paragraph of the body with fewer than [NearBlock] words, because the ROUGE-L of a short paragraph says little. Stage 1 checks it.
+// Models reproduce text that they saw in training, even when nobody asks them to. Thus the copy check compares each body that an agent wrote with a reference corpus, and not only with the sources of the node: a model that writes from memory cites nothing. The check has three stages. Stage 1 finds the exact runs. A run of [FlagRun] normalized characters or more is a flag. A run of [MatchRun] characters or more in one source, or flags that cover [MatchCover] of a section or more, is a match. Stage 2 finds the near copies of each paragraph with MinHash on word 5-grams. A pair with an estimated Jaccard similarity of [NearJaccard] or more is a match when it also has a common block of [NearBlock] words or more, or a ROUGE-L of [NearRouge] or more. Stage 2 skips a paragraph of the body with fewer than [NearBlock] words, because the ROUGE-L of a short paragraph says little. Stage 1 checks it. Stage 3 compares the fingerprint of the section and of each long paragraph with the fingerprints of the items of the arXiv corpus that the corpus has only as a MinHash, the items of a closed version (corpus arxiv AX9.5). A similarity of [ItemJaccard] or more is a match.
 //
 // The check normalizes each text first: lower case, one space for each run of white space, no Markdown marks, and one placeholder for each formula, thus a standard formula does not count as a copy. A standard phrase, such as "let $G$ be a group", does not count either. Only a curator adds a phrase to the list.
 //
@@ -41,7 +41,7 @@ const (
 )
 
 // Version is the version of the check. The run record names it with each result.
-const Version = "copycheck/1"
+const Version = "copycheck/2"
 
 // The MinHash signature has hashes values, in bands of rows values each. Two paragraphs are candidates when they agree on one band. With 32 bands of 2 values, a pair at the Jaccard similarity 0.5 is a candidate with a probability above 0.9999.
 const (
@@ -65,6 +65,7 @@ type Text struct {
 	Licence string       `json:"licence,omitempty"` // the SPDX identifier of the licence
 	Class   ingest.Class `json:"class,omitempty"`   // the access class. Empty means the class of the licence
 	Text    string       `json:"text"`
+	MinHash string       `json:"minhash,omitempty"` // the fingerprint of an item of the arXiv corpus, for stage 3, in the form of the object records of tamnd/arxiv
 }
 
 // Section is one body field of a node, for example body.proof, with its text.
@@ -128,6 +129,8 @@ type Corpus struct {
 	index   *suffixarray.Index
 	paras   []para
 	bandIx  map[uint64][]int // the paragraphs with a band, by the hash of the band
+	items   []item           // the fingerprints of stage 3
+	itemIx  map[uint64][]int // the fingerprints with a band, by the key of the band
 }
 
 // para is a paragraph of a reference text, for stage 2.
@@ -139,7 +142,7 @@ type para struct {
 
 // New makes the corpus of the texts, with the standard phrases. A text with no class gets the class of its licence, and a text with a class that is not valid gets the class record, the most closed one.
 func New(texts []Text, phrases []string) *Corpus {
-	c := &Corpus{texts: slices.Clone(texts), bandIx: map[uint64][]int{}}
+	c := &Corpus{texts: slices.Clone(texts), bandIx: map[uint64][]int{}, itemIx: map[uint64][]int{}}
 	for _, p := range phrases {
 		if n := normalize(p).b; len(bytes.TrimSpace(n)) > 0 {
 			c.phrases = append(c.phrases, n)
@@ -153,6 +156,9 @@ func New(texts []Text, phrases []string) *Corpus {
 		}
 		if !t.Class.Valid() {
 			t.Class = ingest.RecordOnly
+		}
+		if sig, ok := parseItem(t.MinHash); ok {
+			c.addItem(i, sig)
 		}
 		n := c.mask(normalize(t.Text), refMask)
 		c.norm = append(c.norm, sep)
@@ -240,6 +246,7 @@ func (c *Corpus) Check(sections ...Section) *Report {
 	for _, s := range sections {
 		r.Findings = append(r.Findings, c.exact(s)...)
 		r.Findings = append(r.Findings, c.near(s)...)
+		r.Findings = append(r.Findings, c.fingerprints(s)...)
 	}
 	slices.SortFunc(r.Findings, func(a, b Finding) int {
 		return cmp.Or(strings.Compare(a.Field, b.Field), cmp.Compare(a.Start, b.Start), cmp.Compare(a.Stage, b.Stage), cmp.Compare(a.End, b.End), strings.Compare(a.Source, b.Source), strings.Compare(a.URI, b.URI))
