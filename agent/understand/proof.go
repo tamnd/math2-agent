@@ -172,9 +172,10 @@ func sentences(s string) []string {
 		case r == '\\' && i+1 < len(rs):
 			i++
 			cur.WriteRune(rs[i])
-			if rs[i] == '[' || rs[i] == '(' {
+			switch rs[i] {
+			case '[', '(':
 				math = true
-			} else if rs[i] == ']' || rs[i] == ')' {
+			case ']', ')':
 				math = false
 			}
 		case r == '$':

@@ -143,7 +143,7 @@ func run(t *testing.T, it item, m llm.Model, r int) (*agent.Record, []string) {
 		t.Fatal(err)
 	}
 	j := &agent.Job{ID: "j-2026-10-27-1", Role: "write", Target: it.Tag, Goal: it.Goal, OnBehalfOf: "github:octocat"}
-	brief, err := write.Brief(ws, j, card.Embedded())
+	brief, err := write.Brief(ws, j, card.Embedded(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
