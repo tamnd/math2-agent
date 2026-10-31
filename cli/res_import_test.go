@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/resource"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
 )
@@ -70,6 +71,19 @@ func TestResImport(t *testing.T) {
 	}
 	if len(rs) != 2 || rs[0].NativeID != "b1" || rs[0].Source != "shelf" || rs[0].Snapshot != hash || rs[1].Title != "Topology" {
 		t.Fatalf("the source records are %+v", rs)
+	}
+	// -held keeps the records of the papers that the mentions of the source name.
+	if code, _, stderr := run("res", "import", "shelf", "-root", root, "-cache", cache, "-snapshot", hash, "-held"); code != ExitFailure || !strings.Contains(stderr, "no mentions of shelf") {
+		t.Fatalf("-held with no mentions: exit code %d, stderr %q", code, stderr)
+	}
+	if err := inventory.WriteMentions(root, "shelf", []inventory.Mention{{ID: "m2://rec/shelf/b2#1", Source: "shelf", NativeID: "b2#1"}}); err != nil {
+		t.Fatal(err)
+	}
+	if code, stdout, stderr := run("res", "import", "shelf", "-root", root, "-cache", cache, "-snapshot", hash, "-held"); code != ExitOK || !strings.Contains(stdout, "shelf: 1 source records") {
+		t.Fatalf("-held: exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	if rs, err = rescluster.ReadRecords(root); err != nil || len(rs) != 1 || rs[0].NativeID != "b2" {
+		t.Fatalf("-held gives the source records %+v, %v", rs, err)
 	}
 }
 

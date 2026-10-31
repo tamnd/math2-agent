@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/tamnd/math2-agent/ingest"
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
@@ -22,7 +23,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/swh"
 )
 
-const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-url URL] [-cache DIR] [-structure] <source> | m2 res import [-root DIR] [-lookup] [-gap D] refs | m2 res import [-root DIR] [-gap D] s2 | m2 res import [-root DIR] [-gap D] [-n N] swh | m2 res import [-root DIR] source_works"
+const resImportUsage = "m2 res import [-root DIR] [-snapshot HASH] [-url URL] [-cache DIR] [-structure] [-held] <source> | m2 res import [-root DIR] [-lookup] [-gap D] refs | m2 res import [-root DIR] [-gap D] s2 | m2 res import [-root DIR] [-gap D] [-n N] swh | m2 res import [-root DIR] source_works"
 
 // structurer is an adapter that gives the table of contents of the work of its snapshot (RS4.5), as the adapter of an open textbook does. It also gives the commit of the snapshot.
 type structurer interface {
@@ -60,6 +61,7 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.URL, "url", "", "fetch the new snapshot from this URL or local path, and not from the bulk channel of the adapter")
 	fs.StringVar(&opt.Cache, "cache", "", "the directory of the downloaded snapshots. Empty means m2 in the user cache directory.")
 	structure := fs.Bool("structure", false, "also write the table of contents of the snapshot to the first expression of the resource that groups the source records, or the sessions of each offering of a course platform to its expression")
+	held := fs.Bool("held", false, "keep only the source records of the papers that the corpus holds: the records whose native id is the paper of a mention in records/mentions/<source>/")
 	lookup := fs.Bool("lookup", false, "for the source refs: confirm the ids of the references with a live lookup")
 	gap := fs.Duration("gap", time.Second, "for the sources refs, s2 and swh: the shortest time between two lookups")
 	limit := fs.Int("n", 0, "for the source swh: ask for at most this number of new origins. 0 means no limit.")
@@ -126,9 +128,18 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
+	var keep map[string]bool
+	if *held {
+		if keep, err = heldPapers(opt.Root, source); err != nil {
+			return fail(err)
+		}
+	}
 	var rs []rescluster.Record
 	var rejects []rescluster.Reject
 	err = sr.Records(snapshot, func(r rescluster.Record) error {
+		if keep != nil && !keep[r.NativeID] {
+			return nil
+		}
 		r.Source, r.Snapshot = source, res.Snapshot.Hash
 		if why := rescluster.Check(&r); why != "" {
 			rejects = append(rejects, rescluster.Reject{NativeID: r.NativeID, Snapshot: r.Snapshot, Reason: why})
@@ -172,6 +183,25 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "%s: %d top nodes of the table of contents in %s\n", source, nodes, filepath.Join(resource.StructureDir, file))
 	return ExitOK
+}
+
+// heldPapers gives the papers of the mentions of the source in the tree at root: the native id of each mention before the #.
+func heldPapers(root, source string) (map[string]bool, error) {
+	ms, err := inventory.ReadMentions(root)
+	if err != nil {
+		return nil, err
+	}
+	keep := map[string]bool{}
+	for _, m := range ms {
+		if m.Source == source {
+			paper, _, _ := strings.Cut(m.NativeID, "#")
+			keep[paper] = true
+		}
+	}
+	if len(keep) == 0 {
+		return nil, fmt.Errorf("the tree has no mentions of %s, so -held keeps no records", source)
+	}
+	return keep, nil
 }
 
 // writeStructure reads the table of contents of the snapshot at path and writes it to the first expression of the resource that groups the source records rs. The resource gets an expression e1 when it has no expression. It gives the path of the structure file, relative to records/resources/structure/, and the number of top nodes. It fails when no resource, or more than one resource, groups the records, because then m2 res cluster must run first.
