@@ -25,6 +25,7 @@ type Record struct {
 	MathHeading  bool     `json:"math_heading,omitempty"`  // a subject heading of the work is a heading of mathematics
 	Venues       []string `json:"venues,omitempty"`        // the keys of the venues of the work in the venue register: resource ids or ISSN-L
 	Curriculum   bool     `json:"curriculum,omitempty"`    // a curriculum or a syllabus names the work (RS5.6)
+	OpenText     bool     `json:"open_text,omitempty"`     // the work is an open textbook of K5.4.1 Table A
 	MathUnit     bool     `json:"math_unit,omitempty"`     // the work is a course of a mathematics unit of an institution (RS5.3)
 	MainSubjects []string `json:"main_subjects,omitempty"` // the Wikidata items of the property P921 main subject
 	Topics       []Topic  `json:"topics,omitempty"`        // the OpenAlex topics of the work
@@ -238,8 +239,8 @@ func S4(r Record, env Env) bool {
 	return slices.ContainsFunc(r.Venues, func(v string) bool { return env.Venues[v] == VenueCore })
 }
 
-// S5 is the test curriculum: a curriculum or a syllabus names the work.
-func S5(r Record) bool { return r.Curriculum }
+// S5 is the test curriculum: a curriculum or a syllabus names the work, or the work is an open textbook of K5.4.1 Table A. A person read each book of that table and chose it for its mathematics.
+func S5(r Record) bool { return r.Curriculum || r.OpenText }
 
 // S6 is the test course: the work is a course of a mathematics unit of an institution.
 func S6(r Record) bool { return r.MathUnit }
@@ -302,7 +303,7 @@ func lccClass(c, cls string) bool {
 	return letters == cls
 }
 
-// FromResource makes a Record from the fields of a resource: the MSC codes that a catalogue gave, the subjects, the zbMATH ids, the venues of its part_of relations, and its own id when it is a venue. The fields Curriculum, MathUnit and MathHeading come from other registers, so the caller sets them.
+// FromResource makes a Record from the fields of a resource: the MSC codes that a catalogue gave, the subjects, the zbMATH ids, the venues of its part_of relations, and its own id when it is a venue. The fields Curriculum, OpenText, MathUnit and MathHeading come from other registers, so the caller sets them.
 func FromResource(r *resource.Resource) Record {
 	var rec Record
 	for _, c := range r.MSC {
