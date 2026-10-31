@@ -123,3 +123,46 @@ func recalls(rs []resource.Resource, cat *ingest.Catalogue) []Recall {
 	}
 	return out
 }
+
+// withPairs adds the estimates of the independent pairs of the census (RS11.4.3 item 2) to the strata that have no estimate from the captures of the tree. Of the pairs of a stratum, it takes the one with the highest end of the interval, which gives the least recall, as rule H12 does. A stratum of the census with a target and with no live resource gets a row with 0 resources.
+func withPairs(out []Recall, rows []census.ReportRow) []Recall {
+	top := map[census.Stratum]census.ReportRow{}
+	for _, row := range rows {
+		s := census.Stratum{Kind: row.Kind, Decade: row.Decade}
+		if census.Target(s.Kind, s.Decade) == 0 {
+			continue
+		}
+		if old, ok := top[s]; !ok || row.High > old.High {
+			top[s] = row
+		}
+	}
+	if len(top) == 0 {
+		return out
+	}
+	at := map[census.Stratum]int{}
+	for i, r := range out {
+		at[census.Stratum{Kind: r.Kind, Decade: r.Decade}] = i
+	}
+	for s := range top {
+		if _, ok := at[s]; !ok {
+			at[s] = len(out)
+			out = append(out, Recall{Kind: s.Kind, Decade: s.Decade, Target: census.Target(s.Kind, s.Decade), Reason: "no live resource in scope"})
+		}
+	}
+	for s, row := range top {
+		rec := &out[at[s]]
+		if rec.Model != "" {
+			continue
+		}
+		rec.Captures = []string{row.A, row.B}
+		rec.Model = "pair " + row.A + " and " + row.B
+		rec.Reason = ""
+		rec.N, rec.Low, rec.High = row.N, row.Low, row.High
+		n := float64(rec.Resources)
+		rec.Recall = round(min(1, n/max(row.N, n, 1)))
+		rec.RecallLow = round(min(1, n/max(row.High, n, 1)))
+		rec.Below = rec.Target > 0 && rec.RecallLow < rec.Target
+	}
+	slices.SortFunc(out, func(a, b Recall) int { return cmp.Or(cmp.Compare(a.Kind, b.Kind), cmp.Compare(a.Decade, b.Decade)) })
+	return out
+}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/resource"
+	"github.com/tamnd/math2-agent/resource/census"
 )
 
 func TestRecalls(t *testing.T) {
@@ -74,5 +75,33 @@ func TestUnmet(t *testing.T) {
 		if !strings.Contains(md, want) {
 			t.Errorf("the report has no %q:\n%s", want, md)
 		}
+	}
+}
+
+func TestWithPairs(t *testing.T) {
+	out := []Recall{
+		{Kind: "article", Decade: "2000s", Resources: 900, Target: 0.99, Reason: "fewer than three captures hold works of the stratum"},
+		{Kind: "book", Decade: "1990s", Resources: 10, Model: "m", N: 10, Low: 10, High: 10, Recall: 1, RecallLow: 1, Target: 0.97},
+	}
+	rows := []census.ReportRow{
+		{A: "arxiv", B: "zbmath", Kind: "article", Decade: "2000s", N: 950, Low: 920, High: 1000},
+		{A: "hal", B: "zbmath", Kind: "article", Decade: "2000s", N: 990, Low: 960, High: 1100},
+		{A: "hal", B: "zbmath", Kind: "article", Decade: "2010s", N: 500, Low: 400, High: 600},
+		{A: "hal", B: "zbmath", Kind: "book", Decade: "1990s", N: 99, Low: 90, High: 120},
+		{A: "hal", B: "zbmath", Kind: "other", Decade: "2010s", N: 99, Low: 90, High: 120}, // no target
+	}
+	got := withPairs(out, rows)
+	if len(got) != 3 {
+		t.Fatalf("got %+v", got)
+	}
+	a := got[0]
+	if a.Decade != "2000s" || a.Model != "pair hal and zbmath" || a.High != 1100 || a.RecallLow != 0.8182 || !a.Below || a.Reason != "" {
+		t.Errorf("article 2000s = %+v", a)
+	}
+	if b := got[1]; b.Decade != "2010s" || b.Resources != 0 || b.Recall != 0 || !b.Below {
+		t.Errorf("article 2010s = %+v", b)
+	}
+	if c := got[2]; c.Model != "m" || c.Below {
+		t.Errorf("book 1990s = %+v", c)
 	}
 }
