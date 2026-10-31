@@ -105,3 +105,18 @@ func TestWithPairs(t *testing.T) {
 		t.Errorf("book 1990s = %+v", c)
 	}
 }
+
+func TestRecallsSkipLookups(t *testing.T) {
+	var rs []resource.Resource
+	for i, srcs := range [][]string{{"a", "zbmath_search"}, {"b", "s2"}, {"a", "b"}} {
+		r := resource.Resource{ID: fmt.Sprintf("R%d", i), Kind: "monograph", Date: "1990", Scope: &resource.Scope{Value: resource.In}}
+		for _, s := range srcs {
+			r.Catalogue = append(r.Catalogue, resource.CatalogueRecord{Source: s, NativeID: r.ID})
+		}
+		rs = append(rs, r)
+	}
+	got := recalls(rs, &ingest.Catalogue{})
+	if len(got) != 1 || strings.Join(got[0].Captures, ",") != "a,b" || got[0].Reason == "" {
+		t.Fatalf("got %+v", got)
+	}
+}

@@ -63,6 +63,9 @@ func recalls(rs []resource.Resource, cat *ingest.Catalogue) []Recall {
 		}
 		var w work
 		for _, c := range r.Catalogue {
+			if census.Lookups[c.Source] {
+				continue
+			}
 			if !slices.Contains(w.sources, c.Source) {
 				w.sources = append(w.sources, c.Source)
 			}
