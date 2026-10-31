@@ -134,7 +134,7 @@ func TestImport(t *testing.T) {
 		t.Errorf("article structure %+v", a.Structure)
 	}
 	th := got["100#THM1"]
-	if th.Kind != "statement" || th.Role != "theorem" || th.Anchor != "widget" || th.NativeID != "widget" || th.TextRef != "content/wikitext/0000/100.wiki@r7#10-20" || th.Cue != "math-theorem" || th.Strength != "strong" {
+	if th.Kind != "statement" || th.Role != "theorem" || th.Anchor != "widget" || th.NativeID != "Widget theorem (group theory)#THM1" || th.Same != nil || th.TextRef != "content/wikitext/0000/100.wiki@r7#10-20" || th.Cue != "math-theorem" || th.Strength != "strong" {
 		t.Errorf("theorem %+v", th)
 	}
 	if th.Locator != "Widget theorem (group theory), revision 7, section Statement, https://en.wikipedia.org/w/index.php?oldid=7#widget" {
@@ -197,6 +197,25 @@ func TestImport(t *testing.T) {
 	}
 	if len(ms) != len(res.Mentions) || ms[0].Page != 100 {
 		t.Errorf("read %d mentions", len(ms))
+	}
+}
+
+// TestIdentifierPass checks pass 1 of WP8.2: the Wikidata item joins the article mention, and the object mentions of the article stay apart.
+func TestIdentifierPass(t *testing.T) {
+	res, err := wikipedia.Import(corpus(t), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms := append(slices.Clone(res.Mentions), inventory.Mention{ID: "wikidata:Q1", Source: "wikidata", Kind: "statement", NativeID: "Q1"})
+	group := inventory.Passes(ms)[0]
+	art := wpcorpus.MentionID(100, "")
+	if group["wikidata:Q1"] != group[art] {
+		t.Errorf("the Wikidata item is in the group %s, and the article is in %s", group["wikidata:Q1"], group[art])
+	}
+	for _, m := range res.Mentions {
+		if m.Page == 100 && m.ID != art && !m.Attached() && group[m.ID] == group[art] {
+			t.Errorf("the object %s is in the group of the article", m.ID)
+		}
 	}
 }
 

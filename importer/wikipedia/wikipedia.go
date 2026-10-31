@@ -496,14 +496,9 @@ func (a *article) object(o wpcorpus.Object) inventory.Mention {
 		m.Locator += ", section " + o.Section
 	}
 	m.Locator += ", " + Permalink(a.md.Revision, cmpOr(m.Anchor, o.SectionAnchor))
-	switch {
-	case m.Anchor != "":
-		m.NativeID = m.Anchor
-	case o.Name != "":
-		m.NativeID = o.Cue + ":" + o.Name
-	default:
-		m.NativeID = o.Cue + ":" + o.Ref
-	}
+	// Pass 1 of WP8.2 joins two mentions with a key in common. The Wikidata id names the subject of the article, not each object in it, so an object mention does not have it. The native id of an object is the title and the tag, as for an object of arXiv, so that it is not the key of an object of another article.
+	m.Same = nil
+	m.NativeID = a.md.Title + "#" + o.Tag
 	m.TextRef = fmt.Sprintf("%s@r%d#%d-%d", filepath.ToSlash(wpcorpus.WikitextPath(a.md.Page)), a.md.Revision, o.Span[0], o.Span[1])
 	m.Hash = o.Hash
 	m.Flags = append(m.Flags, o.Flags...)
