@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	wpImport "github.com/tamnd/math2-agent/importer/wikipedia"
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
 // y04 checks that each article in scope has an article mention, and that each object of an item kind has a mention (WP5.8). A proof must be attached, and a member must name a mention that exists.
@@ -165,6 +167,70 @@ func y06(a *auditor) outcome {
 	}
 	if o.checked == 0 && len(o.findings) == 0 {
 		o.reason = "the record plane has no Wikipedia mention"
+	}
+	return o
+}
+
+// y12 reports each redirect into an article in scope that ended as the name or an alias of no mention of the article (WP5.6). The redirects to the article come from its metadata file, and the redirects to an anchor come from the pointers of its census. An article with no mention is not checked, because rule Y04 reports it.
+func y12(a *auditor) outcome {
+	var o outcome
+	if a.wikipedia == "" {
+		o.reason = "no checkout of tamnd/wikipedia-math is given, so set -wikipedia to run the rule"
+		return o
+	}
+	t := a.inventory()
+	if t.err != nil {
+		o.add(inventory.MentionsDir, 0, 0, "%v", t.err)
+		return o
+	}
+	names := map[int]map[string]bool{}
+	for _, m := range t.ms {
+		if m.Source != wpImport.Source || m.Retired != 0 || m.Page == 0 {
+			continue
+		}
+		set := names[m.Page]
+		if set == nil {
+			set = map[string]bool{}
+			names[m.Page] = set
+		}
+		for _, n := range append([]string{m.Name}, m.Aliases...) {
+			set[strings.ToLower(n)] = true
+		}
+	}
+	mds, err := wpcorpus.ReadMetadataFiles(a.wikipedia)
+	if err != nil {
+		o.add(a.wikipedia, 0, 0, "%v", err)
+		return o
+	}
+	for _, md := range mds {
+		set := names[md.Page]
+		if set == nil || t.ms[wpcorpus.MentionID(md.Page, "")] == nil {
+			continue
+		}
+		path := wpcorpus.MetadataPath(md.Page)
+		for _, r := range md.Redirects {
+			o.checked++
+			if !set[strings.ToLower(r)] {
+				o.add(path, 0, 0, "the redirect %q to %q is the name or an alias of no mention", r, md.Title)
+			}
+		}
+		c, err := wpcorpus.ReadCensus(a.wikipedia, md.Page, md.Revision)
+		if err != nil {
+			continue // Y02 reports it
+		}
+		path = wpcorpus.CensusPath(md.Page, md.Revision)
+		for _, p := range c.Pointers {
+			if p.Via != wpcorpus.ViaRedirect {
+				continue
+			}
+			o.checked++
+			if !set[strings.ToLower(p.From)] {
+				o.add(path, 0, 0, "the redirect %q to the anchor %q of %q is the name or an alias of no mention", p.From, p.Anchor, md.Title)
+			}
+		}
+	}
+	if o.checked == 0 && len(o.findings) == 0 {
+		o.reason = "no article with a mention has a redirect"
 	}
 	return o
 }
