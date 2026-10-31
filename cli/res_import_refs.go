@@ -16,6 +16,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/refs"
 	"github.com/tamnd/math2-agent/resource/s2"
 	resscope "github.com/tamnd/math2-agent/resource/scope"
+	"github.com/tamnd/math2-agent/resource/zbsearch"
 )
 
 // refsBases are the APIs that confirm an id of a reference. A test sets them to a local server.
@@ -153,6 +154,41 @@ func runResImportS2(root string, gap time.Duration, stdout, stderr io.Writer) in
 	fmt.Fprintf(stdout, "s2: asked %d, found %d, records %d, rejected %d, requests %d, snapshot %s\n", n.Asked, n.Found, kept, rejected, n.Requests, hash)
 	return ExitOK
 }
+
+func runResImportZbsearch(root string, gap time.Duration, stdout, stderr io.Writer) int {
+	fail := func(err error) int {
+		fmt.Fprintf(stderr, "m2 res import: %s: %v\n", zbsearch.Source, err)
+		return ExitFailure
+	}
+	rs, err := resource.ReadResources(root)
+	if err != nil {
+		return fail(err)
+	}
+	c := fetch.NewClient(gap)
+	search := func(ctx context.Context, q string) ([]zbsearch.Doc, error) {
+		var body struct {
+			Result []zbsearch.Doc `json:"result"`
+		}
+		err := c.JSON(ctx, zbsearch.Query(zbsearchURL, q), &body)
+		if errors.Is(err, fetch.ErrNotFound) {
+			return nil, nil
+		}
+		return body.Result, err
+	}
+	recs, n, err := zbsearch.Build(context.Background(), rs, search)
+	if err != nil {
+		return fail(err)
+	}
+	kept, rejected, hash, err := saveBuilt(root, zbsearch.Entry(), zbsearch.Snapshot, recs)
+	if err != nil {
+		return fail(err)
+	}
+	fmt.Fprintf(stdout, "%s: asked %d, found %d, records %d, rejected %d, snapshot %s\n", zbsearch.Source, n.Asked, n.Found, kept, rejected, hash)
+	return ExitOK
+}
+
+// zbsearchURL is the search of zbMATH Open. A test sets it to a local server.
+var zbsearchURL = zbsearch.SearchURL
 
 // s2URL is the batch endpoint of Semantic Scholar. A test sets it to a local server.
 var s2URL = s2.BatchURL

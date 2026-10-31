@@ -351,3 +351,20 @@ func TestExpressionGetsLanguage(t *testing.T) {
 		t.Errorf("got expression %+v", x)
 	}
 }
+
+func TestFillerFillsOnly(t *testing.T) {
+	res := run(t, Input{
+		Records: []Record{
+			{Source: "springer-series", NativeID: "b", Level: "expression", Kind: "monograph", Title: "Random Walk and the Heat Equation", Creators: author("Lawler, G."), Date: "2010", IDs: resource.IDs{"doi": {"10.1090/stml/055"}}},
+			{Source: "zbmath_search", NativeID: "1", Level: "work", Kind: "monograph", Title: "Random walk and the heat equation", Creators: author("Lawler, Gregory F."), Date: "2010", Language: "en", MSC: []string{"60-01"}, IDs: resource.IDs{"doi": {"10.1090/stml/055"}, "zbl_id": {"1"}}},
+		},
+	})
+	rs := live(res)
+	if len(rs) != 1 || len(rs[0].Expressions) != 1 {
+		t.Fatalf("got %+v", rs)
+	}
+	r := rs[0]
+	if r.Title != "Random Walk and the Heat Equation" || r.Creators[0].Name != "Lawler, G." || len(r.MSC) != 1 || r.MSC[0].From != "zbmath_search" || r.Expressions[0].Language != "en" {
+		t.Errorf("got %+v", r)
+	}
+}

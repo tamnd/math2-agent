@@ -105,3 +105,42 @@ func TestResImportS2(t *testing.T) {
 		t.Fatalf("source %+v", src)
 	}
 }
+
+func TestResImportZbsearch(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch q := r.URL.Query().Get("search_string"); q {
+		case "ti:random walk and the heat equation & py:2010 & au:lawler":
+			_, _ = w.Write([]byte(`{"result":[{"id":5826084,"identifier":"1213.60001","title":{"title":"Random walk and the heat equation"},"year":"2010","language":{"languages":["English"]},"msc":[{"code":"60-01","scheme":"msc2020"}],"contributors":{"authors":[{"name":"Lawler, Gregory F."}]}}]}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+	saved := zbsearchURL
+	t.Cleanup(func() { zbsearchURL = saved })
+	zbsearchURL = srv.URL
+
+	root := t.TempDir()
+	in := &resource.Scope{Value: resource.In}
+	if err := resource.WriteResources(root, []resource.Resource{
+		{ID: "8F2AAAAAA3", Kind: "monograph", Title: "Random Walk and the Heat Equation", Date: "2010", Creators: []resource.Creator{{Name: "Gregory F. Lawler", Role: "author"}}, Scope: in, IDs: resource.IDs{"doi": {"10.1090/stml/055"}}},
+		{ID: "8F2BBBBBB6", Kind: "monograph", Title: "B", Date: "2001", Scope: in, IDs: resource.IDs{"isbn": {"9780000000002"}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := run("res", "import", "-root", root, "-gap", "0", "zbmath_search")
+	if code != ExitOK || !strings.Contains(stdout, "zbmath_search: asked 2, found 1, records 1, rejected 0") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+	recs, err := rescluster.ReadRecords(root)
+	if err != nil || len(recs) != 1 || recs[0].Source != "zbmath_search" || recs[0].IDs["doi"][0] != "10.1090/stml/055" || recs[0].Language != "en" || recs[0].MSC[0] != "60-01" {
+		t.Fatalf("records %+v, %v", recs, err)
+	}
+	cat, err := ingest.ReadCatalogue(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if src := cat.Source("zbmath_search"); src == nil || len(src.Snapshots) != 1 || src.Licence != "CC-BY-SA-4.0" {
+		t.Fatalf("source %+v", src)
+	}
+}

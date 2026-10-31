@@ -63,6 +63,9 @@ var Precedence = map[string][]string{
 	"kind":     {"zbmath", "crossref", "openalex", "loc", "openlibrary", "hal", "wikidata", "arxiv"},
 }
 
+// Fillers are the sources whose records give a field of a resource only when no other record of the resource has the field. A search that matches a resource by its title fills the fields that the catalogues do not give, and does not change the others.
+var Fillers = map[string]bool{"zbmath_search": true}
+
 // wholes are the kinds of a volume, a journal or a series. Clustering never joins a chapter with one of them (RS10.5).
 var wholes = map[string]bool{"edited-volume": true, "proceedings": true, "journal": true, "series": true, "monograph": true, "textbook": true, "handbook": true, "encyclopedia": true}
 
@@ -582,6 +585,9 @@ func rank(field, source string) int {
 func best(field string, rs []*Record, has func(*Record) bool, first func(*Record) bool) *Record {
 	var out *Record
 	better := func(a, b *Record) bool {
+		if Fillers[a.Source] != Fillers[b.Source] {
+			return Fillers[b.Source]
+		}
 		if first != nil && first(a) != first(b) {
 			return first(a)
 		}
