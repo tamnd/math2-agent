@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"crypto/rand"
@@ -13,6 +14,7 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -396,6 +398,16 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		if err != nil {
 			return nil, ws, nil, err
 		}
+		if t.Pass == understand.Prose {
+			text, err := proseText(ctx, rs.arxiv, p.ID, p.Version)
+			if err != nil {
+				return nil, ws, nil, err
+			}
+			if err := p.SetText(text); err != nil {
+				return nil, ws, nil, err
+			}
+			// The check must be a model of a family other than the family of the pass (rule X09), and the model register has no such model yet. Thus p.Check stays nil, and each prose item goes to prose-review.
+		}
 		by := "agent:m2-agent/understand@" + r.Version
 		brief = understand.Brief(job, p, r.Passes[t.Pass])
 		check = understand.Goal(ws, job, p, by)
@@ -595,4 +607,22 @@ func sandboxFlags(flags *flag.FlagSet) func(root string) (*tools.Box, error) {
 		}
 		return &tools.Box{Docker: &sandbox.Docker{}, Image: *image, Packages: packages, CPU: boxCPU, Memory: boxMemory}, nil
 	}
+}
+
+// proseText runs ax prose of arxiv-reader on the version, with the checkout of tamnd/arxiv as its corpus, and reads the running text that it prints. ax prose reads the e-print that the pipeline cached and never fetches from arXiv. The binary is $AX, or ax on the path.
+func proseText(ctx context.Context, corpus, id string, version int) (*understand.Text, error) {
+	bin := cmp.Or(os.Getenv("AX"), "ax")
+	cmd := exec.CommandContext(ctx, bin, "prose", fmt.Sprintf("%sv%d", id, version)) // #nosec G204 -- the binary is the one that the operator names, and the arguments are an arXiv id
+	cmd.Env = append(os.Environ(), "ARXIV_CORPUS="+corpus)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("the pass prose reads the running text with %s prose: %w: %s", bin, err, strings.TrimSpace(stderr.String()))
+	}
+	var t understand.Text
+	if err := json.Unmarshal(out, &t); err != nil {
+		return nil, fmt.Errorf("%s prose printed no running text: %w", bin, err)
+	}
+	return &t, nil
 }

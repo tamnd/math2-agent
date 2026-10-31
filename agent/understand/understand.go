@@ -30,14 +30,14 @@ import (
 	"github.com/tamnd/math2-agent/workspace"
 )
 
-// The passes of tier T1.
+// The passes of tier T1. The pass prose of tier T2 is in prose.go.
 const (
 	Classify = "classify"
 	Concepts = "concepts"
 )
 
 // Passes are the passes that are written, in the order of AX7.1.
-var Passes = []string{Classify, Concepts}
+var Passes = []string{Classify, Concepts, Prose}
 
 // Dir is the directory of the records of the passes, with one directory for each pass.
 const Dir = agent.UnderstandDir
@@ -54,10 +54,11 @@ type pass struct {
 	reads func(item string) bool
 	brief func(b *strings.Builder, p *Paper)                                                  // the work of the pass, at the start of the brief
 	check func(r *Record, p *Paper, it Item, raw json.RawMessage) (left []string, err string) // fills the record from one result, or gives why the result is not valid
+	after func(ctx context.Context, r *Record, p *Paper) error                                // runs on each valid record before it is stored, or is nil
 }
 
 // passes has the code of each pass of Passes.
-var passes = map[string]pass{Classify: classifyPass, Concepts: conceptsPass}
+var passes = map[string]pass{Classify: classifyPass, Concepts: conceptsPass, Prose: prosePass}
 
 // schemaOf returns the schema of the input of the tool of the pass, from schema/understand.
 func schemaOf(name string) json.RawMessage {
@@ -115,6 +116,10 @@ type Paper struct {
 	MSC     []string
 	Pass    string
 	Items   []Item
+	// Sections is the running text of each section for the pass prose, by the id of its item, from SetText.
+	Sections map[string]Section
+	// Check is the check of the prose items by a model of another family, or nil when math2 has none.
+	Check ProseCheck
 }
 
 // Reads reports whether the pass reads an object of the item kind.
@@ -187,14 +192,18 @@ func Brief(job *agent.Job, p *Paper, prompt string) string {
 	b.WriteString("The items:\n\n")
 	for _, it := range p.Items {
 		var head strings.Builder
-		fmt.Fprintf(&head, "kind now: %s", it.Item)
-		for _, f := range [][2]string{{"environment", it.Env}, {"title", it.Title}, {"number", it.Number}, {"head", it.Head}} {
-			if f[1] != "" {
-				fmt.Fprintf(&head, "\n%s: %s", f[0], f[1])
+		if it.Item == "section" {
+			fmt.Fprintf(&head, "the running text of %s, one numbered sentence on each line\n\n%s", it.Title, it.Body)
+		} else {
+			fmt.Fprintf(&head, "kind now: %s", it.Item)
+			for _, f := range [][2]string{{"environment", it.Env}, {"title", it.Title}, {"number", it.Number}, {"head", it.Head}} {
+				if f[1] != "" {
+					fmt.Fprintf(&head, "\n%s: %s", f[0], f[1])
+				}
 			}
-		}
-		if it.Body != "" {
-			fmt.Fprintf(&head, "\n\n%s", it.Body)
+			if it.Body != "" {
+				fmt.Fprintf(&head, "\n\n%s", it.Body)
+			}
 		}
 		fmt.Fprintf(&b, "Item %s\n%s\n\n", it.ID, tools.Data("arxiv:"+it.Ref, licenceLabel(p), head.String()))
 	}
@@ -205,21 +214,22 @@ func licenceLabel(p *Paper) string { return cmp.Or(p.Licence, "no licence: the a
 
 // Record is the stored result of a pass on one item.
 type Record struct {
-	ID         string    `json:"id"`  // the item, ax://paper/ID#TAG
-	Ref        string    `json:"ref"` // the object in its version, IDvN#LOCAL
-	Pass       string    `json:"pass"`
-	By         string    `json:"by"`    // the role at its version, as agent:m2-agent/understand@0.1.0
-	Model      string    `json:"model"` // the model of the rung
-	Class      string    `json:"class"` // the licence class of the version
-	Was        string    `json:"was,omitempty"`
-	Kind       string    `json:"kind,omitempty"`
-	Confidence float64   `json:"confidence,omitempty"`
-	Flags      []string  `json:"flags,omitempty"`
-	Queue      string    `json:"queue,omitempty"`
-	Failed     string    `json:"failed,omitempty"` // Failed and the pass, when the result of the model was not valid twice
-	MSC        []string  `json:"msc,omitempty"`
-	Concepts   []Concept `json:"concepts,omitempty"`
-	Terms      []Term    `json:"terms,omitempty"`
+	ID         string      `json:"id"`  // the item, ax://paper/ID#TAG
+	Ref        string      `json:"ref"` // the object in its version, IDvN#LOCAL
+	Pass       string      `json:"pass"`
+	By         string      `json:"by"`    // the role at its version, as agent:m2-agent/understand@0.1.0
+	Model      string      `json:"model"` // the model of the rung
+	Class      string      `json:"class"` // the licence class of the version
+	Was        string      `json:"was,omitempty"`
+	Kind       string      `json:"kind,omitempty"`
+	Confidence float64     `json:"confidence,omitempty"`
+	Flags      []string    `json:"flags,omitempty"`
+	Queue      string      `json:"queue,omitempty"`
+	Failed     string      `json:"failed,omitempty"` // Failed and the pass, when the result of the model was not valid twice
+	MSC        []string    `json:"msc,omitempty"`
+	Concepts   []Concept   `json:"concepts,omitempty"`
+	Terms      []Term      `json:"terms,omitempty"`
+	Prose      []ProseItem `json:"prose,omitempty"`
 }
 
 // Concept is one concept of an item (AX7.3): a row of the inventory, a Wikidata item, or a name with the flag new-concept.
@@ -347,6 +357,11 @@ func Tool(ws *workspace.Workspace, p *Paper, model, by string) agent.Tool {
 					notes = append(notes, fmt.Sprintf("item %d: %s, and it is the second result of the item that is not valid, thus the item is stored as %s", i+1, why, r.Failed))
 				} else if why != "" {
 					notes = append(notes, fmt.Sprintf("item %d: %s", i+1, why))
+				}
+				if ps.after != nil && r.Failed == "" {
+					if err := ps.after(ctx, r, p); err != nil {
+						return agent.Result{}, err
+					}
 				}
 				done[r.ID] = true
 				stored[r.ID] = stored[r.ID] || r.Failed == ""

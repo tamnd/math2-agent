@@ -3,6 +3,7 @@ package understand_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -321,5 +322,116 @@ func TestRun(t *testing.T) {
 	}
 	if got := rec.Turns[0].Why; !strings.Contains(got, "1 of the 2 items have no result yet: ax://paper/2401.00001#RMK1") {
 		t.Errorf("after the first turn the goal says %q", got)
+	}
+}
+
+// text is the running text of 2401.00001v1, as ax prose prints it: two sections with synthetic sentences.
+const text = `{"paper":"2401.00001","version":1,"text":true,"sections":[
+{"section":"sec-1","sentences":[
+ {"n":1,"file":"main.tex","line":5,"text":"We say that a space is \\emph{tame} if it is compact.","cues":[{"kind":"definition","cue":"we say that"}]},
+ {"n":2,"file":"main.tex","line":6,"text":"This holds for each finite space."},
+ {"n":3,"file":"main.tex","line":7,"text":"It is not known whether each tame space is metrizable.","cues":[{"kind":"problem","cue":"it is not known whether"}]}]},
+{"section":"sec-2","sentences":[
+ {"n":4,"file":"main.tex","line":12,"text":"The proof of the theorem is in the next section."}]}]}`
+
+func prosePaper(t *testing.T, licence string) *understand.Paper {
+	t.Helper()
+	p := load(t, licence, "arxiv:2401.00001/prose")
+	var tx understand.Text
+	if err := json.Unmarshal([]byte(text), &tx); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.SetText(&tx); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func TestProseBrief(t *testing.T) {
+	p := prosePaper(t, "cc-by")
+	if len(p.Items) != 2 || p.Items[0].ID != "ax://paper/2401.00001#sec-1" || p.Items[1].Ref != "2401.00001v1#sec-2" {
+		t.Fatalf("the items are %+v", p.Items)
+	}
+	b := understand.Brief(&agent.Job{ID: "j-1", Goal: "find the prose items."}, p, "")
+	for _, want := range []string{"each of the 2 sections below with one call of give_prose", "the running text of sec-1", "[1] (cue definition: we say that) We say that", "[4] The proof"} {
+		if !strings.Contains(b, want) {
+			t.Errorf("the brief has no %q:\n%s", want, b)
+		}
+	}
+	var other understand.Text
+	_ = json.Unmarshal([]byte(strings.Replace(text, `"version":1`, `"version":2`, 1)), &other)
+	if err := p.SetText(&other); err == nil {
+		t.Error("the text of another version is set")
+	}
+}
+
+func TestProse(t *testing.T) {
+	ws := tree(t)
+	p := prosePaper(t, "cc-by")
+	res, err := call(t, ws, p, "give_prose",
+		map[string]any{"id": "ax://paper/2401.00001#sec-1", "prose": []map[string]any{
+			{"from": 1, "to": 2, "kind": "definition", "term": "tame"},
+			{"from": 3, "to": 3, "kind": "problem", "term": "x"},
+			{"from": 2, "to": 2, "kind": "claim"},
+			{"from": 4, "to": 4, "kind": "claim"},
+		}},
+		map[string]any{"id": "ax://paper/2401.00001#sec-2", "prose": []any{}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Stored the results of 2 of 2 items.", "the term of the item 3 to 3, which is not a definition", "the item 2 to 2, which overlaps", "the item 4 to 4, whose sentences are not of the section"} {
+		if !strings.Contains(res.Text, want) {
+			t.Errorf("the result has no %q: %s", want, res.Text)
+		}
+	}
+	rs := records(t, ws, "prose", "ax://paper/2401.00001#sec-1")
+	var got []string
+	for _, r := range rs {
+		for _, pi := range r.Prose {
+			got = append(got, fmt.Sprintf("%s %s %s:%d %s %s %v", r.ID, pi, pi.File, pi.Line, pi.Term, pi.Queue, pi.Accepted()))
+		}
+	}
+	if want := "ax://paper/2401.00001#sec-1 [1-2] definition main.tex:5 tame prose-review false|ax://paper/2401.00001#sec-1 [3-3] problem main.tex:7  prose-review false"; strings.Join(got, "|") != want {
+		t.Errorf("the prose items are\n%s\nwant\n%s", strings.Join(got, "|"), want)
+	}
+	if _, err := call(t, ws, p, "give_prose", map[string]any{"id": "ax://paper/2401.00001#sec-2"}); err == nil || !strings.Contains(err.Error(), "has no list prose") {
+		t.Errorf("a result with no list gives %v", err)
+	}
+	// A paper of the class record keeps no term.
+	ws = tree(t)
+	p = prosePaper(t, "")
+	res, err = call(t, ws, p, "give_prose", map[string]any{"id": "ax://paper/2401.00001#sec-1", "prose": []map[string]any{{"from": 1, "to": 1, "kind": "definition", "term": "tame"}}})
+	if err != nil || !strings.Contains(res.Text, "no words of a paper of the class record") {
+		t.Errorf("the result is %v, %v", res.Text, err)
+	}
+}
+
+// TestProseCheck checks that the check of another family accepts an item only when it gives the same kind and finds the span complete (AX7.4 step 3).
+func TestProseCheck(t *testing.T) {
+	ws := tree(t)
+	p := prosePaper(t, "cc-by")
+	m := llmtest.New(
+		llmtest.Call("check_prose", map[string]any{"kind": "definition", "complete": true}, llm.Usage{}),
+		llmtest.Call("check_prose", map[string]any{"kind": "conjecture", "complete": true}, llm.Usage{}),
+	)
+	p.Check = understand.CheckWith(m, "other-model", "the check prompt")
+	if _, err := call(t, ws, p, "give_prose", map[string]any{"id": "ax://paper/2401.00001#sec-1", "prose": []map[string]any{
+		{"from": 1, "to": 1, "kind": "definition", "term": "tame"},
+		{"from": 3, "to": 3, "kind": "problem"},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	rs := records(t, ws, "prose", "ax://paper/2401.00001#sec-1")
+	if len(rs) != 1 || len(rs[0].Prose) != 2 {
+		t.Fatalf("the records are %+v", rs)
+	}
+	a, b := rs[0].Prose[0], rs[0].Prose[1]
+	if !a.Accepted() || a.Check.Model != "other-model" || b.Accepted() || b.Queue != understand.ProseReview || b.Check.Kind != "conjecture" {
+		t.Errorf("the items are %+v %+v, %+v %+v", a, a.Check, b, b.Check)
+	}
+	reqs := m.Requests()
+	if len(reqs) != 2 || reqs[0].System != "the check prompt" || !strings.Contains(reqs[0].Messages[0].Content[0].Text, "After the span:") || strings.Contains(reqs[0].Messages[0].Content[0].Text, "Before the span:") {
+		t.Errorf("the first request of the check is %+v", reqs[0])
 	}
 }

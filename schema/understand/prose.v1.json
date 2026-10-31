@@ -1,0 +1,35 @@
+{
+  "title": "understand prose v1",
+  "description": "The results of the pass prose (corpus arxiv AX7.4): the prose items of each section, as ranges of sentence numbers with a kind. The result has no text of the paper other than the term of a definition.",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "the id of the section, as ax://paper/2401.00001#sec-3"},
+          "prose": {
+            "type": "array",
+            "description": "the prose items of the section, or an empty list",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {"type": "integer", "minimum": 1, "description": "the number of the first sentence"},
+                "to": {"type": "integer", "minimum": 1, "description": "the number of the last sentence"},
+                "kind": {"type": "string", "enum": ["definition", "conjecture", "problem", "claim", "hypothesis"]},
+                "term": {"type": "string", "description": "for a definition: the term that it defines, as the sentence writes it"}
+              },
+              "required": ["from", "to", "kind"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["id", "prose"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}
