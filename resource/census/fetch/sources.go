@@ -62,6 +62,11 @@ type zbDoc struct {
 		Code string `json:"code"`
 	} `json:"msc"`
 	Source struct {
+		Book []struct {
+			ISBN []struct {
+				Number string `json:"number"`
+			} `json:"isbn"`
+		} `json:"book"`
 		Series []struct {
 			ISSN []struct {
 				Number string `json:"number"`
@@ -219,6 +224,33 @@ func (z ZBMath) Lookup(ctx context.Context, c *Client, dois []string) (map[strin
 		for _, l := range d.Links {
 			if l.Type == "doi" {
 				if n, err := ids.Normalize("doi", l.Identifier); err == nil {
+					found[n] = true
+				}
+			}
+		}
+	}
+	return found, nil
+}
+
+// LookupISBN asks for the ISBNs with one query isbn:(a | b | ...), and gives the ISBNs in normal form of the books of the result.
+func (z ZBMath) LookupISBN(ctx context.Context, c *Client, isbns []string) (map[string]bool, error) {
+	found := map[string]bool{}
+	if len(isbns) == 0 {
+		return found, nil
+	}
+	q := url.Values{"search_string": {"isbn:(" + strings.Join(isbns, " | ") + ")"}, "results_per_page": {"100"}}
+	var page zbPage
+	err := c.JSON(ctx, z.Base+"/document/_search?"+q.Encode(), &page)
+	if errors.Is(err, ErrNotFound) {
+		return found, nil
+	}
+	if err != nil {
+		return nil, wrap("zbmath", err)
+	}
+	for _, d := range page.Result {
+		for _, b := range d.Source.Book {
+			for _, i := range b.ISBN {
+				if n, err := ids.Normalize("isbn", i.Number); err == nil {
 					found[n] = true
 				}
 			}

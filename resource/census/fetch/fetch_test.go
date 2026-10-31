@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -174,6 +175,20 @@ func TestZBMathLookupNone(t *testing.T) {
 	}
 }
 
+func TestZBMathLookupISBN(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if q := r.URL.Query().Get("search_string"); q != "isbn:(9780821848296 | 9780387902449)" {
+			t.Errorf("search_string = %q", q)
+		}
+		fmt.Fprint(w, `{"result":[{"id":1,"source":{"book":[{"isbn":[{"number":"978-0-8218-4829-6","type":"pbk"}]}]}}],"status":{"nr_total_results":1}}`)
+	}))
+	defer srv.Close()
+	found, err := ZBMath{Base: srv.URL}.LookupISBN(context.Background(), client(), []string{"9780821848296", "9780387902449"})
+	if err != nil || !found["9780821848296"] || found["9780387902449"] {
+		t.Errorf("LookupISBN = %v, %v", found, err)
+	}
+}
+
 func TestHAL(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
@@ -256,6 +271,44 @@ func (f *fakeLooker) Lookup(_ context.Context, _ *Client, dois []string) (map[st
 		}
 	}
 	return out, nil
+}
+
+type fakeISBNLooker struct {
+	fakeLooker
+	isbns map[string]bool
+	asked []string
+}
+
+func (f *fakeISBNLooker) LookupISBN(_ context.Context, _ *Client, isbns []string) (map[string]bool, error) {
+	f.asked = append(f.asked, isbns...)
+	out := map[string]bool{}
+	for _, i := range isbns {
+		if f.isbns[i] {
+			out[i] = true
+		}
+	}
+	return out, nil
+}
+
+func TestMarkISBN(t *testing.T) {
+	in := scope.Record{MSC: []string{"11A41"}}
+	rs := []census.Record{
+		{NativeID: "1", IDs: resource.IDs{"doi": {"10.1000/A"}, "isbn": {"9780821848296"}}, Signals: in},
+		{NativeID: "2", IDs: resource.IDs{"isbn": {"0-387-90244-9", "9780821848296"}}, Signals: in},
+		{NativeID: "3", IDs: resource.IDs{"isbn": {"9781461263784"}}, Signals: in},
+	}
+	doi := &fakeLooker{name: "d"}
+	zb := &fakeISBNLooker{fakeLooker: fakeLooker{name: "z"}, isbns: map[string]bool{"9780821848296": true}}
+	n, err := Mark(context.Background(), client(), rs, scope.Env{}, "a", []Looker{doi, zb}, 10, 1)
+	if err != nil || n != 3 {
+		t.Fatalf("Mark = %d, %v", n, err)
+	}
+	if len(zb.asked) != 3 || slices.Contains(zb.asked, "10.1000/a") {
+		t.Errorf("asked %q", zb.asked)
+	}
+	if _, ok := rs[1].Found["d"]; ok || !rs[1].Found["z"] || rs[2].Found["z"] || rs[2].Found == nil || rs[0].Found["z"] {
+		t.Errorf("found = %v %v %v", rs[0].Found, rs[1].Found, rs[2].Found)
+	}
 }
 
 func TestMark(t *testing.T) {

@@ -35,6 +35,11 @@ type Looker interface {
 	Lookup(ctx context.Context, c *Client, dois []string) (map[string]bool, error)
 }
 
+// ISBNLooker is a Looker that can also look up ISBNs, for the books with no DOI.
+type ISBNLooker interface {
+	LookupISBN(ctx context.Context, c *Client, isbns []string) (map[string]bool, error)
+}
+
 // Paths names the local files that some samplers read.
 type Paths struct {
 	Arxiv string // the metadata plane of a checkout of tamnd/arxiv
@@ -203,50 +208,73 @@ func wrap(name string, err error) error {
 	return fmt.Errorf("%s: %w", name, err)
 }
 
-// Mark chooses at random up to n records of rs that are in scope and have a DOI, and looks up their DOIs in each looker that is not the catalogue self. It sets the field Found of each chosen record, and gives the number of chosen records.
+// Mark chooses at random up to n records of rs that are in scope and have a DOI, and looks up their DOIs in each looker that is not the catalogue self. Then it chooses at random up to n records that are in scope, have no DOI and have an ISBN, and looks up their ISBNs in each looker that is an ISBNLooker. A record of a book is found when the looker has one of its ISBNs. It sets the field Found of each chosen record, and gives the number of chosen records.
 func Mark(ctx context.Context, c *Client, rs []census.Record, env scope.Env, self string, lookers []Looker, n int, seed uint64) (int, error) {
-	var cand []int
-	dois := map[int]string{}
+	var withDOI, withISBN []int
+	keys := map[int][]string{}
 	for i := range rs {
 		if scope.Decide(rs[i].Signals, env).Value != resource.In {
 			continue
 		}
 		for _, v := range rs[i].IDs["doi"] {
 			if d, err := ids.Normalize("doi", v); err == nil {
-				dois[i] = d
-				cand = append(cand, i)
+				keys[i] = []string{d}
+				withDOI = append(withDOI, i)
 				break
 			}
 		}
+		if keys[i] != nil {
+			continue
+		}
+		for _, v := range rs[i].IDs["isbn"] {
+			if d, err := ids.Normalize("isbn", v); err == nil && !slices.Contains(keys[i], d) {
+				keys[i] = append(keys[i], d)
+			}
+		}
+		if keys[i] != nil {
+			withISBN = append(withISBN, i)
+		}
 	}
-	var chosen []int
-	for _, k := range census.Offsets(len(cand), n, seed) {
-		chosen = append(chosen, cand[k])
+	choose := func(cand []int) []int {
+		var out []int
+		for _, k := range census.Offsets(len(cand), n, seed) {
+			out = append(out, cand[k])
+		}
+		return out
 	}
+	byDOI, byISBN := choose(withDOI), choose(withISBN)
 	for _, l := range lookers {
 		if l.Name() == self {
 			continue
 		}
-		list := make([]string, len(chosen))
-		for j, i := range chosen {
-			list[j] = dois[i]
+		look := []func(context.Context, *Client, []string) (map[string]bool, error){l.Lookup}
+		chosen := [][]int{byDOI}
+		if il, ok := l.(ISBNLooker); ok {
+			look = append(look, il.LookupISBN)
+			chosen = append(chosen, byISBN)
 		}
-		found := map[string]bool{}
-		for _, b := range batches(list, l.Batch()) {
-			f, err := l.Lookup(ctx, c, b)
-			if err != nil {
-				return 0, err
+		for j, set := range chosen {
+			var list []string
+			for _, i := range set {
+				list = append(list, keys[i]...)
 			}
-			for k := range f {
-				found[k] = true
+			found := map[string]bool{}
+			for _, b := range batches(list, l.Batch()) {
+				f, err := look[j](ctx, c, b)
+				if err != nil {
+					return 0, err
+				}
+				for k := range f {
+					found[k] = true
+				}
 			}
-		}
-		for _, i := range chosen {
-			if rs[i].Found == nil {
-				rs[i].Found = map[string]bool{}
+			for _, i := range set {
+				if rs[i].Found == nil {
+					rs[i].Found = map[string]bool{}
+				}
+				rs[i].Found[l.Name()] = slices.ContainsFunc(keys[i], func(k string) bool { return found[k] })
 			}
-			rs[i].Found[l.Name()] = found[dois[i]]
 		}
 	}
-	return len(chosen), nil
+	return len(byDOI) + len(byISBN), nil
 }
