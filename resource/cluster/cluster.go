@@ -1073,12 +1073,14 @@ func keyed(exprs []*expr, prev []resource.Expression, workLang string) []resourc
 			x.IDs = nil
 		}
 		x.Key = ""
-		for _, p := range prev {
-			if !taken[p.Key] && sameExpression(&x, &p) {
-				x.Key = p.Key
-				x.Structure, x.Access, x.Contributors = p.Structure, p.Access, p.Contributors
-				x.Manifestations = keepManifestations(x.Manifestations, p.Manifestations)
-				break
+		// An expression that had no language and now has one is the same expression, but an expression with the same language is a better match.
+		for _, same := range []func(a, b *resource.Expression) bool{sameExpression, lessLanguage} {
+			for _, p := range prev {
+				if x.Key == "" && !taken[p.Key] && same(&x, &p) {
+					x.Key = p.Key
+					x.Structure, x.Access, x.Contributors = p.Structure, p.Access, p.Contributors
+					x.Manifestations = keepManifestations(x.Manifestations, p.Manifestations)
+				}
 			}
 		}
 		if x.Key == "" {
@@ -1105,6 +1107,11 @@ func sameExpression(a, b *resource.Expression) bool {
 		}
 	}
 	return a.Kind == b.Kind && a.Label == b.Label && a.Language == b.Language
+}
+
+// lessLanguage reports whether b is a, but with no language.
+func lessLanguage(a, b *resource.Expression) bool {
+	return b.Language == "" && a.Kind == b.Kind && a.Label == b.Label
 }
 
 // keepManifestations gives a manifestation the key of the existing manifestation with which it shares an id. A new manifestation gets the next key.

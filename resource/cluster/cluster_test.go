@@ -335,3 +335,19 @@ func TestResolveTargets(t *testing.T) {
 		t.Errorf("the competition has the relations %+v to itself", rels)
 	}
 }
+
+func TestExpressionGetsLanguage(t *testing.T) {
+	old := resource.Resource{ID: "cccccccc", Kind: "textbook", Title: "A book", Catalogue: []resource.CatalogueRecord{{Source: "book", Snapshot: "s0", NativeID: "book", Level: "work"}}, History: []resource.Event{{Op: "add", At: "2026-01-01", By: "test"}},
+		Expressions: []resource.Expression{{Key: "e1", Kind: "edition", Structure: "cccccccc/e1.json"}}}
+	res := run(t, Input{
+		Records:  []Record{{Source: "book", NativeID: "book", Level: "work", Kind: "textbook", Title: "A book", Creators: author("Chen, E."), Language: "en", Date: "2026-10-23"}},
+		Existing: []resource.Resource{old},
+	})
+	rs := live(res)
+	if len(rs) != 1 || len(rs[0].Expressions) != 1 {
+		t.Fatalf("got %+v", rs)
+	}
+	if x := rs[0].Expressions[0]; x.Key != "e1" || x.Language != "en" || x.Structure != "cccccccc/e1.json" {
+		t.Errorf("got expression %+v", x)
+	}
+}
