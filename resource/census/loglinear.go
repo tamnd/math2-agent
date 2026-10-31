@@ -297,6 +297,9 @@ func fitBeta(x [][]float64, y []float64) ([]float64, bool) {
 	return nil, false
 }
 
+// Lookups are the sources whose records come from a lookup of the resources that other sources give, by their ids or by their titles. Such a source is not a capture (RS11.4): it never holds a work that no other source holds, so the estimate of the works that only it holds would be zero.
+var Lookups = map[string]bool{"s2": true, "zbmath_search": true}
+
 // Captures merges the catalogues that share lineage into one capture (RS11.4.3 rule 1). Two catalogues share lineage when one names the other in its lineage, or when both name the same catalogue. It gives the name of the capture of each catalogue: the names of its catalogues in order, joined by "+".
 func Captures(catalogues []string, lineage map[string][]string) map[string]string {
 	parent := map[string]string{}
