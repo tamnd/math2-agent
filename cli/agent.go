@@ -97,6 +97,43 @@ var newModel = func() (llm.Model, error) {
 	return claude.New(), nil
 }
 
+// CheckEnv names the client of the model of the checks of understand, a backend of llm/command with its model, for example codex:gpt-6-sol.
+const CheckEnv = "M2_LLM_CHECK"
+
+// newCheck makes the model of the checks of understand from $M2_LLM_CHECK, and gives its id. The model must have an entry in the register, of a family other than the family of the model of the pass (rule X09). With no $M2_LLM_CHECK it gives no model. The tests replace it.
+var newCheck = func(pass string) (llm.Model, string, error) {
+	s := os.Getenv(CheckEnv)
+	if s == "" {
+		return nil, "", nil
+	}
+	backends, err := llmcmd.Parse(s)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(backends) != 1 || backends[0].Model == "" {
+		return nil, "", fmt.Errorf("%s is one backend with its model, for example codex:gpt-6-sol, not %q", CheckEnv, s)
+	}
+	id := backends[0].Model
+	if err := checkFamily(pass, id); err != nil {
+		return nil, "", err
+	}
+	return llmcmd.New(backends...), id, nil
+}
+
+// checkFamily reports an error unless the register has both models, in two families (rule X09).
+func checkFamily(pass, check string) error {
+	reg := models.Default()
+	for _, id := range []string{pass, check} {
+		if err := reg.Check(id); err != nil {
+			return err
+		}
+	}
+	if f := reg.Family(check); f == reg.Family(pass) {
+		return fmt.Errorf("the check model %s is of the family %s, as the model %s of the pass is, and rule X09 asks for another family", check, f, pass)
+	}
+	return nil
+}
+
 // newLean makes the Lean environment of a work tree, in the sandbox box when it is not nil. The tests replace it.
 var newLean = func(ctx context.Context, tree string, box *tools.Box) (tools.Lean, error) {
 	if box != nil {
@@ -315,11 +352,12 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		}
 	}
 	var (
-		brief string
-		check agent.Goal
-		meter *agent.Meter
-		extra []agent.Tool
-		nv    *explore.Novelty
+		brief  string
+		check  agent.Goal
+		before agent.Goal // the goal before the first turn, for a role whose goal calls no model
+		meter  *agent.Meter
+		extra  []agent.Tool
+		nv     *explore.Novelty
 	)
 	if slices.Contains([]string{"align", "curate", "enumerate", "explain", "explore", "understand"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
 		return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
@@ -409,12 +447,22 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 			if err := p.SetText(text); err != nil {
 				return nil, ws, nil, err
 			}
-			// The check must be a model of a family other than the family of the pass (rule X09), and the model register has no such model yet. Thus p.Check stays nil, and each prose item goes to prose-review.
 		}
-		// The pass unfold has the same rule for its check, thus p.UnfoldCheck stays nil, and each unfolding goes to unfold-review.
+		// The checks of prose and unfold need a model of a family other than the family of the pass (rule X09). With no such model in $M2_LLM_CHECK, p.Check and p.UnfoldCheck stay nil, and each prose item and each unfolding goes to its review queue.
+		if t.Pass == understand.Prose || t.Pass == understand.Unfold {
+			cm, id, err := newCheck(r.Ladder[rung].Model)
+			if err != nil {
+				return nil, ws, nil, err
+			}
+			if cm != nil {
+				p.Check = understand.CheckWith(cm, id, r.Checks["prose"])
+				p.UnfoldCheck = understand.UnfoldCheckWith(cm, id, r.Checks["unfold"])
+			}
+		}
 		by := "agent:m2-agent/understand@" + r.Version
 		brief = understand.Brief(job, p, r.Passes[t.Pass])
 		check = understand.Goal(ws, job, p, by)
+		before = check // the goal reads the records only, thus a paper with no item of the pass needs no model
 		extra = understand.Tools(ws, p, r.Ladder[rung].Model, by)
 	case "explore":
 		var runner *compute.Runner
@@ -490,7 +538,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 	if err != nil {
 		return nil, ws, nil, err
 	}
-	rn := agent.Runner{Role: r, Model: rs.model, Tools: ts, Goal: check, Meter: meter}
+	rn := agent.Runner{Role: r, Model: rs.model, Tools: ts, Goal: check, Before: before, Meter: meter}
 	rec, runErr := rn.Run(ctx, job, rung, brief)
 	if rec == nil {
 		return nil, ws, nil, runErr

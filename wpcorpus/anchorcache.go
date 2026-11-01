@@ -102,7 +102,7 @@ func cacheField(s string) string {
 
 // ReadAnchorCache reads the anchor cache at path. It calls fn one time for each page with anchor links, and it returns the name of the dump and the count of pages in the header.
 func ReadAnchorCache(path string, fn func(from string, links []AnchorLink) error) (dump string, pages int, err error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- the path is the anchor cache that the user names
 	if err != nil {
 		return "", 0, err
 	}

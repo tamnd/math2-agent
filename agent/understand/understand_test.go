@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -88,12 +89,14 @@ func TestParseTarget(t *testing.T) {
 	for s, want := range map[string]understand.Target{
 		"arxiv:2401.00001/classify":   {Paper: "2401.00001", Pass: "classify"},
 		"arxiv:math/9802134/concepts": {Paper: "math/9802134", Pass: "concepts"},
+		"arxiv:2401.00001/proof:2":    {Paper: "2401.00001", Pass: "proof", Part: 2},
+		"arxiv:math/9802134/proof:12": {Paper: "math/9802134", Pass: "proof", Part: 12},
 	} {
 		if got, err := understand.ParseTarget(s); err != nil || got != want {
 			t.Errorf("ParseTarget(%q) is %+v, %v", s, got, err)
 		}
 	}
-	for _, s := range []string{"2401.00001/classify", "arxiv:2401.00001", "arxiv:2401.00001/explain", "arxiv:x y/classify"} {
+	for _, s := range []string{"2401.00001/classify", "arxiv:2401.00001", "arxiv:2401.00001/explain", "arxiv:x y/classify", "arxiv:2401.00001/proof:0", "arxiv:2401.00001/proof:02", "arxiv:2401.00001/proof:", "arxiv:2401.00001/proof:x"} {
 		if _, err := understand.ParseTarget(s); err == nil {
 			t.Errorf("ParseTarget(%q) gives no error", s)
 		}
@@ -473,6 +476,16 @@ func unfoldPaper(t *testing.T, licence string) *understand.Paper {
 // paperOf loads the pass from a checkout whose paper has the objects and the edges.
 func paperOf(t *testing.T, licence, pass, objects, edges string) *understand.Paper {
 	t.Helper()
+	p, err := understand.Load(checkoutWith(t, licence, objects, edges), understand.Target{Paper: "2401.00001", Pass: pass})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// checkoutWith makes a checkout of tamnd/arxiv with the objects and the edges of 2401.00001.
+func checkoutWith(t *testing.T, licence, objects, edges string) string {
+	t.Helper()
 	root := checkout(t, licence)
 	for name, data := range map[string]string{
 		"analysis/objects/2401/2401.00001.jsonl": objects,
@@ -486,11 +499,7 @@ func paperOf(t *testing.T, licence, pass, objects, edges string) *understand.Pap
 			t.Fatal(err)
 		}
 	}
-	p, err := understand.Load(root, understand.Target{Paper: "2401.00001", Pass: pass})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return p
+	return root
 }
 
 const thm = "ax://paper/2401.00001#THM1"
@@ -713,5 +722,50 @@ func TestSummary(t *testing.T) {
 		if _, err := understand.Load(checkout(t, l), understand.Target{Paper: "2401.00001", Pass: understand.Summary}); err == nil || !strings.Contains(err.Error(), "AX7.7") {
 			t.Errorf("summary on the licence %q gives %v", l, err)
 		}
+	}
+}
+
+// TestParts loads a paper whose proofs have more text than one run reads: the target with no part names the parts, and the parts have each proof once, in the order of the paper.
+func TestParts(t *testing.T) {
+	var b strings.Builder
+	b.WriteString(`{"tag":"THM1","kind":"statement","paper":"2401.00001","version":"1","local":"thm-1","order":1,"body_md":"Every tame space is normal.","path":"source","item":"statement/theorem","scope":"paper"}` + "\n")
+	body := strings.Repeat("The space is compact. ", 500) // 11,000 characters
+	const n = 40
+	for i := 1; i <= n; i++ {
+		fmt.Fprintf(&b, `{"tag":"P%02d","kind":"proof","paper":"2401.00001","version":"1","local":"proof-%d","order":%d,"proves":"thm-1","body_md":%q,"path":"source","item":"proof","scope":"paper"}`+"\n", i, i, i+1, body)
+	}
+	root := checkoutWith(t, "cc-by", b.String(), "")
+	if _, err := understand.Load(root, understand.Target{Paper: "2401.00001", Pass: understand.Proof}); err == nil || !strings.Contains(err.Error(), "arxiv:2401.00001/proof:1 to arxiv:2401.00001/proof:") {
+		t.Fatalf("the target with no part gives %v", err)
+	}
+	var ids []string
+	for part := 1; ; part++ {
+		p, err := understand.Load(root, understand.Target{Paper: "2401.00001", Pass: understand.Proof, Part: part})
+		if err != nil {
+			if part == 1 || !strings.Contains(err.Error(), "not "+strconv.Itoa(part)) {
+				t.Fatalf("part %d gives %v", part, err)
+			}
+			break
+		}
+		if p.Part != part || p.Parts < 2 || len(p.Items) == 0 {
+			t.Fatalf("part %d is %d of %d with %d items", part, p.Part, p.Parts, len(p.Items))
+		}
+		size := 0
+		for _, it := range p.Items {
+			ids = append(ids, it.ID)
+			size += len(it.Body)
+		}
+		if size > understand.PartChars {
+			t.Errorf("part %d has %d characters", part, size)
+		}
+		if !strings.Contains(understand.Brief(&agent.Job{ID: "j-1", Goal: "proof"}, p, ""), fmt.Sprintf("part %d of %d", part, p.Parts)) {
+			t.Errorf("the brief of part %d does not name the part", part)
+		}
+	}
+	if len(ids) != n || !slices.IsSorted(ids) {
+		t.Errorf("the parts have %d proofs: %v", len(ids), ids)
+	}
+	if p := paperOf(t, "cc-by", understand.Proof, proofObjects, ""); p.Parts != 1 || p.Part != 0 {
+		t.Errorf("a small paper has the part %d of %d", p.Part, p.Parts)
 	}
 }

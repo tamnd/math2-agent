@@ -600,7 +600,7 @@ func permitMentions(p string, c workspace.Change) error {
 // UnderstandDir is the directory of the records of the understand role, with one directory for each pass.
 const UnderstandDir = "records/understand/arxiv"
 
-// permitUnderstand allows a change of a shard file of the records of the pass of the target, UnderstandDir/PASS/SHARD.jsonl. Each line is a record of the pass by understand, the records are sorted by id and are of the shard, and each line of another paper stays. A record of the paper of the target can replace the record of the same id.
+// permitUnderstand allows a change of a shard file of the records of the pass of the target, UnderstandDir/PASS/SHARD.jsonl, also for a target of one part, arxiv:ID/PASS:PART. Each line is a record of the pass by understand, the records are sorted by id and are of the shard, and each line of another paper stays. A record of the paper of the target can replace the record of the same id.
 func permitUnderstand(target, p string, c workspace.Change) error {
 	rest, ok := strings.CutPrefix(target, "arxiv:")
 	i := strings.LastIndex(rest, "/")
@@ -608,6 +608,7 @@ func permitUnderstand(target, p string, c workspace.Change) error {
 		return fmt.Errorf("the target %q of understand is not in the form arxiv:ID/PASS", target)
 	}
 	paper, pass := rest[:i], rest[i+1:]
+	pass, _, _ = strings.Cut(pass, ":") // a part of the items of the paper, arxiv:ID/PASS:PART, writes the records of the pass
 	dir, file := path.Split(p)
 	shard := strings.TrimSuffix(file, ".jsonl")
 	if path.Clean(dir) != path.Join(UnderstandDir, pass) || shard == file {
