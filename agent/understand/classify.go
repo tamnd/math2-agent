@@ -40,6 +40,8 @@ var classifyPass = pass{
 	},
 	brief: func(b *strings.Builder, p *Paper) {
 		fmt.Fprintf(b, "Give the item kind of each of the %d items below with one call of classify_items. The kinds are: %s. Give a confidence from 0 to 1. Give the flag %s to a remark or an observation that states a claim, and the flag %s to a problem or a question with a yes or no answer.\n\n", len(p.Items), strings.Join(Kinds, ", "), ClaimInRemark, ConjectureCandidate)
+		// The pilot of #256 gave remark to most of the items that the gold marks of C give another kind: the model kept the head of the paper.
+		b.WriteString("The head of an item, such as Remark, is the guess of the extractor and is often wrong. Give the kind from what the body does: an instance of a notion or a theorem is example, an instance that shows a claim fails is counterexample, a body that fixes symbols is definition/notation, one that fixes a word is definition/terminology or definition, one that fixes a convention is definition/convention, one that builds an object is definition/construction, and one that states a result is a kind of statement. Give remark only to a comment that is none of these.\n\n")
 	},
 	check: checkClassify,
 }
