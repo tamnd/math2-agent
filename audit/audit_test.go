@@ -353,3 +353,42 @@ func TestGroupAndHard(t *testing.T) {
 		t.Error("the group Y and the plane graph select no rule, and Run gave no error")
 	}
 }
+
+// TestH12PullRequest checks that the audit of a pull request checks rule H12 only when the pull request changes the census report or a record of a resource.
+func TestH12PullRequest(t *testing.T) {
+	root := t.TempDir()
+	if err := os.CopyFS(root, os.DirFS(filepath.Join("testdata", "H12", "bad"))); err != nil {
+		t.Fatal(err)
+	}
+	run(t, root, "init", "-q", "-b", "main")
+	commit(t, root, "main")
+	run(t, root, "checkout", "-q", "-b", "change")
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("an import that changes no resource\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	commit(t, root, "add a file")
+	rep, err := Run(root, Options{Rules: []string{"H12"}, Base: "main"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := result(t, rep, "H12"); r.State != check.Skip || r.Reason == "" {
+		t.Errorf("H12: the state is %s %q, and a pull request that changes no resource must skip it", r.State, r.Reason)
+	}
+
+	report := filepath.Join(root, "reports", "resources-census.md")
+	data, err := os.ReadFile(report) // #nosec G304 -- a file of the test tree.
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(report, append(data, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	commit(t, root, "change the census")
+	rep, err = Run(root, Options{Rules: []string{"H12"}, Base: "main"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := result(t, rep, "H12"); r.State != check.Fail {
+		t.Errorf("H12: the state is %s, and a pull request that changes the census must fail it", r.State)
+	}
+}
