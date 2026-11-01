@@ -50,6 +50,8 @@ type Runner struct {
 	Models *models.Register     // the model register. The runner refuses a model with no entry (corpus K7.7). Nil means models.Default().
 	Now    func() time.Time     // the clock. Nil means time.Now.
 	Meter  *Meter               // the model that the goal calls, or nil
+	// Before is the goal checked once before the first turn, or nil. A role sets it only when its goal calls no model; when it holds, the run succeeds with no turn, as a pass on a paper with no item of the pass.
+	Before Goal
 }
 
 // Turn is one model turn of a run: the response and the results of its tool calls.
@@ -180,6 +182,15 @@ func (rn *Runner) Run(ctx context.Context, job *Job, rung int, brief string) (*R
 		rec.Finished = now()
 		rec.Spend.Seconds = rec.Finished.Sub(start).Seconds()
 		return rec, nil
+	}
+	if rn.Before != nil {
+		done, _, err := rn.Before(ctx)
+		if err != nil {
+			return stop(Failure, "the goal check failed: "+err.Error())
+		}
+		if done {
+			return stop(Success, "the goal holds before the first turn")
+		}
 	}
 	for turn := 1; ; turn++ {
 		if turn > role.Turns {
