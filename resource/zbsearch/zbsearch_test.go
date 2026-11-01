@@ -111,3 +111,14 @@ func TestNeedsHeld(t *testing.T) {
 		t.Error("a resource that a record of the last run is on does not need the search")
 	}
 }
+
+func TestPlainTitle(t *testing.T) {
+	r := &resource.Resource{Title: "Introduction to Some Methods of Algebraic 𝐾-Theory", Date: "1974-12-31", Creators: []resource.Creator{{Name: "Hyman Bass"}}}
+	if q := query(r); !strings.Contains(q, "ti:introduction to some methods of algebraic k theory") {
+		t.Errorf("query %q", q)
+	}
+	d := doc(t, `{"title":{"title":"Introduction to some methods of algebraic K-theory"},"year":"1974","contributors":{"authors":[{"name":"Bass, Hyman"}]}}`)
+	if !matches(&d, r) {
+		t.Error("a title with a math italic letter does not match")
+	}
+}
