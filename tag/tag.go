@@ -2,7 +2,7 @@
 //
 // A tag has 10 characters of Crockford base32: the digits and the capital letters without I, L, O and U. The first 9 characters are random, and the last one is a check character (corpus spec K3.3). The tags of 6 characters that math2 minted before the change are legacy tags. They have no check character, and they stay valid. Tags that start with 0 are for the seed only. Mint draws tags at random, so two branches can mint tags without coordination. Rule T02 finds a collision at merge.
 //
-// Mint does not give a tag that YAML reads as a number, such as 1234567890 or 12E3456789. It does not give a tag that starts with an MSC code, such as 20D60XXXXX, or a tag with fewer than two letters. A bare tag then resolves to one type of thing only (spec 04.3).
+// Mint does not give a tag that YAML reads as a number, such as 1234567890, 12E3456789 or the hex 0XDED1F7D1. It does not give a tag that starts with an MSC code, such as 20D60XXXXX, or a tag with fewer than two letters. A bare tag then resolves to one type of thing only (spec 04.3).
 //
 // A provisional id is ~ and 8 lowercase hex characters, for example ~3fa94c01. A node has a provisional id until it merges.
 package tag
@@ -16,6 +16,8 @@ import (
 	"io"
 	"regexp"
 	"strings"
+
+	"go.yaml.in/yaml/v3"
 )
 
 // Alphabet is Crockford base32 in value order.
@@ -36,6 +38,8 @@ var (
 
 	numberRE = regexp.MustCompile(`^[0-9]+(E[0-9]+)?$`)
 	mscRE    = regexp.MustCompile(`^[0-9]{2}[A-Z][0-9]{2}`)
+	// maybeNumberRE matches each string of the alphabet that YAML could read as a number, a superset that yamlString then checks.
+	maybeNumberRE = regexp.MustCompile(`^(0[XB]|[0-9E]+$)`)
 )
 
 // maxTries is the number of draws before Mint stops. With fewer than 100 million tags in use, 64 draws fail with a chance below 1 in 10^24.
@@ -126,7 +130,7 @@ func IsSeed(s string) bool { return IsTag(s) && s[0] == '0' }
 
 // Excluded reports whether Mint must not give s. The schema accepts such a tag, but no new node gets one. A tag of 10 characters is also excluded when it has fewer than two letters, because it could then read as an ISBN or another numeric id.
 func Excluded(s string) bool {
-	if numberRE.MatchString(s) || mscRE.MatchString(s) {
+	if numberRE.MatchString(s) || mscRE.MatchString(s) || !yamlString(s) {
 		return true
 	}
 	letters := 0
@@ -136,6 +140,18 @@ func Excluded(s string) bool {
 		}
 	}
 	return len(s) == Len && letters < 2
+}
+
+// yamlString reports whether YAML reads s, bare, as a string. A tag such as 0XDED1F7D1 or 0B10110101 matches no pattern of numberRE, but YAML reads it as a number in hex or binary.
+func yamlString(s string) bool {
+	if !maybeNumberRE.MatchString(s) {
+		return true
+	}
+	var n yaml.Node
+	if err := yaml.Unmarshal([]byte(s), &n); err != nil || len(n.Content) != 1 {
+		return false
+	}
+	return n.Content[0].Tag == "!!str"
 }
 
 // Mint draws a new tag that does not start with 0. The used function reports whether a tag exists or existed. If r is nil, Mint uses crypto/rand.
