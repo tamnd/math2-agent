@@ -420,3 +420,23 @@ func TestFillerFillsOnly(t *testing.T) {
 		t.Errorf("got %+v", r)
 	}
 }
+
+func TestScoreNumbers(t *testing.T) {
+	ed := []resource.Creator{{Name: "Kvant editorial board", Role: "editor"}}
+	a := Record{Kind: "problem-set", Title: "Kvant 1982, no. 1", Date: "1982", Creators: ed}
+	b := Record{Kind: "problem-set", Title: "Kvant 1982, no. 2", Date: "1982", Creators: ed}
+	if s := Score(&a, &b); s != 0 {
+		t.Errorf("two issues: score %v", s)
+	}
+	k := []resource.Creator{{Name: "KöMaL editorial board", Role: "editor"}}
+	e := Record{Kind: "problem-set", Title: "KöMaL Problems in Mathematics, September 2014", Date: "2014-09", Creators: k}
+	f := Record{Kind: "problem-set", Title: "KöMaL Problems in Mathematics, December 2014", Date: "2014-12", Creators: k}
+	if s := Score(&e, &f); s != 0 {
+		t.Errorf("two months: score %v", s)
+	}
+	c := Record{Kind: "book", Title: "Linear algebra", Date: "1982", Creators: ed}
+	d := Record{Kind: "book", Title: "Linear algebra, 2nd edition", Date: "1982", Creators: ed}
+	if s := Score(&c, &d); s == 0 {
+		t.Errorf("a title with no numbers: score %v", s)
+	}
+}
