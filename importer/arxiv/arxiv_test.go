@@ -237,7 +237,7 @@ func TestPlanUnderstand(t *testing.T) {
 		}
 	}
 	p, _ := arxiv.PlanUnderstand("T1", rows, ms, "")
-	if p.TokensIn != 75000 || math.Abs(p.CostLow-0.006) > 1e-9 || math.Abs(p.CostHigh-0.018) > 1e-9 {
+	if p.TokensIn != 66000 || math.Abs(p.CostLow-0.015) > 1e-9 || math.Abs(p.CostHigh-0.036) > 1e-9 {
 		t.Errorf("the plan of T1 is %+v", p)
 	}
 	if _, err := arxiv.PlanUnderstand("T0", rows, ms, ""); err == nil {
