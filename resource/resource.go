@@ -240,6 +240,11 @@ func (ids IDs) Get(system string) string {
 // Live reports whether the resource is not merged into another resource.
 func (r *Resource) Live() bool { return r.Scope == nil || r.Scope.Value != Duplicate }
 
+// Holds reports whether a catalogue record of the source is on the resource.
+func (r *Resource) Holds(source string) bool {
+	return slices.ContainsFunc(r.Catalogue, func(c CatalogueRecord) bool { return c.Source == source })
+}
+
 // Expression returns the expression with the key, or nil.
 func (r *Resource) Expression(key string) *Expression {
 	for i := range r.Expressions {

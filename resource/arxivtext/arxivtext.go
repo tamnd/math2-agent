@@ -83,12 +83,12 @@ type Counts struct {
 	Found int // the resources with a language
 }
 
-// needs reports whether the resource is live, in scope, has an arXiv id and has no expression with a language.
+// needs reports whether the resource is live, in scope, has an arXiv id and has no expression with a language. A resource that a record of the source is on also needs it, because the records of a run replace all the records of the last run.
 func needs(r *resource.Resource) bool {
 	if !r.Live() || r.Scope == nil || r.Scope.Value != resource.In {
 		return false
 	}
-	return arxivID(r) != "" && !slices.ContainsFunc(r.Expressions, func(e resource.Expression) bool { return e.Language != "" })
+	return arxivID(r) != "" && (r.Holds(Source) || !slices.ContainsFunc(r.Expressions, func(e resource.Expression) bool { return e.Language != "" }))
 }
 
 // arxivID gives the first arXiv id of the resource or of one of its expressions, or "".
