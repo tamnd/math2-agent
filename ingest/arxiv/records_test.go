@@ -2,6 +2,7 @@ package arxiv
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -46,6 +47,17 @@ func TestRecordsMSCClass(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(rs) != 1 || len(rs[0].MSC) != 1 || rs[0].MSC[0] != "11N05" {
+		t.Errorf("records = %+v", rs)
+	}
+}
+
+func TestRecordsCategoryMSC(t *testing.T) {
+	in := `{"id":"2101.00001","title":"T","categories":["math.AT","math.QA"]}` + "\n" + `{"id":"hep-th/9409063","title":"U","categories":["hep-th","math.AT"]}` + "\n"
+	var rs []cluster.Record
+	if err := (Adapter{}).Records(strings.NewReader(in), func(r cluster.Record) error { rs = append(rs, r); return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if len(rs) != 2 || !slices.Equal(rs[0].MSC, []string{"55-XX", "17-XX", "81-XX"}) || len(rs[1].MSC) != 0 {
 		t.Errorf("records = %+v", rs)
 	}
 }
