@@ -72,3 +72,14 @@ func TestMatchesCreator(t *testing.T) {
 		t.Error("another author matches")
 	}
 }
+
+func TestNeedsHeld(t *testing.T) {
+	r := &resource.Resource{Scope: &resource.Scope{Value: resource.In}, MSC: []resource.Code{{Code: "60-01"}}, Expressions: []resource.Expression{{Key: "e1", Language: "en"}}}
+	if needs(r) {
+		t.Error("a resource with codes and a language needs the search")
+	}
+	r.Catalogue = []resource.CatalogueRecord{{Source: Source, NativeID: "1"}}
+	if !needs(r) {
+		t.Error("a resource that a record of the last run is on does not need the search")
+	}
+}
