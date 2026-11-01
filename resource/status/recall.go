@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/resource"
@@ -168,4 +169,70 @@ func withPairs(out []Recall, rows []census.ReportRow) []Recall {
 	}
 	slices.SortFunc(out, func(a, b Recall) int { return cmp.Or(cmp.Compare(a.Kind, b.Kind), cmp.Compare(a.Decade, b.Decade)) })
 	return out
+}
+
+// Citations is the name of the capture of the cited works in the report.
+const Citations = "citations"
+
+// MinStratum is the fewest resources of a stratum. A stratum with fewer and with no estimate is merged with the next decade of its kind group (RS11.3).
+const MinStratum = 200
+
+// withCitations adds the estimate of the pair of the catalogue and the cited works (RS11.4.3 item 3) to each stratum. The cited works of the resources in scope do not copy any catalogue, so they are a second capture: nA is the resources of the stratum, nB the distinct cited works of the stratum, and m the cited works that are resources of the catalogue. A stratum needs census.MinMatched cited works in the catalogue for an estimate. The estimate replaces the estimate of the stratum when the stratum has none, or when its interval ends higher, because the report gives the least recall of the pairs (RS11.4.3 item 4).
+//
+// A stratum with fewer than MinStratum resources and no estimate is merged with the next decade of its kind group when that decade has no estimate from the captures of the tree or from the census (RS11.3). The merged stratum has the decades "<first> to <last>", the sum of the resources and of the cited works, and the highest target of its decades.
+func withCitations(out []Recall, rows []RefRow) []Recall {
+	type key struct{ kind, decade string }
+	cite := map[key]RefRow{}
+	for _, row := range rows {
+		cite[key{row.Kind, row.Decade}] = row
+	}
+	var res []Recall
+	var acc *Recall
+	var accWorks, accHeld int
+	flush := func() {
+		if acc != nil {
+			res = append(res, *acc)
+			acc = nil
+		}
+	}
+	for _, rec := range out {
+		row := cite[key{rec.Kind, rec.Decade}]
+		works, held := row.Works, row.Held
+		if acc != nil && acc.Kind != rec.Kind {
+			flush()
+		}
+		if acc != nil {
+			if rec.Model != "" {
+				flush()
+			} else {
+				first, _, _ := strings.Cut(acc.Decade, " to ")
+				rec.Decade = first + " to " + rec.Decade
+				rec.Resources += acc.Resources
+				rec.Target = max(rec.Target, acc.Target)
+				works, held = works+accWorks, held+accHeld
+				acc = nil
+			}
+		}
+		if held >= census.MinMatched {
+			est := census.Pair(rec.Resources, works, held, Seed)
+			if rec.Model == "" || est.CI.High > rec.High {
+				rec.Captures = []string{"catalogue", Citations}
+				rec.Model = "pair catalogue and " + Citations
+				rec.Reason = ""
+				rec.N, rec.Low, rec.High = round(est.N), round(est.CI.Low), round(est.CI.High)
+				n := float64(rec.Resources)
+				rec.Recall = round(min(1, n/max(est.N, n, 1)))
+				rec.RecallLow = round(min(1, n/max(est.CI.High, n, 1)))
+				rec.Below = rec.Target > 0 && rec.RecallLow < rec.Target
+			}
+		}
+		if rec.Model == "" && rec.Resources < MinStratum {
+			acc = &rec
+			accWorks, accHeld = works, held
+			continue
+		}
+		res = append(res, rec)
+	}
+	flush()
+	return res
 }

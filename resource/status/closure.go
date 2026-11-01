@@ -28,6 +28,8 @@ type RefRow struct {
 	Closure  float64 `json:"closure"`
 	Target   float64 `json:"target"`
 	Below    bool    `json:"below,omitempty"`
+	Works    int     `json:"works"` // the distinct cited works of the stratum: the resources that the references resolve to, and the unresolved works by folded title and family of the first creator
+	Held     int     `json:"held"`  // of them, the live resources in scope or border, which are works of the catalogue (RS11.4.3 item 3)
 }
 
 // Uncited is one work that references cite and that resolves to no resource. The references of one work have the same folded title and the same family of the first creator.
@@ -65,6 +67,14 @@ func refClosure(rs []resource.Resource, cs []resource.Cite, depthOf map[string]i
 	citing := map[string]bool{}
 	works := map[string]*Uncited{}
 	who := map[string]map[string]bool{}
+	distinct := map[key]map[string]bool{}
+	held := map[key]map[string]bool{}
+	add := func(m map[key]map[string]bool, k key, w string) {
+		if m[k] == nil {
+			m[k] = map[string]bool{}
+		}
+		m[k][w] = true
+	}
 	for _, e := range cs {
 		id, _, _ := strings.Cut(e.From, "/")
 		r := byID[id]
@@ -93,6 +103,12 @@ func refClosure(rs []resource.Resource, cs []resource.Cite, depthOf map[string]i
 		row.Parsed++
 		if e.To != "" {
 			row.Resolved++
+			if t := byID[to]; t != nil {
+				add(distinct, k, "r:"+t.ID)
+				if t.Live() && t.Scope != nil && (t.Scope.Value == resource.In || t.Scope.Value == resource.Border) {
+					add(held, k, "r:"+t.ID)
+				}
+			}
 			continue
 		}
 		if e.Parsed == nil || len(e.Parsed.Authors) == 0 {
@@ -103,6 +119,7 @@ func refClosure(rs []resource.Resource, cs []resource.Cite, depthOf map[string]i
 			continue
 		}
 		w := title + "|" + family
+		add(distinct, k, "u:"+w)
 		if works[w] == nil {
 			works[w] = &Uncited{Title: e.Parsed.Title, Author: e.Parsed.Authors[0], Year: e.Parsed.Year}
 			who[w] = map[string]bool{}
@@ -117,6 +134,7 @@ func refClosure(rs []resource.Resource, cs []resource.Cite, depthOf map[string]i
 		row := rows[k]
 		row.Closure = round(float64(row.Resolved) / float64(row.Parsed))
 		row.Below = row.Closure < row.Target
+		row.Works, row.Held = len(distinct[k]), len(held[k])
 		out.Rows = append(out.Rows, *row)
 	}
 	for w, u := range works {
