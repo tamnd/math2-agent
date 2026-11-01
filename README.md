@@ -668,6 +668,12 @@ $ m2 wp scope -corpus ../wikipedia-math -store scope.sqlite -dump 20261001 -asse
 $ m2 wp cited -root ../math2 > cited.txt
 ```
 
+With `-store` and `-corpus`, the command does not write the titles. It resolves each title in the store of the scope pass, after one redirect, and writes `reports/cited.md` to the corpus. The report gives the counts in its YAML header and a table of each title that has no mention, with its reason. The reason is `no-page` when no article of the dump has the title, `out-of-scope` when the article is a candidate that the scope rule did not take, with its verdict and rule, and `no-candidate` when the article is not a candidate. A title that resolves to an article in scope has the article mention `wikipedia://en/<pageid>`.
+
+```
+$ m2 wp cited -root ../math2 -store scope.sqlite -corpus ../wikipedia-math
+```
+
 `m2 wp gold draw` draws gold set S of WP11.2 from `candidates.tsv`: 500 candidates with S1 or S2, 500 candidates with S4 and no project tag, and 1,000 candidates with one weak signal. It writes `manifests/wikipedia/gold/scope.tsv`, and `-seed N` sets the sample. A reviewer writes `math`, `uses-math` or `not-math` in the column `mark` of each row. `m2 wp gold measure` then compares the marks with the scope list and writes `reports/gold-s.md`. The precision and the recall are weighted by the population of each stratum, so they estimate the measures over all the candidates.
 
 ```
