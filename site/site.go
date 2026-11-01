@@ -180,6 +180,11 @@ type builder struct {
 	res         map[string]*resView
 	resOrder    []*resView
 	resMentions map[string][]resMention // the mentions of each resource, by the resource id
+
+	courses   []*learnPath             // the courses of the seed list, in teaching order
+	skeletons map[string]*learnPath    // the skeleton of each subject, by the top-level MSC code
+	steps     map[*nodeView][]pathStep // the place of each node in the courses
+	areas     map[*nodeView]areaRef    // the section of the skeleton of the subject of each node
 }
 
 // Build writes the site to opt.Out.
@@ -200,10 +205,13 @@ func Build(opt Options) error {
 	if err := b.load(); err != nil {
 		return err
 	}
+	if err := b.loadPaths(); err != nil {
+		return err
+	}
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeResources, b.writeLevels, b.writeWikipedia, b.writeFeeds}
+	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeLearn, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeResources, b.writeLevels, b.writeWikipedia, b.writeFeeds}
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
