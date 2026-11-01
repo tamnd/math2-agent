@@ -28,6 +28,9 @@ func parseTemplates(b *builder) (*template.Template, error) {
 		"mscCodes":     mscCodes,
 		"subjectCount": subjectCount,
 		"hue":          hue,
+		"steps":        b.Steps,
+		"area":         b.Area,
+		"skeleton":     func(code string) *learnPath { return b.skeletons[code] },
 		"top": func(code string) string {
 			if len(code) < 2 {
 				return code
@@ -403,8 +406,9 @@ type kindGroup struct {
 
 type subjectView struct {
 	*mscGroup
-	Start []*nodeView // the first nodes to read: the concepts with the shortest reading paths
-	Kinds []kindGroup
+	Start []*nodeView // the first nodes to read: the first items of the map with a node, or the concepts with the shortest reading paths
+	Map   *learnPath  // the skeleton of the subject, or nil
+	Kinds []kindGroup // the nodes that are not on the map, by kind
 }
 
 // kindTitles are the kinds in the order of the page of a subject, with the title of each for a reader. A definition comes late, because the page of its concept comes first.
@@ -446,7 +450,16 @@ func (b *builder) depths() map[*nodeView]int {
 
 // subjectView orders the nodes of a subject for a learner: the foundations first, by the length of their reading paths, and by kind.
 func (b *builder) subjectView(g *mscGroup) subjectView {
-	sv := subjectView{mscGroup: g}
+	sv := subjectView{mscGroup: g, Map: b.skeletons[g.Code]}
+	onMap := map[*nodeView]bool{}
+	if sv.Map != nil {
+		for _, it := range sv.Map.Items {
+			if it.Node != nil {
+				onMap[it.Node] = true
+			}
+		}
+		sv.Start = sv.Map.Start(6)
+	}
 	depth := b.depthOf
 	nodes := slices.Clone(g.Nodes)
 	slices.SortStableFunc(nodes, func(x, y *nodeView) int {
@@ -456,14 +469,14 @@ func (b *builder) subjectView(g *mscGroup) subjectView {
 		return strings.Compare(strings.ToLower(x.Name), strings.ToLower(y.Name))
 	})
 	for _, v := range nodes {
-		if v.Kind == "concept" && v.Excerpt != "" && v.Retired == nil && len(sv.Start) < 6 {
+		if sv.Map == nil && v.Kind == "concept" && v.Excerpt != "" && v.Retired == nil && len(sv.Start) < 6 {
 			sv.Start = append(sv.Start, v)
 		}
 	}
 	for _, k := range kindTitles {
 		kg := kindGroup{Title: k.Title}
 		for _, v := range nodes {
-			if v.Kind == k.Kind {
+			if v.Kind == k.Kind && !onMap[v] {
 				kg.Nodes = append(kg.Nodes, v)
 			}
 		}

@@ -2,7 +2,8 @@
 <header class="subject-head" style="--hue: {{hue .Code}}">
   <p class="crumbs"><a href="{{url "msc/"}}">Subjects</a></p>
   <h1>{{.Name}}</h1>
-  <p class="lead">{{if .Nodes}}{{len .Nodes}} ideas{{else}}No ideas yet{{end}} in this subject. The list puts the foundations first.</p>
+  <p class="lead">{{if .Nodes}}{{len .Nodes}} ideas{{else}}No ideas yet{{end}} in this subject.{{with .Map}} The map below lists the main ideas of the subject by area, in teaching order. {{.Done}} of its {{len .Items}} ideas have a page so far.{{else}} The list puts the foundations first.{{end}}</p>
+  {{with .Map}}{{template "meter" .}}{{end}}
 </header>
 {{with .Start}}
 <section class="band">
@@ -13,13 +14,20 @@
   </ul>
 </section>
 {{end}}
+{{with .Map}}
+<section class="band subject-map">
+  <h2>Map of the subject</h2>
+  {{template "pathsections" .}}
+</section>
+{{if $.Kinds}}<h2 class="more-head">More ideas in this subject</h2>{{end}}
+{{end}}
 {{range .Kinds}}
 <section class="kind-section">
   <h2>{{.Title}} <span class="count">{{len .Nodes}}</span></h2>
   <ul class="name-list">{{range .Nodes}}<li><a href="{{.URL}}">{{.Name}}</a></li>{{end}}</ul>
 </section>
-{{else}}
+{{else}}{{if not .Map}}
 <p class="notice">This subject has no ideas yet. To add one, read <a href="{{url "contribute/"}}">Contribute</a>.</p>
-{{end}}
+{{end}}{{end}}
 <p class="aside-link"><a href="https://zbmath.org/classification/?q=cc%3A{{.Code}}">This subject is MSC class {{.Code}}. See it on zbMATH Open.</a></p>
 {{end}}

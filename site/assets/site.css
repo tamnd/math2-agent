@@ -460,3 +460,27 @@ ul.bare, .bare > ul { list-style: none; padding-left: 0; }
 .res-toc .d1 { margin-left: 1.2rem; }
 .res-toc .d2 { margin-left: 2.4rem; }
 .res-toc .d3, .res-toc .d4, .res-toc .d5 { margin-left: 3.6rem; }
+
+/* Learning paths: the courses and the maps of the subjects */
+.meter { display: block; height: 6px; background: color-mix(in srgb, var(--muted) 25%, transparent); border-radius: 3px; overflow: hidden; max-width: 24rem; margin: 0.6rem 0; }
+.meter > span { display: block; height: 100%; background: hsl(var(--hue, 250) 60% 50%); }
+.course-cards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.8rem; }
+.course-cards li { position: relative; background: var(--surface); padding: 1.1rem 1.3rem; }
+.course-cards li::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: hsl(var(--hue) 60% 55%); }
+.course-cards a { display: block; text-decoration: none; color: var(--text); }
+.course-cards a::after { content: ""; position: absolute; inset: 0; }
+.course-meta, .course-first { display: block; font-size: 0.88rem; color: var(--muted); }
+.toc ol { columns: 2 16rem; padding-left: 1.3rem; margin: 1rem 0 2rem; }
+.toc li { break-inside: avoid; margin: 0.15rem 0; }
+.path-section { margin: 2rem 0; scroll-margin-top: 4rem; }
+.path-list { padding-left: 2.6rem; max-width: var(--measure); }
+.path-list li { margin: 0.45rem 0; }
+.path-list li > a { font-weight: 550; }
+.path-list li.todo { color: var(--muted); }
+.path-excerpt { font-size: 0.9rem; color: var(--soft); margin-top: 0.1rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.kind-tag { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-left: 0.3rem; }
+.more-head { margin-top: 3rem; }
+.step-strip { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: baseline; background: var(--surface); padding: 0.6rem 1rem; margin: 0 0 1rem; font-size: 0.92rem; }
+.step-course { font-weight: 600; }
+.step-prev { margin-left: auto; }
+.button { display: inline-block; padding: 0.5rem 1rem; background: hsl(var(--hue, 250) 60% 45%); color: #fff; text-decoration: none; font-weight: 600; border-radius: 4px; }

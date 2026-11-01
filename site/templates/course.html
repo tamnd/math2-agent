@@ -1,0 +1,10 @@
+{{define "course"}}
+<header class="subject-head" style="--hue: {{hue .ID}}">
+  <p class="crumbs"><a href="{{url "learn/"}}">Learn</a> <span aria-hidden="true">/</span> Year {{.Year}}</p>
+  <h1>{{.Title}}</h1>
+  <p class="lead">{{len .Items}} ideas in teaching order. Each idea comes after the ideas that it builds on.{{if lt .Done (len .Items)}} {{.Done}} of them have a page so far; the others are on the list in grey.{{end}}</p>
+  {{template "meter" .}}
+  {{with .Start 1}}<p><a class="button" href="{{(index . 0).URL}}">Start with {{(index . 0).Name}} →</a></p>{{end}}
+</header>
+{{template "pathsections" .}}
+{{end}}

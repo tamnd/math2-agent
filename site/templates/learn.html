@@ -1,0 +1,35 @@
+{{define "learn"}}
+<header class="page-head">
+  <h1>Learn</h1>
+  <p class="lead">Follow a course from its first idea to its main theorems. Each course lists its ideas in teaching order, so each idea comes after the ideas that it builds on. To explore one area of mathematics in depth, choose a <a href="{{url "msc/"}}">subject</a>.</p>
+</header>
+{{range .Years}}
+<section class="band">
+  <h2>Year {{.Year}}</h2>
+  <ul class="course-cards">
+    {{range .Courses}}<li style="--hue: {{hue .ID}}"><a href="{{.URL}}"><span class="mini-title">{{.Title}}</span><span class="course-meta">{{len .Items}} ideas{{if lt .Done (len .Items)}} · {{.Done}} written{{end}}</span>{{template "meter" .}}</a>{{with .Start 1}}<span class="course-first">Starts with {{(index . 0).Name}}</span>{{end}}</li>
+    {{end}}
+  </ul>
+</section>
+{{end}}
+<section class="band">
+  <h2>All of mathematics</h2>
+  <p>The <a href="{{url "msc/"}}">subjects</a> follow the Mathematics Subject Classification. Each subject has a map of its main ideas, sorted by area and in teaching order.</p>
+</section>
+{{end}}
+
+{{define "meter"}}<span class="meter" role="img" aria-label="{{.Percent}}% written"><span style="width: {{.Percent}}%"></span></span>{{end}}
+
+{{define "pathsections"}}
+{{$many := gt (len .Sections) 1}}
+{{if $many}}<nav class="toc" aria-label="Sections"><ol>{{range .Sections}}<li><a href="#{{.ID}}">{{if .Title}}{{.Title}}{{else}}First ideas{{end}}</a> <span class="count">{{.Done}}/{{len .Items}}</span></li>{{end}}</ol></nav>{{end}}
+{{range .Sections}}
+<section class="path-section" id="{{.ID}}">
+  {{if .Title}}<h2>{{.Title}} <span class="count">{{.Done}} of {{len .Items}}</span></h2>{{end}}
+  <ol class="path-list" start="{{(index .Items 0).N}}">
+    {{range .Items}}<li class="{{if not .Node}}todo{{end}}">{{if .Node}}<a href="{{.Node.URL}}">{{.Node.Name}}</a>{{else}}<span title="This page is not written yet">{{.Name}}</span>{{end}} <span class="kind-tag k-{{.Kind}}">{{.Kind}}</span>{{with .Node}}{{with .Excerpt}}<div class="path-excerpt">{{.}}</div>{{end}}{{end}}</li>
+    {{end}}
+  </ol>
+</section>
+{{end}}
+{{end}}

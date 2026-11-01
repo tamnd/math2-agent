@@ -25,7 +25,8 @@
 <header class="top">
   <a class="brand" href="{{url ""}}" aria-label="Math 2.0, main page"><img src="{{url "assets/icon.svg"}}" alt="" width="26" height="26"><span>Math 2.0</span></a>
   <nav class="main-nav" aria-label="Main">
-    <a href="{{url "msc/"}}"{{if or (eq .Section "msc") (eq .Section "nodes")}} aria-current="page"{{end}}>Learn</a>
+    <a href="{{url "learn/"}}"{{if eq .Section "learn"}} aria-current="page"{{end}}>Learn</a>
+    <a href="{{url "msc/"}}"{{if or (eq .Section "msc") (eq .Section "nodes")}} aria-current="page"{{end}}>Subjects</a>
     <a href="{{url "latest/"}}"{{if eq .Section "latest"}} aria-current="page"{{end}}>Latest</a>
     <a href="{{url "discover/"}}"{{if eq .Section "discover"}} aria-current="page"{{end}}>Discover</a>
     <a href="{{url "res/"}}"{{if eq .Section "res"}} aria-current="page"{{end}}>Resources</a>
@@ -43,6 +44,7 @@
     <section>
       <h2>Learn</h2>
       <ul>
+        <li><a href="{{url "learn/"}}">Courses</a></li>
         <li><a href="{{url "msc/"}}">Subjects</a></li>
         <li><a href="{{url "nodes/"}}">Every idea</a></li>
         <li><a href="{{url "search/"}}">Search</a></li>

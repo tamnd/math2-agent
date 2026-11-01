@@ -1,11 +1,12 @@
 {{define "node"}}
 <article class="node" style="--hue: {{hue .SubjectCode}}">
 <header class="node-head">
-  <p class="crumbs">{{with .SubjectCode}}<a href="{{url (print "msc/" . "/")}}">{{mscName .}}</a> <span aria-hidden="true">/</span> {{end}}<a href="{{url (print "kind/" .Kind "/")}}">{{.Label}}</a></p>
+  <p class="crumbs">{{with .SubjectCode}}<a href="{{url (print "msc/" . "/")}}">{{mscName .}}</a> <span aria-hidden="true">/</span> {{end}}{{with area .}}<a href="{{.URL}}">{{.Title}}</a> <span aria-hidden="true">/</span> {{end}}<a href="{{url (print "kind/" .Kind "/")}}">{{.Label}}</a></p>
   <h1>{{.Name}}</h1>
   {{with .Uses}}<p class="builds"><span>Builds on</span> {{range $i, $l := .}}<a href="{{$l.URL}}"{{if $l.Missing}} class="missing" title="This page does not exist yet"{{end}}>{{$l.Text}}</a>{{end}}</p>{{end}}
 </header>
-{{with .Retired}}<div class="notice warn"><p><b>This page is retired.</b> The reason is: {{.reason}}.{{with .note}} {{.}}{{end}}</p></div>{{end}}
+{{range steps .}}<nav class="step-strip" aria-label="Course {{.Path.Title}}"><a class="step-course" href="{{.Path.URL}}">{{.Path.Title}}</a> <span class="count">{{.N}} of {{.Of}}</span>{{with .Prev}}<a class="step-prev" href="{{.URL}}" rel="prev">← {{.Name}}</a>{{end}}{{with .Next}}<a class="step-next" href="{{.URL}}" rel="next">{{.Name}} →</a>{{end}}</nav>
+{{end}}{{with .Retired}}<div class="notice warn"><p><b>This page is retired.</b> The reason is: {{.reason}}.{{with .note}} {{.}}{{end}}</p></div>{{end}}
 {{with .Prov}}{{with .Quarantined}}<div class="notice warn"><p><b>Some text of this page is hidden.</b> An agent wrote it with a model or a prompt that is under review, and no person checked it since. This page does not show {{list .}}.</p></div>{{end}}
 {{with .Unchecked}}<div class="notice"><p><b>An agent wrote some of this page, and no person checked it yet:</b> {{list .}}.</p></div>{{end}}{{end}}
 {{if or .Lead .Rest .Plain}}
