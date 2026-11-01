@@ -27,10 +27,13 @@ import (
 const Source = "zbmath_search"
 
 // Version is the version of the adapter.
-const Version = "zbmath_search/1"
+const Version = "zbmath_search/2"
 
 // SearchURL is the search of documents of the REST interface of zbMATH Open.
 const SearchURL = zbmath.API + "document/_search"
+
+// YearSlack is the most years between the date of the resource and the year of a document of zbMATH Open. A publisher often dates a book at the end of a year, and zbMATH Open gives the next year.
+const YearSlack = 1
 
 // MaxWords is the most words of the title in a query. A long title with many words gives no match when one word differs.
 const MaxWords = 8
@@ -83,7 +86,7 @@ func query(r *resource.Resource) string {
 	if len(words) == 0 || year == 0 {
 		return ""
 	}
-	q := "ti:" + strings.Join(words[:min(len(words), MaxWords)], " ") + " & py:" + strconv.Itoa(year)
+	q := "ti:" + strings.Join(words[:min(len(words), MaxWords)], " ") + " & py:" + strconv.Itoa(year-YearSlack) + "-" + strconv.Itoa(year+YearSlack)
 	if len(r.Creators) > 0 {
 		if f := word.FindAllString(cluster.Family(r.Creators[0].Name), -1); len(f) > 0 {
 			q += " & au:" + strings.Join(f, " ")
@@ -127,9 +130,10 @@ func needs(r *resource.Resource) bool {
 	return r.Holds(Source) || len(r.MSC) == 0 || !slices.ContainsFunc(r.Expressions, func(e resource.Expression) bool { return e.Language != "" })
 }
 
-// matches reports whether the document is the work of the resource: the same title of the work, the same year and, when the resource has creators, the family name of one creator among the authors and the editors.
+// matches reports whether the document is the work of the resource: the same title of the work, a year at most YearSlack from the year of the resource and, when the resource has creators, the family name of one creator among the authors and the editors.
 func matches(d *Doc, r *resource.Resource) bool {
-	if cluster.WorkTitle(d.Title.Title) != cluster.WorkTitle(r.Title) || d.Year != strconv.Itoa(year(r)) {
+	y, err := strconv.Atoi(d.Year)
+	if err != nil || y < year(r)-YearSlack || y > year(r)+YearSlack || !sameTitle(d.Title.Title, r.Title) {
 		return false
 	}
 	if len(r.Creators) == 0 {
@@ -149,6 +153,15 @@ func matches(d *Doc, r *resource.Resource) bool {
 		}
 	}
 	return false
+}
+
+// sameTitle reports whether two titles have the same title of the work. The title of a proceedings in zbMATH Open often goes on after the title of the work with no colon, as "Symmetry for elliptic PDEs. 30 years after a conjecture", so a title of two or more words that starts the other title at a word boundary is the same title.
+func sameTitle(a, b string) bool {
+	a, b = cluster.WorkTitle(a), cluster.WorkTitle(b)
+	if len(a) > len(b) {
+		a, b = b, a
+	}
+	return a != "" && (a == b || strings.Count(a, " ") > 0 && strings.HasPrefix(b, a+" "))
 }
 
 // Build asks the search for each resource that needs it and gives one record for each resource with a matching document that has an MSC code or a language. The first matching document wins.

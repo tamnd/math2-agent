@@ -111,7 +111,7 @@ func TestResImportS2(t *testing.T) {
 func TestResImportZbsearch(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch q := r.URL.Query().Get("search_string"); q {
-		case "ti:random walk and the heat equation & py:2010 & au:lawler":
+		case "ti:random walk and the heat equation & py:2009-2011 & au:lawler":
 			_, _ = w.Write([]byte(`{"result":[{"id":5826084,"identifier":"1213.60001","title":{"title":"Random walk and the heat equation"},"year":"2010","language":{"languages":["English"]},"msc":[{"code":"60-01","scheme":"msc2020"}],"contributors":{"authors":[{"name":"Lawler, Gregory F."}]}}]}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
