@@ -169,7 +169,6 @@ func Build(root, day string) (*Report, error) {
 	}
 	rep.Recall = withPairs(recalls(rs, cat), pairs)
 	rep.Stale = stale(cat, day)
-	rep.Unlisted = unlisted(rep.Recall)
 	texts, err := resource.ReadTexts(root)
 	if err != nil {
 		return nil, err
@@ -224,6 +223,8 @@ func Build(root, day string) (*Report, error) {
 		return nil, err
 	}
 	rep.Refs = refClosure(rs, cs, depthOf)
+	rep.Recall = withCitations(rep.Recall, rep.Refs.Rows)
+	rep.Unlisted = unlisted(rep.Recall)
 	ins, err := institutions.Read(root)
 	if err != nil {
 		return nil, err
