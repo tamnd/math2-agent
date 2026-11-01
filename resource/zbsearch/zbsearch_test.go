@@ -73,6 +73,14 @@ func TestMatchesCreator(t *testing.T) {
 	}
 }
 
+func TestMatchesAuthorReference(t *testing.T) {
+	r := &resource.Resource{Title: "Geometrical Approaches to Differential Equations", Date: "1980", Creators: []resource.Creator{{Name: "Rodolfo Martini", Role: "editor"}}}
+	d := doc(t, `{"title":{"title":"Geometrical approaches to differential equations"},"year":"1980","contributors":{"authors":[],"author_references":[{"name":"Martini, R."}],"editors":[]}}`)
+	if !matches(&d, r) {
+		t.Error("a name in the author references does not match")
+	}
+}
+
 func TestMatchesYearAndTitle(t *testing.T) {
 	r := &resource.Resource{Title: "Symmetry for Elliptic PDEs", Date: "2010", Creators: []resource.Creator{{Name: "Alberto Farina"}}}
 	d := doc(t, `{"title":{"title":"Symmetry for elliptic PDEs. 30 years after a conjecture of De Giorgi"},"year":"2011","contributors":{"editors":[{"name":"Farina, Alberto"}]}}`)
