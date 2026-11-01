@@ -33,6 +33,9 @@ const Version = "zbmath_search/3"
 // SearchURL is the search of documents of the REST interface of zbMATH Open.
 const SearchURL = zbmath.API + "document/_search"
 
+// FirstYear is the first year of the query of the earlier editions.
+const FirstYear = 1800
+
 // YearSlack is the most years between the date of the resource and the year of a document of zbMATH Open. A publisher often dates a book at the end of a year, and zbMATH Open gives the next year.
 const YearSlack = 1
 
@@ -155,9 +158,11 @@ func matches(d *Doc, r *resource.Resource) bool {
 	if err != nil || y < year(r)-YearSlack || y > year(r)+YearSlack || !sameTitle(d.Title.Title, r.Title) {
 		return false
 	}
-	if len(r.Creators) == 0 {
-		return true
-	}
+	return len(r.Creators) == 0 || sameCreator(d, r)
+}
+
+// sameCreator reports whether the name of one creator of the resource is among the names of the document.
+func sameCreator(d *Doc, r *resource.Resource) bool {
 	names := d.names()
 	for _, c := range r.Creators {
 		if slices.ContainsFunc(names, func(n string) bool { return sameName(n, c.Name) }) {
@@ -165,6 +170,26 @@ func matches(d *Doc, r *resource.Resource) bool {
 		}
 	}
 	return false
+}
+
+// reprint reports whether the document is an earlier edition of the work of the resource: a year before the years of the query, the same title with no more words, and the name of one creator. A publisher gives a reprint or an ebook of an old book the date of the reprint, as 2007 for a book of 1997, and zbMATH Open has the first edition.
+func reprint(d *Doc, r *resource.Resource) bool {
+	y, err := strconv.Atoi(d.Year)
+	if err != nil || y >= year(r)-YearSlack || len(r.Creators) == 0 {
+		return false
+	}
+	t := cluster.Fold(plain(d.Title.Title))
+	return t != "" && (t == cluster.WorkTitle(plain(r.Title)) || t == cluster.Fold(plain(r.Title))) && sameCreator(d, r)
+}
+
+// earlier gives the query of the earlier editions of the work of the resource, or "" when the resource has no creator. The query has the years before the years of query.
+func earlier(r *resource.Resource) string {
+	q := query(r)
+	if q == "" || len(r.Creators) == 0 {
+		return ""
+	}
+	y := year(r)
+	return strings.Replace(q, " & py:"+strconv.Itoa(y-YearSlack)+"-"+strconv.Itoa(y+YearSlack), " & py:"+strconv.Itoa(FirstYear)+"-"+strconv.Itoa(y-YearSlack-1), 1)
 }
 
 // sameName reports whether each word of the family name of the document name is a word of the creator name. A family name can have a particle or two words, as "van Neerven, Jan" for "Jan van Neerven" and "Fernández López, Antonio" for "Antonio Fernández López", and a catalogue can give the family name first, as "Marsh Duncan".
@@ -191,7 +216,26 @@ func plain(t string) string {
 // texCommand is a command of TeX in a title of zbMATH Open, as the \mathcal of "Mixed twistor \(\mathcal D\)-modules".
 var texCommand = regexp.MustCompile(`\\[A-Za-z]+`)
 
-// Build asks the search for each resource that needs it and gives one record for each resource with a matching document that has an MSC code or a language. The first matching document wins.
+// find gives the first document of the query that the test accepts, or nil. Of the documents that reprint accepts, the latest wins, because it is the edition nearest to the resource.
+func find(ctx context.Context, search Search, q string, r *resource.Resource, test func(*Doc, *resource.Resource) bool) (*Doc, error) {
+	docs, err := search(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	var best *Doc
+	for j := range docs {
+		d := &docs[j]
+		if !test(d, r) {
+			continue
+		}
+		if best == nil || d.Year > best.Year {
+			best = d
+		}
+	}
+	return best, nil
+}
+
+// Build asks the search for each resource that needs it and gives one record for each resource with a matching document that has an MSC code or a language. When no document of the years of the resource matches, Build asks for the earlier editions, and the latest earlier edition with the same title and a creator wins.
 func Build(ctx context.Context, rs []resource.Resource, search Search) ([]cluster.Record, Counts, error) {
 	var c Counts
 	var out []cluster.Record
@@ -207,26 +251,27 @@ func Build(ctx context.Context, rs []resource.Resource, search Search) ([]cluste
 			continue
 		}
 		c.Asked++
-		docs, err := search(ctx, q)
+		d, err := find(ctx, search, q, r, matches)
+		if err == nil && d == nil {
+			if e := earlier(r); e != "" {
+				d, err = find(ctx, search, e, r, reprint)
+			}
+		}
 		if err != nil {
 			return nil, c, err
 		}
-		for j := range docs {
-			d := &docs[j]
-			if !matches(d, r) {
-				continue
-			}
-			rec, ok := record(d, r)
-			if !ok {
-				break
-			}
-			c.Found++
-			rec.IDs[key] = resource.Values{value}
-			if !seen[rec.NativeID] {
-				seen[rec.NativeID] = true
-				out = append(out, rec)
-			}
-			break
+		if d == nil {
+			continue
+		}
+		rec, ok := record(d, r)
+		if !ok {
+			continue
+		}
+		c.Found++
+		rec.IDs[key] = resource.Values{value}
+		if !seen[rec.NativeID] {
+			seen[rec.NativeID] = true
+			out = append(out, rec)
 		}
 	}
 	return out, c, nil
