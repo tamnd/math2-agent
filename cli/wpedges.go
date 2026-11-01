@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
@@ -22,8 +23,12 @@ func runWPEdges(args []string, stdout, stderr io.Writer) int {
 	corpus := fs.String("corpus", ".", "the Wikipedia corpus (a clone of tamnd/wikipedia-math)")
 	storePath := fs.String("store", "", "the SQLite store of the scope pass, with the tables page and redirect")
 	page := fs.Int("page", 0, "write only the edges of the page with this id")
+	workers := fs.Int("workers", 4, "the number of pages to read and write at the same time")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
+	}
+	if *workers < 1 {
+		*workers = 1
 	}
 	fail := func(err error) int {
 		fmt.Fprintf(stderr, "m2 wp edges: %v\n", err)
@@ -97,30 +102,20 @@ func runWPEdges(args []string, stdout, stderr io.Writer) int {
 	results := map[int]*wpcorpus.Result{}
 	var order []int
 	failed := 0
-	for _, id := range ids {
-		p, err := wpcorpus.ReadContent(*corpus, id)
-		var r *wpcorpus.Result
-		var in *wpcorpus.PointerFile
-		if err == nil {
-			in, err = wpcorpus.ReadPointers(*corpus, id)
-		}
-		if err == nil {
-			r, err = wpcorpus.ExtractPage(p, m, "m2/"+version, in)
-		}
-		if err == nil {
-			var objs []wpcorpus.Object
-			if objs, err = wpcorpus.ReadObjects(*corpus, p.ID, p.Revision); err == nil {
-				err = wpcorpus.JoinTags(r, objs)
-			}
-		}
+	var mu sync.Mutex
+	eachPage(ids, *workers, func(id int) {
+		r, err := edgeResult(*corpus, id, m)
+		mu.Lock()
+		defer mu.Unlock()
 		if err != nil {
 			fmt.Fprintf(stderr, "m2 wp edges: page %d: %v\n", id, err)
 			failed++
-			continue
+			return
 		}
-		r.Slim()
 		results[id] = r
-		if *page == 0 || id == *page {
+	})
+	for _, id := range ids {
+		if results[id] != nil && (*page == 0 || id == *page) {
 			order = append(order, id)
 		}
 	}
@@ -160,15 +155,26 @@ func runWPEdges(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
-	var sum wpcorpus.EdgeSummary
-	for _, id := range order {
+	// The context is read only, so the workers build and write the edge
+	// files at the same time. The summary adds the files in page order.
+	files := make(map[int]*wpcorpus.EdgeFile, len(order))
+	eachPage(order, *workers, func(id int) {
 		f := wpcorpus.BuildEdges(results[id], ctx)
-		if err := wpcorpus.WriteEdges(*corpus, f); err != nil {
+		err := wpcorpus.WriteEdges(*corpus, f)
+		mu.Lock()
+		defer mu.Unlock()
+		if err != nil {
 			fmt.Fprintf(stderr, "m2 wp edges: %s: %v\n", f.Title, err)
 			failed++
-			continue
+			return
 		}
-		sum.Add(f)
+		files[id] = f
+	})
+	var sum wpcorpus.EdgeSummary
+	for _, id := range order {
+		if f := files[id]; f != nil {
+			sum.Add(f)
+		}
 	}
 	if *page == 0 {
 		path := filepath.Join(*corpus, wpcorpus.EdgesReportPath)
@@ -184,4 +190,49 @@ func runWPEdges(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	return ExitOK
+}
+
+// edgeResult extracts a page again and joins the tags of its objects file.
+func edgeResult(corpus string, id int, m *wpcorpus.Manifests) (*wpcorpus.Result, error) {
+	p, err := wpcorpus.ReadContent(corpus, id)
+	if err != nil {
+		return nil, err
+	}
+	in, err := wpcorpus.ReadPointers(corpus, id)
+	if err != nil {
+		return nil, err
+	}
+	r, err := wpcorpus.ExtractPage(p, m, "m2/"+version, in)
+	if err != nil {
+		return nil, err
+	}
+	objs, err := wpcorpus.ReadObjects(corpus, p.ID, p.Revision)
+	if err != nil {
+		return nil, err
+	}
+	if err := wpcorpus.JoinTags(r, objs); err != nil {
+		return nil, err
+	}
+	r.Slim()
+	return r, nil
+}
+
+// eachPage calls fn for each id, with n workers.
+func eachPage(ids []int, n int, fn func(id int)) {
+	ch := make(chan int)
+	var wg sync.WaitGroup
+	for range n {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for id := range ch {
+				fn(id)
+			}
+		}()
+	}
+	for _, id := range ids {
+		ch <- id
+	}
+	close(ch)
+	wg.Wait()
 }
