@@ -122,3 +122,20 @@ func TestPlainTitle(t *testing.T) {
 		t.Error("a title with a math italic letter does not match")
 	}
 }
+
+func TestSameName(t *testing.T) {
+	for _, c := range [][2]string{{"van Neerven, Jan", "Jan van Neerven"}, {"Fernández López, Antonio", "Antonio Fernández López"}, {"De Boor, Carl", "Carl de Boor"}, {"Martinez-Maure, Yves", "Yves Martinez-Maure"}, {"Marsh, Duncan", "Marsh Duncan"}, {"Gerstein, Larry J.", "Larry J. Gerstein"}} {
+		if !sameName(c[0], c[1]) {
+			t.Errorf("%q and %q are not the same name", c[0], c[1])
+		}
+	}
+	if sameName("Lang, Serge", "Larry J. Gerstein") || sameName("", "Larry J. Gerstein") {
+		t.Error("another name is the same name")
+	}
+}
+
+func TestTitleTeX(t *testing.T) {
+	if !sameTitle(`Mixed twistor \(\mathcal D\)-modules`, "Mixed Twistor D-modules") {
+		t.Error("a title with a command of TeX is not the same title")
+	}
+}

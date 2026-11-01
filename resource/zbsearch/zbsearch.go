@@ -160,12 +160,18 @@ func matches(d *Doc, r *resource.Resource) bool {
 	}
 	names := d.names()
 	for _, c := range r.Creators {
-		f := cluster.Family(c.Name)
-		if f != "" && slices.ContainsFunc(names, func(n string) bool { return cluster.Family(n) == f }) {
+		if slices.ContainsFunc(names, func(n string) bool { return sameName(n, c.Name) }) {
 			return true
 		}
 	}
 	return false
+}
+
+// sameName reports whether each word of the family name of the document name is a word of the creator name. A family name can have a particle or two words, as "van Neerven, Jan" for "Jan van Neerven" and "Fernández López, Antonio" for "Antonio Fernández López", and a catalogue can give the family name first, as "Marsh Duncan".
+func sameName(doc, creator string) bool {
+	f := strings.Fields(cluster.Family(doc))
+	words := strings.Fields(cluster.Fold(creator))
+	return len(f) > 0 && !slices.ContainsFunc(f, func(w string) bool { return !slices.Contains(words, w) })
 }
 
 // sameTitle reports whether two titles have the same title of the work. The title of a proceedings in zbMATH Open often goes on after the title of the work with no colon, as "Symmetry for elliptic PDEs. 30 years after a conjecture", so a title of two or more words that starts the other title at a word boundary is the same title.
@@ -177,10 +183,13 @@ func sameTitle(a, b string) bool {
 	return a != "" && (a == b || strings.Count(a, " ") > 0 && strings.HasPrefix(b, a+" "))
 }
 
-// plain gives the title with the compatibility forms of Unicode as plain letters, so that the math italic 𝐾 of a publisher title is the K of zbMATH Open.
+// plain gives the title with no commands of TeX and with the compatibility forms of Unicode as plain letters, so that the math italic 𝐾 of a publisher title is the K of zbMATH Open.
 func plain(t string) string {
-	return norm.NFKC.String(t)
+	return norm.NFKC.String(texCommand.ReplaceAllString(t, " "))
 }
+
+// texCommand is a command of TeX in a title of zbMATH Open, as the \mathcal of "Mixed twistor \(\mathcal D\)-modules".
+var texCommand = regexp.MustCompile(`\\[A-Za-z]+`)
 
 // Build asks the search for each resource that needs it and gives one record for each resource with a matching document that has an MSC code or a language. The first matching document wins.
 func Build(ctx context.Context, rs []resource.Resource, search Search) ([]cluster.Record, Counts, error) {
