@@ -421,8 +421,11 @@ func h11(a *auditor) outcome {
 	return o
 }
 
-// h12 reports each stratum whose estimated recall is below its target (rule H12, RS11.4.5). It reads the estimates of the census report. The recall of a stratum is the count of its live in-scope resources over the high end of the interval of the estimate, so it is the lower end of the interval of the recall. When more than one pair gives an estimate, the rule takes the highest end, which gives the least recall. A stratum with no target is not checked. The rule is hard from phase R5 (RS15.1), so a stratum below its target blocks a merge or a release.
+// h12 reports each stratum whose estimated recall is below its target (rule H12, RS11.4.5). It reads the estimates of the census report. The recall of a stratum is the count of its live in-scope resources over the high end of the interval of the estimate, so it is the lower end of the interval of the recall. When more than one pair gives an estimate, the rule takes the highest end, which gives the least recall. A stratum with no target is not checked. The rule is hard from phase R5 (RS15.1), so a stratum below its target blocks a merge or a release. The audit of a pull request checks it only when the pull request changes the census report or a record of a resource, because no other change moves a recall: an import of arXiv mentions then merges while the resources are below target, and the full audit of main still fails.
 func h12(a *auditor) outcome {
+	if a.pr && !a.touchedUnder(census.ReportFile, "records/resources/") {
+		return outcome{reason: "the pull request changes no record of a resource and not " + census.ReportFile}
+	}
 	t := a.resources()
 	if o, done := t.skip(); done {
 		return o

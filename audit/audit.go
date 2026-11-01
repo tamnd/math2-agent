@@ -246,6 +246,18 @@ func (a *auditor) inScope(path string) bool {
 	return !a.pr || a.touched[shard(path)]
 }
 
+// touchedUnder reports whether the pull request changed a file at one of the paths, or under one of them when a path ends in a slash.
+func (a *auditor) touchedUnder(paths ...string) bool {
+	for f := range a.touched {
+		for _, p := range paths {
+			if f == p || strings.HasSuffix(p, "/") && strings.HasPrefix(f, p) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // shard returns the shard directory of a node file, for example nodes/G5. For another file it returns the path.
 func shard(path string) string {
 	if dir := filepath.ToSlash(filepath.Dir(path)); strings.HasPrefix(dir, "nodes/") && strings.Count(dir, "/") == 1 {
