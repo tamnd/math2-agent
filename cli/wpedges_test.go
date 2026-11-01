@@ -89,6 +89,45 @@ func TestWPEdges(t *testing.T) {
 	}
 }
 
+// TestWPEdgesWorkers checks that the workers give the same edge files and
+// report as one worker.
+func TestWPEdgesWorkers(t *testing.T) {
+	root := edgeCorpus(t)
+	snap := func(workers string) map[string]string {
+		code, stdout, stderr := run("wp", "edges", "-corpus", root, "-workers", workers)
+		if code != ExitOK {
+			t.Fatalf("edges -workers %s: exit code %d, stderr %q, stdout %q", workers, code, stderr, stdout)
+		}
+		files := map[string]string{"stdout": stdout}
+		for _, dir := range []string{"analysis/edges", wpcorpus.EdgesReportPath} {
+			err := filepath.WalkDir(filepath.Join(root, dir), func(path string, d os.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				b, err := os.ReadFile(path) // #nosec G304 -- a file of the test corpus
+				files[path] = string(b)
+				return err
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		return files
+	}
+	one, many := snap("1"), snap("8")
+	if len(one) < 4 {
+		t.Fatalf("%d files, want 4 or more", len(one))
+	}
+	for path, b := range one {
+		if many[path] != b {
+			t.Errorf("%s differs with 8 workers", path)
+		}
+	}
+	if len(many) != len(one) {
+		t.Errorf("%d files with 8 workers, want %d", len(many), len(one))
+	}
+}
+
 func TestCorpusImportOfWikipedia(t *testing.T) {
 	root := edgeCorpus(t)
 	if code, stdout, stderr := run("wp", "edges", "-corpus", root); code != ExitOK {
