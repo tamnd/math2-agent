@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,6 +25,7 @@ func runWPPointers(args []string, stdout, stderr io.Writer) int {
 	dumpPath := fs.String("dump", "", "the multistream XML dump. Without it, the command reads only the redirects.")
 	index := fs.String("index", "", "the index of the dump. The default is the dump path with -index.txt.bz2.")
 	workers := fs.Int("workers", 4, "the number of workers that read the dump")
+	cache := fs.String("cache", "", "the anchor cache of the dump. When the file exists, the command reads the anchor links from it and not from the dump. When it does not exist, the command writes it.")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -75,28 +78,61 @@ func runWPPointers(args []string, stdout, stderr io.Writer) int {
 			return fail(err)
 		}
 		target := wpcorpus.ScopeTarget(scope, facts.Target)
-		streams, _, err := dump.StreamsOf(*index, nil)
-		if err != nil {
-			return fail(err)
-		}
-		err = dump.ReadPages(*dumpPath, streams, nil, *workers, func(p dump.Page) error {
-			if p.NS != 0 || p.Redirect != "" {
-				return nil
-			}
-			pages++
-			for to, ps := range wpcorpus.LinkPointers(p.Title, p.Text, target) {
+		add := func(from string, ls []wpcorpus.AnchorLink) {
+			for to, ps := range wpcorpus.AnchorPointers(from, ls, target) {
 				in[to] = append(in[to], ps...)
 				links += len(ps)
 			}
-			return nil
-		})
-		if err != nil {
-			return fail(err)
+		}
+		if _, err := os.Stat(*cache); *cache != "" && err == nil {
+			name, n, err := wpcorpus.ReadAnchorCache(*cache, func(from string, ls []wpcorpus.AnchorLink) error {
+				add(from, ls)
+				return nil
+			})
+			if err != nil {
+				return fail(err)
+			}
+			if want := filepath.Base(*dumpPath); name != want {
+				return fail(fmt.Errorf("the anchor cache %s is of the dump %s, not of %s", *cache, name, want))
+			}
+			pages = n
+		} else {
+			var ac *wpcorpus.AnchorCache
+			if *cache != "" {
+				if ac, err = wpcorpus.CreateAnchorCache(*cache, filepath.Base(*dumpPath)); err != nil {
+					return fail(err)
+				}
+			}
+			streams, _, err := dump.StreamsOf(*index, nil)
+			if err != nil {
+				return fail(err)
+			}
+			err = dump.ReadPages(*dumpPath, streams, nil, *workers, func(p dump.Page) error {
+				if p.NS != 0 || p.Redirect != "" {
+					return nil
+				}
+				pages++
+				ls := wpcorpus.AnchorLinks(p.Text)
+				add(p.Title, ls)
+				if ac != nil {
+					return ac.Add(p.Title, ls)
+				}
+				return nil
+			})
+			if err != nil {
+				if ac != nil {
+					ac.Abort()
+				}
+				return fail(err)
+			}
+			if ac != nil {
+				if err := ac.Close(); err != nil {
+					return fail(err)
+				}
+			}
 		}
 	}
 
-	// Each article in scope gets a file, also with no pointers, so that the
-	// census knows that the witness W-in was read.
 	for _, c := range scope {
 		f := &wpcorpus.PointerFile{Page: int(c.PageID), Title: c.Title, Pointers: in[strings.ReplaceAll(c.Title, " ", "_")]}
 		wpcorpus.SortPointers(f.Pointers)

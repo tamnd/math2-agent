@@ -67,6 +67,30 @@ INSERT INTO redirect VALUES (500, 0, 'Widget', 'Gadget theorem'), (700, 0, 'Widg
 		t.Errorf("pointers = %+v", f.Pointers)
 	}
 
+	// The first run with -cache writes the anchor cache, and the second run reads it and not the dump.
+	cache := filepath.Join(t.TempDir(), "anchors.tsv.gz")
+	for i := range 2 {
+		code, stdout, stderr := run("wp", "pointers", "-corpus", root, "-store", storePath, "-dump", dumpPath, "-index", indexPath, "-cache", cache)
+		if code != ExitOK {
+			t.Fatalf("run %d: exit code %d, stderr %q, stdout %q", i, code, stderr, stdout)
+		}
+		if !strings.HasPrefix(stdout, "1 articles, 3 redirects and 2 links with an anchor, 2 pages of the dump read, run record ") {
+			t.Errorf("run %d: stdout is %q", i, stdout)
+		}
+		f, err := wpcorpus.ReadPointers(root, 12345)
+		if err != nil || f == nil || !slices.Equal(f.Pointers, want) {
+			t.Errorf("run %d: pointers %+v, %v", i, f, err)
+		}
+		if i == 0 {
+			if err := os.WriteFile(dumpPath, nil, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if code, _, stderr := run("wp", "pointers", "-corpus", root, "-store", storePath, "-dump", filepath.Join(filepath.Dir(dumpPath), "other.xml.bz2"), "-cache", cache); code != ExitFailure || !strings.Contains(stderr, "is of the dump") {
+		t.Errorf("a cache of another dump: exit code %d, stderr %q", code, stderr)
+	}
+
 	// The extract reads the pointers file into the census.
 	if err := wpcorpus.WriteContent(root, &wpcorpus.Page{ID: 12345, Revision: 678, Title: "Widget", Wikitext: string(widget)}); err != nil {
 		t.Fatal(err)
