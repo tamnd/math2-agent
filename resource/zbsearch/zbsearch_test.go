@@ -48,7 +48,7 @@ func TestBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(asked) != 4 || n.Asked != 4 || n.Found != 2 || len(recs) != 2 {
+	if len(asked) != 5 || asked[3] != "ti:wrong year & py:1800-1988 & au:lawler" || n.Asked != 4 || n.Found != 2 || len(recs) != 2 {
 		t.Fatalf("asked %q, counts %+v, records %+v", asked, n, recs)
 	}
 	a := recs[0]
@@ -137,5 +137,31 @@ func TestSameName(t *testing.T) {
 func TestTitleTeX(t *testing.T) {
 	if !sameTitle(`Mixed twistor \(\mathcal D\)-modules`, "Mixed Twistor D-modules") {
 		t.Error("a title with a command of TeX is not the same title")
+	}
+}
+
+func TestBuildReprint(t *testing.T) {
+	in := &resource.Scope{Value: resource.In}
+	rs := []resource.Resource{{ID: "8F2HHHHHH4", Kind: "monograph", Title: "Rings, Modules, and Algebras in Stable Homotopy Theory", Date: "2007", Creators: []resource.Creator{{Name: "A. Elmendorf"}}, Scope: in, IDs: resource.IDs{"doi": {"10.1090/surv/047"}}}}
+	docs := map[string]string{
+		"ti:rings modules and algebras in stable homotopy theory & py:1800-2005 & au:elmendorf": `[{"id":5,"identifier":"0894.55001","title":{"title":"Rings, modules, and algebras in stable homotopy theory"},"year":"1997","msc":[{"code":"55-02","scheme":"msc2020"}],"contributors":{"authors":[{"name":"Elmendorf, A. D."}]}},{"id":6,"identifier":"0000.00006","title":{"title":"Rings, modules, and algebras in stable homotopy theory"},"year":"1995","msc":[{"code":"55P42","scheme":"msc2020"}],"contributors":{"authors":[{"name":"Elmendorf, A. D."}]}},{"id":7,"identifier":"0000.00007","title":{"title":"Rings, modules, and algebras in stable homotopy theory. A survey"},"year":"1999","msc":[{"code":"55-01","scheme":"msc2020"}],"contributors":{"authors":[{"name":"Elmendorf, A. D."}]}}]`,
+	}
+	search := func(_ context.Context, q string) ([]Doc, error) {
+		s, ok := docs[q]
+		if !ok {
+			return nil, nil
+		}
+		var ds []Doc
+		if err := json.Unmarshal([]byte(s), &ds); err != nil {
+			t.Fatal(err)
+		}
+		return ds, nil
+	}
+	recs, n, err := Build(context.Background(), rs, search)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n.Found != 1 || len(recs) != 1 || recs[0].NativeID != "5" {
+		t.Fatalf("counts %+v, records %+v", n, recs)
 	}
 }
