@@ -323,3 +323,19 @@ func TestRunMeter(t *testing.T) {
 		t.Errorf("the run spends $%.6f of $%.6f, and stops with %q", rec.Spend.USD, j.Budget.USD, rec.Reason)
 	}
 }
+
+// TestRunBefore checks the goal before the first turn: when it holds, the run succeeds with no turn and calls no model.
+func TestRunBefore(t *testing.T) {
+	rn, _ := runner(t, llmtest.New())
+	rn.Before = func(context.Context) (bool, string, error) { return true, "", nil }
+	rec, err := rn.Run(context.Background(), job(), 0, "Prove 7K3QX2.")
+	if err != nil || rec.Outcome != agent.Success || len(rec.Turns) != 0 || rec.Spend.USD != 0 {
+		t.Fatalf("the run is %+v, %v", rec, err)
+	}
+	model := llmtest.New(llmtest.Call("lean_check", code("done"), u))
+	rn, c := runner(t, model)
+	rn.Before = func(context.Context) (bool, string, error) { return c.done, "", nil }
+	if rec, err = rn.Run(context.Background(), job(), 0, "Prove 7K3QX2."); err != nil || rec.Outcome != agent.Success || len(rec.Turns) != 1 {
+		t.Fatalf("a goal that does not hold before the first turn gives %+v, %v", rec, err)
+	}
+}
