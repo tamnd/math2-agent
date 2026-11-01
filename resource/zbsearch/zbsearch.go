@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/zeebo/blake3"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/ingest/zbmath"
@@ -99,7 +100,7 @@ var word = regexp.MustCompile(`[\pL\pN]+`)
 
 // query gives the query of zbMATH Open for the resource, or "" when the resource has no title or no year.
 func query(r *resource.Resource) string {
-	words := word.FindAllString(cluster.WorkTitle(r.Title), -1)
+	words := word.FindAllString(cluster.WorkTitle(plain(r.Title)), -1)
 	year := year(r)
 	if len(words) == 0 || year == 0 {
 		return ""
@@ -169,11 +170,16 @@ func matches(d *Doc, r *resource.Resource) bool {
 
 // sameTitle reports whether two titles have the same title of the work. The title of a proceedings in zbMATH Open often goes on after the title of the work with no colon, as "Symmetry for elliptic PDEs. 30 years after a conjecture", so a title of two or more words that starts the other title at a word boundary is the same title.
 func sameTitle(a, b string) bool {
-	a, b = cluster.WorkTitle(a), cluster.WorkTitle(b)
+	a, b = cluster.WorkTitle(plain(a)), cluster.WorkTitle(plain(b))
 	if len(a) > len(b) {
 		a, b = b, a
 	}
 	return a != "" && (a == b || strings.Count(a, " ") > 0 && strings.HasPrefix(b, a+" "))
+}
+
+// plain gives the title with the compatibility forms of Unicode as plain letters, so that the math italic 𝐾 of a publisher title is the K of zbMATH Open.
+func plain(t string) string {
+	return norm.NFKC.String(t)
 }
 
 // Build asks the search for each resource that needs it and gives one record for each resource with a matching document that has an MSC code or a language. The first matching document wins.
