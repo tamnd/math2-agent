@@ -179,6 +179,8 @@ var Prices = map[string]Price{
 	"claude-sonnet-5-5": {Input: 2, Output: 10, CacheRead: 0.20, CacheWrite: 2.50},
 	"claude-opus-5-5":   {Input: 4, Output: 20, CacheRead: 0.20, CacheWrite: 5},
 	"claude-fable-5-1":  {Input: 10, Output: 50, CacheRead: 0.25, CacheWrite: 12.50},
+	// math2 knows no price of gpt-6-sol on an API. It runs through the client of a subscription (llm/command), and the table gives it the price of claude-opus-5-5 as an upper estimate, so that a budget still bounds a run.
+	"gpt-6-sol": {Input: 4, Output: 20, CacheRead: 0.20, CacheWrite: 5},
 }
 
 // Cost returns the price in US dollars of the usage of one request to the model, from the table. It reports false when the table has no price for the model.
