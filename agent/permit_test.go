@@ -378,5 +378,12 @@ func TestPermitUnderstand(t *testing.T) {
 				t.Errorf("error %v, want %q", err, tc.err)
 			}
 		})
+	} // A target of one part of the items writes the records of the pass, not of a directory of the part.
+	if err := agent.Permit("understand", target+":2", []workspace.Change{{Path: path, New: []byte(own)}}); err != nil {
+		t.Errorf("a part: %v", err)
+	}
+	part := agent.UnderstandDir + "/classify:2/" + inventory.MentionShard("ax://paper/2401.00001#UNK1") + ".jsonl"
+	if err := agent.Permit("understand", target+":2", []workspace.Change{{Path: part, New: []byte(own)}}); err == nil {
+		t.Error("a part writes a directory of the part")
 	}
 }

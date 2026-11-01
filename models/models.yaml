@@ -27,6 +27,20 @@ terms:
         from: 2026-11-12
         says: A user must not use outputs to train an AI model, for example by model scraping or model distillation, without the prior authorization of Anthropic.
 
+  - id: openai-terms-of-use
+    name: Terms of Use of OpenAI
+    url: https://openai.com/policies/row-terms-of-use/
+    effective: 2026-01-01
+    read: 2026-11-01
+    by: Claude Code, for tamnd (the page refuses fetchers, thus from a search snapshot of it)
+    outputs:
+      - duty: owns
+        section: Ownership of content
+        says: As between the user and OpenAI, the user owns the Output.
+      - duty: no_competing
+        section: Using our Services
+        says: The user must not use Output to develop models that compete with OpenAI.
+
 models:
   - id: claude-haiku-5-5
     family: claude
@@ -44,3 +58,7 @@ models:
     family: claude
     provider: anthropic
     terms: [anthropic-commercial, anthropic-aup]
+  - id: gpt-6-sol
+    family: gpt
+    provider: openai
+    terms: [openai-terms-of-use]
