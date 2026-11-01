@@ -352,11 +352,12 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		}
 	}
 	var (
-		brief string
-		check agent.Goal
-		meter *agent.Meter
-		extra []agent.Tool
-		nv    *explore.Novelty
+		brief  string
+		check  agent.Goal
+		before agent.Goal // the goal before the first turn, for a role whose goal calls no model
+		meter  *agent.Meter
+		extra  []agent.Tool
+		nv     *explore.Novelty
 	)
 	if slices.Contains([]string{"align", "curate", "enumerate", "explain", "explore", "understand"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
 		return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
@@ -461,6 +462,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		by := "agent:m2-agent/understand@" + r.Version
 		brief = understand.Brief(job, p, r.Passes[t.Pass])
 		check = understand.Goal(ws, job, p, by)
+		before = check // the goal reads the records only, thus a paper with no item of the pass needs no model
 		extra = understand.Tools(ws, p, r.Ladder[rung].Model, by)
 	case "explore":
 		var runner *compute.Runner
@@ -536,7 +538,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 	if err != nil {
 		return nil, ws, nil, err
 	}
-	rn := agent.Runner{Role: r, Model: rs.model, Tools: ts, Goal: check, Meter: meter}
+	rn := agent.Runner{Role: r, Model: rs.model, Tools: ts, Goal: check, Before: before, Meter: meter}
 	rec, runErr := rn.Run(ctx, job, rung, brief)
 	if rec == nil {
 		return nil, ws, nil, runErr
