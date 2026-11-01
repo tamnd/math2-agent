@@ -17,11 +17,14 @@ type Tier struct {
 }
 
 // Tiers are the model tiers of AX7.8. T0 calls no model, so it has no plan.
+// T1 and T4 are measured in the MSC 20 pilot (#256, claude-haiku-5-5, input with the cache):
+// T1 is 22k tokens in and 5k out for each paper, T4 is 11k in and 1k out for each proof.
+// The high cost of T4 stays the estimate for a model of tier 2.
 var Tiers = map[string]Tier{
-	"T1": {Name: "T1", Passes: "classify, concepts", Unit: "paper", Est: queue.Estimate{Tier: 1, TokensIn: 25000, TokensOut: 2000, CostLow: 0.002, CostHigh: 0.003, CostKnown: true}},
+	"T1": {Name: "T1", Passes: "classify, concepts", Unit: "paper", Est: queue.Estimate{Tier: 1, TokensIn: 22000, TokensOut: 5000, CostLow: 0.005, CostHigh: 0.006, CostKnown: true}},
 	"T2": {Name: "T2", Passes: "prose and its check", Unit: "paper", Est: queue.Estimate{Tier: 2, TokensIn: 35000, TokensOut: 4000, CostLow: 0.05, CostHigh: 0.06, CostKnown: true}}, // #nosec G101 -- Passes names the passes of a tier, not a password
 	"T3": {Name: "T3", Passes: "unfold and its check", Unit: "item", Est: queue.Estimate{Tier: 2, TokensIn: 17000, TokensOut: 900, CostLow: 0.03, CostHigh: 0.03, CostKnown: true}},  // #nosec G101 -- Passes names the passes of a tier, not a password
-	"T4": {Name: "T4", Passes: "proof, summary", Unit: "proof", Est: queue.Estimate{Tier: 2, TokensIn: 15000, TokensOut: 3000, CostLow: 0.05, CostHigh: 0.1, CostKnown: true}},
+	"T4": {Name: "T4", Passes: "proof, summary", Unit: "proof", Est: queue.Estimate{Tier: 2, TokensIn: 11000, TokensOut: 1000, CostLow: 0.007, CostHigh: 0.1, CostKnown: true}},
 }
 
 // TierNames returns the names of the tiers with a plan.
