@@ -75,3 +75,41 @@ func TestWords(t *testing.T) {
 		t.Errorf("got %v", got)
 	}
 }
+
+func TestTuneClass(t *testing.T) {
+	g, p, mixed := Features(&resource.Resource{Title: "graph vertex"}, nil), Features(&resource.Resource{Title: "prime zeta"}, nil), Features(&resource.Resource{Title: "graph prime"}, nil)
+	var train, held []Example
+	for i := range 100 {
+		train = append(train, Example{ID: fmt.Sprint("t", i), Features: g, Label: "05"}, Example{ID: fmt.Sprint("u", i), Features: p, Label: "11"})
+	}
+	for i := range 40 {
+		held = append(held, Example{ID: fmt.Sprint("g", i), Features: g, Label: "05"}, Example{ID: fmt.Sprint("p", i), Features: p, Label: "11"})
+	}
+	// A work with both kinds of words has a low score, and its class is wrong.
+	for i := range 10 {
+		held = append(held, Example{ID: fmt.Sprint("m", i), Features: mixed, Label: "14"})
+	}
+	m := &Model{Classes: Fit(train)}
+	ev := m.TuneClass(held)
+	if m.ClassMin <= 0.5 || ev.Precision != 1 || ev.Share != 0.889 || ev.Total != 90 {
+		t.Fatalf("class min %v, eval %+v", m.ClassMin, ev)
+	}
+	s := Scope{Model: m}
+	if c, _ := s.Class(&resource.Resource{Title: "graph vertex"}); c != "05" {
+		t.Errorf("the class of a graph text is %q", c)
+	}
+	if c, _ := s.Class(&resource.Resource{Title: "graph prime"}); c != "" {
+		t.Errorf("a mixed text has the class %q", c)
+	}
+	if ev := m.TuneClass(held[:10]); m.ClassMin != 0 || ev.Min != 0 {
+		t.Errorf("a small sample gave the class min %v", m.ClassMin)
+	}
+}
+
+func TestTuneOneLabel(t *testing.T) {
+	m := Fit([]Example{{ID: "a", Label: resource.In, Features: Features(&resource.Resource{Title: "Algebraic topology"}, nil)}})
+	ev := m.Tune([]Example{{ID: "a", Label: resource.In, Features: Features(&resource.Resource{Title: "Algebraic topology"}, nil)}})
+	if ev.High != 1 || ev.Low != 0 || m.High != 1 || m.Low != 0 {
+		t.Errorf("Tune with no out records = %+v, high %v, low %v", ev, m.High, m.Low)
+	}
+}

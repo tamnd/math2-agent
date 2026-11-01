@@ -111,7 +111,7 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 	if err := writeOut(filepath.Join(*root, ResScopeQueue), buf.Bytes()); err != nil {
 		return fail(err)
 	}
-	fmt.Fprintf(stdout, "in %d, border %d, out %d, deferred %d, changed %d, open %d, queue %d\n", c.ByValue[resource.In], c.ByValue[resource.Border], c.ByValue[resource.Out], c.ByValue[resource.Deferred], c.Changed, c.Open, len(items))
+	fmt.Fprintf(stdout, "in %d, border %d, out %d, deferred %d, changed %d, open %d, queue %d, classed %d\n", c.ByValue[resource.In], c.ByValue[resource.Border], c.ByValue[resource.Out], c.ByValue[resource.Deferred], c.Changed, c.Open, len(items), c.Classed)
 	return ExitOK
 }
 
@@ -146,6 +146,16 @@ func fitScope(root string, rs []resource.Resource, env resscope.Env, stdout io.W
 		}
 	}
 	m := resclassify.Fit(train)
+	var classTrain, classHeld []resclassify.Example
+	for _, e := range classes {
+		if h := sha256.Sum256([]byte(e.ID)); h[0] < 26 {
+			classHeld = append(classHeld, e)
+		} else {
+			classTrain = append(classTrain, e)
+		}
+	}
+	m.Classes = resclassify.Fit(classTrain)
+	cev := m.TuneClass(classHeld)
 	m.Classes = resclassify.Fit(classes)
 	ev := m.Tune(gold)
 	met := "meets"
@@ -153,6 +163,7 @@ func fitScope(root string, rs []resource.Resource, env resscope.Env, stdout io.W
 		met = "does not meet"
 	}
 	fmt.Fprintf(stdout, "fitted on %d examples and %d classes; on %s (%d records): high %.3f, low %.3f, precision %.3f, recall %.3f, middle %d; it %s the targets of RS9.3\n", len(train), len(m.Classes.Labels), source, ev.Total, ev.High, ev.Low, ev.Precision, ev.Recall, ev.Middle, met)
+	fmt.Fprintf(stdout, "classes: on a held-out tenth of the works with an MSC code (%d works): class min %.3f, precision %.3f, share %.3f\n", cev.Total, cev.Min, cev.Precision, cev.Share)
 	return m, nil
 }
 

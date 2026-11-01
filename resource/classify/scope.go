@@ -22,6 +22,15 @@ func (s Scope) Classify(r *resource.Resource) (string, float64, string) {
 	return v, score, class
 }
 
+// Class gives the MSC2 class of a resource that a test put in scope and its score, or an empty class when the score is below ClassMin or ClassMin is zero.
+func (s Scope) Class(r *resource.Resource) (string, float64) {
+	class, score := s.Model.Class(Features(r, s.cited(r.ID)))
+	if s.Model.ClassMin == 0 || score < s.Model.ClassMin {
+		return "", score
+	}
+	return class, score
+}
+
 // Version gives the version of the model.
 func (s Scope) Version() string { return s.Model.Version() }
 
