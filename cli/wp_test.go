@@ -207,3 +207,55 @@ func TestAuditWikipedia(t *testing.T) {
 		t.Errorf("-group Q: exit code %d, stderr %q", code, stderr)
 	}
 }
+
+// TestWPExtractWorkers checks that the workers write the same files as one worker.
+func TestWPExtractWorkers(t *testing.T) {
+	root := wpCorpus(t)
+	names := []string{"edges", "glossary", "list", "pointers", "widget", "witness"}
+	for i, n := range names {
+		text, err := os.ReadFile(filepath.Join("..", "wpcorpus", "testdata", "pages", n+".wiki"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		p := &wpcorpus.Page{ID: 1000 + i, Revision: 2000 + i, Title: strings.ToUpper(n[:1]) + n[1:], Wikitext: string(text)}
+		if err := wpcorpus.WriteContent(root, p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	snapshot := func() map[string]string {
+		out := map[string]string{}
+		for _, d := range []string{"analysis", wpcorpus.MarkdownDir, wpcorpus.TagsDir} {
+			_ = filepath.WalkDir(filepath.Join(root, d), func(p string, e os.DirEntry, err error) error {
+				if err == nil && !e.IsDir() {
+					b, _ := os.ReadFile(p)
+					out[p] = string(b)
+				}
+				return nil
+			})
+		}
+		return out
+	}
+	var first map[string]string
+	for _, w := range []string{"1", "8"} {
+		code, stdout, stderr := run("wp", "extract", "-corpus", root, "-workers", w)
+		if code != ExitOK || !strings.Contains(stdout, "6 pages, ") {
+			t.Fatalf("-workers %s: exit code %d, stdout %q, stderr %q", w, code, stdout, stderr)
+		}
+		got := snapshot()
+		if first == nil {
+			if len(got) < 12 {
+				t.Fatalf("-workers 1 wrote only %d files", len(got))
+			}
+			first = got
+			continue
+		}
+		if len(got) != len(first) {
+			t.Fatalf("-workers %s wrote %d files, -workers 1 wrote %d", w, len(got), len(first))
+		}
+		for p, b := range first {
+			if got[p] != b {
+				t.Errorf("-workers %s changed %s", w, p)
+			}
+		}
+	}
+}

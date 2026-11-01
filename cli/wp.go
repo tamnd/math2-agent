@@ -9,12 +9,13 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-const wpUsage = "m2 wp extract [-corpus DIR] [-list FILE] [-page ID] [-type T] [-api URL] [title...]\n       m2 wp cited [-root DIR]\n       m2 wp scope -store DB -dump DATE -assess FILE [-cited FILE] [-wikidata FILE] [-corpus DIR] [-work DIR]\n       m2 wp gold draw|measure [s|y|m] [-corpus DIR] [-seed N]\n       m2 wp fetch -dump FILE -store DB [-index FILE] [-date DATE] [-corpus DIR] [-workers N] [-check=false] [-page ID] [-limit N]\n       m2 wp parsoid [-corpus DIR] [-page ID] [-limit N]\n       m2 wp pointers -store DB [-dump FILE] [-index FILE] [-workers N] [-cache FILE] [-corpus DIR]\n       m2 wp census report|diff [-corpus DIR] [PAGE]\n       m2 wp edges [-corpus DIR] [-store DB] [-page ID]\n       m2 wp refresh"
+const wpUsage = "m2 wp extract [-corpus DIR] [-list FILE] [-page ID] [-type T] [-api URL] [-workers N] [title...]\n       m2 wp cited [-root DIR]\n       m2 wp scope -store DB -dump DATE -assess FILE [-cited FILE] [-wikidata FILE] [-corpus DIR] [-work DIR]\n       m2 wp gold draw|measure [s|y|m] [-corpus DIR] [-seed N]\n       m2 wp fetch -dump FILE -store DB [-index FILE] [-date DATE] [-corpus DIR] [-workers N] [-check=false] [-page ID] [-limit N]\n       m2 wp parsoid [-corpus DIR] [-page ID] [-limit N]\n       m2 wp pointers -store DB [-dump FILE] [-index FILE] [-workers N] [-cache FILE] [-corpus DIR]\n       m2 wp census report|diff [-corpus DIR] [PAGE]\n       m2 wp edges [-corpus DIR] [-store DB] [-page ID]\n       m2 wp refresh"
 
 // wpLater holds the wp subcommands that are not written yet, with the
 // milestone of the Wikipedia roadmap (WP14) that delivers each of them.
@@ -66,8 +67,12 @@ func runWPExtract(args []string, stdout, stderr io.Writer) int {
 	page := fs.Int("page", 0, "extract only the page with this id from the content plane")
 	typ := fs.String("type", "", "extract only the pages of this article type: article, statement, glossary, list, outline or timeline")
 	api := fs.String("api", wpcorpus.DefaultAPI, "the Action API URL")
+	workers := fs.Int("workers", 4, "the number of pages to extract at the same time")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
+	}
+	if *workers < 1 {
+		*workers = 1
 	}
 	titles := fs.Args()
 	if *list != "" {
@@ -89,7 +94,7 @@ func runWPExtract(args []string, stdout, stderr io.Writer) int {
 	}
 
 	var pages []*wpcorpus.Page
-	failed := 0
+	failed, lazy := 0, false
 	if len(titles) > 0 {
 		f := &wpcorpus.Fetcher{API: *api, UserAgent: userAgent()}
 		for i, t := range titles {
@@ -115,15 +120,11 @@ func runWPExtract(args []string, stdout, stderr io.Writer) int {
 				return ExitFailure
 			}
 		}
+		// The workers read the content of each page, so the pages are not all in memory.
 		for _, id := range ids {
-			p, err := wpcorpus.ReadContent(*corpus, id)
-			if err != nil {
-				fmt.Fprintf(stderr, "m2 wp extract: %v\n", err)
-				failed++
-				continue
-			}
-			pages = append(pages, p)
+			pages = append(pages, &wpcorpus.Page{ID: id})
 		}
+		lazy = true
 	}
 
 	resolve, err := wpcorpus.ScopeResolver(*corpus)
@@ -132,52 +133,86 @@ func runWPExtract(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	var objects, cues, gaps, done int
-	for _, p := range pages {
-		if *typ != "" && wpcorpus.ArticleType(p.Title) != *typ {
-			continue
-		}
-		var r *wpcorpus.Result
-		in, err := wpcorpus.ReadPointers(*corpus, p.ID)
-		if err == nil {
-			r, err = wpcorpus.ExtractPage(p, m, "m2/"+version, in)
-		}
-		if err == nil {
-			err = wpcorpus.JoinWitness(*corpus, r, m)
-		}
-		if err == nil {
-			_, err = wpcorpus.AssignTags(*corpus, r)
-		}
-		if err == nil {
-			err = wpcorpus.WriteResult(*corpus, r)
-		}
-		if err == nil {
-			err = wpcorpus.RemoveStale(*corpus, p.ID, p.Revision)
-		}
-		if err == nil {
-			var md []byte
-			if md, err = wpcorpus.Render(p, m, r, resolve, "m2/"+version); err == nil {
-				err = wpcorpus.WriteMarkdown(*corpus, p.ID, md)
+	var mu sync.Mutex
+	jobs := make(chan *wpcorpus.Page)
+	var wg sync.WaitGroup
+	for range *workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for p := range jobs {
+				var err error
+				if lazy {
+					if p, err = wpcorpus.ReadContent(*corpus, p.ID); err != nil {
+						mu.Lock()
+						fmt.Fprintf(stderr, "m2 wp extract: %v\n", err)
+						failed++
+						mu.Unlock()
+						continue
+					}
+				}
+				if *typ != "" && wpcorpus.ArticleType(p.Title) != *typ {
+					continue
+				}
+				r, err := extractOne(*corpus, p, m, resolve)
+				mu.Lock()
+				if err != nil {
+					fmt.Fprintf(stderr, "m2 wp extract: %s: %v\n", p.Title, err)
+					failed++
+					mu.Unlock()
+					continue
+				}
+				c := &r.Census
+				g := len(c.Gaps())
+				fmt.Fprintf(stdout, "%d r%d %s: %d objects, %d cues, %d gaps, %d unmapped templates, %d unmapped headings\n",
+					p.ID, p.Revision, p.Title, len(r.Objects), len(c.Cues), g, len(c.Unmapped), len(c.UnmappedHeadings))
+				objects += len(r.Objects)
+				cues += len(c.Cues)
+				gaps += g
+				done++
+				mu.Unlock()
 			}
-		}
-		if err != nil {
-			fmt.Fprintf(stderr, "m2 wp extract: %s: %v\n", p.Title, err)
-			failed++
-			continue
-		}
-		c := &r.Census
-		g := len(c.Gaps())
-		fmt.Fprintf(stdout, "%d r%d %s: %d objects, %d cues, %d gaps, %d unmapped templates, %d unmapped headings\n",
-			p.ID, p.Revision, p.Title, len(r.Objects), len(c.Cues), g, len(c.Unmapped), len(c.UnmappedHeadings))
-		objects += len(r.Objects)
-		cues += len(c.Cues)
-		gaps += g
-		done++
+		}()
 	}
+	for _, p := range pages {
+		jobs <- p
+	}
+	close(jobs)
+	wg.Wait()
 	fmt.Fprintf(stdout, "%d pages, %d objects, %d cues, %d gaps, %d failed\n", done, objects, cues, gaps, failed)
 	if failed > 0 {
 		return ExitFailure
 	}
 	return ExitOK
+}
+
+// extractOne extracts one page and writes its objects, census, tags and Markdown.
+func extractOne(corpus string, p *wpcorpus.Page, m *wpcorpus.Manifests, resolve wpcorpus.Resolver) (*wpcorpus.Result, error) {
+	in, err := wpcorpus.ReadPointers(corpus, p.ID)
+	if err != nil {
+		return nil, err
+	}
+	r, err := wpcorpus.ExtractPage(p, m, "m2/"+version, in)
+	if err != nil {
+		return nil, err
+	}
+	if err := wpcorpus.JoinWitness(corpus, r, m); err != nil {
+		return nil, err
+	}
+	if _, err := wpcorpus.AssignTags(corpus, r); err != nil {
+		return nil, err
+	}
+	if err := wpcorpus.WriteResult(corpus, r); err != nil {
+		return nil, err
+	}
+	if err := wpcorpus.RemoveStale(corpus, p.ID, p.Revision); err != nil {
+		return nil, err
+	}
+	md, err := wpcorpus.Render(p, m, r, resolve, "m2/"+version)
+	if err != nil {
+		return nil, err
+	}
+	return r, wpcorpus.WriteMarkdown(corpus, p.ID, md)
 }
 
 // readTitles reads a list file: one title on each line. Empty lines and
