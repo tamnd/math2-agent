@@ -136,7 +136,7 @@ func TestExcluded(t *testing.T) {
 			t.Errorf("Excluded(%q) = false", s)
 		}
 	}
-	for _, s := range []string{"1234567890", "12E3456789", "20D60XXXXX", "123456789X", "A123456789"} {
+	for _, s := range []string{"1234567890", "12E3456789", "20D60XXXXX", "123456789X", "A123456789", "0XDED1F7D1", "0B10110101"} {
 		if !Excluded(s) {
 			t.Errorf("Excluded(%q) = false", s)
 		}
