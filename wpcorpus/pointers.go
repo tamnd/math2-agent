@@ -138,14 +138,17 @@ func (s *Store) RedirectPointers(titles map[string]bool) (map[string][]Pointer, 
 	return out, rows.Err()
 }
 
-// LinkPointers gives the links with an anchor of the wikitext of the page
-// from. target gives the title of the article in scope, with underscores,
-// that a link title names, or "". A link of a page to itself is not a
-// pointer, and two links with the same anchor are one pointer.
-func LinkPointers(from, wikitext string, target func(string) string) map[string][]Pointer {
-	out := map[string][]Pointer{}
-	self := normTitle(from)
-	seen := map[[2]string]bool{}
+// AnchorLink is a link with an anchor in wikitext, as it is written: the
+// link title and the fragment. It does not depend on the scope, so m2 wp
+// pointers can keep the anchor links of a dump in a cache.
+type AnchorLink struct {
+	Title string
+	Frag  string
+}
+
+// AnchorLinks gives the links with an anchor of wikitext, in order.
+func AnchorLinks(wikitext string) []AnchorLink {
+	var out []AnchorLink
 	for rest := wikitext; ; {
 		i := strings.Index(rest, "[[")
 		if i < 0 {
@@ -161,8 +164,28 @@ func LinkPointers(from, wikitext string, target func(string) string) map[string]
 		if !ok || title == "" {
 			continue
 		}
-		to := target(title)
-		a := normAnchor(decodeAnchor(frag))
+		out = append(out, AnchorLink{title, frag})
+	}
+	return out
+}
+
+// LinkPointers gives the links with an anchor of the wikitext of the page
+// from. target gives the title of the article in scope, with underscores,
+// that a link title names, or "". A link of a page to itself is not a
+// pointer, and two links with the same anchor are one pointer.
+func LinkPointers(from, wikitext string, target func(string) string) map[string][]Pointer {
+	return AnchorPointers(from, AnchorLinks(wikitext), target)
+}
+
+// AnchorPointers gives the pointers of the anchor links of the page from,
+// with the rules of LinkPointers.
+func AnchorPointers(from string, links []AnchorLink, target func(string) string) map[string][]Pointer {
+	out := map[string][]Pointer{}
+	self := normTitle(from)
+	seen := map[[2]string]bool{}
+	for _, l := range links {
+		to := target(l.Title)
+		a := normAnchor(decodeAnchor(l.Frag))
 		if to == "" || to == self || a == "" || seen[[2]string{to, a}] {
 			continue
 		}

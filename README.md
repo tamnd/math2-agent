@@ -712,7 +712,7 @@ $ m2 wp parsoid -corpus ../wikipedia-math -limit 500
 
 When the corpus has the Parsoid HTML of a revision, `m2 wp extract` and `m2 wp fetch` add the witness W-html of WP4.3 to its census. The witness gives the math count, the TeX of each `<math>` element against the alttext, the item templates and the sections of the HTML. The census strength becomes `normal` when the two readings agree within the threshold. So run `m2 wp extract` again after `m2 wp parsoid`.
 
-`m2 wp pointers` collects the witness W-in of WP4.2: the redirects with a fragment, from the store of the scope pass, and the links with an anchor, from the wikitext of each article of the dump. It writes one file for each article in scope to `work/pointers/<shard>/<pageid>.md`, also when the article has no pointers. Without `-dump`, the command reads only the redirects.
+`m2 wp pointers` collects the witness W-in of WP4.2: the redirects with a fragment, from the store of the scope pass, and the links with an anchor, from the wikitext of each article of the dump. It writes one file for each article in scope to `work/pointers/<shard>/<pageid>.md`, also when the article has no pointers. Without `-dump`, the command reads only the redirects. A read of all the dump takes some hours. With `-cache FILE`, the first run writes the anchor links of all the articles of the dump to FILE, and each later run reads them from FILE and not from the dump. These links do not depend on the scope, so a new scope list needs no new read of the dump. The cache names its dump, and the command refuses a cache of another dump.
 
 ```
 $ m2 wp pointers -corpus ../wikipedia-math -store scope.sqlite -dump enwiki-20261001-pages-articles-multistream.xml.bz2
