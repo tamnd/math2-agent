@@ -27,7 +27,7 @@ import (
 const Source = "zbmath_search"
 
 // Version is the version of the adapter.
-const Version = "zbmath_search/2"
+const Version = "zbmath_search/3"
 
 // SearchURL is the search of documents of the REST interface of zbMATH Open.
 const SearchURL = zbmath.API + "document/_search"
@@ -60,7 +60,25 @@ type Doc struct {
 		Editors []struct {
 			Name string `json:"name"`
 		} `json:"editors"`
+		References []struct {
+			Name string `json:"name"`
+		} `json:"author_references"`
 	} `json:"contributors"`
+}
+
+// names gives the names of the authors, the editors and the author references of the document. zbMATH Open gives some documents, often proceedings, with the name only in the author references.
+func (d *Doc) names() []string {
+	var out []string
+	for _, a := range d.Contributors.Authors {
+		out = append(out, a.Name)
+	}
+	for _, e := range d.Contributors.Editors {
+		out = append(out, e.Name)
+	}
+	for _, a := range d.Contributors.References {
+		out = append(out, a.Name)
+	}
+	return out
 }
 
 // Search gives the documents of one query. A query with no document gives none and no error.
@@ -130,7 +148,7 @@ func needs(r *resource.Resource) bool {
 	return r.Holds(Source) || len(r.MSC) == 0 || !slices.ContainsFunc(r.Expressions, func(e resource.Expression) bool { return e.Language != "" })
 }
 
-// matches reports whether the document is the work of the resource: the same title of the work, a year at most YearSlack from the year of the resource and, when the resource has creators, the family name of one creator among the authors and the editors.
+// matches reports whether the document is the work of the resource: the same title of the work, a year at most YearSlack from the year of the resource and, when the resource has creators, the family name of one creator among the names of the document.
 func matches(d *Doc, r *resource.Resource) bool {
 	y, err := strconv.Atoi(d.Year)
 	if err != nil || y < year(r)-YearSlack || y > year(r)+YearSlack || !sameTitle(d.Title.Title, r.Title) {
@@ -139,13 +157,7 @@ func matches(d *Doc, r *resource.Resource) bool {
 	if len(r.Creators) == 0 {
 		return true
 	}
-	var names []string
-	for _, a := range d.Contributors.Authors {
-		names = append(names, a.Name)
-	}
-	for _, e := range d.Contributors.Editors {
-		names = append(names, e.Name)
-	}
+	names := d.names()
 	for _, c := range r.Creators {
 		f := cluster.Family(c.Name)
 		if f != "" && slices.ContainsFunc(names, func(n string) bool { return cluster.Family(n) == f }) {
