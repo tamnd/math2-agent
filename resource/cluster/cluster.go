@@ -470,8 +470,14 @@ func overlap(a, b *Record) float64 {
 	return float64(n) / float64(len(fa))
 }
 
-// Score gives the score of the matcher for two records of one block of C4, from 0 to 1. It gives 0 for a pair that the years of RS10.4 rule out.
+// Score gives the score of the matcher for two records of one block of C4, from 0 to 1. It gives 0 for a pair that the years of RS10.4 rule out, and for a pair whose titles both have numbers that are not the same, as two issues of a journal (Kvant 1982, no. 1 and Kvant 1982, no. 2) or two volumes of a book. It gives 0 for two problem sets with different dates, because a problem set is one issue or one paper of a competition (KöMaL Problems in Mathematics, September 2014 and December 2014).
 func Score(a, b *Record) float64 {
+	if a.Kind == "problem-set" && b.Kind == "problem-set" && a.Date != "" && b.Date != "" && a.Date != b.Date {
+		return 0
+	}
+	if na, nb := numbers(a.Title), numbers(b.Title); len(na) > 0 && len(nb) > 0 && !slices.Equal(na, nb) {
+		return 0
+	}
 	ya, yb := a.Year(), b.Year()
 	if a.Kind == "preprint" && b.Kind != "preprint" && papers[b.Kind] && ya > 0 && yb > 0 && (yb < ya || yb > ya+Window) {
 		return 0
@@ -493,6 +499,13 @@ func Score(a, b *Record) float64 {
 		s = max(s, 0.6*Similarity(a.Title, b.Title)+0.4)
 	}
 	return s
+}
+
+var number = regexp.MustCompile(`\b[0-9]+\b`)
+
+// numbers gives the numbers of the title that are words of their own, in order. A number in an ordinal as 2nd is not one.
+func numbers(title string) []string {
+	return number.FindAllString(title, -1)
 }
 
 func abs(n int) int {
