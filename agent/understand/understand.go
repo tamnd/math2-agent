@@ -17,6 +17,7 @@ import (
 	"maps"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -71,15 +72,23 @@ func schemaOf(name string) json.RawMessage {
 	return s
 }
 
-// Target is the paper and the pass of a job.
+// Target is the paper and the pass of a job, and the part of the items of a paper with more text than one run reads.
 type Target struct {
 	Paper string // the arXiv id, for example 2401.00001 or math/9802134
 	Pass  string
+	Part  int // 1 or more, or 0 for all the items
+}
+
+func (t Target) String() string {
+	if t.Part > 0 {
+		return fmt.Sprintf("arxiv:%s/%s:%d", t.Paper, t.Pass, t.Part)
+	}
+	return "arxiv:" + t.Paper + "/" + t.Pass
 }
 
 var paperID = regexp.MustCompile(`^(?:[0-9]{4}\.[0-9]{4,5}|[a-z-]+(?:\.[A-Z]{2})?/[0-9]{7})$`)
 
-// ParseTarget returns the target of a job, in the form arxiv:ID/PASS.
+// ParseTarget returns the target of a job, in the form arxiv:ID/PASS, or arxiv:ID/PASS:PART for one part of the items.
 func ParseTarget(s string) (Target, error) {
 	rest, ok := strings.CutPrefix(s, "arxiv:")
 	i := strings.LastIndex(rest, "/")
@@ -87,6 +96,13 @@ func ParseTarget(s string) (Target, error) {
 		return Target{}, fmt.Errorf("understand: the target %q is not in the form arxiv:ID/PASS, such as arxiv:2401.00001/classify", s)
 	}
 	t := Target{Paper: rest[:i], Pass: rest[i+1:]}
+	if pass, part, ok := strings.Cut(t.Pass, ":"); ok {
+		n, err := strconv.Atoi(part)
+		if err != nil || n < 1 || strconv.Itoa(n) != part {
+			return Target{}, fmt.Errorf("understand: the part %q in the target %q is not a number from 1", part, s)
+		}
+		t.Pass, t.Part = pass, n
+	}
 	if !paperID.MatchString(t.Paper) {
 		return Target{}, fmt.Errorf("understand: %q in the target %q is not an arXiv id", t.Paper, s)
 	}
@@ -117,7 +133,9 @@ type Paper struct {
 	Class   string // the licence class of the version (AX2.3)
 	MSC     []string
 	Pass    string
-	Items   []Item
+	Items   []Item // the items of the part, when the target has a part
+	// Part is the part of the items of the target, or 0, and Parts is the number of the parts of the paper for the pass.
+	Part, Parts int
 	// Sections is the running text of each section for the pass prose, by the id of its item, from SetText.
 	Sections map[string]Section
 	// Check is the check of the prose items by a model of another family, or nil when math2 has none.
@@ -171,7 +189,38 @@ func Load(root string, t Target) (*Paper, error) {
 			return nil, err
 		}
 	}
+	parts := split(p)
+	p.Part, p.Parts = t.Part, len(parts)
+	switch {
+	case t.Part == 0 && len(parts) > 1:
+		return nil, fmt.Errorf("understand: the items of %s for the pass %s have more text than one run reads, thus the paper has %d parts. Give the targets %s to %s", t.Paper, t.Pass, len(parts), Target{t.Paper, t.Pass, 1}, Target{t.Paper, t.Pass, len(parts)})
+	case t.Part > max(len(parts), 1):
+		return nil, fmt.Errorf("understand: the items of %s for the pass %s have %d parts, not %d", t.Paper, t.Pass, len(parts), t.Part)
+	case t.Part > 0 && len(parts) > 0:
+		p.Items = parts[t.Part-1]
+	}
 	return p, nil
+}
+
+// PartChars is the most text of the items of a run and of their context: about 60,000 tokens of TeX, thus the brief and the turns of a run fit the context of each model of the ladder. A paper with more text than this has parts, each its own job.
+const PartChars = 240_000
+
+// split returns the items of the paper in parts in their order, each with at most PartChars of text, or one part with the item that alone has more.
+func split(p *Paper) [][]Item {
+	var out [][]Item
+	n := 0
+	for _, it := range p.Items {
+		size := len(it.Body) + len(it.Title) + len(it.Head) + 200
+		for _, c := range p.Context[it.ID] {
+			size += len(c.Body) + 200
+		}
+		if len(out) == 0 || n+size > PartChars && len(out[len(out)-1]) > 0 {
+			out, n = append(out, nil), 0
+		}
+		out[len(out)-1] = append(out[len(out)-1], it)
+		n += size
+	}
+	return out
 }
 
 // cut returns the first n characters of s, at a word end when it can.
@@ -204,6 +253,9 @@ func Brief(job *agent.Job, p *Paper, prompt string) string {
 	if len(p.Items) == 0 {
 		b.WriteString("The paper has no item for this pass.\n")
 		return b.String()
+	}
+	if p.Part > 0 && p.Parts > 1 {
+		fmt.Fprintf(&b, "The paper has more items than one run reads. These are the items of part %d of %d; the other parts are other jobs.\n\n", p.Part, p.Parts)
 	}
 	b.WriteString("The items:\n\n")
 	for _, it := range p.Items {
