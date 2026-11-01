@@ -128,7 +128,7 @@ func TestLoad(t *testing.T) {
 func TestBrief(t *testing.T) {
 	p := load(t, "", "arxiv:2401.00001/classify")
 	b := understand.Brief(&agent.Job{ID: "j-1", Goal: "classify the items."}, p, "The prompt of the pass.")
-	for _, want := range []string{"the pass classify on the arXiv paper 2401.00001v1", "classify the items.\n\nThe prompt of the pass.\n\nGive the item kind", "The goal of the job: classify the items.", "each of the 2 items", "statement/lemma", "Item ax://paper/2401.00001#UNK1", "environment: point", "Then $X$ is compact.", "54D30", "no licence"} {
+	for _, want := range []string{"the pass classify on the arXiv paper 2401.00001v1", "classify the items.\n\nThe prompt of the pass.\n\nGive the item kind", "The goal of the job: classify the items.", "each of the 2 items", "statement/lemma", "Item ax://paper/2401.00001#UNK1", "environment: point", "Then $X$ is compact.", "54D30", "no licence", "Give the kind from what the body does", "counterexample, a body"} {
 		if !strings.Contains(b, want) {
 			t.Errorf("the brief has no %q:\n%s", want, b)
 		}
