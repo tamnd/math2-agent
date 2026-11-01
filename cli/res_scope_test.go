@@ -9,11 +9,15 @@ import (
 )
 
 func TestCourseSignal(t *testing.T) {
-	if courseSignal(nil) != nil {
+	if courseSignal(nil, nil) != nil {
 		t.Fatal("an empty register gives a signal")
 	}
 	ins, _ := institutions.Build(nil, nil, nil)
-	fn := signals(nil, courseSignal(ins))
+	rs := []resource.Resource{
+		{ID: "C1", Kind: "course", IDs: resource.IDs{"course": {"042nb2s44:18.06"}}, Catalogue: []resource.CatalogueRecord{{Source: "ocw"}}},
+		{ID: "C2", Kind: "course", IDs: resource.IDs{"course": {"042nb2s44:8.01"}}, Catalogue: []resource.CatalogueRecord{{Source: "ocw"}}},
+	}
+	fn := signals(nil, courseSignal(ins, rs))
 	for _, c := range []struct {
 		r    resource.Resource
 		want bool
@@ -23,6 +27,8 @@ func TestCourseSignal(t *testing.T) {
 		{resource.Resource{Kind: "course", Catalogue: []resource.CatalogueRecord{{Source: "nptel"}}}, true},
 		{resource.Resource{Kind: "course-material", Catalogue: []resource.CatalogueRecord{{Source: "nptel"}}}, false},
 		{resource.Resource{Kind: "course", Catalogue: []resource.CatalogueRecord{{Source: "oyc"}}}, false},
+		{resource.Resource{Kind: "course-material", Relations: []resource.Relation{{Kind: "part_of", To: "C1/e1"}}}, true},
+		{resource.Resource{Kind: "course-material", Relations: []resource.Relation{{Kind: "part_of", To: "C2/e1"}}}, false},
 	} {
 		var rec resscope.Record
 		fn(&c.r, &rec)

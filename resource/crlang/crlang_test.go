@@ -47,3 +47,14 @@ func TestURL(t *testing.T) {
 		t.Errorf("URL = %q", got)
 	}
 }
+
+func TestNeedsHeld(t *testing.T) {
+	r := &resource.Resource{Scope: &resource.Scope{Value: resource.In}, Expressions: []resource.Expression{{Key: "e1", Language: "en"}}}
+	if needs(r) {
+		t.Error("a resource with a language needs the lookup")
+	}
+	r.Catalogue = []resource.CatalogueRecord{{Source: Source, NativeID: "10.1/a"}}
+	if !needs(r) {
+		t.Error("a resource that a record of the last run is on does not need the lookup")
+	}
+}

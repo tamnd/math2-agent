@@ -31,9 +31,9 @@ func TestRefClosure(t *testing.T) {
 		t.Errorf("citing = %d, want 2", c.Citing)
 	}
 	want := []RefRow{
-		{Kind: "article", Decade: "1990s", Parsed: 1, Resolved: 1, Closure: 1, Target: 0.99},
-		{Kind: "article", Decade: "2000s", Parsed: 1, Closure: 0, Target: 0.99, Below: true},
-		{Kind: "book", Decade: "1800s", Parsed: 2, Closure: 0, Target: 0.95, Below: true},
+		{Kind: "article", Decade: "1990s", Parsed: 1, Resolved: 1, Closure: 1, Target: 0.99, Works: 1, Held: 1},
+		{Kind: "article", Decade: "2000s", Parsed: 1, Closure: 0, Target: 0.99, Below: true, Works: 1},
+		{Kind: "book", Decade: "1800s", Parsed: 2, Closure: 0, Target: 0.95, Below: true, Works: 1},
 	}
 	if len(c.Rows) != len(want) {
 		t.Fatalf("rows = %+v", c.Rows)

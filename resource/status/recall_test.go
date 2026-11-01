@@ -120,3 +120,51 @@ func TestRecallsSkipLookups(t *testing.T) {
 		t.Fatalf("got %+v", got)
 	}
 }
+
+func TestWithCitations(t *testing.T) {
+	out := []Recall{
+		{Kind: "book", Decade: "1970s", Resources: 100, Target: 0.97, Reason: "fewer than three captures hold works of the stratum"},
+		{Kind: "book", Decade: "1980s", Resources: 100, Target: 0.97, Reason: "fewer than three captures hold works of the stratum"},
+		{Kind: "article", Decade: "2020s", Resources: 100, Target: 0.99, Model: "pair openalex and zbmath", N: 1e6, High: 2e6},
+	}
+	rows := []RefRow{
+		{Kind: "book", Decade: "1970s", Works: 50, Held: 20},
+		{Kind: "book", Decade: "1980s", Works: 50, Held: 3},
+		{Kind: "article", Decade: "2020s", Works: 50, Held: 20},
+	}
+	out = withCitations(out, rows)
+	if r := out[0]; r.Model != "pair catalogue and citations" || r.N != round(census.Chapman(100, 50, 20)) || r.Reason != "" || !r.Below {
+		t.Errorf("1970s = %+v", r)
+	}
+	if r := out[1]; r.Model != "" {
+		t.Errorf("1980s with 3 held = %+v", r)
+	}
+	if r := out[2]; r.Model != "pair openalex and zbmath" {
+		t.Errorf("a pair with a higher interval is replaced: %+v", r)
+	}
+}
+
+func TestWithCitationsMerge(t *testing.T) {
+	out := []Recall{
+		{Kind: "book", Decade: "1900s", Resources: 40, Target: 0.9},
+		{Kind: "book", Decade: "1910s", Resources: 60, Target: 0.97},
+		{Kind: "book", Decade: "1920s", Resources: 150},
+		{Kind: "book", Decade: "1930s", Resources: 500, Model: "pair a and b", N: 600, High: 700},
+		{Kind: "course", Decade: "2010s", Resources: 10},
+	}
+	rows := []RefRow{
+		{Kind: "book", Decade: "1900s", Works: 10, Held: 3},
+		{Kind: "book", Decade: "1910s", Works: 10, Held: 3},
+		{Kind: "book", Decade: "1920s", Works: 10, Held: 2},
+	}
+	got := withCitations(out, rows)
+	if len(got) != 3 {
+		t.Fatalf("got %+v", got)
+	}
+	if r := got[0]; r.Decade != "1900s to 1920s" || r.Resources != 250 || r.Target != 0.97 || r.N != round(census.Chapman(250, 30, 8)) {
+		t.Errorf("merged = %+v", r)
+	}
+	if got[1].Decade != "1930s" || got[2].Kind != "course" || got[2].Model != "" {
+		t.Errorf("rest = %+v", got[1:])
+	}
+}

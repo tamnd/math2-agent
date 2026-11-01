@@ -122,12 +122,12 @@ func join(r *resource.Resource) (key, value string) {
 	return "", ""
 }
 
-// needs reports whether the resource is live, in scope and has no MSC code or no expression with a language.
+// needs reports whether the resource is live, in scope and has no MSC code or no expression with a language. A resource that a record of the source is on also needs it, because the records of a run replace all the records of the last run.
 func needs(r *resource.Resource) bool {
 	if !r.Live() || r.Scope == nil || r.Scope.Value != resource.In {
 		return false
 	}
-	return len(r.MSC) == 0 || !slices.ContainsFunc(r.Expressions, func(e resource.Expression) bool { return e.Language != "" })
+	return r.Holds(Source) || len(r.MSC) == 0 || !slices.ContainsFunc(r.Expressions, func(e resource.Expression) bool { return e.Language != "" })
 }
 
 // matches reports whether the document is the work of the resource: the same title of the work, a year at most YearSlack from the year of the resource and, when the resource has creators, the family name of one creator among the authors and the editors.

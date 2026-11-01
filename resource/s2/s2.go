@@ -108,7 +108,7 @@ func Build(ctx context.Context, rs []resource.Resource, lookup Lookup) ([]cluste
 	var asks []ask
 	for i := range rs {
 		r := &rs[i]
-		if !r.Live() || r.Scope == nil || r.Scope.Value != resource.In || has(r) {
+		if !r.Live() || r.Scope == nil || r.Scope.Value != resource.In || has(r) && !r.Holds(Source) {
 			continue
 		}
 		if k, v := query(r); k != "" {
