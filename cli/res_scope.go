@@ -89,7 +89,7 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day, Signals: signals(curriculumSignal(texts), openTextSignal(depth.OpenTexts()), courseSignal(ins))}
+	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day, Signals: signals(curriculumSignal(texts), openTextSignal(depth.OpenTexts()), courseSignal(ins, rs))}
 	if model != nil && !*noModel {
 		in.Classifier = resclassify.Scope{Model: model}
 	}
@@ -221,24 +221,39 @@ func openTextSignal(open map[string]bool) func(*resource.Resource, *resscope.Rec
 	}
 }
 
-// courseSignal sets the signal of test S6 on each course that a catalogue of the institution register gives as a course of its mathematics unit (RS5.3). It gives nil when no catalogue names its mathematics unit.
-func courseSignal(ins []institutions.Institution) func(*resource.Resource, *resscope.Record) {
+// courseSignal sets the signal of test S6 on each course that a catalogue of the institution register gives as a course of its mathematics unit (RS5.3). A course-material with a part_of relation to such a course, or to an offering of it, gets the signal too, because it is a part of the course. It gives nil when no catalogue names its mathematics unit.
+func courseSignal(ins []institutions.Institution, rs []resource.Resource) func(*resource.Resource, *resscope.Record) {
 	math := institutions.MathCourses(ins)
 	if len(math) == 0 {
 		return nil
 	}
-	return func(r *resource.Resource, rec *resscope.Record) {
+	isMath := func(r *resource.Resource) bool {
 		if r.Kind != "course" {
-			return
+			return false
 		}
 		course := ""
 		if v := r.IDs["course"]; len(v) > 0 {
 			course = v[0]
 		}
-		for _, c := range r.Catalogue {
-			if institutions.MathCourse(math, c.Source, course) {
-				rec.MathUnit = true
-				return
+		return slices.ContainsFunc(r.Catalogue, func(c resource.CatalogueRecord) bool { return institutions.MathCourse(math, c.Source, course) })
+	}
+	courses := map[string]bool{}
+	for i := range rs {
+		if isMath(&rs[i]) {
+			courses[rs[i].ID] = true
+		}
+	}
+	return func(r *resource.Resource, rec *resscope.Record) {
+		switch r.Kind {
+		case "course":
+			rec.MathUnit = isMath(r)
+		case "course-material":
+			for _, rel := range r.Relations {
+				id, _, _ := strings.Cut(rel.To, "/")
+				if rel.Kind == "part_of" && courses[id] {
+					rec.MathUnit = true
+					return
+				}
 			}
 		}
 	}
