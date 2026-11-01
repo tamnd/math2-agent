@@ -55,3 +55,34 @@ func TestApply(t *testing.T) {
 		t.Errorf("a second run changed %d resources", c.Changed)
 	}
 }
+
+type classer struct{ fixed }
+
+func (classer) Class(r *resource.Resource) (string, float64) {
+	if r.ID == "B" {
+		return "", 0.2
+	}
+	return "05", 0.95
+}
+
+func TestApplyClasser(t *testing.T) {
+	rs := []resource.Resource{
+		{ID: "A", Kind: "textbook", Title: "a", Subjects: []resource.Subject{{System: "lcc", Code: "QA164"}}},
+		{ID: "B", Kind: "textbook", Title: "b", Subjects: []resource.Subject{{System: "lcc", Code: "QA164"}}},
+		{ID: "C", Kind: "textbook", Title: "c", MSC: []resource.Code{{Code: "11M06", From: "zbmath"}}},
+		{ID: "D", Kind: "article", Title: "d", Subjects: []resource.Subject{{System: "lcc", Code: "QH506"}}},
+	}
+	c, _, err := Apply(rs, Input{By: "m2 test", Day: "2026-10-30", Classifier: classer{fixed{resource.Out, 0.01}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rs[0].Scope.Value != resource.In || len(rs[0].MSC) != 1 || rs[0].MSC[0] != (resource.Code{Code: "05-XX", From: "classify/1@test"}) {
+		t.Errorf("A: %+v, %v", rs[0].Scope, rs[0].MSC)
+	}
+	if len(rs[1].MSC) != 0 || rs[2].MSC[0].Code != "11M06" || len(rs[2].MSC) != 1 || len(rs[3].MSC) != 0 {
+		t.Errorf("B %v, C %v, D %v", rs[1].MSC, rs[2].MSC, rs[3].MSC)
+	}
+	if c.Classed != 1 {
+		t.Errorf("classed %d, want 1", c.Classed)
+	}
+}

@@ -67,6 +67,11 @@ type Classifier interface {
 	Version() string
 }
 
+// A Classer gives the MSC2 class of a work in scope and its score, or an empty class. A classifier that is a Classer gives a class to each live work in scope with no MSC code, also when a test decided its scope (RS9.3).
+type Classer interface {
+	Class(r *resource.Resource) (string, float64)
+}
+
 // Input is what Apply reads.
 type Input struct {
 	Env        Env
@@ -90,9 +95,10 @@ type Counts struct {
 	ByValue map[string]int // the live resources of each outcome after the run
 	Changed int            // the resources whose outcome changed
 	Open    int            // the decision open count of RS9.6
+	Classed int            // the works in scope that the run gave an MSC class
 }
 
-// Apply sets the scope of each resource: the decision of a person first, then the tests S1 to S7 and the border rules, then the classifier. A record that nothing decides is deferred for DeferDays. It gives the items of the queue res-scope: the records in the middle band of the classifier and the deferred records past their date.
+// Apply sets the scope of each resource: the decision of a person first, then the tests S1 to S7 and the border rules, then the classifier. A work in scope with no MSC code then gets the class of a Classer. A record that nothing decides is deferred for DeferDays. It gives the items of the queue res-scope: the records in the middle band of the classifier and the deferred records past their date.
 func Apply(rs []resource.Resource, in Input) (Counts, []Item, error) {
 	day, err := time.Parse(time.DateOnly, in.Day)
 	if err != nil {
@@ -128,6 +134,12 @@ func Apply(rs []resource.Resource, in Input) (Counts, []Item, error) {
 			r.History = append(r.History, resource.Event{Op: "scope", At: in.Day, By: next.By, Note: note})
 		}
 		r.Scope = next
+		if cl, ok := in.Classifier.(Classer); ok && r.Live() && next.Value == resource.In && len(r.MSC) == 0 {
+			if class, _ := cl.Class(r); class != "" {
+				r.MSC = []resource.Code{{Code: class + "-XX", From: in.Classifier.Version()}}
+				c.Classed++
+			}
+		}
 		if r.Live() {
 			c.ByValue[next.Value]++
 			if next.Value == resource.Deferred && next.Until <= in.Day {

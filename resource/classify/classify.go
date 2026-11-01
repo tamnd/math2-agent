@@ -100,7 +100,9 @@ type Model struct {
 	Low    float64                   `json:"low,omitempty"`  // a score of in below it gives the best other label
 	// Classes is the model of the MSC2 class of a work in scope, fitted on the works in scope that have an MSC code.
 	Classes *Model `json:"classes,omitempty"`
-	version string
+	// ClassMin is the least score of a class that gives the class to a work that a test put in scope. Zero means that such a work gets no class.
+	ClassMin float64 `json:"class_min,omitempty"`
+	version  string
 }
 
 // MinCount is the least count of a feature in the training set. A rarer feature is left out, so the model stays small.
@@ -234,7 +236,7 @@ type Eval struct {
 	Met       bool // the precision and the recall meet the targets of RS9.3
 }
 
-// Tune sets High to the lowest score that gives a precision of in of at least TargetPrecision on the sample, and Low to the highest score below which the share of in is at most 1 - TargetPrecision. It gives the precision and the recall at these thresholds.
+// Tune sets High to the lowest score that gives a precision of in of at least TargetPrecision on the sample, and Low to the highest score below which the share of in is at most 1 - TargetPrecision. It gives the precision and the recall at these thresholds. When the sample has no in records, or fewer than MinOut records that are not in, or when the share of in in the sample is already TargetPrecision or more, or when only the lowest score of the sample meets the precision, the thresholds do not separate in from out, so High stays 1 and Low stays 0 and the model decides no record.
 func (m *Model) Tune(gold []Example) Eval {
 	type scored struct {
 		s  float64
@@ -250,7 +252,7 @@ func (m *Model) Tune(gold []Example) Eval {
 		xs = append(xs, x)
 	}
 	ev := Eval{Total: len(xs), High: 1, Low: 0}
-	if len(xs) == 0 || pos == 0 {
+	if pos == 0 || len(xs)-pos < MinOut || float64(pos)/float64(len(xs)) >= TargetPrecision {
 		m.High, m.Low = ev.High, ev.Low
 		return ev
 	}
@@ -268,6 +270,10 @@ func (m *Model) Tune(gold []Example) Eval {
 		if float64(tp)/float64(n) >= TargetPrecision {
 			ev.High = x.s
 		}
+	}
+	if ev.High <= xs[len(xs)-1].s {
+		// A threshold at the lowest score takes each record of the sample, so it does not separate in from out.
+		ev.High = 1
 	}
 	// Low: walk up the scores and keep the highest score below which few records are in.
 	fn, n := 0, 0
@@ -306,6 +312,59 @@ func (m *Model) Tune(gold []Example) Eval {
 	ev.Recall = round(float64(tp) / float64(pos))
 	ev.High, ev.Low = round(ev.High), round(ev.Low)
 	ev.Met = ev.Precision >= TargetPrecision && ev.Recall >= TargetRecall
+	return ev
+}
+
+// MinOut is the fewest records that are not in in the sample of Tune. With fewer, the sample cannot show a precision of TargetPrecision.
+const MinOut = 50
+
+// TargetClassPrecision is the least share of right classes on the held-out works above ClassMin.
+const TargetClassPrecision = 0.9
+
+// MinClassHeld is the fewest held-out works that TuneClass needs to set ClassMin.
+const MinClassHeld = 50
+
+// ClassEval is the outcome of ClassMin on the held-out works.
+type ClassEval struct {
+	Min       float64
+	Precision float64 // the share of right classes of the works above Min
+	Share     float64 // the share of the works above Min
+	Total     int
+}
+
+// TuneClass sets ClassMin to the lowest score that gives a share of right classes of at least TargetClassPrecision on the held-out works. It sets ClassMin to zero when fewer than MinClassHeld works are held out or when no score meets the target.
+func (m *Model) TuneClass(held []Example) ClassEval {
+	m.ClassMin = 0
+	ev := ClassEval{Total: len(held)}
+	if len(held) < MinClassHeld {
+		return ev
+	}
+	type scored struct {
+		s     float64
+		right bool
+	}
+	var xs []scored
+	for _, e := range held {
+		c, s := m.Class(e.Features)
+		xs = append(xs, scored{s, c == e.Label})
+	}
+	slices.SortFunc(xs, func(a, b scored) int { return cmp.Compare(b.s, a.s) })
+	right, n, above, good := 0, 0, 0, 0
+	for i, x := range xs {
+		n++
+		if x.right {
+			right++
+		}
+		if i+1 < len(xs) && xs[i+1].s == x.s {
+			continue
+		}
+		if float64(right)/float64(n) >= TargetClassPrecision {
+			m.ClassMin, above, good = x.s, n, right
+		}
+	}
+	if above > 0 {
+		ev.Min, ev.Precision, ev.Share = m.ClassMin, round(float64(good)/float64(above)), round(float64(above)/float64(len(xs)))
+	}
 	return ev
 }
 
