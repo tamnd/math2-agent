@@ -23,6 +23,8 @@ type Options struct {
 	Mint func(used func(string) bool) (string, error) // gives a new row identifier. Nil means tag.Mint with crypto/rand.
 	// Signals are the facts outside the mentions for the formal rules of corpus K4.5 and the rule research-aligned. The zero value means that only the mentions of a row decide.
 	Signals Signals
+	// NotItems gives the mentions that the import no longer makes, because the pass classify gave their item a kind that is not a mention kind (corpus arxiv AX5.1 and AX7.2), with that kind. An open row whose mentions are all in it gets the outcome out_of_scope by the rule research-not-item.
+	NotItems map[string]string
 	// Judge is the dedup judge of the passes of cited results and names (corpus arxiv AX8.2): it reports whether a mention and the mention that it cites, or that has its name, are not different. Nil means that these passes join nothing. On gold set K v1 a cited result with the confidence high states the cited result in 3 of 7 pairs: the others generalize it or are a variant, so the citation alone does not join.
 	Judge func(mention, target *Mention) bool
 }
@@ -47,6 +49,8 @@ type Result struct {
 	Formal int
 	// Aligned is the number of rows of the research layer that got the outcome aligned, or lost it, because of the aligned edges of the nodes.
 	Aligned int
+	// NotItems is the number of open rows that got the outcome out_of_scope by the rule research-not-item.
+	NotItems int
 }
 
 // Cluster runs the first two passes of corpus spec K4.3 on the mentions. Pass 1 joins two mentions with the same identifier, or with identifiers that a crosswalk links. It also joins two mentions of one kind and one block with the same content hash, which is the same item copied from paper to paper (corpus arxiv AX8.2). The block of a mention is its MSC codes at two digits (AX8.1), and two mentions with no code are in one block. Pass 2 joins two statements of formal libraries with the same canonical type hash: Lean then proves each from the other with the identity, so they are one statement. Pass 2 never joins definitions, because two definitions with one type, such as two functions from ℕ to ℕ, are not one item. A row that a pass merged names the pass as its rule: identifiers, hash or equivalence. Mentions that a row holds stay in one row, so Cluster never splits a row. Only a curator splits a row. When one group of mentions touches more than one row, Cluster keeps one row and gives the others the outcome merged.
@@ -164,6 +168,11 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 		applyRules(keep, byID, opt.By)
 	}
 	res.Orphans = attach(rows, ms, byID)
+	for i := range rows {
+		if applyNotItem(&rows[i], byID, opt.NotItems, day, opt.By) {
+			res.NotItems++
+		}
+	}
 	for i := range rows {
 		if applyFormal(&rows[i], byID, opt.Signals, day, opt.By) {
 			res.Formal++

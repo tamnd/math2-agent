@@ -410,6 +410,39 @@ func TestClusterJoinsByHash(t *testing.T) {
 	}
 }
 
+func TestClusterNotItem(t *testing.T) {
+	ax := func(id, kind string) Mention {
+		return Mention{ID: "ax://paper/" + id, Source: "arxiv", NativeID: id, Kind: kind, MSC: []string{"20E06"}, Class: "open", By: "m2/arxiv"}
+	}
+	ms := []Mention{ax("2401.00001#R1", "unknown"), ax("2401.00001#R2", "unknown"), ax("2401.00001#R3", "unknown")}
+	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The pass classify gives R1 the kind remark, so the import no longer makes its mention. R2 becomes a statement, and R3 is a remark that the import still makes.
+	notItems := map[string]string{ms[0].ID: "remark", ms[2].ID: "remark"}
+	ms[1].Kind = "statement"
+	again, err := Cluster(res.Rows, ms[1:], Options{Day: day, By: "test", Mint: counter(), NotItems: notItems})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.NotItems != 1 {
+		t.Errorf("got %d rows out of scope by the kind of classify, want 1", again.NotItems)
+	}
+	for _, r := range again.Rows {
+		switch r.Mentions[0] {
+		case ms[0].ID:
+			if r.Outcome == nil || r.Outcome.Value != OutcomeOutOfScope || r.Outcome.Rule != ResearchNotItem || r.History[len(r.History)-1].Note != "the pass classify gives the kind remark" {
+				t.Errorf("the row of the remark is %+v", r)
+			}
+		default:
+			if r.Outcome != nil && r.Outcome.Rule == ResearchNotItem {
+				t.Errorf("the row of %s got the rule %s", r.Mentions[0], ResearchNotItem)
+			}
+		}
+	}
+}
+
 func TestClusterJoinsByCitedResult(t *testing.T) {
 	ax := func(id, kind string, cites ...CitedResult) Mention {
 		return Mention{ID: "ax://paper/" + id, Source: "arxiv", NativeID: id, Kind: kind, MSC: []string{"14J60"}, Class: "record", By: "m2/arxiv", Origin: "cited", CitesResult: cites}
