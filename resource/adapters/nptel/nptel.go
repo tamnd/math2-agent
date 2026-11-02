@@ -128,6 +128,70 @@ func Courses(r io.Reader) ([]Course, error) {
 	return nil, errors.New("nptel: the data file has no course list")
 }
 
+// Lesson is one lecture of the outline of a course page, with the id of its video on YouTube.
+type Lesson struct {
+	Title   string
+	YouTube string
+}
+
+// Unit is one unit of the outline of a course page, as a week or a module, with its lectures.
+type Unit struct {
+	Title   string
+	Lessons []Lesson
+}
+
+// PageURL gives the URL of the data file of the page of the course with the id.
+func PageURL(id string) string {
+	return Home + "/courses/" + id + "/__data.json"
+}
+
+// Outline reads the data file of the page of one course and gives the units of its outline. The file is in the form of devalue, as the course list.
+func Outline(r io.Reader) ([]Unit, error) {
+	var page struct {
+		Nodes []*struct {
+			Type string            `json:"type"`
+			Data []json.RawMessage `json:"data"`
+		} `json:"nodes"`
+	}
+	if err := json.NewDecoder(r).Decode(&page); err != nil {
+		return nil, fmt.Errorf("nptel: %w", err)
+	}
+	for _, n := range page.Nodes {
+		if n == nil || n.Type != "data" || len(n.Data) == 0 {
+			continue
+		}
+		v, err := hydrate(n.Data, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+		root, _ := v.(map[string]any)
+		outline, ok := root["courseOutline"].(map[string]any)
+		if !ok {
+			continue
+		}
+		units, _ := outline["units"].([]any)
+		var out []Unit
+		for _, u := range units {
+			um, _ := u.(map[string]any)
+			unit := Unit{Title: text(um["name"])}
+			lessons, _ := um["lessons"].([]any)
+			for _, l := range lessons {
+				lm, _ := l.(map[string]any)
+				unit.Lessons = append(unit.Lessons, Lesson{Title: text(lm["name"]), YouTube: text(lm["youtube_id"])})
+			}
+			out = append(out, unit)
+		}
+		return out, nil
+	}
+	return nil, errors.New("nptel: the data file has no course outline")
+}
+
+// text gives the string of a value of devalue with no spaces at the ends, or "" when the value is not a string.
+func text(v any) string {
+	s, _ := v.(string)
+	return strings.TrimSpace(s)
+}
+
 // hydrate gives the value at index i of the flat array of devalue. A negative index is a special value, as undefined or NaN, and gives nil. An array that starts with a string is a typed value, as a date, and gives its string.
 func hydrate(data []json.RawMessage, i, depth int) (any, error) {
 	if i < 0 {

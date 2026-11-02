@@ -128,3 +128,17 @@ func TestSource(t *testing.T) {
 		t.Error("the adapter is not registered")
 	}
 }
+
+func TestOutline(t *testing.T) {
+	data := `{"type":"data","nodes":[null,{"type":"data","data":[{"courseOutline":1},{"title":2,"units":3},"A Basic Course in Real Analysis",[4,9],{"id":5,"name":6,"lessons":7},1,"Rational Numbers",[8],{"id":5,"name":6,"youtube_id":13},{"id":10,"name":11,"lessons":12},2,"Dedekind\\'s Theorem",[],"Bef8QjIjCy0"]}]}`
+	units, err := Outline(strings.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(units) != 2 || units[0].Title != "Rational Numbers" || len(units[0].Lessons) != 1 || units[0].Lessons[0].YouTube != "Bef8QjIjCy0" || len(units[1].Lessons) != 0 {
+		t.Fatalf("units %+v", units)
+	}
+	if _, err := Outline(strings.NewReader(`{"type":"data","nodes":[]}`)); err == nil {
+		t.Error("a file with no outline gives no error")
+	}
+}
