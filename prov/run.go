@@ -35,6 +35,18 @@ type Run struct {
 	Copy    []CopyCheck   `json:"copy,omitempty"`    // the copy check of each body that the run wrote (corpus K9.4, rule L05)
 	Sanity  []Sanity      `json:"sanity,omitempty"`  // the sanity checks of each statement and proof that the run wrote (corpus K9.3, rule X05)
 	Sources []SourceClaim `json:"sources,omitempty"` // each source that the run proposed, with what the run claims about it (corpus K9.5, rule P05)
+
+	// Texts is each text of a work that the context of the run gave the model (corpus arxiv AX9.3, rule D17).
+	Texts []ContextText `json:"texts,omitempty"`
+}
+
+// ContextText is one text of a work in the context of a run: the version that it is from, with its access class and its licence.
+type ContextText struct {
+	Source  string `json:"source"`         // the source, for example arxiv
+	Version string `json:"version"`        // the version, for example 2401.00001v2
+	Item    string `json:"item,omitempty"` // the mention of the text, for example ax://paper/2401.00001#AB12
+	Class   string `json:"class"`          // the access class of the version (spec 09.3)
+	Licence string `json:"licence"`        // the licence of the version, as the source gives it
 }
 
 // CopyCheck is the result of the copy check of the bodies of one node (corpus K9.4).

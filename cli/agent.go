@@ -55,6 +55,7 @@ import (
 	"github.com/tamnd/math2-agent/novelty"
 	"github.com/tamnd/math2-agent/project"
 	"github.com/tamnd/math2-agent/prompts"
+	"github.com/tamnd/math2-agent/prov"
 	"github.com/tamnd/math2-agent/sandbox"
 	"github.com/tamnd/math2-agent/search"
 	"github.com/tamnd/math2-agent/workspace"
@@ -358,6 +359,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		meter  *agent.Meter
 		extra  []agent.Tool
 		nv     *explore.Novelty
+		texts  []prov.ContextText // the texts of works that the brief gives (rule D17)
 	)
 	if slices.Contains([]string{"align", "curate", "enumerate", "explain", "explore", "understand"}, job.Role) && (rung < 0 || rung >= len(r.Ladder)) {
 		return nil, ws, nil, fmt.Errorf("the ladder of %s has no rung %d", r.Name, rung)
@@ -489,7 +491,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		if err != nil {
 			return nil, ws, nil, err
 		}
-		if brief, err = write.Brief(ws, job, cards, rs.arxiv); err != nil {
+		if brief, texts, err = write.BriefTexts(ws, job, cards, rs.arxiv); err != nil {
 			return nil, ws, nil, err
 		}
 		// With -arxiv, the copy check runs in the loop against the arXiv reference corpus (corpus arxiv AX9.5). Otherwise the tree has no reference corpus yet, thus the copy check runs in CI and not in the loop.
@@ -544,6 +546,7 @@ func (rs *runSetup) run(ctx context.Context, job *agent.Job, rung int, dir strin
 		return nil, ws, nil, runErr
 	}
 	rec.Shadow = rs.shadow
+	rec.Texts = texts
 	if nv != nil {
 		rec.Novelty = nv.Results()
 	}

@@ -335,23 +335,23 @@ func union[V any](a, b map[string]V) map[string]V {
 	return u
 }
 
-// Brief returns the first message of a write run: the job, the level that it takes the target to, the work that the card asks for, the proofs from papers of the target (corpus arxiv AX9.4), and the target node from the work tree in a data block. arxiv is the checkout of tamnd/arxiv, or "" when the run has none, and then the brief has no text of a proof.
-func Brief(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, arxiv string) (string, error) {
+// BriefTexts returns the first message of a write run: the job, the level that it takes the target to, the work that the card asks for, the proofs from papers of the target (corpus arxiv AX9.4), and the target node from the work tree in a data block. arxiv is the checkout of tamnd/arxiv, or "" when the run has none, and then the brief has no text of a proof. It also returns the texts of papers that the brief gives, for the run record (rule D17).
+func BriefTexts(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, arxiv string) (string, []prov.ContextText, error) {
 	p := tools.NodePath(job.Target)
 	if p == "" {
-		return "", fmt.Errorf("write: the target %q is not a tag or a provisional id", job.Target)
+		return "", nil, fmt.Errorf("write: the target %q is not a tag or a provisional id", job.Target)
 	}
 	text, err := ws.Read(p)
 	if err != nil {
-		return "", fmt.Errorf("write: %w", err)
+		return "", nil, fmt.Errorf("write: %w", err)
 	}
 	nodes, _, err := tree(ws, nil)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	n := find(nodes, job.Target)
 	if n == nil {
-		return "", fmt.Errorf("write: %s does not parse", p)
+		return "", nil, fmt.Errorf("write: %s does not parse", p)
 	}
 	g := graph.Build(nodes)
 	level := Level(cards, n, g, job.Goal)
@@ -376,10 +376,16 @@ func Brief(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, arxiv str
 	}
 	ps, err := PaperProofs(ws, n, arxiv)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	briefProofs(&b, ps)
 	fmt.Fprintf(&b, "Write the sections in %s. Do not change the sections that a person wrote, the explanations or the front matter other than notation and uses.\n\n", p)
 	fmt.Fprintf(&b, "The target node:\n\n%s\n", tools.Data(p, tools.Licence(p), string(text)))
-	return b.String(), nil
+	return b.String(), Texts(ps), nil
+}
+
+// Brief returns the brief of BriefTexts without the texts.
+func Brief(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, arxiv string) (string, error) {
+	brief, _, err := BriefTexts(ws, job, cards, arxiv)
+	return brief, err
 }
