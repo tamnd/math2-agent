@@ -120,6 +120,8 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 
 `m2 site build` makes the wiki at https://tamnd.github.io/math2 from a math2 working tree and the spec. The math2 repository runs it on each push to `main` and each night, and GitHub Pages serves the result.
 
+The Cloudflare build (`-cloudflare`) groups the node, resource and inventory files into shards and generates share cards for the nodes. It groups the JPEG cards into 128 content-addressed packs. An image URL carries the pack hash and the byte range of one card, so the Pages Worker can read only that range from the `SOCIAL_PACKS` R2 binding and cache the result. The pack is also a Pages asset for fallback delivery. Give `-social-packs DIR` to write copies of the packs for `scripts/upload_social_packs.py` to upload before the Pages deployment. The build server's deploy script does this automatically.
+
 ```sh
 go run ./cmd/m2 site build -content ../math2 -spec spec -out _site -url http://localhost:8000/math2
 go run ./cmd/m2 site check -url http://localhost:8000/math2 _site

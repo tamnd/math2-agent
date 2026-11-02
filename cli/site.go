@@ -211,6 +211,7 @@ func runSiteBuild(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&opt.Commit, "commit", "", "the content commit")
 	fs.StringVar(&opt.Wikipedia, "wikipedia", "", "the Wikipedia corpus (a clone of tamnd/wikipedia-math). The site then has the pages of the Wikipedia scope. Leave it empty for no Wikipedia pages.")
 	fs.StringVar(&opt.Cache, "cache", "", "a file that keeps the rendered math between builds, so that a build renders only the new formulas. Leave it empty for no cache.")
+	fs.StringVar(&opt.SocialPacks, "social-packs", "", "write the Cloudflare social image packs to this R2 upload directory, rather than individual site files")
 	fs.BoolVar(&opt.Cloudflare, "cloudflare", false, "build for Cloudflare Pages: a worker serves the short links node/TAG/, in place of one page for each node")
 	date := fs.String("date", "", "the build date: now, or empty for no date. SOURCE_DATE_EPOCH also sets it.")
 	if err := fs.Parse(args); err != nil {

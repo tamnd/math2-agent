@@ -44,22 +44,23 @@ type Milestone struct {
 
 // Options configure a build.
 type Options struct {
-	Content    string      // the math2 working tree
-	Spec       string      // the spec directory of math2-agent, or "" for no spec pages
-	Out        string      // the output directory. Build removes it first.
-	URL        string      // the public URL of the site, for example https://tamnd.github.io/math2
-	Repo       string      // the content repository, for example tamnd/math2
-	AgentRepo  string      // the toolchain repository, for example tamnd/math2-agent
-	Build      string      // the output directory of m2 build for the tree, or "". With a build, the pages show the status that the build computed.
-	Store      string      // the directory of the agent run records, or "". With a store, the project pages show the runs and the spend of each project.
-	Commit     string      // the content commit, or ""
-	Version    string      // the m2 version
-	Date       time.Time   // the build date. A zero date leaves it out, so that two builds give the same bytes.
-	Milestones []Milestone // the plan
-	Current    string      // the current milestone, for example M0
-	Cloudflare bool        // build for Cloudflare Pages: a worker sends node/TAG/ to the page of the node, so the site has no page for each short link
-	Wikipedia  string      // the Wikipedia corpus (a clone of tamnd/wikipedia-math), or "". With a corpus, the site has the pages of the Wikipedia scope.
-	Cache      string      // a file that keeps the rendered math between builds, or "" (see mathCache)
+	Content     string      // the math2 working tree
+	Spec        string      // the spec directory of math2-agent, or "" for no spec pages
+	Out         string      // the output directory. Build removes it first.
+	URL         string      // the public URL of the site, for example https://tamnd.github.io/math2
+	Repo        string      // the content repository, for example tamnd/math2
+	AgentRepo   string      // the toolchain repository, for example tamnd/math2-agent
+	Build       string      // the output directory of m2 build for the tree, or "". With a build, the pages show the status that the build computed.
+	Store       string      // the directory of the agent run records, or "". With a store, the project pages show the runs and the spend of each project.
+	Commit      string      // the content commit, or ""
+	Version     string      // the m2 version
+	Date        time.Time   // the build date. A zero date leaves it out, so that two builds give the same bytes.
+	Milestones  []Milestone // the plan
+	Current     string      // the current milestone, for example M0
+	Cloudflare  bool        // build for Cloudflare Pages: a worker sends node/TAG/ to the page of the node, so the site has no page for each short link
+	Wikipedia   string      // the Wikipedia corpus (a clone of tamnd/wikipedia-math), or "". With a corpus, the site has the pages of the Wikipedia scope.
+	Cache       string      // a file that keeps the rendered math between builds, or "" (see mathCache)
+	SocialPacks string      // optional R2 pack output for Cloudflare social images; enables range-read delivery
 }
 
 // kinds are the 12 node kinds with a short description, in schema order.
@@ -172,8 +173,9 @@ type builder struct {
 	tmpl        *template.Template
 	reviewers   []*reviewerView
 	projects    []*projectView
-	pages       []string // the paths of the HTML pages, for the sitemap
-	socialImage string   // absolute URL of the default social card
+	pages       []string          // the paths of the HTML pages, for the sitemap
+	socialImage string            // absolute URL of the default social card
+	socialURLs  map[string]string // node tag to its social image URL
 	nodeMD      *markup.Markdown
 	plainMD     *markup.Markdown
 
@@ -195,6 +197,12 @@ type builder struct {
 
 // Build writes the site to opt.Out.
 func Build(opt Options) error {
+	if opt.SocialPacks != "" && !opt.Cloudflare {
+		return fmt.Errorf("site: social packs require a Cloudflare build")
+	}
+	if opt.SocialPacks != "" && (filepath.Clean(opt.SocialPacks) == filepath.Clean(opt.Out) || filepath.Clean(opt.SocialPacks) == filepath.Clean(opt.Content)) {
+		return fmt.Errorf("site: social packs need their own output directory")
+	}
 	b := &builder{opt: opt, nodes: map[string]*nodeView{}, plainMD: markup.New(nil)}
 	if opt.URL != "" {
 		u := strings.TrimSuffix(opt.URL, "/")
@@ -219,9 +227,18 @@ func Build(opt Options) error {
 	if err := os.RemoveAll(opt.Out); err != nil {
 		return err
 	}
-	steps := []func() error{b.writeAssets, b.writeNodes, b.writeLists, b.writeLearn, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeResources, b.writeLevels, b.writeWikipedia, b.writeFeeds}
+	if opt.SocialPacks != "" {
+		if err := os.RemoveAll(opt.SocialPacks); err != nil {
+			return err
+		}
+	}
+	steps := []func() error{b.writeAssets, b.writeNodeSocialCards}
 	if opt.Cloudflare {
 		b.shards = map[string][]byte{}
+		steps = append(steps, b.writeSocialPacks)
+	}
+	steps = append(steps, b.writeNodes, b.writeLists, b.writeLearn, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeResources, b.writeLevels, b.writeWikipedia, b.writeFeeds)
+	if opt.Cloudflare {
 		steps = append(steps, b.writeWorker)
 	}
 	if err := timed(steps); err != nil {

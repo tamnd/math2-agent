@@ -23,19 +23,68 @@ import (
 const socialWidth, socialHeight = 1200, 630
 
 var (
-	socialInk                              = color.RGBA{17, 29, 46, 255}
-	socialBlue                             = color.RGBA{60, 135, 190, 255}
-	socialGold                             = color.RGBA{240, 192, 91, 255}
-	socialWhite                            = color.RGBA{250, 249, 245, 255}
-	socialMuted                            = color.RGBA{187, 204, 216, 255}
+	socialGold    = color.RGBA{240, 192, 91, 255}
+	socialWhite   = color.RGBA{250, 249, 245, 255}
+	socialMuted   = color.RGBA{187, 204, 216, 255}
+	socialAccents = [...]color.RGBA{
+		{69, 176, 211, 255}, {147, 120, 225, 255}, {76, 194, 155, 255}, {226, 126, 126, 255},
+		{218, 168, 83, 255}, {104, 148, 233, 255}, {199, 129, 191, 255}, {98, 190, 194, 255},
+	}
+	socialBackgrounds                      [len(socialAccents)]*image.RGBA
+	socialBackgroundOnce                   sync.Once
 	socialFontOnce                         sync.Once
 	socialDrawMu                           sync.Mutex
 	socialBold, socialRegular, socialLabel font.Face
 	socialFontErr                          error
 )
 
-// socialPath changes when the text on a card changes. A Pages deployment can
-// therefore cache old cards indefinitely without showing an old title.
+func socialBackground(tag string) (*image.RGBA, color.RGBA) {
+	socialBackgroundOnce.Do(func() {
+		for i, accent := range socialAccents {
+			bg := image.NewRGBA(image.Rect(0, 0, socialWidth, socialHeight))
+			for y := 0; y < socialHeight; y++ {
+				for x := 0; x < socialWidth; x++ {
+					// A dark gradient, a quiet grid and concentric arcs give each
+					// subject a distinct card without competing with its title.
+					r := 15 + x*8/socialWidth
+					g := 26 + x*10/socialWidth
+					b := 43 + x*13/socialWidth
+					if x > 590 {
+						glow := (x - 590) * 12 / (socialWidth - 590)
+						r += int(accent.R) * glow / 100
+						g += int(accent.G) * glow / 100
+						b += int(accent.B) * glow / 100
+						if x%72 < 2 || y%72 < 2 {
+							r += 4
+							g += 5
+							b += 6
+						}
+						dx, dy := x-1040, y-175
+						d2 := dx*dx + dy*dy
+						for _, radius := range [...]int{115, 190, 265, 340} {
+							if d2 >= (radius-2)*(radius-2) && d2 <= (radius+2)*(radius+2) {
+								r += int(accent.R) / 8
+								g += int(accent.G) / 8
+								b += int(accent.B) / 8
+								break
+							}
+						}
+					}
+					bg.SetRGBA(x, y, color.RGBA{uint8(min(r, 255)), uint8(min(g, 255)), uint8(min(b, 255)), 255})
+				}
+			}
+			draw.Draw(bg, image.Rect(0, 0, 18, socialHeight), &image.Uniform{C: accent}, image.Point{}, draw.Src)
+			draw.Draw(bg, image.Rect(70, 98, 250, 104), &image.Uniform{C: socialGold}, image.Point{}, draw.Src)
+			draw.Draw(bg, image.Rect(70, 526, 1130, 528), &image.Uniform{C: accent}, image.Point{}, draw.Src)
+			socialBackgrounds[i] = bg
+		}
+	})
+	i := shardOf(tag, len(socialAccents))
+	return socialBackgrounds[i], socialAccents[i]
+}
+
+// socialPath names a card while the build assembles the content-addressed
+// packs. A GitHub Pages build also serves this file directly.
 func socialPath(tag, title, subtitle string) string {
 	h := sha256.Sum256([]byte(title + "\x00" + subtitle))
 	return "social/" + tag + "-" + hex.EncodeToString(h[:6]) + ".jpg"
@@ -112,10 +161,8 @@ func socialLines(face font.Face, title string, width, maxLines int) []string {
 // bundled Go fonts and no system programs, so CI and the deploy server agree.
 func socialJPEG(title, subtitle, tag string) ([]byte, error) {
 	img := image.NewRGBA(image.Rect(0, 0, socialWidth, socialHeight))
-	draw.Draw(img, img.Bounds(), &image.Uniform{C: socialInk}, image.Point{}, draw.Src)
-	draw.Draw(img, image.Rect(0, 0, 18, socialHeight), &image.Uniform{C: socialBlue}, image.Point{}, draw.Src)
-	draw.Draw(img, image.Rect(70, 98, 250, 104), &image.Uniform{C: socialGold}, image.Point{}, draw.Src)
-	draw.Draw(img, image.Rect(70, 526, 1130, 528), &image.Uniform{C: socialBlue}, image.Point{}, draw.Src)
+	background, accent := socialBackground(tag)
+	draw.Draw(img, img.Bounds(), background, image.Point{}, draw.Src)
 	bold, regular, label, err := socialFonts()
 	if err != nil {
 		return nil, err
@@ -131,7 +178,7 @@ func socialJPEG(title, subtitle, tag string) ([]byte, error) {
 	for i, line := range lines {
 		put(bold, socialWhite, 70, 206+i*83, line)
 	}
-	put(regular, socialMuted, 70, 490, subtitle)
+	put(regular, accent, 70, 490, subtitle)
 	put(regular, socialMuted, 70, 578, "math2.tamnd.com")
 	if tag != "" {
 		put(regular, socialMuted, 930, 578, tag)
@@ -157,6 +204,20 @@ func (b *builder) writeSocial(tag, title, subtitle string) (string, error) {
 }
 
 type socialJob struct{ tag, title, subtitle string }
+
+func (b *builder) writeNodeSocialCards() error {
+	jobs := make([]socialJob, 0, len(b.order))
+	b.socialURLs = make(map[string]string, len(b.order))
+	for _, v := range b.order {
+		subtitle := v.Label()
+		if subject := v.Subject(); subject != "" {
+			subtitle += " · " + subject
+		}
+		jobs = append(jobs, socialJob{v.Tag, v.Name, subtitle})
+		b.socialURLs[v.Tag] = b.abs(socialPath(v.Tag, v.Name, subtitle))
+	}
+	return b.writeSocialCards(jobs)
+}
 
 // JPEG encoding takes most of the time spent making cards. Write independent
 // cards in parallel so a large content update does not delay deployment.
