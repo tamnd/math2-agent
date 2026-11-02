@@ -108,6 +108,14 @@ func adoptFixture(t *testing.T) (string, []inventory.Row, []inventory.Mention) {
 	return dir, rows, ms
 }
 
+func TestGenericName(t *testing.T) {
+	for name, want := range map[string]bool{"Theorem (2)": true, "Theorem A (groups)": true, "Lemma B": true, "Examples": true, "Extension of Lagrange's theorem": false, "Theorem of Lagrange": false, "Uniqueness of identity element": false} {
+		if got := genericName.MatchString(name); got != want {
+			t.Errorf("%q: got %v, want %v", name, got, want)
+		}
+	}
+}
+
 func TestAdopt(t *testing.T) {
 	dir, rows, ms := adoptFixture(t)
 	n := 0

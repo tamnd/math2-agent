@@ -84,8 +84,8 @@ type AdoptResult struct {
 // adoptFlags are the flags of WP9.2 that stop the adoption of an item.
 var adoptFlags = []string{"citation-needed", "dubious", "disputed", "informal"}
 
-// genericName matches a name that is a label and not the name of the item, as Theorem (2) or Examples.
-var genericName = regexp.MustCompile(`(?i)^(theorem|lemma|corollary|proposition|claim|fact|definition|definitions|example|examples|remark|proof|statement|statements|properties|facts|notation|applications?|generali[sz]ations?|extensions?|construction|history|overview|motivation|algorithms?|representations?)( \(\d+\))?$`)
+// genericName matches a name that is a label and not the name of the item, as Theorem (2), Theorem A (groups) or Examples.
+var genericName = regexp.MustCompile(`(?i)^(theorem|lemma|corollary|proposition|claim|fact|definition|definitions|example|examples|remark|proof|statement|statements|properties|facts|notation|applications?|generali[sz]ations?|extensions?|construction|history|overview|motivation|algorithms?|representations?)( \(\d+\))?$|^(theorem|lemma|corollary|proposition) [A-Z]( \([^)]*\))?$`)
 
 // adoptCues are the cues that give the item a name of its own (WP9.1 reason 2). A plain heading names a section, not an item.
 var adoptCues = []string{"lead", "math-theorem", "named-heading", "term", "inline-head", "list-entry"}
