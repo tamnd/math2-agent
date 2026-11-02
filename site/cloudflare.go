@@ -21,7 +21,10 @@ const LinksFile = "api/links.json"
 const ShardDir = "shards"
 
 // shardBytes is the size of a shard that the build aims for.
-const shardBytes = 1 << 20
+const shardBytes = 512 << 10
+
+// maxSharded is the size above which a file stays a static file, so that the worker does not read a large shard for it. The worker gives a path that is not in its shard to the static files.
+const maxSharded = 512 << 10
 
 // sharded matches the paths of the files that a Cloudflare build puts in shards: the files of the nodes, the resources and the inventory, except the index page of each of these sections.
 var sharded = regexp.MustCompile(`^(?:(?:wiki|res|inventory)/.+/index\.html|node/[0-9A-Za-z~]+\.md|api/node/[0-9A-Za-z~]+\.json)$`)
@@ -137,8 +140,18 @@ func (b *builder) writeWorker() error {
 
 // writeShards writes the sharded files to shards/N.json and returns the count of shards.
 func (b *builder) writeShards() (int, error) {
+	shards := b.shards
+	b.shards = nil // write the large files and the shards themselves to files
+	defer func() { b.shards = shards }()
 	total := 0
-	for _, data := range b.shards {
+	for p, data := range shards {
+		if len(data) > maxSharded {
+			if err := b.write(p, data); err != nil {
+				return 0, err
+			}
+			delete(shards, p)
+			continue
+		}
 		total += len(data)
 	}
 	n := 16
@@ -146,16 +159,13 @@ func (b *builder) writeShards() (int, error) {
 		n *= 2
 	}
 	parts := make([]map[string]string, n)
-	for p, data := range b.shards {
+	for p, data := range shards {
 		i := shardOf(p, n)
 		if parts[i] == nil {
 			parts[i] = map[string]string{}
 		}
 		parts[i][p] = string(data)
 	}
-	shards := b.shards
-	b.shards = nil // write the shards themselves to files
-	defer func() { b.shards = shards }()
 	for i, part := range parts {
 		var buf bytes.Buffer
 		enc := json.NewEncoder(&buf)
