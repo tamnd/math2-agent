@@ -335,15 +335,17 @@ func TestGroupAndHard(t *testing.T) {
 	var ids []string
 	for _, r := range rep.Results {
 		ids = append(ids, r.Rule)
-		reason := "not written yet"
+		state, reason := check.Skip, "not written yet"
 		switch r.Rule {
+		case "Y11":
+			state, reason = check.NA, ""
 		case "Y01", "Y02", "Y03", "Y04":
 			reason = "no checkout of tamnd/wikipedia-math is given, so set -wikipedia to run the rule"
 		case "Y05", "Y06":
 			reason = "the record plane has no Wikipedia mention"
 		}
-		if r.State != check.Skip || r.Reason != reason {
-			t.Errorf("%s: the state is %s %q, and it must be skip with the reason %q", r.Rule, r.State, r.Reason, reason)
+		if r.State != state || r.Reason != reason {
+			t.Errorf("%s: the state is %s %q, and it must be %s with the reason %q", r.Rule, r.State, r.Reason, state, reason)
 		}
 	}
 	if !slices.Equal(ids, []string{"Y01", "Y02", "Y03", "Y04", "Y05", "Y06", "Y11", "Y15", "Y18"}) {
