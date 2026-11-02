@@ -132,9 +132,6 @@ func (b *builder) writeNodes() error {
 			return err
 		}
 	}
-	if b.opt.Cloudflare {
-		return b.writeWorker()
-	}
 	return nil
 }
 
