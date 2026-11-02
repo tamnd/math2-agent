@@ -14,7 +14,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -57,6 +59,7 @@ type Options struct {
 	Current    string      // the current milestone, for example M0
 	Cloudflare bool        // build for Cloudflare Pages: a worker sends node/TAG/ to the page of the node, so the site has no page for each short link
 	Wikipedia  string      // the Wikipedia corpus (a clone of tamnd/wikipedia-math), or "". With a corpus, the site has the pages of the Wikipedia scope.
+	Cache      string      // a file that keeps the rendered math between builds, or "" (see mathCache)
 }
 
 // kinds are the 12 node kinds with a short description, in schema order.
@@ -161,6 +164,7 @@ type builder struct {
 	order     []*nodeView
 	specs     []*specDoc
 	katex     *katex.Renderer
+	mathMemo  *mathCache
 	graph     *graph.Graph
 	status    map[string]status.Status           // nil when the site has no build
 	levels    map[string]int                     // the number of nodes at each writing level
@@ -203,9 +207,11 @@ func Build(opt Options) error {
 	if b.tmpl, err = parseTemplates(b); err != nil {
 		return err
 	}
+	start := time.Now()
 	if err := b.load(); err != nil {
 		return err
 	}
+	fmt.Fprintf(os.Stderr, "m2 site build: load %s\n", time.Since(start).Round(time.Millisecond))
 	if err := b.loadPaths(); err != nil {
 		return err
 	}
@@ -217,12 +223,13 @@ func Build(opt Options) error {
 		b.shards = map[string][]byte{}
 		steps = append(steps, b.writeWorker)
 	}
-	for _, step := range steps {
-		if err := step(); err != nil {
-			return err
-		}
+	if err := timed(steps); err != nil {
+		return err
 	}
-	return b.writeSitemap()
+	if err := b.writeSitemap(); err != nil {
+		return err
+	}
+	return b.mathMemo.save(opt.Cache)
 }
 
 // url returns the site URL path for p.
@@ -276,39 +283,34 @@ func (b *builder) load() error {
 		return fmt.Errorf("site: %w", err)
 	}
 	b.nodeMD = markup.New(b.math)
-	b.loadHistory()
-	if err := b.loadProv(); err != nil {
+	b.mathMemo = loadMathCache(b.opt.Cache, macros)
+	if err := timed([]func() error{func() error { return b.prerender(macros) }}); err != nil {
 		return err
 	}
+	b.loadHistory()
+	return timed([]func() error{b.loadProv, b.resolveAll, func() error { b.graph = graph.Build(nodes); return nil }, b.loadStatus, func() error { return b.loadWriting(nodes) }, b.loadRuns, b.loadReviews, func() error { b.explore(); return nil }, b.loadProjects, b.loadInventory, b.loadResources, b.loadSpec})
+}
+
+func (b *builder) resolveAll() error {
 	for _, v := range b.order {
 		if err := b.resolve(v); err != nil {
 			return err
 		}
 	}
-	b.graph = graph.Build(nodes)
-	if err := b.loadStatus(); err != nil {
-		return err
+	return nil
+}
+
+// timed runs the steps of a build in order, and writes the time of each to the standard error, for the log of a deploy.
+func timed(steps []func() error) error {
+	for _, step := range steps {
+		start := time.Now()
+		if err := step(); err != nil {
+			return err
+		}
+		name := runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name()
+		fmt.Fprintf(os.Stderr, "m2 site build: %s %s\n", strings.TrimSuffix(name[strings.LastIndex(name, ".")+1:], "-fm"), time.Since(start).Round(time.Millisecond))
 	}
-	if err := b.loadWriting(nodes); err != nil {
-		return err
-	}
-	if err := b.loadRuns(); err != nil {
-		return err
-	}
-	if err := b.loadReviews(); err != nil {
-		return err
-	}
-	b.explore()
-	if err := b.loadProjects(); err != nil {
-		return err
-	}
-	if err := b.loadInventory(); err != nil {
-		return err
-	}
-	if err := b.loadResources(); err != nil {
-		return err
-	}
-	return b.loadSpec()
+	return nil
 }
 
 // loadStatus reads the status of each node from the store of the build.
@@ -448,7 +450,17 @@ func (b *builder) resolve(v *nodeView) error {
 
 // math returns the MathML of a formula. A formula that KaTeX cannot parse shows as its TeX source, with the error as the title.
 func (b *builder) math(tex string, display bool) string {
-	out, err := b.katex.Render(tex, display)
+	if out, ok := b.mathMemo.get(tex, display); ok {
+		return out
+	}
+	out := renderMath(b.katex, tex, display)
+	b.mathMemo.put(tex, display, out)
+	return out
+}
+
+// renderMath renders a formula with the renderer r, as math does.
+func renderMath(r *katex.Renderer, tex string, display bool) string {
+	out, err := r.Render(tex, display)
 	if err != nil {
 		return `<code class="tex-error" title="` + html.EscapeString(err.Error()) + `">` + html.EscapeString(tex) + `</code>`
 	}
