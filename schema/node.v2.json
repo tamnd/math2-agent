@@ -1242,6 +1242,21 @@
         "note": {
           "type": "string"
         },
+        "mention": {
+          "description": "The id of the mention that the text of the node came from, for a source with the note adopted or adapted (corpus wikipedia WP9.2).",
+          "type": "string",
+          "minLength": 1
+        },
+        "sections": {
+          "description": "The sections of the node that the source filled with adopted or adapted text (corpus wikipedia WP9.2 and WP9.3).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
         "locator_unconfirmed": {
           "description": "The date when the source got the flag: nobody confirmed the locator in the source yet. Only a person removes the flag (corpus K9.5).",
           "type": "string",

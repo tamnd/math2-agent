@@ -1,0 +1,5 @@
+nodes/7K3/7K3QX2.md:5:1: Y11: source 1 is a Wikipedia revision with the note "cited". The note must be adopted or adapted
+nodes/7K3/7K3QX2.md:5:1: Y11: source 1 is a Wikipedia revision with no locator. Give the title and the section of the article
+nodes/7K3/7K3QX2.md:5:1: Y11: source 1 is a Wikipedia revision with no mention. Give the id of the mention that the text came from
+nodes/7K3/7K3QX2.md:5:1: Y11: source 1 names the section "Remarks", and the body has no section of that name
+nodes/9QX/9QX4M1.md:5:1: Y11: source 1 has the note adapted and a URL of Wikipedia. Use the key wikipedia with the page id and the revision

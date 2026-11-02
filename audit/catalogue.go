@@ -120,7 +120,7 @@ var catalogue = []entry{
 	{Rule{"Y08", Wikipedia, false, "a template that an article uses and that the template table does not map"}, y08},
 	{Rule{"Y09", Wikipedia, false, "a heading in 5 or more articles that the heading table does not map"}, y09},
 	{Rule{"Y10", Wikipedia, false, "a formula whose TeX wiki/texvc does not convert"}, y10},
-	{Rule{"Y11", Wikipedia, true, "each node with text adopted or adapted from Wikipedia has the attribution of rule L03 in its sources and in its run record"}, nil},
+	{Rule{"Y11", Wikipedia, true, "each node with text adopted or adapted from Wikipedia has the attribution of WP9.3 in its sources: the revision, the locator, the note, the mention and the sections"}, y11},
 	{Rule{"Y12", Wikipedia, false, "a redirect into an article in scope that names no mention as an alias"}, y12},
 	{Rule{"Y13", Wikipedia, false, "an article in scope whose revision of record is more than 60 days older than its newest settled revision"}, y13},
 	{Rule{"Y14", Wikipedia, false, "a candidate article that two signals name and that the classifier rejects with a confidence below 0.9"}, y14},
