@@ -27,7 +27,7 @@
 <section class="path-section" id="{{.ID}}">
   {{if .Title}}<h2>{{.Title}} <span class="count">{{.Done}} of {{len .Items}}</span></h2>{{end}}
   <ol class="path-list" start="{{(index .Items 0).N}}">
-    {{range .Items}}<li class="{{if not .Node}}todo{{end}}">{{if .Node}}<a href="{{.Node.URL}}">{{.Node.Name}}</a>{{else}}<span title="This page is not written yet">{{.Name}}</span>{{end}} <span class="kind-tag k-{{.Kind}}">{{.Kind}}</span>{{with .Node}}{{with .Excerpt}}<div class="path-excerpt">{{.}}</div>{{end}}{{end}}</li>
+    {{range .Items}}<li class="{{if not .Node}}todo{{end}}">{{if .Node}}<a href="{{.Node.URL}}">{{.Node.Name}}</a>{{else}}<span title="This page is not written yet">{{.Name}}</span>{{end}} <span class="kind-tag k-{{.Kind}}">{{.Kind}}</span></li>
     {{end}}
   </ol>
 </section>

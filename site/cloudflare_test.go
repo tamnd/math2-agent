@@ -50,6 +50,20 @@ func TestCloudflare(t *testing.T) {
 	if w := readFile(t, out, "_worker.js"); !strings.Contains(w, `const base = "/math2";`) || !strings.Contains(w, "/"+LinksFile) || !strings.Contains(w, "const shards = 16;") {
 		t.Errorf("_worker.js does not have the base path and the links file:\n%s", w)
 	}
+	if w := readFile(t, out, "_worker.js"); !strings.Contains(w, "caches.default.match(key)") || !strings.Contains(w, "caches.default.put(key") || !strings.Contains(w, "cacheVersion") {
+		t.Error("the worker does not cache sharded responses by build")
+	}
+	if h := readFile(t, out, "_headers"); !strings.Contains(h, "/social/*") || !strings.Contains(h, "immutable") {
+		t.Error("social cards have no immutable cache header")
+	}
+	var nodeShard map[string]string
+	path := "wiki/lagranges-theorem/index.html"
+	if err := json.Unmarshal([]byte(readFile(t, out, fmt.Sprintf("%s/%d.json", ShardDir, shardOf(path, n)))), &nodeShard); err != nil {
+		t.Fatal(err)
+	}
+	if page := nodeShard[path]; !strings.Contains(page, `property="og:type" content="article"`) || !strings.Contains(page, `name="twitter:card" content="summary_large_image"`) || !strings.Contains(page, `property="article:tag" content="statement"`) || !strings.Contains(page, `property="og:image" content="https://example.org/math2/social/7K3QX2-`) {
+		t.Error("the node has incomplete sharing metadata")
+	}
 	var routes struct {
 		Version int
 		Include []string

@@ -1,9 +1,11 @@
 {{define "frontier"}}
 <header class="page-head">
-  <h1>Frontier</h1>
+  <h1>Frontier{{if gt .Page 1}}, page {{.Page}}{{end}}</h1>
   <p class="lead">The gaps in the graph. People and agents can take each item as work. To claim an item, open an issue in the content repository.</p>
 </header>
 {{if not .HasStatus}}<p class="notice">This copy of the site has no build data, so the lists give no evidence levels.</p>{{end}}
+<p class="muted">{{.TotalUnproved}} statements with no proof; {{.TotalOpen}} open conjectures and problems. Showing up to {{.From}}–{{.To}} in each list.</p>
+<nav class="pager" aria-label="Frontier pages">{{with .Prev}}<a href="{{.}}" rel="prev">← Previous</a>{{end}}{{with .Next}}<a href="{{.}}" rel="next">Next →</a>{{end}}</nav>
 <section aria-labelledby="unproved-h">
   <h2 id="unproved-h">Statements with no proof</h2>
   <p>No proof node in the graph proves these statements. A source can still support them.</p>
@@ -14,6 +16,7 @@
   <p>No node in the graph resolves these conjectures and problems.</p>
   {{template "frontierlist" .Open}}
 </section>
+<nav class="pager" aria-label="Frontier pages">{{with .Prev}}<a href="{{.}}" rel="prev">← Previous</a>{{end}}{{with .Next}}<a href="{{.}}" rel="next">Next →</a>{{end}}</nav>
 {{end}}
 
 {{define "frontierlist"}}{{if .}}

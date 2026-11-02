@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/schema"
@@ -107,9 +108,23 @@ func (b *builder) mscGroups() []*mscGroup {
 }
 
 func (b *builder) writeNodes() error {
+	images := make([]socialJob, 0, len(b.order))
 	for _, v := range b.order {
 		desc := v.Name + ". A " + v.Kind + " in Math 2.0."
-		p := page{Title: v.Name, Description: desc, Section: "nodes", MarkdownURL: v.MarkdownURL, JSONURL: v.JSONURL, Math: true}
+		subtitle := v.Label()
+		if subject := v.Subject(); subject != "" {
+			subtitle += " · " + subject
+		}
+		images = append(images, socialJob{v.Tag, v.Name, subtitle})
+		imageURL := b.abs(socialPath(v.Tag, v.Name, subtitle))
+		p := page{Title: v.Name, Description: desc, Section: "nodes", MarkdownURL: v.MarkdownURL, JSONURL: v.JSONURL, Math: true,
+			ImageURL: imageURL, ImageAlt: v.Name + ", a " + v.Kind + " in Math 2.0", OGType: "article", Tags: append([]string{v.Kind}, v.MSC...)}
+		if !v.Added.IsZero() {
+			p.Published = v.Added.UTC().Format(time.RFC3339)
+		}
+		if !v.Updated.IsZero() {
+			p.Modified = v.Updated.UTC().Format(time.RFC3339)
+		}
 		if err := b.writePage("wiki/"+v.Slug, "node", v, p); err != nil {
 			return err
 		}
@@ -132,19 +147,48 @@ func (b *builder) writeNodes() error {
 			return err
 		}
 	}
+	return b.writeSocialCards(images)
+}
+
+type listData struct {
+	Title, Text     string
+	Kinds           []kindCount
+	Levels          []levelCount
+	Nodes           []*nodeView
+	From, To, Total int
+	Prev, Next      string
+}
+
+const listPerPage = 150
+
+func (b *builder) writeNodeList(dir, title, description, text, jsonURL string, nodes []*nodeView, kinds []kindCount, levels []levelCount) error {
+	for i := 0; i == 0 || i < len(nodes); i += listPerPage {
+		end := min(i+listPerPage, len(nodes))
+		p := listData{Title: title, Text: text, Kinds: kinds, Levels: levels, Nodes: nodes[i:end], Total: len(nodes), From: i + 1, To: end}
+		pageDir := dir
+		pageTitle := title
+		if i > 0 {
+			pageDir = fmt.Sprintf("%s/%d", dir, i/listPerPage+1)
+			pageTitle += fmt.Sprintf(", page %d", i/listPerPage+1)
+			prev := i / listPerPage
+			if prev == 1 {
+				p.Prev = b.url(dir + "/")
+			} else {
+				p.Prev = b.url(fmt.Sprintf("%s/%d/", dir, prev))
+			}
+		}
+		if end < len(nodes) {
+			p.Next = b.url(fmt.Sprintf("%s/%d/", dir, i/listPerPage+2))
+		}
+		if err := b.writePage(pageDir, "list", p, page{Title: pageTitle, Description: description, Section: "nodes", JSONURL: jsonURL}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (b *builder) writeLists() error {
-	type listData struct {
-		Title, Text string
-		Kinds       []kindCount
-		Levels      []levelCount
-		Nodes       []*nodeView
-		Groups      []*mscGroup
-	}
-	all := listData{Title: "Every idea", Kinds: b.kindCounts(), Nodes: b.order}
-	if err := b.writePage("nodes", "list", all, page{Title: "Every idea", Description: "Each idea in Math 2.0.", Section: "nodes", JSONURL: b.url("api/nodes.json")}); err != nil {
+	if err := b.writeNodeList("nodes", "Every idea", "Each idea in Math 2.0.", "", b.url("api/nodes.json"), b.order, b.kindCounts(), nil); err != nil {
 		return err
 	}
 	for _, k := range kinds {
@@ -154,8 +198,7 @@ func (b *builder) writeLists() error {
 				nodes = append(nodes, v)
 			}
 		}
-		d := listData{Title: k.Plural, Text: k.Text, Kinds: b.kindCounts(), Nodes: nodes}
-		if err := b.writePage("kind/"+k.Name, "list", d, page{Title: k.Plural, Description: k.Text, Section: "nodes"}); err != nil {
+		if err := b.writeNodeList("kind/"+k.Name, k.Plural, k.Text, k.Text, "", nodes, b.kindCounts(), nil); err != nil {
 			return err
 		}
 	}

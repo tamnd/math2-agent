@@ -42,6 +42,7 @@ const worker = `// The worker of Math 2.0. m2 site build -cloudflare writes this
 // A request for node/TAG/ goes to the page of the node. A request for a file of a node, a resource or the inventory gets the file from its shard. Each other request gets the static file.
 const base = BASE;
 const shards = SHARDS;
+const cacheVersion = CACHE_VERSION;
 const sharded = /^(?:(?:wiki|res|inventory)\/.+|node\/[0-9A-Za-z~]+\.md|api\/node\/[0-9A-Za-z~]+\.json)$/;
 const types = { html: "text/html; charset=utf-8", md: "text/markdown; charset=utf-8", json: "application/json; charset=utf-8" };
 const cache = new Map();
@@ -71,7 +72,7 @@ async function lookup(env, url, p) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.slice(base.length).replace(/^\/+/, "");
     const m = path.match(/^node\/([0-9A-Z]+)\/?$/);
@@ -94,12 +95,21 @@ export default {
         }
         return env.ASSETS.fetch(request);
       }
+      // Cached responses are keyed by the build, so a new deployment cannot
+      // reuse the content of a previous shard even when the URL is unchanged.
+      const key = new Request(new URL(base + "/__cache/" + cacheVersion + "/" + p, url));
+      if (request.method === "GET") {
+        const hit = await caches.default.match(key);
+        if (hit) return hit;
+      }
       const body = await lookup(env, url, p);
       if (body !== undefined) {
         const type = types[p.slice(p.lastIndexOf(".") + 1)] || "application/octet-stream";
-        return new Response(request.method === "HEAD" ? null : body, {
-          headers: { "content-type": type, "cache-control": "public, max-age=0, must-revalidate" },
+        const response = new Response(request.method === "HEAD" ? null : body, {
+          headers: { "content-type": type, "cache-control": "public, max-age=60, s-maxage=86400" },
         });
+        if (request.method === "GET") ctx.waitUntil(caches.default.put(key, response.clone()));
+        return response;
       }
     }
     return env.ASSETS.fetch(request);
@@ -127,7 +137,15 @@ func (b *builder) writeWorker() error {
 	}
 	w := strings.Replace(worker, "BASE", string(base), 1)
 	w = strings.Replace(w, "SHARDS", strconv.Itoa(n), 1)
+	version, err := json.Marshal(fmt.Sprintf("%s-%s-%d", b.opt.Commit, b.opt.Version, b.opt.Date.Unix()))
+	if err != nil {
+		return err
+	}
+	w = strings.Replace(w, "CACHE_VERSION", string(version), 1)
 	if err := b.write("_worker.js", []byte(w)); err != nil {
+		return err
+	}
+	if err := b.write("_headers", []byte("/social/*\n  Cache-Control: public, max-age=31536000, immutable\n/assets/*\n  Cache-Control: public, max-age=3600, stale-while-revalidate=86400\n")); err != nil {
 		return err
 	}
 	var include []string

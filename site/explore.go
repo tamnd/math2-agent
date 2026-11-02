@@ -296,9 +296,14 @@ func (b *builder) explore() {
 
 // frontier is the data of the frontier page.
 type frontier struct {
-	Unproved, Open []*dagItem
-	HasStatus      bool
+	Unproved, Open           []*dagItem
+	HasStatus                bool
+	TotalUnproved, TotalOpen int
+	From, To, Page           int
+	Prev, Next               string
 }
+
+const frontierPerPage = 150
 
 // frontierOf returns the statements with no proof in the graph, and the conjectures and problems that no node resolves.
 func (b *builder) frontierOf() frontier {
@@ -326,7 +331,36 @@ func (b *builder) frontierOf() frontier {
 }
 
 func (b *builder) writeExplore() error {
-	f := b.frontierOf()
-	p := page{Title: "Frontier", Description: "The statements of Math 2.0 with no proof, and the open conjectures and problems.", Section: "explore"}
-	return b.writePage("explore/frontier", "frontier", f, p)
+	return b.writeFrontier(b.frontierOf())
+}
+
+func (b *builder) writeFrontier(f frontier) error {
+	totalUnproved, totalOpen := len(f.Unproved), len(f.Open)
+	for i := 0; i == 0 || i < max(totalUnproved, totalOpen); i += frontierPerPage {
+		d := frontier{HasStatus: f.HasStatus, TotalUnproved: totalUnproved, TotalOpen: totalOpen, From: i + 1, To: min(i+frontierPerPage, max(totalUnproved, totalOpen)), Page: i/frontierPerPage + 1}
+		if i < totalUnproved {
+			d.Unproved = f.Unproved[i:min(i+frontierPerPage, totalUnproved)]
+		}
+		if i < totalOpen {
+			d.Open = f.Open[i:min(i+frontierPerPage, totalOpen)]
+		}
+		dir, title := "explore/frontier", "Frontier"
+		if i > 0 {
+			dir = fmt.Sprintf("explore/frontier/%d", d.Page)
+			title = fmt.Sprintf("Frontier, page %d", d.Page)
+			if d.Page == 2 {
+				d.Prev = b.url("explore/frontier/")
+			} else {
+				d.Prev = b.url(fmt.Sprintf("explore/frontier/%d/", d.Page-1))
+			}
+		}
+		if i+frontierPerPage < max(totalUnproved, totalOpen) {
+			d.Next = b.url(fmt.Sprintf("explore/frontier/%d/", d.Page+1))
+		}
+		p := page{Title: title, Description: "The statements of Math 2.0 with no proof, and the open conjectures and problems.", Section: "explore"}
+		if err := b.writePage(dir, "frontier", d, p); err != nil {
+			return err
+		}
+	}
+	return nil
 }
