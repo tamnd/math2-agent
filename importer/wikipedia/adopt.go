@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"go.yaml.in/yaml/v3"
 
@@ -217,7 +218,7 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 		it.State = Waiting
 		it.Reason = whyWait(m, opt.Hold, subjectOf, byName)
 		if it.Reason == "" {
-			d, why, err := adoptOne(m, m.Name, pages, pageNode, opt, msc[pageNode(m.Page)], "", r.ID)
+			d, why, err := adoptNode(m, displayName(m), freeAliases(m, byName), pages, pageNode, opt, msc[pageNode(m.Page)], "", r.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -326,6 +327,10 @@ func whyWait(m *inventory.Mention, hold map[string]string, subjectOf map[string]
 
 // adoptOne writes the node of one item. It gives a nil draft and the reason when the text cannot be adopted.
 func adoptOne(m *inventory.Mention, name string, pages *pageCache, pageNode func(int) string, opt AdoptOptions, msc []string, proves, row string) (*AdoptDraft, string, error) {
+	return adoptNode(m, name, nil, pages, pageNode, opt, msc, proves, row)
+}
+
+func adoptNode(m *inventory.Mention, name string, aliases []string, pages *pageCache, pageNode func(int) string, opt AdoptOptions, msc []string, proves, row string) (*AdoptDraft, string, error) {
 	pf, err := pages.get(m.Page, m.Revision)
 	if err != nil {
 		return nil, "", err
@@ -369,8 +374,8 @@ func adoptOne(m *inventory.Mention, name string, pages *pageCache, pageNode func
 		fmt.Fprintf(&b, "role: %s\n", role)
 	}
 	fmt.Fprintf(&b, "name: %s\n", scalar(name))
-	if len(m.Aliases) > 0 && kind != "proof" {
-		fmt.Fprintf(&b, "aliases: %s\n", flow(m.Aliases))
+	if len(aliases) > 0 && kind != "proof" {
+		fmt.Fprintf(&b, "aliases: %s\n", flow(aliases))
 	}
 	if len(msc) > 0 {
 		fmt.Fprintf(&b, "msc: %s\n", flow(msc))
@@ -388,6 +393,30 @@ func adoptOne(m *inventory.Mention, name string, pages *pageCache, pageNode func
 	}
 	fmt.Fprintf(&b, "---\n\n## %s\n\n%s\n", section, text)
 	return &AdoptDraft{ID: id, Path: "nodes/~/" + id + ".md", Data: b.Bytes()}, "", nil
+}
+
+// displayName gives the name of the node: the name of the mention, with a capital first letter for a glossary term, as the other node names have. A name that starts with a letter symbol, as p-group, does not change.
+func displayName(m *inventory.Mention) string {
+	if m.Cue != "term" || m.Name == "" {
+		return m.Name
+	}
+	r := []rune(m.Name)
+	if !unicode.IsLower(r[0]) || len(r) > 1 && !unicode.IsLower(r[1]) {
+		return m.Name
+	}
+	r[0] = unicode.ToUpper(r[0])
+	return string(r)
+}
+
+// freeAliases gives the aliases of the mention that are not the name or an alias of a node, so that the new node does not take the name of another node.
+func freeAliases(m *inventory.Mention, byName map[string]string) []string {
+	var out []string
+	for _, a := range m.Aliases {
+		if _, ok := byName[inventory.NameKey(a)]; !ok {
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 func tagOf(id string) string {

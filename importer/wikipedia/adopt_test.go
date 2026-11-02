@@ -116,6 +116,23 @@ func TestGenericName(t *testing.T) {
 	}
 }
 
+func TestNames(t *testing.T) {
+	m := &inventory.Mention{Cue: "term", Name: "locally cyclic group", Aliases: []string{"Left coset", "Coset representative"}}
+	if got := displayName(m); got != "Locally cyclic group" {
+		t.Errorf("got the name %q", got)
+	}
+	if got := displayName(&inventory.Mention{Cue: "term", Name: "p-group"}); got != "p-group" {
+		t.Errorf("got the name %q", got)
+	}
+	if got := displayName(&inventory.Mention{Cue: "term", Name: "pGroup"}); got != "pGroup" {
+		t.Errorf("got the name %q", got)
+	}
+	got := freeAliases(m, map[string]string{"left coset": "3C53TD"})
+	if len(got) != 1 || got[0] != "Coset representative" {
+		t.Errorf("got the aliases %q", got)
+	}
+}
+
 func TestAdopt(t *testing.T) {
 	dir, rows, ms := adoptFixture(t)
 	n := 0
