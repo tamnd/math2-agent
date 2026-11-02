@@ -12,7 +12,7 @@ require (
 	github.com/tamnd/wikipedia-cli v0.4.9
 	github.com/yuin/goldmark v1.8.6
 	github.com/zeebo/blake3 v0.2.4
-	go.yaml.in/yaml/v3 v3.0.5
+	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/image v0.47.0
 	golang.org/x/net v0.62.0
 	golang.org/x/text v0.43.0
