@@ -28,7 +28,7 @@ import (
 const Source = "zbmath_search"
 
 // Version is the version of the adapter.
-const Version = "zbmath_search/3"
+const Version = "zbmath_search/4"
 
 // SearchURL is the search of documents of the REST interface of zbMATH Open.
 const SearchURL = zbmath.API + "document/_search"
@@ -68,6 +68,17 @@ type Doc struct {
 			Name string `json:"name"`
 		} `json:"author_references"`
 	} `json:"contributors"`
+	Source struct {
+		Book []struct {
+			ISBN []struct {
+				Number string `json:"number"`
+			} `json:"isbn"`
+		} `json:"book"`
+	} `json:"source"`
+	Links []struct {
+		Identifier string `json:"identifier"`
+		Type       string `json:"type"`
+	} `json:"links"`
 }
 
 // names gives the names of the authors, the editors and the author references of the document. zbMATH Open gives some documents, often proceedings, with the name only in the author references.
@@ -152,13 +163,65 @@ func needs(r *resource.Resource) bool {
 	return r.Holds(Source) || len(r.MSC) == 0 || !slices.ContainsFunc(r.Expressions, func(e resource.Expression) bool { return e.Language != "" })
 }
 
-// matches reports whether the document is the work of the resource: the same title of the work, a year at most YearSlack from the year of the resource and, when the resource has creators, the family name of one creator among the names of the document.
+// matches reports whether the document is the work of the resource: the same title of the work, a year at most YearSlack from the year of the resource and the family name of one creator among the names of the document. A resource with no creators needs a DOI or an ISBN of the document instead, because a short title as "Number Theory" is the title of many books of one year.
 func matches(d *Doc, r *resource.Resource) bool {
 	y, err := strconv.Atoi(d.Year)
 	if err != nil || y < year(r)-YearSlack || y > year(r)+YearSlack || !sameTitle(d.Title.Title, r.Title) {
 		return false
 	}
-	return len(r.Creators) == 0 || sameCreator(d, r)
+	if len(r.Creators) == 0 {
+		return sameDOI(d, r) || sameISBN(d, r)
+	}
+	return sameCreator(d, r)
+}
+
+// values gives the normal forms of the ids of the system key of the resource, of its expressions and of their manifestations.
+func values(r *resource.Resource, key string) []string {
+	var out []string
+	add := func(vs resource.Values) {
+		for _, v := range vs {
+			if n, err := ids.Normalize(key, v); err == nil && !slices.Contains(out, n) {
+				out = append(out, n)
+			}
+		}
+	}
+	add(r.IDs[key])
+	for _, e := range r.Expressions {
+		add(e.IDs[key])
+		for _, m := range e.Manifestations {
+			add(m.IDs[key])
+		}
+	}
+	return out
+}
+
+// byDOI reports whether the document has a DOI of the resource. A search by DOI finds a document that a search by title does not find, as a document with another title or no authors in zbMATH Open.
+func byDOI(d *Doc, r *resource.Resource) bool {
+	return sameDOI(d, r)
+}
+
+// sameDOI reports whether a DOI of the document is a DOI of the resource.
+func sameDOI(d *Doc, r *resource.Resource) bool {
+	dois := values(r, "doi")
+	for _, l := range d.Links {
+		if n, err := ids.Normalize("doi", l.Identifier); l.Type == "doi" && err == nil && slices.Contains(dois, n) {
+			return true
+		}
+	}
+	return false
+}
+
+// sameISBN reports whether an ISBN of the document is an ISBN of the resource.
+func sameISBN(d *Doc, r *resource.Resource) bool {
+	isbns := values(r, "isbn")
+	for _, b := range d.Source.Book {
+		for _, i := range b.ISBN {
+			if n, err := ids.Normalize("isbn", i.Number); err == nil && slices.Contains(isbns, n) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // sameCreator reports whether the name of one creator of the resource is among the names of the document.
@@ -235,7 +298,7 @@ func find(ctx context.Context, search Search, q string, r *resource.Resource, te
 	return best, nil
 }
 
-// Build asks the search for each resource that needs it and gives one record for each resource with a matching document that has an MSC code or a language. When no document of the years of the resource matches, Build asks for the earlier editions, and the latest earlier edition with the same title and a creator wins.
+// Build asks the search for each resource that needs it and gives one record for each resource with a matching document that has an MSC code or a language. When no document of the years of the resource matches, Build asks for the earlier editions, and the latest earlier edition with the same title and a creator wins. When no edition matches, Build asks for the first DOI of the resource.
 func Build(ctx context.Context, rs []resource.Resource, search Search) ([]cluster.Record, Counts, error) {
 	var c Counts
 	var out []cluster.Record
@@ -256,6 +319,9 @@ func Build(ctx context.Context, rs []resource.Resource, search Search) ([]cluste
 			if e := earlier(r); e != "" {
 				d, err = find(ctx, search, e, r, reprint)
 			}
+		}
+		if dois := values(r, "doi"); err == nil && d == nil && len(dois) > 0 {
+			d, err = find(ctx, search, "doi:"+dois[0], r, byDOI)
 		}
 		if err != nil {
 			return nil, c, err
