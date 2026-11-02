@@ -335,7 +335,7 @@ func union[V any](a, b map[string]V) map[string]V {
 	return u
 }
 
-// BriefTexts returns the first message of a write run: the job, the level that it takes the target to, the work that the card asks for, the proofs from papers of the target (corpus arxiv AX9.4), and the target node from the work tree in a data block. arxiv is the checkout of tamnd/arxiv, or "" when the run has none, and then the brief has no text of a proof. It also returns the texts of papers that the brief gives, for the run record (rule D17).
+// BriefTexts returns the first message of a write run: the job, the level that it takes the target to, the work that the card asks for, the items of papers that the target states (corpus arxiv AX9.2), the proofs from papers of the target (AX9.4), and the target node from the work tree in a data block. arxiv is the checkout of tamnd/arxiv, or "" when the run has none, and then the brief has no text of a paper. It also returns the texts of papers that the brief gives, for the run record (rule D17).
 func BriefTexts(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, arxiv string) (string, []prov.ContextText, error) {
 	p := tools.NodePath(job.Target)
 	if p == "" {
@@ -374,6 +374,11 @@ func BriefTexts(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, arxi
 		}
 		b.WriteString("\n")
 	}
+	items, err := SourceItems(ws, n, arxiv)
+	if err != nil {
+		return "", nil, err
+	}
+	briefSources(&b, items)
 	ps, err := PaperProofs(ws, n, arxiv)
 	if err != nil {
 		return "", nil, err
@@ -381,7 +386,7 @@ func BriefTexts(ws *workspace.Workspace, job *agent.Job, cards *card.Cards, arxi
 	briefProofs(&b, ps)
 	fmt.Fprintf(&b, "Write the sections in %s. Do not change the sections that a person wrote, the explanations or the front matter other than notation and uses.\n\n", p)
 	fmt.Fprintf(&b, "The target node:\n\n%s\n", tools.Data(p, tools.Licence(p), string(text)))
-	return b.String(), Texts(ps), nil
+	return b.String(), append(SourceTexts(items), Texts(ps)...), nil
 }
 
 // Brief returns the brief of BriefTexts without the texts.

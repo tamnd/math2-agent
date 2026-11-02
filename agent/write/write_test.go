@@ -383,3 +383,41 @@ func TestPaperProofs(t *testing.T) {
 		t.Errorf("with no checkout the brief has no text and still the proofs:\n%s", plain)
 	}
 }
+
+func TestSourceItems(t *testing.T) {
+	ws, root := proofTree(t)
+	for name, line := range map[string]string{
+		"analysis/objects/2401/2401.00001.jsonl": `{"version":"1","path":"source","local":"t2","tag":"THM2","item":"statement","body_md":"Every widget is blue."}`,
+		"analysis/objects/2402/2402.00002.jsonl": `{"version":"2","path":"source","local":"t3","tag":"THM3","item":"statement","body_md":"The secret statement of a closed paper."}`,
+	} {
+		f, err := os.OpenFile(filepath.Join(root, filepath.FromSlash(name)), os.O_APPEND|os.O_WRONLY, 0o600)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.WriteString(line + "\n"); err != nil {
+			t.Fatal(err)
+		}
+		if err := f.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srcs := "sources:\n  - arxiv: 2401.00001v1\n    locator: Theorem 2\n    mention: ax://paper/2401.00001#THM2\n  - arxiv: 2402.00002v2\n    locator: Theorem 3\n    mention: ax://paper/2402.00002#THM3\n  - work: arxiv:2401.00001\n"
+	n := parse(t, nodePath, strings.Replace(target, "uses: [G5S1M9]\n", "uses: [G5S1M9]\n"+srcs, 1))
+	items, err := write.SourceItems(ws, n, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 || items[0].Text != "Every widget is blue." || items[0].Version != 1 || items[1].Class != "record" || items[1].Text != "" {
+		t.Fatalf("the items are %+v: the open item has its text, the closed one none", items)
+	}
+	if want := []prov.ContextText{{Source: "arxiv", Version: "2401.00001v1", Item: "ax://paper/2401.00001#THM2", Class: "open", Licence: "cc-by"}}; !reflect.DeepEqual(write.SourceTexts(items), want) {
+		t.Errorf("the texts are %+v, want %+v", write.SourceTexts(items), want)
+	}
+	plain, err := write.SourceItems(ws, n, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plain) != 2 || plain[0].Text != "" || len(write.SourceTexts(plain)) != 0 {
+		t.Errorf("with no checkout the items are %+v", plain)
+	}
+}

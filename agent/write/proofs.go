@@ -242,7 +242,7 @@ func proofRecord(ws *workspace.Workspace, id string) (*understand.Record, error)
 
 type paperData struct {
 	title, authors, licence, class string
-	bodies                         map[string]string // the bodies of the proofs of the latest version, by their mention, for the class open
+	bodies                         map[string]string // the bodies of the items of the latest version, by their mention, for the class open
 }
 
 func readPaper(root, id string) (*paperData, error) {
@@ -262,7 +262,7 @@ func readPaper(root, id string) (*paperData, error) {
 		return pd, nil
 	}
 	for _, o := range latest {
-		if o.Tag != "" && o.Item == "proof" {
+		if o.Tag != "" {
 			pd.bodies[axImport.MentionID(id, o.Tag)] = strings.TrimSpace(o.BodyMD)
 		}
 	}
