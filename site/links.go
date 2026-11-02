@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+
+	"github.com/tamnd/math2-agent/wpsource"
 )
 
 // sourceURL gives the URL for each kind of source identifier.
@@ -86,6 +88,9 @@ func sourceLinks(v any) []link {
 				continue
 			}
 			l = idLink(key, fmt.Sprint(m[key]))
+			if r, err := wpsource.Parse(fmt.Sprint(m[key])); key == wpsource.Key && err == nil {
+				l = link{Text: r.Title(), URL: r.URL()}
+			}
 		}
 		if loc, ok := m["locator"].(string); ok {
 			l.Note = loc

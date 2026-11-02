@@ -1225,6 +1225,11 @@
           "type": "string",
           "minLength": 1
         },
+        "wikipedia": {
+          "description": "English Wikipedia page id and revision, en:<pageid>@r<revision>, of the text that the node adopted or adapted (corpus wikipedia WP9.3). The locator gives the title and the section, and the note is adopted or adapted.",
+          "type": "string",
+          "pattern": "^en:[1-9][0-9]*@r[1-9][0-9]*$"
+        },
         "url": {
           "description": "URL, only when no identifier exists",
           "type": "string",
@@ -1307,6 +1312,11 @@
         {
           "required": [
             "hexagon"
+          ]
+        },
+        {
+          "required": [
+            "wikipedia"
           ]
         },
         {

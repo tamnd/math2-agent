@@ -96,6 +96,7 @@ func TestFindings(t *testing.T) {
 		{"bad ref", "kind: concept\nname: A node\nuses: [7K3QXI]\n", "S01", 5, "uses.0: the value is not a tag or a provisional id"},
 		{"bad nested field", "kind: statement\nrole: lemma\nname: A node\nformal:\n  - system: lean4\n    decl: X\n    match: exact\n    level: E5\n", "S01", 10, `the field "level" is not allowed here`},
 		{"bad enum", "kind: statement\nrole: claim\nname: A node\n", "S01", 4, "role:"},
+		{"bad wikipedia source", "kind: concept\nname: A node\nsources:\n  - wikipedia: Group theory\n    locator: lead section\n", "S01", 6, "sources.0"},
 		{"two source ids", "kind: concept\nname: A node\nsources:\n  - doi: \"10.1/x\"\n    arxiv: \"2106.09685v2\"\n    locator: p. 3\n", "S01", 6, "sources.0: a source must have exactly one identifier"},
 	}
 	s := Embedded()
@@ -110,6 +111,13 @@ func TestFindings(t *testing.T) {
 		if !found {
 			t.Errorf("%s: want %s on line %d with %q, got %v", c.name, c.rule, c.line, c.msg, got)
 		}
+	}
+}
+
+func TestWikipediaSource(t *testing.T) {
+	front := "kind: concept\nname: A node\nsources:\n  - wikipedia: en:18902@r1250000000\n    locator: Group (mathematics), Definition\n    note: adopted\n"
+	if f := Embedded().Validate(parse(t, front)); len(f) != 0 {
+		t.Errorf("a wikipedia source gives %v", f)
 	}
 }
 

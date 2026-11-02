@@ -569,7 +569,7 @@ func below(g *graph.Graph, byTag map[string]*node.Node, levels []Level, index ma
 type source struct{ system, id, locator string }
 
 // sourceKeys are the identifier keys of a source in the node schema.
-var sourceKeys = []string{"zbmath", "arxiv", "doi", "book", "mr", "stacks", "kerodon", "mathoverflow", "mathse", "erdos", "formal_conjectures", "palomar", "hexagon", "url"}
+var sourceKeys = []string{"zbmath", "arxiv", "doi", "book", "mr", "stacks", "kerodon", "mathoverflow", "mathse", "erdos", "formal_conjectures", "palomar", "hexagon", "wikipedia", "url"}
 
 func sources(n *node.Node) []source {
 	list, _ := n.Meta["sources"].([]any)

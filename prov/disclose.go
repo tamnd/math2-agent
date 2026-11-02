@@ -15,6 +15,8 @@ import (
 
 	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/node"
+
+	"github.com/tamnd/math2-agent/wpsource"
 )
 
 // Facts is what [Disclose] and [Formalization] read about one node.
@@ -56,7 +58,7 @@ type sourceItem struct {
 }
 
 // sourceKeys are the identifier keys of a source item (schema/node.v2.json).
-var sourceKeys = []string{"zbmath", "arxiv", "doi", "book", "mr", "stacks", "kerodon", "mathoverflow", "mathse", "erdos", "formal_conjectures", "palomar", "hexagon", "url"}
+var sourceKeys = []string{"zbmath", "arxiv", "doi", "book", "mr", "stacks", "kerodon", "mathoverflow", "mathse", "erdos", "formal_conjectures", "palomar", "hexagon", "wikipedia", "url"}
 
 func formalItems(n *node.Node) []formalItem {
 	var out []formalItem
@@ -548,6 +550,10 @@ func sourceID(s sourceItem) string {
 		return "https://doi.org/" + s.value
 	case "book", "url":
 		return s.value
+	case wpsource.Key:
+		if r, err := wpsource.Parse(s.value); err == nil {
+			return r.URL()
+		}
 	}
 	return s.key + ":" + s.value
 }
@@ -565,6 +571,8 @@ func sourceType(key string) string {
 		return "web post"
 	case "erdos":
 		return "problem list"
+	case wpsource.Key:
+		return "encyclopedia article"
 	}
 	return "web page"
 }
