@@ -32,7 +32,7 @@ var sharded = regexp.MustCompile(`^(?:(?:wiki|res|inventory)/.+/index\.html|node
 // shardOf returns the shard of the path p, for n shards. The worker computes the same hash.
 func shardOf(p string, n int) int {
 	h := fnv.New32a()
-	h.Write([]byte(p))
+	_, _ = h.Write([]byte(p))
 	return int(h.Sum32() % uint32(n)) // #nosec G115 -- n is a small positive count.
 }
 
