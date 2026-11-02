@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +13,7 @@ import (
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-const wpGoldUsage = "usage: m2 wp gold draw [s|y|m] [-corpus DIR] [-seed N]\n       m2 wp gold measure [s|y|m] [-corpus DIR]"
+const wpGoldUsage = "usage: m2 wp gold draw [s|y|m|l] [-corpus DIR] [-seed N]\n       m2 wp gold measure [s|y|m|l] [-corpus DIR]"
 
 // runWPGold draws a gold set, or measures the corpus on the marks of a gold
 // set (WP11.2). Set S is the default.
@@ -25,7 +27,7 @@ func runWPGold(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 1 && !strings.HasPrefix(args[1], "-") {
 		set, args = args[1], args[1:]
 	}
-	if set != "s" && set != wpcorpus.GoldSetY && set != wpcorpus.GoldSetM {
+	if set != "s" && set != wpcorpus.GoldSetY && set != wpcorpus.GoldSetM && set != wpcorpus.GoldSetL {
 		fmt.Fprintln(stderr, wpGoldUsage)
 		return ExitUsage
 	}
@@ -105,7 +107,7 @@ func readCandidates(path string) ([]*wpcorpus.Candidate, error) {
 	return cs, nil
 }
 
-// runWPGoldPages draws or measures gold set Y or M. Each article of the set
+// runWPGoldPages draws or measures gold set Y, M or L. Each article of the set
 // has a file under gold/<set>/v<n>/.
 func runWPGoldPages(sub, set, corpus string, seed uint64, stdout io.Writer) error {
 	dir := filepath.Join(corpus, wpcorpus.GoldDir(set, wpcorpus.GoldVersion))
@@ -118,22 +120,31 @@ func runWPGoldPages(sub, set, corpus string, seed uint64, stdout io.Writer) erro
 			return err
 		}
 		var gs []*wpcorpus.GoldPage
-		if set == wpcorpus.GoldSetY {
+		switch set {
+		case wpcorpus.GoldSetY:
 			gs = wpcorpus.DrawGoldY(as, seed)
-		} else {
+		case wpcorpus.GoldSetM:
 			gs = wpcorpus.DrawGoldM(as, seed)
+		default:
+			edges := func(page int) (*wpcorpus.EdgeFile, error) {
+				f, err := wpcorpus.ReadEdges(corpus, page)
+				if errors.Is(err, fs.ErrNotExist) {
+					return nil, nil
+				}
+				return f, err
+			}
+			if gs, err = wpcorpus.DrawGoldL(as, edges, seed); err != nil {
+				return err
+			}
 		}
 		n := 0
 		for _, g := range gs {
 			if err := wpcorpus.WriteGoldPage(corpus, set, g); err != nil {
 				return err
 			}
-			n += len(g.Items) + len(g.Formulas)
+			n += len(g.Items) + len(g.Formulas) + len(g.Links)
 		}
-		what := "draft items"
-		if set == wpcorpus.GoldSetM {
-			what = "formulas"
-		}
+		what := map[string]string{wpcorpus.GoldSetY: "draft items", wpcorpus.GoldSetM: "formulas", wpcorpus.GoldSetL: "draft links"}[set]
 		fmt.Fprintf(stdout, "%d articles and %d %s in %s\n", len(gs), n, what, dir)
 		return nil
 	}
@@ -145,6 +156,23 @@ func runWPGoldPages(sub, set, corpus string, seed uint64, stdout io.Writer) erro
 		return err
 	}
 	report := filepath.Join(corpus, "reports", "gold-"+set+".md")
+	if set == wpcorpus.GoldSetL {
+		m, err := wpcorpus.MeasureGoldL(corpus, gs)
+		if err != nil {
+			return err
+		}
+		if err := writeAtomic(report, func(w io.Writer) error { return wpcorpus.GoldLReport(w, m) }); err != nil {
+			return err
+		}
+		var parts []string
+		for _, k := range wpcorpus.GoldLMethods {
+			if r := m.ByMethod[k]; r != nil {
+				parts = append(parts, fmt.Sprintf("%s %.3f", k, r.Value()))
+			}
+		}
+		fmt.Fprintf(stdout, "%d marked, %s\n", m.Marked, strings.Join(parts, ", "))
+		return nil
+	}
 	if set == wpcorpus.GoldSetY {
 		m, err := wpcorpus.MeasureGoldY(corpus, gs)
 		if err != nil {

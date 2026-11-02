@@ -70,3 +70,49 @@ func TestWPGoldYM(t *testing.T) {
 		t.Errorf("the set x: exit code %d", code)
 	}
 }
+
+func TestWPGoldL(t *testing.T) {
+	root := edgeCorpus(t)
+	for _, md := range []*wpcorpus.Metadata{{Page: 100, Title: "Widget", Revision: 1, Type: "article"}, {Page: 200, Title: "Gadget", Revision: 2, Type: "article"}} {
+		if err := wpcorpus.WriteMetadata(root, md); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if code, stdout, stderr := run("wp", "edges", "-corpus", root); code != ExitOK {
+		t.Fatalf("edges: exit code %d, stderr %q, stdout %q", code, stderr, stdout)
+	}
+	code, stdout, stderr := run("wp", "gold", "draw", "l", "-corpus", root)
+	if code != ExitOK || !strings.HasPrefix(stdout, "2 articles and 3 draft links in ") {
+		t.Fatalf("draw l: exit code %d, stderr %q, stdout %q", code, stderr, stdout)
+	}
+	path := filepath.Join(root, wpcorpus.GoldPath(wpcorpus.GoldSetL, wpcorpus.GoldVersion, 100))
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "to: Sprocket\n") || !strings.Contains(string(data), "the predicate of each link in the items") {
+		t.Errorf("the file of Widget:\n%s", data)
+	}
+	// The person finds that the link to Sprocket is related, not uses.
+	s := strings.Replace(string(data), "to: Sprocket\n    predicate: uses\n", "to: Sprocket\n    predicate: related\n", 1)
+	if s == string(data) {
+		t.Fatalf("no link to Sprocket with the predicate uses:\n%s", data)
+	}
+	if err := os.WriteFile(path, []byte(s), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mark(t, root, wpcorpus.GoldSetL, 100, "")
+	code, stdout, stderr = run("wp", "gold", "measure", "l", "-corpus", root)
+	if code != ExitOK || stdout != "1 marked, link-in-item 0.500\n" {
+		t.Fatalf("measure l: exit code %d, stderr %q, stdout %q", code, stderr, stdout)
+	}
+	report, err := os.ReadFile(filepath.Join(root, "reports", "gold-l.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"| link-in-item | 1 | 2 | 0.500 | 0.900 |", "| uses | 1 | 2 | 0.500 |", "gives uses, and the gold predicate is related"} {
+		if !strings.Contains(string(report), want) {
+			t.Errorf("gold-l.md has no %q:\n%s", want, report)
+		}
+	}
+}
