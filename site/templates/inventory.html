@@ -66,14 +66,17 @@
   <p class="lead">The rows of the <a href="{{url "inventory/"}}">inventory</a> whose names start with {{if eq .Letter.Letter "#"}}a character that is not a letter of A to Z{{else}}{{.Letter.Letter}}{{end}}. The name of a row with a node links to the page of the node. The other names and each id link to the card of the row, with its mentions in the sources.</p>
 </header>
 {{template "invletters" .Letters}}
-<input class="filter" type="search" placeholder="Filter this list" aria-label="Filter this list">
+<p class="muted">Rows {{.From}}–{{.To}} of {{len .Letter.Rows}}.</p>
+<nav class="pager" aria-label="Inventory pages">{{with .Prev}}<a href="{{.}}" rel="prev">← Previous</a>{{end}}{{with .Next}}<a href="{{.}}" rel="next">Next →</a>{{end}}</nav>
+<input class="filter" type="search" placeholder="Filter this page" aria-label="Filter this page">
 <table class="list">
   <thead><tr><th>Name</th><th>Id</th><th>Kind</th><th>Outcome</th><th>Sources</th></tr></thead>
   <tbody>
-  {{range .Letter.Rows}}<tr id="{{.ID}}"><td>{{if .Node}}<a href="{{.Node.URL}}">{{.Name}}</a>{{else}}<a href="{{.Card}}">{{.Name}}</a>{{end}}</td><td><a class="tag" href="{{.Card}}">{{.ID}}</a></td><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td><td>{{.Outcome}}{{with .Reason}} <span class="muted">({{.}})</span>{{end}}</td><td>{{range $i, $l := .Links}}{{if $i}}, {{end}}{{if $l.URL}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{else}}{{$l.Text}}{{end}}{{end}}</td></tr>
+  {{range .Rows}}<tr id="{{.ID}}"><td>{{if .Node}}<a href="{{.Node.URL}}">{{.Name}}</a>{{else}}<a href="{{.Card}}">{{.Name}}</a>{{end}}</td><td><a class="tag" href="{{.Card}}">{{.ID}}</a></td><td><span class="kind kind-{{.Kind}}">{{.Kind}}</span></td><td>{{.Outcome}}{{with .Reason}} <span class="muted">({{.}})</span>{{end}}</td><td>{{range $i, $l := .Links}}{{if $i}}, {{end}}{{if $l.URL}}<a href="{{$l.URL}}">{{$l.Text}}</a>{{else}}{{$l.Text}}{{end}}{{end}}</td></tr>
   {{end}}
   </tbody>
 </table>
+<nav class="pager" aria-label="Inventory pages">{{with .Prev}}<a href="{{.}}" rel="prev">← Previous</a>{{end}}{{with .Next}}<a href="{{.}}" rel="next">Next →</a>{{end}}</nav>
 {{end}}
 
 {{define "invcards"}}

@@ -73,12 +73,6 @@ func (b *builder) writeLevels() error {
 	if err := b.writePage("levels", "levels", d, page{Title: "Writing levels", Description: "How complete the text of each node of Math 2.0 is.", Section: "nodes"}); err != nil {
 		return err
 	}
-	type listData struct {
-		Title, Text string
-		Kinds       []kindCount
-		Levels      []levelCount
-		Nodes       []*nodeView
-	}
 	for i, lc := range d.Levels {
 		var nodes []*nodeView
 		for _, v := range b.order {
@@ -87,7 +81,7 @@ func (b *builder) writeLevels() error {
 			}
 		}
 		title := "Nodes at " + lc.Name + ", " + lc.Word
-		if err := b.writePage("levels/"+lc.Name, "list", listData{Title: title, Text: lc.Text, Levels: d.Levels, Nodes: nodes}, page{Title: title, Description: lc.Text, Section: "nodes"}); err != nil {
+		if err := b.writeNodeList("levels/"+lc.Name, title, lc.Text, lc.Text, "", nodes, nil, d.Levels); err != nil {
 			return err
 		}
 	}

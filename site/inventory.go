@@ -69,9 +69,16 @@ type invIndex struct {
 }
 
 type invPage struct {
-	Letter  *invLetter
-	Letters []*invLetter
+	Letter     *invLetter
+	Letters    []*invLetter
+	Rows       []*invRow
+	From, To   int
+	Prev, Next string
 }
+
+// A letter can contain tens of thousands of rows. Keep each page small enough
+// to paint quickly and to remain useful without JavaScript.
+const invPerPage = 100
 
 // loadInventory reads the inventory of the tree. A tree with no inventory gives no pages but the index.
 func (b *builder) loadInventory() error {
@@ -236,8 +243,31 @@ func (b *builder) writeInventory() error {
 		if l.Letter == "#" {
 			title = "Inventory: other names"
 		}
-		if err := b.writePage(l.Dir, "invletter", invPage{Letter: l, Letters: b.invLetters}, page{Title: title, Description: desc, Section: "inventory"}); err != nil {
-			return err
+		for i := 0; i < len(l.Rows); i += invPerPage {
+			end := min(i+invPerPage, len(l.Rows))
+			dir := l.Dir
+			if i > 0 {
+				dir = fmt.Sprintf("%s/%d", l.Dir, i/invPerPage+1)
+			}
+			p := invPage{Letter: l, Letters: b.invLetters, Rows: l.Rows[i:end], From: i + 1, To: end}
+			if i > 0 {
+				prev := i / invPerPage
+				if prev == 1 {
+					p.Prev = l.URL
+				} else {
+					p.Prev = b.url(fmt.Sprintf("%s/%d/", l.Dir, prev))
+				}
+			}
+			if end < len(l.Rows) {
+				p.Next = b.url(fmt.Sprintf("%s/%d/", l.Dir, i/invPerPage+2))
+			}
+			pageTitle := title
+			if i > 0 {
+				pageTitle += fmt.Sprintf(", page %d", i/invPerPage+1)
+			}
+			if err := b.writePage(dir, "invletter", p, page{Title: pageTitle, Description: desc, Section: "inventory"}); err != nil {
+				return err
+			}
 		}
 	}
 	for _, c := range b.invCards {

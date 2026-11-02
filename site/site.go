@@ -157,24 +157,25 @@ type specDoc struct {
 }
 
 type builder struct {
-	opt       Options
-	base      string            // the URL path of the site, for example /math2
-	shards    map[string][]byte // in a Cloudflare build, the files that go in shards, by path (see ShardDir)
-	nodes     map[string]*nodeView
-	order     []*nodeView
-	specs     []*specDoc
-	katex     *katex.Renderer
-	mathMemo  *mathCache
-	graph     *graph.Graph
-	status    map[string]status.Status           // nil when the site has no build
-	levels    map[string]int                     // the number of nodes at each writing level
-	runs      map[string]map[string]*compute.Run // the runs of the computations in the build, by tag and architecture
-	tmpl      *template.Template
-	reviewers []*reviewerView
-	projects  []*projectView
-	pages     []string // the paths of the HTML pages, for the sitemap
-	nodeMD    *markup.Markdown
-	plainMD   *markup.Markdown
+	opt         Options
+	base        string            // the URL path of the site, for example /math2
+	shards      map[string][]byte // in a Cloudflare build, the files that go in shards, by path (see ShardDir)
+	nodes       map[string]*nodeView
+	order       []*nodeView
+	specs       []*specDoc
+	katex       *katex.Renderer
+	mathMemo    *mathCache
+	graph       *graph.Graph
+	status      map[string]status.Status           // nil when the site has no build
+	levels      map[string]int                     // the number of nodes at each writing level
+	runs        map[string]map[string]*compute.Run // the runs of the computations in the build, by tag and architecture
+	tmpl        *template.Template
+	reviewers   []*reviewerView
+	projects    []*projectView
+	pages       []string // the paths of the HTML pages, for the sitemap
+	socialImage string   // absolute URL of the default social card
+	nodeMD      *markup.Markdown
+	plainMD     *markup.Markdown
 
 	history    bool              // the nodes have dates from the history of the content repository
 	depthOf    map[*nodeView]int // the depth of each node, for the order of the pages of the subjects
@@ -605,6 +606,9 @@ type page struct {
 	Content                           template.HTML
 	Site                              *builder
 	MarkdownURL, JSONURL              string
+	ImageURL, ImageAlt, OGType        string
+	Tags                              []string
+	Published, Modified               string
 	FeedURL                           string // the Atom feed of the page, or ""
 	Math                              bool
 	Bare                              bool // the page fills the screen, with no footer
@@ -619,6 +623,15 @@ func (b *builder) writePage(dir, name string, data any, p page) error {
 	p.Content = template.HTML(content.String()) // #nosec G203 -- html/template escaped the content.
 	p.Site = b
 	p.Path = dir
+	if p.ImageURL == "" {
+		p.ImageURL = b.socialImage
+	}
+	if p.ImageAlt == "" {
+		p.ImageAlt = "Math 2.0, an open map of mathematics"
+	}
+	if p.OGType == "" {
+		p.OGType = "website"
+	}
 	var out bytes.Buffer
 	if err := b.tmpl.ExecuteTemplate(&out, "layout", p); err != nil {
 		return fmt.Errorf("site: layout for %s: %w", dir, err)
@@ -634,7 +647,12 @@ func (b *builder) writePage(dir, name string, data any, p page) error {
 
 // writeAssets writes the files of the site: the style sheet, the script, the icon and the fonts, Inter for the text and STIX Two Math for the math.
 func (b *builder) writeAssets() error {
-	return b.copyFS(files, "assets", "assets")
+	if err := b.copyFS(files, "assets", "assets"); err != nil {
+		return err
+	}
+	var err error
+	b.socialImage, err = b.writeSocial("site", "Mathematics, one idea at a time", "An open map for people and agents")
+	return err
 }
 
 // copyFS writes each file in dir of fsys to the output directory out.
