@@ -286,3 +286,27 @@ func TestAdoptDefersAndParity(t *testing.T) {
 		}
 	}
 }
+
+func TestAdoptSkipsMintedProof(t *testing.T) {
+	dir, rows, ms := adoptFixture(t)
+	opt := AdoptOptions{Corpus: dir, Day: "2026-11-03", Draw: func() (string, error) { return "", fmt.Errorf("no draw") }}
+	proof := wpcorpus.MentionID(31150, "PRF1")
+	for _, id := range []string{"GN6WHHGBAE", "~0000000a"} {
+		nodes := []AdoptNode{
+			{ID: "3C53TD", Name: "Lagrange's theorem"},
+			{ID: "7K3QX2JW1M", Name: "Extension of Lagrange's theorem", Inventory: []string{"R000000004"}, Mentions: []string{wpcorpus.MentionID(31150, "DCKK")}},
+			{ID: id, Name: "Proof of Extension of Lagrange's theorem", Proves: "7K3QX2JW1M", Mentions: []string{proof}},
+		}
+		res, err := Adopt(rows, ms, nodes, opt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		i := slices.IndexFunc(res.Items, func(it AdoptItem) bool { return it.Mention == proof })
+		switch {
+		case id[0] != '~' && i >= 0:
+			t.Errorf("the minted node %s has the proof, and the run lists it as %s", id, res.Items[i].State)
+		case id[0] == '~' && (i < 0 || res.Items[i].State != Drafted):
+			t.Errorf("the draft %s has the proof, and the run does not list it as drafted", id)
+		}
+	}
+}
