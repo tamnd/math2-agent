@@ -17,7 +17,8 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// The gold sets of WP11.2 that have a file for each article.
+// The gold sets of WP11.2 that have a file for each article. Gold set L is
+// in goldl.go.
 const (
 	GoldSetY = "y"
 	GoldSetM = "m"
@@ -87,6 +88,7 @@ type GoldPage struct {
 	Date     string        `yaml:"date,omitempty"`
 	Items    []GoldItem    `yaml:"items,omitempty"`
 	Formulas []GoldFormula `yaml:"formulas,omitempty"`
+	Links    []GoldLink    `yaml:"links,omitempty"`
 }
 
 // MarshalGoldPage gives the file of an article in a gold set.
@@ -97,8 +99,11 @@ func MarshalGoldPage(set string, g *GoldPage) ([]byte, error) {
 	}
 	fmt.Fprintf(&b, "\n# %s\n\n", g.Title)
 	what := "each item of the article: the kind, the span in the wikitext, the name, the cue, and for a proof the span of its target. An item in running text with no cue has no cue field"
-	if set == GoldSetM {
+	switch set {
+	case GoldSetM:
 		what = "the correct TeX of each formula"
+	case GoldSetL:
+		what = "the predicate of each link in the items, and writes the correct predicate"
 	}
 	fmt.Fprintf(&b, "The draft is the output of the extractor %s for the revision %d (https://en.wikipedia.org/w/index.php?oldid=%d). A person checks %s. Then the person removes the wrong entries, adds the missing entries, and sets marked to true with the name of the marker and the date.\n", g.Draft, g.Revision, g.Revision, what)
 	return b.Bytes(), nil
