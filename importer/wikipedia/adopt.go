@@ -252,8 +252,10 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 		}
 		t := byMention[m.AttachedTo]
 		switch {
-		case done[m.ID] != "":
+		case strings.HasPrefix(done[m.ID], "~"):
 			it.State, it.Node = Drafted, done[m.ID]
+		case done[m.ID] != "":
+			continue // a minted node has the proof, and the proof has no row to link
 		case target == "":
 			it.Reason = "the statement that the proof proves has no node"
 		case t != nil && t.Kind != "statement":
