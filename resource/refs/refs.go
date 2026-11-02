@@ -177,15 +177,15 @@ func mode(g []ref) int {
 	return best
 }
 
-// record gives the source record of a reference. A reference with a venue or a volume is an article, and another reference is a monograph.
+// record gives the source record of a reference. A reference with a venue or a volume is an article, and another reference is a monograph. A parsed title or name can have line breaks, so each run of white space becomes one space.
 func record(nativeID string, e resource.Cite) cluster.Record {
 	p := e.Parsed
-	rec := cluster.Record{Source: Source, NativeID: nativeID, Level: "work", Kind: "monograph", Title: p.Title, Date: p.Year, Volume: p.Volume}
+	rec := cluster.Record{Source: Source, NativeID: nativeID, Level: "work", Kind: "monograph", Title: oneLine(p.Title), Date: p.Year, Volume: oneLine(p.Volume)}
 	if p.Venue != "" || p.Volume != "" {
 		rec.Kind = "article"
 	}
 	for _, a := range p.Authors {
-		rec.Creators = append(rec.Creators, resource.Creator{Name: a, Role: "author"})
+		rec.Creators = append(rec.Creators, resource.Creator{Name: oneLine(a), Role: "author"})
 	}
 	for k, vs := range p.IDs {
 		for _, v := range vs {
@@ -202,6 +202,9 @@ func record(nativeID string, e resource.Cite) cluster.Record {
 	}
 	return rec
 }
+
+// oneLine gives the text with each run of white space as one space and with no space at the ends.
+func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 // Entry is the entry of the source in manifests/sources.yaml. A person approves it there, as for each catalogue.
 func Entry() ingest.Source {

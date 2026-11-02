@@ -68,3 +68,11 @@ func TestBuild(t *testing.T) {
 		t.Error("Confirmed")
 	}
 }
+
+func TestRecordOneLine(t *testing.T) {
+	e := resource.Cite{Parsed: &resource.Parsed{Title: "\n$$\\mathcal {A}$$\n-free rigidity", Authors: []string{"E.\nChiodaroli"}}}
+	r := record("cited:1", e)
+	if r.Title != "$$\\mathcal {A}$$ -free rigidity" || r.Creators[0].Name != "E. Chiodaroli" {
+		t.Errorf("title %q, creator %q", r.Title, r.Creators[0].Name)
+	}
+}
