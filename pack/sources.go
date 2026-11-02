@@ -3,6 +3,8 @@ package pack
 import (
 	"strconv"
 	"strings"
+
+	"github.com/tamnd/math2-agent/wpsource"
 )
 
 // Source is a work that the items of the volume cite in their field sources.
@@ -23,7 +25,7 @@ type Citation struct {
 }
 
 // sourceKeys are the identifier keys of a source in the node schema, in the order of the schema.
-var sourceKeys = []string{"zbmath", "arxiv", "doi", "book", "mr", "stacks", "kerodon", "mathoverflow", "mathse", "erdos", "formal_conjectures", "palomar", "hexagon", "url"}
+var sourceKeys = []string{"zbmath", "arxiv", "doi", "book", "mr", "stacks", "kerodon", "mathoverflow", "mathse", "erdos", "formal_conjectures", "palomar", "hexagon", "wikipedia", "url"}
 
 // sources gives each item its citations and makes the list of sources of the document.
 func (p *packer) sources() {
@@ -108,6 +110,10 @@ func sourceTitle(system, id string) string {
 		return "Palomar, entry " + id
 	case "hexagon":
 		return "Hexagon, " + id
+	case wpsource.Key:
+		if r, err := wpsource.Parse(id); err == nil {
+			return r.Title()
+		}
 	}
 	return id
 }
@@ -133,6 +139,10 @@ func sourceURL(system, id string) string {
 		return "https://math.stackexchange.com/q/" + id
 	case "erdos":
 		return "https://www.erdosproblems.com/" + id
+	case wpsource.Key:
+		if r, err := wpsource.Parse(id); err == nil {
+			return r.URL()
+		}
 	case "url":
 		if strings.HasPrefix(id, "https://") || strings.HasPrefix(id, "http://") {
 			return id

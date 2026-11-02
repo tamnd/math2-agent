@@ -8,7 +8,7 @@ import (
 )
 
 // sourceKeys are the identifier fields of a source, in the order of the schema.
-var sourceKeys = []string{"zbmath", "arxiv", "doi", "book", "mr", "stacks", "kerodon", "mathoverflow", "mathse", "erdos", "formal_conjectures", "palomar", "hexagon", "url"}
+var sourceKeys = []string{"zbmath", "arxiv", "doi", "book", "mr", "stacks", "kerodon", "mathoverflow", "mathse", "erdos", "formal_conjectures", "palomar", "hexagon", "wikipedia", "url"}
 
 // edges returns the edges in the front matter of n.
 func edges(n *node.Node) []Edge {
