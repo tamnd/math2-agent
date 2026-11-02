@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"go.yaml.in/yaml/v3"
@@ -51,6 +52,7 @@ type AdoptOptions struct {
 	Hold   map[string]string      // the mentions that a person holds, with the reason
 	Draw   func() (string, error) // gives a new provisional id
 	Day    string                 // the date of the run, YYYY-MM-DD
+	Until  string                 // when not empty, the date until which a row whose item waits is deferred
 }
 
 // AdoptItem is one line of the adopt report.
@@ -76,10 +78,11 @@ type AdoptDraft struct {
 
 // AdoptResult is the result of Adopt.
 type AdoptResult struct {
-	Drafts []AdoptDraft
-	Rows   []inventory.Row // each row, with the outcomes that the run set
-	Linked int             // the rows that the run set to the outcome node
-	Items  []AdoptItem
+	Drafts   []AdoptDraft
+	Rows     []inventory.Row // each row, with the outcomes that the run set
+	Linked   int             // the rows that the run set to the outcome node
+	Deferred int             // the rows that the run deferred
+	Items    []AdoptItem
 }
 
 // adoptFlags are the flags of WP9.2 that stop the adoption of an item.
@@ -206,7 +209,7 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 			continue
 		}
 		r := rowOf[m.ID]
-		if r == nil || r.Outcome != nil {
+		if r == nil || !r.IsOpen(dayTime(opt.Day)) {
 			continue
 		}
 		it := AdoptItem{Mention: m.ID, Row: r.ID, Page: m.Page, Title: title[m.Page], Name: m.Name, Kind: m.Kind, Cue: m.Cue}
@@ -230,6 +233,11 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 				nameOf[d.ID] = m.Name
 				it.State, it.Node = Adopted, d.ID
 			}
+		}
+		if it.State == Waiting && opt.Until != "" {
+			r.Outcome = &inventory.Outcome{Value: inventory.OutcomeDeferred, Reason: it.Reason, Rule: "WP9.2", Until: opt.Until, By: AdoptBy}
+			r.History = append(r.History, inventory.Event{Op: "outcome", At: opt.Day, By: AdoptBy, Note: "deferred until " + opt.Until})
+			res.Deferred++
 		}
 		res.Items = append(res.Items, it)
 	}
@@ -278,6 +286,12 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 		return strings.Compare(a.Mention, b.Mention)
 	})
 	return res, nil
+}
+
+// dayTime gives the time of a date YYYY-MM-DD, or the zero time.
+func dayTime(day string) time.Time {
+	t, _ := time.Parse(time.DateOnly, day)
+	return t
 }
 
 func whyFlag(m *inventory.Mention, hold map[string]string) string {
@@ -625,9 +639,9 @@ func AdoptReport(res *AdoptResult, day string) []byte {
 	}
 	var b bytes.Buffer
 	b.WriteString("---\n")
-	fmt.Fprintf(&b, "source: wikipedia\ndate: %s\nitems: %d\nadopted: %d\ndrafted: %d\nlinked: %d\nwaiting: %d\n", day, len(res.Items), count[Adopted], count[Drafted], res.Linked, count[Waiting])
+	fmt.Fprintf(&b, "source: wikipedia\ndate: %s\nitems: %d\nadopted: %d\ndrafted: %d\nlinked: %d\nwaiting: %d\ndeferred: %d\n", day, len(res.Items), count[Adopted], count[Drafted], res.Linked, count[Waiting], res.Deferred)
 	b.WriteString("---\n\n# The adoption of Wikipedia text\n\n")
-	fmt.Fprintf(&b, "This report gives the items of the Wikipedia articles that m2 corpus adopt read on %s (corpus wikipedia WP9.2). The run adopted %d items, %d items wait for m2 mint, and it set the outcome node on %d rows. %d items wait for the write role or for a person.\n", day, count[Adopted], count[Drafted], res.Linked, count[Waiting])
+	fmt.Fprintf(&b, "This report gives the items of the Wikipedia articles that m2 corpus adopt read on %s (corpus wikipedia WP9.2). The run adopted %d items, %d items wait for m2 mint, and it set the outcome node on %d rows. %d items wait for the write role or for a person, and the run deferred %d of their rows.\n", day, count[Adopted], count[Drafted], res.Linked, count[Waiting], res.Deferred)
 	if len(reasons) > 0 {
 		b.WriteString("\n## Why items wait\n\n| Reason | Items |\n|---|---|\n")
 		keys := make([]string, 0, len(reasons))

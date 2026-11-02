@@ -1,0 +1,2 @@
+records/parity/wikipedia/AAA.jsonl:0:0: Y18: the parity data does not list the item wikipedia://en/100#PRF1 of the article wikipedia://en/100. Run m2 corpus parity again
+records/parity/wikipedia/AAA.jsonl:2:1: Y18: the item wikipedia://en/100#EXM1 of the article Widget theorem has no outcome (open)

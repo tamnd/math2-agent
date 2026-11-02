@@ -63,6 +63,8 @@ func runCorpus(args []string, stdout, stderr io.Writer) int {
 		return runCorpusSample(args[1:], stdout, stderr)
 	case "adopt":
 		return runCorpusAdopt(args[1:], stdout, stderr)
+	case "parity":
+		return runCorpusParity(args[1:], stdout, stderr)
 	}
 	fmt.Fprintln(stderr, "usage: "+corpusUsage)
 	return ExitUsage
