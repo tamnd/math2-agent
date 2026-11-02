@@ -238,6 +238,29 @@ func TestCorpusClusterOfArxiv(t *testing.T) {
 	}
 }
 
+func TestCorpusClusterOfWikipedia(t *testing.T) {
+	root := t.TempDir()
+	body := []inventory.Mention{
+		{ID: "wikipedia://en/100", Source: "wikipedia", NativeID: "Banach fixed-point theorem", Kind: "statement", Name: "Banach fixed-point theorem", MSC: []string{"47H10"}, Class: "open", By: "importer/wikipedia/1", ArticleType: "theorem"},
+	}
+	if err := inventory.WriteMentions(root, "wikipedia", body); err != nil {
+		t.Fatal(err)
+	}
+	if code, stdout, stderr := run("corpus", "cluster", "-root", root, "-commit", "c", "-source", "wikipedia"); code != ExitOK || !strings.Contains(stdout, "wikipedia: name candidates 0, wrote reports/inventory/wikipedia-names.md and reports/inventory-wikipedia.md") {
+		t.Fatalf("m2 corpus cluster gave %d, %q, %q", code, stdout, stderr)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "reports", "inventory-wikipedia.md"))
+	if err != nil || !strings.Contains(string(data), "mentions: 1\nrows: 1\n") || !strings.Contains(string(data), "1 Wikipedia mention with no attachment to another item, in 1 row.") {
+		t.Fatalf("the report is %s, %v", data, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "reports", "inventory", "wikipedia-names.md")); err != nil {
+		t.Error(err)
+	}
+	if code, _, _ := run("corpus", "cluster", "-root", root, "-commit", "c", "-source", "words"); code != ExitUsage {
+		t.Errorf("-source words gave %d", code)
+	}
+}
+
 func TestCorpusIndex(t *testing.T) {
 	root := t.TempDir()
 	if code, _, stderr := run("corpus", "index", "-root", root); code != ExitFailure || !strings.Contains(stderr, "no index terms") {
