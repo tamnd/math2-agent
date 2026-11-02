@@ -36,6 +36,7 @@ type AdoptNode struct {
 	ID        string
 	Inventory []string
 	Mentions  []string // the mention of each arxiv source of the node
+	Defines   string   // for a definition node, the concept that it defines
 	Retired   bool
 }
 
@@ -74,11 +75,11 @@ type AdoptResult struct {
 	Items  []AdoptItem
 }
 
-// nodeKind gives the kind of the node and the main section of its card for the kind of a row (K8.4).
+// nodeKind gives the kind of the node and the main section of its card for the kind of a row (K8.4). A row of the kind definition gets a definition node, which carries the formal outcome of K2.5, and a concept node that the definition defines.
 func nodeKind(kind string) (string, string) {
 	switch kind {
 	case "definition":
-		return "concept", "Summary"
+		return "definition", "Definition"
 	case "statement":
 		return "statement", "Statement"
 	case "conjecture":
@@ -119,13 +120,23 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 				drafted[id] = n.ID
 				continue
 			}
-			if r.Outcome != nil && r.Outcome.Value == inventory.OutcomeNode {
-				continue
+			target := []string{n.ID}
+			if n.Defines != "" && !strings.HasPrefix(n.Defines, "~") {
+				target = append(target, n.Defines)
 			}
-			r.Outcome = &inventory.Outcome{Value: inventory.OutcomeNode, Target: []string{n.ID}, Rule: AdoptRule, By: AdoptBy, Reason: "a node of the research layer states the row (corpus arxiv AX9.2)"}
-			r.History = append(r.History, inventory.Event{Op: "outcome", At: opt.Day, By: AdoptBy, Note: "node " + n.ID + " states the row"})
+			if r.Outcome != nil && r.Outcome.Value == inventory.OutcomeNode {
+				// A definition node that defines the concept of the row comes first in the target, because the formal track reads the first node (AX10.2).
+				if n.Defines == "" || slices.Contains(r.Outcome.Target, n.ID) || !slices.Contains(r.Outcome.Target, n.Defines) {
+					continue
+				}
+				target = append([]string{n.ID}, r.Outcome.Target...)
+			}
+			if !linked[id] {
+				res.Linked++
+			}
+			r.Outcome = &inventory.Outcome{Value: inventory.OutcomeNode, Target: target, Rule: AdoptRule, By: AdoptBy, Reason: "a node of the research layer states the row (corpus arxiv AX9.2)"}
+			r.History = append(r.History, inventory.Event{Op: "outcome", At: opt.Day, By: AdoptBy, Note: "node " + strings.Join(target, ", ") + " states the row"})
 			linked[id] = true
-			res.Linked++
 		}
 	}
 
@@ -172,8 +183,16 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 				}
 				papers[p] = meta[p]
 			}
-			res.Drafts = append(res.Drafts, AdoptDraft{ID: id, Path: "nodes/~/" + id + ".md", Data: draft(id, kind, section, r, m, papers[p])})
 			it.State, it.Node = Adopted, id
+			concept := ""
+			if kind == "definition" {
+				if concept, err = opt.Draw(); err != nil {
+					return nil, err
+				}
+				res.Drafts = append(res.Drafts, AdoptDraft{ID: concept, Path: "nodes/~/" + concept + ".md", Data: draft(concept, "concept", "Summary", "", r, m, papers[p])})
+				it.Node = id + ", " + concept
+			}
+			res.Drafts = append(res.Drafts, AdoptDraft{ID: id, Path: "nodes/~/" + id + ".md", Data: draft(id, kind, section, concept, r, m, papers[p])})
 		}
 		res.Items = append(res.Items, it)
 	}
@@ -208,8 +227,8 @@ func mainMention(r *inventory.Row, byMention map[string]*inventory.Mention) *inv
 	return out[0]
 }
 
-// draft gives the node file of a row: the front matter and the main section with no body.
-func draft(id, kind, section string, r *inventory.Row, m *inventory.Mention, meta *Paper) []byte {
+// draft gives the node file of a row: the front matter and the main section with no body. A definition names the concept that it defines, and a concept does not name the row, because the definition states it.
+func draft(id, kind, section, defines string, r *inventory.Row, m *inventory.Mention, meta *Paper) []byte {
 	paper := PaperOf(m.ID)
 	version := m.Version
 	locator := m.Locator
@@ -234,6 +253,9 @@ func draft(id, kind, section string, r *inventory.Row, m *inventory.Mention, met
 	if len(r.MSC) > 0 {
 		fmt.Fprintf(&b, "msc: %s\n", flow(r.MSC))
 	}
+	if defines != "" {
+		fmt.Fprintf(&b, "defines: %s\n", defines)
+	}
 	b.WriteString("sources:\n")
 	fmt.Fprintf(&b, "  - arxiv: %s\n    locator: %s\n    mention: %s\n    note: the paper that states the item (corpus arxiv AX9.2)\n", scalar(fmt.Sprintf("%sv%d", paper, version)), scalar(cmp.Or(locator, "the paper")), scalar(m.ID))
 	if meta != nil {
@@ -241,7 +263,9 @@ func draft(id, kind, section string, r *inventory.Row, m *inventory.Mention, met
 			fmt.Fprintf(&b, "history:\n  notes: %s\n", scalar(fmt.Sprintf("The source is arXiv:%sv%d (%s), by %s. A paper also restates older results, so this is not the first statement until a person or a later pass confirms it.", paper, version, submitted(paper), who)))
 		}
 	}
-	fmt.Fprintf(&b, "inventory: [%s]\n", r.ID)
+	if kind != "concept" {
+		fmt.Fprintf(&b, "inventory: [%s]\n", r.ID)
+	}
 	fmt.Fprintf(&b, "---\n\n## %s\n", section)
 	return b.Bytes()
 }

@@ -191,6 +191,9 @@ func arxivAdoptNodes(nodes []*node.Node) []axImport.AdoptNode {
 	for _, n := range nodes {
 		a := axImport.AdoptNode{ID: n.ID, Inventory: n.List("inventory")}
 		_, a.Retired = n.Meta["retired"]
+		if n.Get("kind") == "definition" {
+			a.Defines = n.Get("defines")
+		}
 		if srcs, ok := n.Meta["sources"].([]any); ok {
 			for _, s := range srcs {
 				m, _ := s.(map[string]any)
