@@ -35,7 +35,30 @@ const (
 	ResearchResults = "research-results"
 	ResearchPaper   = "research-paper"
 	ResearchAligned = "research-aligned"
+	ResearchNotItem = "research-not-item"
 )
+
+// applyNotItem gives the outcome out_of_scope to an open row of the research layer when the import no longer makes any of its mentions, because the pass classify gave each item a kind that is not a mention kind, such as remark (corpus arxiv AX5.1 and AX7.2). The row keeps its mentions and its history. It reports whether the outcome of the row changed.
+func applyNotItem(r *Row, byID map[string]*Mention, notItems map[string]string, day, by string) bool {
+	if r.Outcome != nil || r.Layer != Research || len(r.Mentions) == 0 {
+		return false
+	}
+	var kinds []string
+	for _, id := range r.Mentions {
+		k, ok := notItems[id]
+		if !ok || byID[id] != nil {
+			return false
+		}
+		kinds = append(kinds, k)
+	}
+	slices.Sort(kinds)
+	kinds = slices.Compact(kinds)
+	r.Outcome = &Outcome{Value: OutcomeOutOfScope, Reason: notItemReason, Rule: ResearchNotItem, By: by}
+	r.History = append(r.History, Event{Op: "outcome", At: day, By: by, Note: "the pass classify gives the kind " + strings.Join(kinds, ", ")})
+	return true
+}
+
+const notItemReason = "the pass classify gives the item of the paper a kind that is not a mention kind, such as remark, so the import no longer makes its mention (corpus arxiv AX5.1 and AX7.2)"
 
 // researchResults are the research sources other than arXiv whose records are results: the results that the arXiv adapter takes from the content plane, the registered results of Palomar and the statements of TheoremSearch.
 var researchResults = map[string]bool{"arxiv_results": true, "palomar": true, "theoremsearch": true}
