@@ -339,6 +339,8 @@ func TestGroupAndHard(t *testing.T) {
 		switch r.Rule {
 		case "Y11":
 			state, reason = check.NA, ""
+		case "Y18":
+			reason = "the tree has no parity data"
 		case "Y01", "Y02", "Y03", "Y04":
 			reason = "no checkout of tamnd/wikipedia-math is given, so set -wikipedia to run the rule"
 		case "Y05", "Y06":

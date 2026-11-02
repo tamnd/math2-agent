@@ -19,7 +19,7 @@ import (
 	"github.com/tamnd/math2-agent/wpsource"
 )
 
-const adoptUsage = "m2 corpus adopt -source wikipedia -corpus DIR [-pages FILE] [-hold FILE] [-root DIR] [-day YYYY-MM-DD] [-n]"
+const adoptUsage = "m2 corpus adopt -source wikipedia -corpus DIR [-pages FILE] [-hold FILE] [-root DIR] [-day YYYY-MM-DD] [-defer YYYY-MM-DD] [-n]"
 
 // runCorpusAdopt makes nodes from the text of Wikipedia items (corpus wikipedia WP9.2). It writes the nodes to nodes/~/, the rows with the outcomes it set, and the report reports/adopt/wikipedia.md.
 func runCorpusAdopt(args []string, stdout, stderr io.Writer) int {
@@ -32,6 +32,7 @@ func runCorpusAdopt(args []string, stdout, stderr io.Writer) int {
 	pagesFile := fs.String("pages", "", "a file with one article title on each line, as manifests/wikipedia/pilot.txt. Empty means each article.")
 	holdFile := fs.String("hold", "", "a Markdown file whose YAML header has the list hold of the mentions that a person holds, each with mention and reason")
 	day := fs.String("day", time.Now().UTC().Format(time.DateOnly), "the date of the run, for the history of the rows")
+	until := fs.String("defer", "", "defer each row whose item waits until this date, YYYY-MM-DD, with the reason, so that the parity report gives it an outcome")
 	dry := fs.Bool("n", false, "write only the report, and no nodes and no rows")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
@@ -56,7 +57,13 @@ func runCorpusAdopt(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	opt := wpImport.AdoptOptions{Corpus: *corpus, Day: *day, Draw: func() (string, error) { return tag.Provisional(nil) }}
+	if *until != "" {
+		if _, err := time.Parse(time.DateOnly, *until); err != nil || *until <= *day {
+			fmt.Fprintf(stderr, "%s: the date of -defer must be a date YYYY-MM-DD after the date of the run\n", name)
+			return ExitUsage
+		}
+	}
+	opt := wpImport.AdoptOptions{Corpus: *corpus, Day: *day, Until: *until, Draw: func() (string, error) { return tag.Provisional(nil) }}
 	if *pagesFile != "" {
 		if opt.Pages, err = readPages(*pagesFile, ms); err != nil {
 			return fail(err)
@@ -81,7 +88,7 @@ func runCorpusAdopt(args []string, stdout, stderr io.Writer) int {
 				return fail(err)
 			}
 		}
-		if res.Linked > 0 {
+		if res.Linked > 0 || res.Deferred > 0 {
 			if err := inventory.WriteRows(*root, res.Rows); err != nil {
 				return fail(err)
 			}
@@ -98,7 +105,7 @@ func runCorpusAdopt(args []string, stdout, stderr io.Writer) int {
 	for _, it := range res.Items {
 		n[it.State]++
 	}
-	fmt.Fprintf(stdout, "%s: %d items, %d adopted, %d drafted, %d waiting, %d rows linked\n", name, len(res.Items), n[wpImport.Adopted], n[wpImport.Drafted], n[wpImport.Waiting], res.Linked)
+	fmt.Fprintf(stdout, "%s: %d items, %d adopted, %d drafted, %d waiting, %d rows linked, %d rows deferred\n", name, len(res.Items), n[wpImport.Adopted], n[wpImport.Drafted], n[wpImport.Waiting], res.Linked, res.Deferred)
 	return ExitOK
 }
 

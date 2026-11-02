@@ -127,7 +127,7 @@ var catalogue = []entry{
 	{Rule{"Y15", Wikipedia, true, "no file, report or tool of math2 writes to a Wikimedia wiki"}, nil},
 	{Rule{"Y16", Wikipedia, false, "a citation with a DOI, ISBN, zbMATH id, MR number or arXiv id that resolves to no source record"}, nil},
 	{Rule{"Y17", Wikipedia, false, "the prose recall on gold set Y is below 90% for an article type or an MSC code at two digits"}, nil},
-	{Rule{"Y18", Wikipedia, true, "each article in scope has an outcome of the parity report for each of its items"}, nil},
+	{Rule{"Y18", Wikipedia, true, "each article in scope has an outcome of the parity report for each of its items"}, y18},
 	{Rule{"H01", Resources, true, "the resource register, the tag register and the inventory register have no value in common"}, h01},
 	{Rule{"H02", Resources, true, "each resource id has a valid check character, and each record has a register line"}, h02},
 	{Rule{"H03", Resources, true, "each external id of a resource is in the normal form of its system and passes its check digit"}, h03},

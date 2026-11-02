@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -212,6 +213,74 @@ func TestAdoptLinksMintedNodes(t *testing.T) {
 	}
 	rep := string(AdoptReport(res, "2026-11-03"))
 	for _, s := range []string{"linked: 1\n", "| a person holds the item | 1 |", "## Lagrange's theorem (group theory)"} {
+		if !strings.Contains(rep, s) {
+			t.Errorf("the report has no %q:\n%s", s, rep)
+		}
+	}
+}
+
+func TestAdoptDefersAndParity(t *testing.T) {
+	dir, rows, ms := adoptFixture(t)
+	hold := wpcorpus.MentionID(31150, "PRF1")
+	opt := AdoptOptions{Corpus: dir, Day: "2026-11-03", Until: "2027-05-01", Draw: func() (string, error) { return "", fmt.Errorf("no draw") }, Hold: map[string]string{hold: "the proof needs a check"}}
+	nodes := []AdoptNode{
+		{ID: "3C53TD", Name: "Lagrange's theorem"},
+		{ID: "7K3QX2JW1M", Name: "Extension of Lagrange's theorem", Inventory: []string{"R000000004"}, Mentions: []string{wpcorpus.MentionID(31150, "DCKK")}},
+	}
+	res, err := Adopt(rows, ms, nodes, opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Deferred == 0 {
+		t.Fatal("the run deferred no row")
+	}
+	for _, r := range res.Rows {
+		if r.Outcome != nil && r.Outcome.Value == inventory.OutcomeDeferred && (r.Outcome.Until != "2027-05-01" || r.Outcome.Reason == "" || len(r.History) == 0) {
+			t.Errorf("the deferred row %s has the outcome %+v and the history %+v", r.ID, r.Outcome, r.History)
+		}
+	}
+	again, err := Adopt(res.Rows, ms, nodes, opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.Deferred != 0 || again.Linked != 0 {
+		t.Errorf("a second run deferred %d rows and linked %d rows, want 0 and 0", again.Deferred, again.Linked)
+	}
+
+	pn := []ParityNode{{ID: "7K3QX2JW1M", Mentions: map[string]string{wpcorpus.MentionID(31150, "DCKK"): "adopted"}}}
+	items := Parity(res.Rows, ms, pn, nil, "2026-11-03")
+	if len(items) == 0 || strings.Contains(items[0].Mention, "#") {
+		t.Fatalf("the parity data does not start with the article: %+v", items)
+	}
+	for _, it := range items {
+		if it.Missing() {
+			t.Errorf("the item %s has no outcome after the run deferred the rows", it.Mention)
+		}
+		if tagOf(it.Mention) == "DCKK" && (it.Outcome != inventory.OutcomeNode || it.Origin != "adopted") {
+			t.Errorf("the item DCKK has the outcome %s and the origin %q", it.Outcome, it.Origin)
+		}
+	}
+	if late := Parity(res.Rows, ms, pn, nil, "2027-05-02"); !slices.ContainsFunc(late, func(it ParityItem) bool { return it.Missing() }) {
+		t.Error("the rows are deferred until 2027-05-01, and the parity data of 2027-05-02 has no open item")
+	}
+
+	root := t.TempDir()
+	if err := WriteParity(root, items); err != nil {
+		t.Fatal(err)
+	}
+	back, err := ReadParity(root)
+	if err != nil || len(back) != len(items) {
+		t.Fatalf("read %d items back (%v), want %d", len(back), err, len(items))
+	}
+	if err := WriteParity(root, items[:1]); err != nil {
+		t.Fatal(err)
+	}
+	back, _ = ReadParity(root)
+	if n := len(slices.DeleteFunc(back, func(it ParityItem) bool { return it.Article != items[0].Article })); n != 1 {
+		t.Errorf("a second write of the article kept %d of its items, want 1", n)
+	}
+	rep := string(ParityReport("group-theory", items, "2026-11-03"))
+	for _, s := range []string{"area: group-theory\n", "without_outcome: 0\n", "## Lagrange's theorem (group theory)", "| Reason of a deferred item |"} {
 		if !strings.Contains(rep, s) {
 			t.Errorf("the report has no %q:\n%s", s, rep)
 		}
