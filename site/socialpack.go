@@ -42,7 +42,7 @@ func (b *builder) writeSocialPacks() error {
 		buckets[i] = append(buckets[i], e.Name())
 	}
 	if b.opt.SocialPacks != "" {
-		if err := os.MkdirAll(b.opt.SocialPacks, 0o755); err != nil {
+		if err := os.MkdirAll(b.opt.SocialPacks, 0o750); err != nil {
 			return err
 		}
 	}
