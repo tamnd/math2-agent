@@ -28,7 +28,7 @@ import (
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -source wikipedia -corpus DIR [-type T] [-msc CODE] [-since DATE] [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv [-msc CODE]]\n       m2 corpus link [-root DIR]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus understand review [-root DIR] [-items] [-json]\n       m2 corpus understand gold [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -source wikipedia -corpus DIR [-type T] [-msc CODE] [-since DATE] [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv|wikipedia [-msc CODE]]\n       m2 corpus link [-root DIR]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus understand review [-root DIR] [-items] [-json]\n       m2 corpus understand gold [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]"
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -430,19 +430,19 @@ func importPlan(root, commit, path, cache, summary string, stdout io.Writer) err
 	return os.WriteFile(summary, []byte(b.String()), 0o644) // #nosec G306 -- the summary is the public body of a pull request.
 }
 
-// runCorpusCluster groups the mentions of the tree into rows again, with the passes 1 and 2 of corpus K4.3. It reads no records. With -source arxiv, it also runs the name pass of corpus arxiv AX8.2, writes its candidates for the dedup judge to reports/inventory/arxiv-names.jsonl, and writes the report of AX8.7 to reports/inventory-arxiv.md.
+// runCorpusCluster groups the mentions of the tree into rows again, with the passes 1 and 2 of corpus K4.3. It reads no records. With -source arxiv, it also runs the name pass of corpus arxiv AX8.2, writes its candidates for the dedup judge to reports/inventory/arxiv-names.jsonl, and writes the report of AX8.7 to reports/inventory-arxiv.md. With -source wikipedia, it runs the name pass of corpus wikipedia WP8.2, and writes its candidates to reports/inventory/wikipedia-names.md and the report of WP8.7 to reports/inventory-wikipedia.md.
 func runCorpusCluster(args []string, stdout, stderr io.Writer) int {
 	const name = "m2 corpus cluster"
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	root := fs.String("root", ".", "the math2 working tree")
 	commit := fs.String("commit", "", "the commit that goes into registers/inventory/. Empty means the HEAD commit of the working tree.")
-	source := fs.String("source", "", "arxiv runs the name pass and writes the report of the arXiv layer")
-	msc := fs.String("msc", "", "with -source arxiv, the name pass reads only the block of this MSC code at two digits")
+	source := fs.String("source", "", "arxiv or wikipedia runs the name pass and writes the report of the layer of that source")
+	msc := fs.String("msc", "", "with -source, the name pass reads only the block of this MSC code at two digits")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
-	if fs.NArg() != 0 || *source != "" && *source != axImport.Source || *msc != "" && *source == "" {
+	if fs.NArg() != 0 || *source != "" && *source != axImport.Source && *source != wpImport.Source || *msc != "" && *source == "" {
 		fmt.Fprintln(stderr, "usage: "+corpusUsage)
 		return ExitUsage
 	}
@@ -450,8 +450,12 @@ func runCorpusCluster(args []string, stdout, stderr io.Writer) int {
 		return ExitFailure
 	}
 	res, err := cluster(*root, *commit, stdout)
-	if err == nil && *source == axImport.Source {
+	switch {
+	case err != nil:
+	case *source == axImport.Source:
 		err = arxivReport(*root, res, *msc, stdout)
+	case *source == wpImport.Source:
+		err = wikipediaReport(*root, res, *msc, stdout)
 	}
 	if err != nil {
 		fmt.Fprintf(stderr, "%s: %v\n", name, err)
@@ -488,6 +492,27 @@ func arxivReport(root string, res *inventory.Result, msc string, stdout io.Write
 		return err
 	}
 	fmt.Fprintf(stdout, "arxiv: joined by cited results %d, joined by hash %d, joined by name %d, name candidates %d, wrote %s and %s\n", res.Cited, res.Hashed, res.Named, len(cands), arxivNames, arxivInventory)
+	return nil
+}
+
+// wikipediaReport runs the name pass on the rows of the cluster and writes its candidates and the report of the Wikipedia layer.
+func wikipediaReport(root string, res *inventory.Result, msc string, stdout io.Writer) error {
+	ms, err := inventory.ReadMentions(root)
+	if err != nil {
+		return err
+	}
+	day := time.Now()
+	cands := wpImport.Candidates(res.Rows, ms, msc)
+	if err := os.MkdirAll(filepath.Join(root, "reports", "inventory"), 0o750); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(wpImport.NamesPath)), wpImport.FormatCandidates(cands, day), 0o644); err != nil { // #nosec G306 -- the report is public.
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(wpImport.InventoryPath)), []byte(wpImport.Report(res.Rows, ms, cands, day)), 0o644); err != nil { // #nosec G306 -- the report is public.
+		return err
+	}
+	fmt.Fprintf(stdout, "wikipedia: name candidates %d, wrote %s and %s\n", len(cands), wpImport.NamesPath, wpImport.InventoryPath)
 	return nil
 }
 

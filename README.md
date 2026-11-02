@@ -696,6 +696,12 @@ $ m2 wp edges -corpus ../wikipedia-math -store scope.sqlite
 $ m2 corpus import -source wikipedia -corpus ../wikipedia-math
 ```
 
+`m2 corpus cluster -source wikipedia` groups the mentions into rows again, and then runs the name pass of WP8.2. A Wikipedia mention gets a name candidate when the row of another source is the only row in its block with the same name. The command writes the candidates for the dedup judge to `reports/inventory/wikipedia-names.md`, and the report of WP8.7 to `reports/inventory-wikipedia.md`. The report gives the mentions, the rows, the outcomes, the rows with a mention of another source, the mentions that wait for a row and the name candidates, for each article type and each MSC code at two digits. Both files have a YAML header with the counts. `-msc CODE` reads only the block of one code.
+
+```
+$ m2 corpus cluster -source wikipedia
+```
+
 `m2 wp gold draw y` draws gold set Y from the parsed articles: 50 articles of each type of WP1.5. In each type, the draw sorts the articles by the class and the MSC code and takes them at equal steps, so the classes and the codes are in proportion to the scope. `m2 wp gold draw m` draws gold set M: 1,000 formulas of each form of WP3.3 (`<math>` with `{{tmath}}`, `{{math}}` and `{{mvar}}`). Each article of a set gets a file `gold/<set>/v1/<shard>/<pageid>.md`. The YAML header holds the draft, which is the output of the extractor. A person corrects the draft, adds the items in running text that have no cue, and sets `marked: true` with the name of the marker. `m2 wp gold measure y` compares the marked articles with the objects and writes `reports/gold-y.md` with the cue recall and precision, the prose recall and precision, the prose recall for each type and each MSC code (rule Y17), and the attachment accuracy of the proofs. `m2 wp gold measure m` writes `reports/gold-m.md` with the share of correct TeX for each form. The targets are the targets of WP11.3.
 
 ```
