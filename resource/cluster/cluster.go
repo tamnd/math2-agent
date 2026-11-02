@@ -38,8 +38,8 @@ const (
 	Person = "person"
 )
 
-// Strong are the strong ids of RS3.5 that join records in pass C1. ISBN-13 is strong only with a title match, so it is in pass C3. RS3.5 does not name swmath, but swMATH gives one id to one package, and the source swh needs it to put a SWHID on the resource of the package (RS7.5).
-var Strong = []string{"doi", "arxiv", "zbl", "zbl_id", "jfm", "mr", "openlibrary_edition", "wikidata", "openalex", "hal", "course", "offering", "swmath"}
+// Strong are the strong ids of RS3.5 that join records in pass C1. ISBN-13 is strong only with a title match, so it is in pass C3. RS3.5 does not name swmath, but swMATH gives one id to one package, and the source swh needs it to put a SWHID on the resource of the package (RS7.5). In the same way NPTEL gives one id to the site of one course, and the source nptel_video needs it to put a date on a course with no course id.
+var Strong = []string{"doi", "arxiv", "zbl", "zbl_id", "jfm", "mr", "openlibrary_edition", "wikidata", "openalex", "hal", "course", "offering", "swmath", "nptel"}
 
 // levels gives the level of a resource where each system of ids goes. A system that is not in the map goes to the expression. The id of a course platform names the site of an offering, so it goes to the manifestation (RS5.2).
 var levels = map[string]string{
