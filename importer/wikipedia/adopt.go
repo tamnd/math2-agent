@@ -15,6 +15,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/tamnd/math2-agent/inventory"
+	"github.com/tamnd/math2-agent/site"
 	"github.com/tamnd/math2-agent/wpcorpus"
 	"github.com/tamnd/math2-agent/wpsource"
 )
@@ -422,12 +423,16 @@ func displayName(m *inventory.Mention) string {
 	return string(r)
 }
 
-// freeAliases gives the aliases of the mention that are not the name or an alias of a node, so that the new node does not take the name of another node.
+// freeAliases gives the aliases of the mention that are not the name or an alias of a node, so that the new node does not take the name of another node. Schema node.v1 gives an alias as a slug, so each alias is a slug, and a slug of the name is not an alias.
 func freeAliases(m *inventory.Mention, byName map[string]string) []string {
 	var out []string
+	name := site.Slug(m.Name)
 	for _, a := range m.Aliases {
-		if _, ok := byName[inventory.NameKey(a)]; !ok {
-			out = append(out, a)
+		if _, ok := byName[inventory.NameKey(a)]; ok {
+			continue
+		}
+		if s := site.Slug(a); s != "" && s != name && !slices.Contains(out, s) {
+			out = append(out, s)
 		}
 	}
 	return out

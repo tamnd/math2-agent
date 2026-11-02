@@ -118,7 +118,7 @@ func TestGenericName(t *testing.T) {
 }
 
 func TestNames(t *testing.T) {
-	m := &inventory.Mention{Cue: "term", Name: "locally cyclic group", Aliases: []string{"Left coset", "Coset representative"}}
+	m := &inventory.Mention{Cue: "term", Name: "locally cyclic group", Aliases: []string{"Left coset", "Coset representative", "Locally-cyclic group", "Coset  representative"}}
 	if got := displayName(m); got != "Locally cyclic group" {
 		t.Errorf("got the name %q", got)
 	}
@@ -129,7 +129,7 @@ func TestNames(t *testing.T) {
 		t.Errorf("got the name %q", got)
 	}
 	got := freeAliases(m, map[string]string{"left coset": "3C53TD"})
-	if len(got) != 1 || got[0] != "Coset representative" {
+	if len(got) != 1 || got[0] != "coset-representative" {
 		t.Errorf("got the aliases %q", got)
 	}
 }
