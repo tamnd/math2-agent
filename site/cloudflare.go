@@ -43,6 +43,7 @@ const worker = `// The worker of Math 2.0. m2 site build -cloudflare writes this
 const base = BASE;
 const shards = SHARDS;
 const cacheVersion = CACHE_VERSION;
+const socialPacks = SOCIAL_PACKS;
 const sharded = /^(?:(?:wiki|res|inventory)\/.+|node\/[0-9A-Za-z~]+\.md|api\/node\/[0-9A-Za-z~]+\.json)$/;
 const types = { html: "text/html; charset=utf-8", md: "text/markdown; charset=utf-8", json: "application/json; charset=utf-8" };
 const cache = new Map();
@@ -75,6 +76,43 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.slice(base.length).replace(/^\/+/, "");
+    if (socialPacks && path.startsWith("social/")) {
+      const image = path.match(/^social\/([0-9a-f]{24})\/([0-9]+)\/([0-9]+)\/([0-9A-Za-z]+)\.jpg$/);
+      if (!image) return env.ASSETS.fetch(request);
+      if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
+      const offset = Number(image[2]);
+      const length = Number(image[3]);
+      if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(length) || length < 1 || length > 250000) return new Response("Not found", { status: 404 });
+      const key = new Request(new URL(url.pathname, url));
+      if (request.method === "GET") {
+        const hit = await caches.default.match(key);
+        if (hit) return hit;
+      }
+      let body;
+      let source = "r2";
+      if (env.SOCIAL_PACKS) {
+        try {
+          const object = await env.SOCIAL_PACKS.get("social/" + image[1] + ".pack", { range: { offset, length } });
+          if (object) body = object.body;
+        } catch (_) { /* The Pages pack below keeps the image available. */ }
+      }
+      if (!body) {
+        source = "pages";
+        // Pages does not yet return 206 for ranges. Read one small pack and
+        // slice it, or use the partial body when Pages gains range support.
+        const packURL = new URL(base + "/social/packs/" + image[1] + ".pack", url);
+        const pack = await env.ASSETS.fetch(new Request(packURL, { headers: { range: "bytes=" + offset + "-" + (offset + length - 1) } }));
+        if (!pack.ok) return new Response("Image not found", { status: 404 });
+        const bytes = await pack.arrayBuffer();
+        body = pack.status === 206 ? bytes : bytes.slice(offset, offset + length);
+        if (body.byteLength !== length) return new Response("Image not found", { status: 404 });
+      }
+      const response = new Response(request.method === "HEAD" ? null : body, {
+        headers: { "content-type": "image/jpeg", "content-length": String(length), "cache-control": "public, max-age=31536000, immutable", "x-math2-image-source": source },
+      });
+      if (request.method === "GET") ctx.waitUntil(caches.default.put(key, response.clone()));
+      return response;
+    }
     const m = path.match(/^node\/([0-9A-Z]+)\/?$/);
     if (m) {
       if (!links) {
@@ -142,6 +180,7 @@ func (b *builder) writeWorker() error {
 		return err
 	}
 	w = strings.Replace(w, "CACHE_VERSION", string(version), 1)
+	w = strings.Replace(w, "SOCIAL_PACKS", "true", 1)
 	if err := b.write("_worker.js", []byte(w)); err != nil {
 		return err
 	}
@@ -152,6 +191,7 @@ func (b *builder) writeWorker() error {
 	for _, p := range []string{"node", "wiki", "res", "inventory", "api/node"} {
 		include = append(include, b.base+"/"+p+"/*")
 	}
+	include = append(include, b.base+"/social/*")
 	routes := map[string]any{"version": 1, "include": include, "exclude": []string{}}
 	return b.writeJSON("_routes.json", routes)
 }

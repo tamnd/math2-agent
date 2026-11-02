@@ -108,15 +108,9 @@ func (b *builder) mscGroups() []*mscGroup {
 }
 
 func (b *builder) writeNodes() error {
-	images := make([]socialJob, 0, len(b.order))
 	for _, v := range b.order {
 		desc := v.Name + ". A " + v.Kind + " in Math 2.0."
-		subtitle := v.Label()
-		if subject := v.Subject(); subject != "" {
-			subtitle += " · " + subject
-		}
-		images = append(images, socialJob{v.Tag, v.Name, subtitle})
-		imageURL := b.abs(socialPath(v.Tag, v.Name, subtitle))
+		imageURL := b.socialURLs[v.Tag]
 		p := page{Title: v.Name, Description: desc, Section: "nodes", MarkdownURL: v.MarkdownURL, JSONURL: v.JSONURL, Math: true,
 			ImageURL: imageURL, ImageAlt: v.Name + ", a " + v.Kind + " in Math 2.0", OGType: "article", Tags: append([]string{v.Kind}, v.MSC...)}
 		if !v.Added.IsZero() {
@@ -147,7 +141,7 @@ func (b *builder) writeNodes() error {
 			return err
 		}
 	}
-	return b.writeSocialCards(images)
+	return nil
 }
 
 type listData struct {
