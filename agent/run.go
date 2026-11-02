@@ -93,6 +93,7 @@ type Record struct {
 	Spend    Spend                      `json:"spend"`
 	Shadow   bool                       `json:"shadow,omitempty"`  // the run is a shadow run of a candidate role version (spec 12.8). The system uses none of its output.
 	Novelty  map[string]*novelty.Result `json:"novelty,omitempty"` // the novelty check of each output of the run, by the id of its node (spec 17.5)
+	Texts    []prov.ContextText         `json:"texts,omitempty"`   // each text of a work that the context gave the model, which the role sets (corpus arxiv AX9.3, rule D17)
 }
 
 // Models returns the models that answered in the run, in the order of their first answer.
@@ -375,6 +376,7 @@ func (r *Record) Summary(transcript string) *prov.Run {
 		ID: r.ID, Agent: r.Agent, Prompt: r.Prompt, Models: r.Models(), OnBehalfOf: r.Job.OnBehalfOf,
 		Started: r.Started.UTC().Format(time.RFC3339), Outcome: r.Outcome, Targets: []string{r.Job.Target},
 		Seconds: r.Spend.Seconds, SpendUSD: r.Spend.USD, BudgetUSD: r.Budget.USD, Transcript: transcript,
+		Texts: r.Texts,
 	}
 }
 

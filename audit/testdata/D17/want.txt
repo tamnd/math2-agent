@@ -1,0 +1,3 @@
+build/runs/r-2026-09-01-1.json:11:1: D17: the run r-2026-09-01-1 gave the model a text of arXiv and names no version of it, only "2601.00001"
+build/runs/r-2026-09-01-1.json:11:1: D17: the run r-2026-09-01-1 gave the model a text of 2601.00002v1, whose class is verbatim and not open
+build/runs/r-2026-09-01-1.json:11:1: D17: the run r-2026-09-01-1 gave the model a text of 2601.00003v1 under the licence "cc-by-nc-sa", which is not compatible with CC BY-SA

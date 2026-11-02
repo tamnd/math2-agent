@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -351,9 +352,12 @@ func TestPaperProofs(t *testing.T) {
 	if ps[0].Text == "" || ps[1].Text != "" || ps[0].Length != 2 || len(ps[1].Lemmas) != write.LongProof {
 		t.Errorf("the open proof has the text %q and the length %d, the closed one the text %q and %d lemmas", ps[0].Text, ps[0].Length, ps[1].Text, len(ps[1].Lemmas))
 	}
-	brief, err := write.Brief(ws, job("the next writing level"), card.Embedded(), root)
+	brief, texts, err := write.BriefTexts(ws, job("the next writing level"), card.Embedded(), root)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if want := []prov.ContextText{{Source: "arxiv", Version: "2401.00001v1", Item: "ax://paper/2401.00001#PRF1", Class: "open", Licence: "cc-by"}}; !reflect.DeepEqual(texts, want) {
+		t.Errorf("the texts of the brief are %+v, want %+v: only the open proof gives its text", texts, want)
 	}
 	for _, want := range []string{
 		"Proof 1: ax://paper/2401.00001#PRF1, in 2401.00001v1, Proof of Theorem 2 (the class open).",

@@ -1,0 +1,20 @@
+{
+  "id": "r-2026-09-01-1",
+  "agent": "m2-agent/write@1.0.0",
+  "prompt": "write/3",
+  "models": [
+    "claude-opus-5-5"
+  ],
+  "on_behalf_of": "schedule:nightly",
+  "started": "2026-09-01T09:00:00Z",
+  "outcome": "success",
+  "texts": [
+    {
+      "source": "arxiv",
+      "version": "2601.00001v2",
+      "item": "ax://paper/2601.00001#T7K2",
+      "class": "open",
+      "licence": "cc-by"
+    }
+  ]
+}

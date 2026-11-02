@@ -1,7 +1,10 @@
 package audit
 
 import (
+	"maps"
+	"path/filepath"
 	"regexp"
+	"slices"
 
 	axImport "github.com/tamnd/math2-agent/importer/arxiv"
 	"github.com/tamnd/math2-agent/inventory"
@@ -64,6 +67,7 @@ var (
 	contentHash   = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 	token         = regexp.MustCompile(`^\S{0,40}$`)
 	shortLocator  = regexp.MustCompile(`^[\w.\- ]{0,32}$`)
+	versionRef    = regexp.MustCompile(`^\S+v\d+$`)
 )
 
 // d06 checks that no arXiv mention of the class record holds text of the paper (AX5.4). Each string field of such a mention must be an id, a label, a number, a hash or a value from a closed list.
@@ -122,6 +126,40 @@ func d06(a *auditor) outcome {
 	}
 	if o.checked == 0 && len(o.findings) == 0 {
 		o.reason = "no arXiv mention has the class record"
+	}
+	return o
+}
+
+// shareAlike is the licences of an arXiv version whose text the context of a run may give: the licences that are compatible with CC BY-SA (corpus arxiv AX9.3). tamnd/arxiv names them cc0, cc-by and cc-by-sa.
+var shareAlike = map[string]bool{"cc0": true, "cc-by": true, "cc-by-sa": true}
+
+// d17 checks that each text of an arXiv paper that the context of a run gave the model is of a version of the class open, with a licence compatible with CC BY-SA (AX9.3). It reads the texts that the run summaries in build/runs/ name. A run from before the summaries named their texts names none, so the rule sees only the runs from then on.
+func d17(a *auditor) outcome {
+	var o outcome
+	runs, reason := a.runs()
+	if reason != "" {
+		o.reason = reason
+		return o
+	}
+	for _, id := range slices.Sorted(maps.Keys(runs)) {
+		p := filepath.ToSlash(filepath.Join(runsDir, id+".json"))
+		for _, t := range runs[id].Texts {
+			if t.Source != axImport.Source {
+				continue
+			}
+			o.checked++
+			switch {
+			case !versionRef.MatchString(t.Version):
+				o.add(p, jsonKeyLine(a, p, "texts"), 1, "the run %s gave the model a text of arXiv and names no version of it, only %q", id, t.Version)
+			case t.Class != "open":
+				o.add(p, jsonKeyLine(a, p, "texts"), 1, "the run %s gave the model a text of %s, whose class is %s and not open", id, t.Version, t.Class)
+			case !shareAlike[t.Licence]:
+				o.add(p, jsonKeyLine(a, p, "texts"), 1, "the run %s gave the model a text of %s under the licence %q, which is not compatible with CC BY-SA", id, t.Version, t.Licence)
+			}
+		}
+	}
+	if o.checked == 0 && len(o.findings) == 0 {
+		o.reason = "no run names a text of arXiv in its context"
 	}
 	return o
 }

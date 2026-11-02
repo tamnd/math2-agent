@@ -102,6 +102,7 @@ var catalogue = []entry{
 	{Rule{"I06", Inventory, false, "an MSC code at two digits whose estimated recall is below 90%"}, i06},
 	{Rule{"D05", Inventory, true, "each object of an item kind of an extracted arXiv paper has a mention, and each proof and local claim has an attached mention"}, d05},
 	{Rule{"D06", Inventory, true, "no mention from an arXiv version of the class record holds text of the paper, in any field"}, d06},
+	{Rule{"D17", Inventory, true, "each text of an arXiv paper that the context of a run gave the model is of a version of the class open, with a licence compatible with CC BY-SA"}, d17},
 	{Rule{"N01", Notation, true, "each macro in a body has an entry in the notation register whose scope includes a topic of the node, or the global scope, or the node defines it"}, n01},
 	{Rule{"N02", Notation, true, "two entries with the same glyph in scopes with a topic in common are the same macro, or each lists the other in conflicts"}, n02},
 	{Rule{"N03", Notation, false, "a curriculum puts a member before one of its prerequisites"}, n03},

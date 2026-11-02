@@ -15,6 +15,7 @@ import (
 	axImport "github.com/tamnd/math2-agent/importer/arxiv"
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/node"
+	"github.com/tamnd/math2-agent/prov"
 	"github.com/tamnd/math2-agent/workspace"
 )
 
@@ -129,6 +130,20 @@ func PaperProofs(ws *workspace.Workspace, n *node.Node, arxiv string) ([]PaperPr
 		)
 	})
 	return out, nil
+}
+
+// briefsText reports whether the brief gives the text of the proof: only a proof of an open version that tamnd/arxiv has the text of.
+func (p PaperProof) briefsText() bool { return p.Class == "open" && p.Text != "" }
+
+// Texts returns the texts of papers that the brief gives for the proofs ps, for the run record (rule D17).
+func Texts(ps []PaperProof) []prov.ContextText {
+	var out []prov.ContextText
+	for _, p := range ps[:min(len(ps), maxProofs)] {
+		if p.briefsText() {
+			out = append(out, prov.ContextText{Source: "arxiv", Version: fmt.Sprintf("%sv%d", p.Paper, p.Version), Item: p.ID, Class: p.Class, Licence: p.Licence})
+		}
+	}
+	return out
 }
 
 // length is the length of a proof for the choice: its sentences, or a large number when the pass proof has not run.
@@ -294,7 +309,7 @@ func briefProofs(b *strings.Builder, ps []PaperProof) {
 		if len(p.Methods) > 0 {
 			fmt.Fprintf(b, "Its methods: %s.\n", strings.Join(p.Methods, ", "))
 		}
-		if p.Class == "open" && p.Text != "" {
+		if p.briefsText() {
 			fmt.Fprintf(b, "The version is open. Adapt the proof into numbered steps in the house notation and in your own words, and add the attribution line: %s.\n%s\n\n", attribution(p), tools.Data("arxiv:"+p.ID, p.Licence, cut(p.Text, maxProofChars)))
 			continue
 		}
