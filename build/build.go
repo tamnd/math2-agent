@@ -174,7 +174,8 @@ func Run(ctx context.Context, opt Options) (*Manifest, error) {
 	if hasLean {
 		b.project = project
 	}
-	if hasLean {
+	// A run of one step that needs no Lean, as -only status, does not read the toolchain, so it runs where Lean is not installed.
+	if hasLean && (opt.Only == "" || slices.Contains([]string{Lean, Extract, Replay, Battery}, opt.Only)) {
 		if err := b.toolchain(ctx); err != nil {
 			return nil, err
 		}
