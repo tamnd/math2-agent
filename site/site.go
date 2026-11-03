@@ -166,6 +166,7 @@ type builder struct {
 	specs       []*specDoc
 	katex       *katex.Renderer
 	mathMemo    *mathCache
+	cards       *cardCache // the social cards of earlier builds, or nil
 	graph       *graph.Graph
 	status      map[string]status.Status           // nil when the site has no build
 	levels      map[string]int                     // the number of nodes at each writing level
@@ -247,6 +248,7 @@ func Build(opt Options) error {
 	if err := b.writeSitemap(); err != nil {
 		return err
 	}
+	b.cards.prune()
 	return b.mathMemo.save(opt.Cache)
 }
 
@@ -302,6 +304,7 @@ func (b *builder) load() error {
 	}
 	b.nodeMD = markup.New(b.math)
 	b.mathMemo = loadMathCache(b.opt.Cache, macros)
+	b.cards = newCardCache(b.opt.Cache)
 	if err := timed([]func() error{func() error { return b.prerender(macros) }}); err != nil {
 		return err
 	}

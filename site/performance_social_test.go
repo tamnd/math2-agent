@@ -102,3 +102,30 @@ func TestFrontierPagination(t *testing.T) {
 		t.Error("second frontier page has the wrong rows or previous link")
 	}
 }
+
+func TestSocialCardCache(t *testing.T) {
+	tmp := t.TempDir()
+	build := func(title string) *builder {
+		b := &builder{opt: Options{Out: filepath.Join(tmp, "site"), URL: "https://example.org/math2"}, base: "/math2"}
+		b.cards = newCardCache(filepath.Join(tmp, "cache", "math.gob.gz"))
+		if _, err := b.writeSocial("7K3QX2", title, "Theorem"); err != nil {
+			t.Fatal(err)
+		}
+		b.cards.prune()
+		return b
+	}
+	build("First")
+	cached := filepath.Join(tmp, "cache", socialCardVersion, filepath.Base(socialPath("7K3QX2", "First", "Theorem")))
+	if err := os.WriteFile(cached, []byte("cached"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	build("First")
+	got, err := os.ReadFile(filepath.Join(tmp, "site", filepath.FromSlash(socialPath("7K3QX2", "First", "Theorem"))))
+	if err != nil || string(got) != "cached" {
+		t.Errorf("the build drew the card again instead of using the cache: %q %v", got, err)
+	}
+	build("Second")
+	if _, err := os.Stat(cached); !os.IsNotExist(err) {
+		t.Error("prune kept a card that the build did not use")
+	}
+}
