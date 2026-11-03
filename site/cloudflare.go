@@ -2,9 +2,14 @@ package site
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/fnv"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -196,41 +201,26 @@ func (b *builder) writeWorker() error {
 	return b.writeJSON("_routes.json", routes)
 }
 
-// writeShards writes the sharded files to shards/N.json and returns the count of shards.
+// writeShards writes the sharded files to shards/N.json and returns the count of shards. It reads the spool of one shard at a time, so that the build does not hold all the sharded files in memory.
 func (b *builder) writeShards() (int, error) {
-	shards := b.shards
-	b.shards = nil // write the large files and the shards themselves to files
-	defer func() { b.shards = shards }()
-	total := 0
-	for p, data := range shards {
-		if len(data) > maxSharded {
-			if err := b.write(p, data); err != nil {
-				return 0, err
-			}
-			delete(shards, p)
-			continue
-		}
-		total += len(data)
-	}
+	sp := b.spool
+	b.spool = nil // write the shards themselves to files
+	defer func() { b.spool = sp }()
 	n := 16
-	for n*shardBytes < total && n < 4096 {
+	for n*shardBytes < sp.total && n < spoolBuckets {
 		n *= 2
 	}
-	parts := make([]map[string]string, n)
-	for p, data := range shards {
-		i := shardOf(p, n)
-		if parts[i] == nil {
-			parts[i] = map[string]string{}
+	for i := range n {
+		part := map[string]string{}
+		// n divides spoolBuckets, so bucket j holds paths of shard j mod n.
+		for j := i; j < spoolBuckets; j += n {
+			if err := sp.read(j, func(p string, data []byte) { part[p] = string(data) }); err != nil {
+				return 0, err
+			}
 		}
-		parts[i][p] = string(data)
-	}
-	for i, part := range parts {
 		var buf bytes.Buffer
 		enc := json.NewEncoder(&buf)
 		enc.SetEscapeHTML(false)
-		if part == nil {
-			part = map[string]string{}
-		}
 		if err := enc.Encode(part); err != nil {
 			return 0, err
 		}
@@ -238,5 +228,63 @@ func (b *builder) writeShards() (int, error) {
 			return 0, err
 		}
 	}
-	return n, nil
+	return n, os.RemoveAll(sp.dir)
+}
+
+// spoolDir is the directory in the output where a Cloudflare build keeps the sharded files until it writes the shards. writeShards removes it.
+const spoolDir = ".shard-spool"
+
+// spoolBuckets is the count of spool files, and the largest count of shards. It is a power of two, as each count of shards is.
+const spoolBuckets = 4096
+
+// shardSpool keeps the sharded files of a build on disk: bucket j holds the files whose path hashes to j modulo spoolBuckets, as records of the path and the data, each with its length.
+type shardSpool struct {
+	dir   string
+	total int // the bytes of the files
+}
+
+func (s *shardSpool) bucket(j int) string { return filepath.Join(s.dir, strconv.Itoa(j)) }
+
+func (s *shardSpool) add(p string, data []byte) error {
+	if err := os.MkdirAll(s.dir, 0o755); err != nil { // #nosec G301 -- the site is public.
+		return err
+	}
+	f, err := os.OpenFile(s.bucket(shardOf(p, spoolBuckets)), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644) // #nosec G302 G304 -- as in write.
+	if err != nil {
+		return err
+	}
+	rec := binary.AppendUvarint(nil, uint64(len(p)))
+	rec = append(rec, p...)
+	rec = binary.AppendUvarint(rec, uint64(len(data)))
+	rec = append(rec, data...)
+	if _, err := f.Write(rec); err != nil {
+		_ = f.Close()
+		return err
+	}
+	s.total += len(data)
+	return f.Close()
+}
+
+// read calls f for each file in bucket j, in the order of add. A later file with the same path replaces an earlier one.
+func (s *shardSpool) read(j int, f func(p string, data []byte)) error {
+	data, err := os.ReadFile(s.bucket(j)) // #nosec G304 -- the build makes the path.
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for len(data) > 0 {
+		var fields [2][]byte
+		for k := range fields {
+			l, m := binary.Uvarint(data)
+			if m <= 0 || uint64(len(data)-m) < l {
+				return fmt.Errorf("site: the shard spool %d is damaged", j)
+			}
+			fields[k] = data[m : m+int(l)]
+			data = data[m+int(l):]
+		}
+		f(string(fields[0]), fields[1])
+	}
+	return nil
 }
