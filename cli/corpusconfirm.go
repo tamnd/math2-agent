@@ -28,7 +28,7 @@ func runCorpusConfirm(args []string, stdout, stderr io.Writer) int {
 	source := fs.String("source", "", "the source. Only arxiv now.")
 	arxiv := fs.String("arxiv", "", "the checkout of tamnd/arxiv, which gives the text of the open items")
 	only := fs.String("node", "", "check only this node")
-	write_ := fs.Bool("write", false, "write "+confirm.Path+" in the tree")
+	writeOut := fs.Bool("write", false, "write "+confirm.Path+" in the tree")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
@@ -82,12 +82,12 @@ func runCorpusConfirm(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	day := time.Now().UTC().Format(time.DateOnly)
-	if *write_ {
+	if *writeOut {
 		p := filepath.Join(*root, confirm.Path)
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil { // #nosec G301 -- the report is public.
 			return fail(err)
 		}
-		if err := os.WriteFile(p, confirm.Report(rs, day), 0o644); err != nil {
+		if err := os.WriteFile(p, confirm.Report(rs, day), 0o644); err != nil { // #nosec G306 -- the report is public.
 			return fail(err)
 		}
 	}
@@ -110,11 +110,11 @@ func provModel(root, tag string) string {
 	if len(tag) < 3 {
 		return ""
 	}
-	f, err := os.Open(filepath.Join(root, "prov", tag[:3], tag+".jsonl"))
+	f, err := os.Open(filepath.Join(root, "prov", tag[:3], tag+".jsonl")) // #nosec G304 -- the path is in the tree.
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	model := ""
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 1<<20), 1<<24)
