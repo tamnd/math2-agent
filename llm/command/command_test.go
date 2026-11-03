@@ -162,6 +162,14 @@ func TestReply(t *testing.T) {
 		}, llm.ToolCall},
 		{"I cannot answer in JSON.", []llm.Block{llm.TextBlock("I cannot answer in JSON.")}, llm.EndTurn},
 		{`{"text": "", "calls": []}`, nil, llm.EndTurn},
+		{"<invoke name=\"read_file\">\n</invoke>\n</invoke>\n\n<invoke name=\"read_file\">\n<parameter name=\"path\">nodes/0F1/0F1WR9C83K.md</parameter>\n</invoke>\n<invoke name=\"read_file\"><parameter name=\"path\">nodes/0F1/0F1WR9C83K.md</parameter></invoke>", []llm.Block{
+			{Type: llm.ToolUse, ID: "c3_1", Name: "read_file", Input: json.RawMessage(`{"path":"nodes/0F1/0F1WR9C83K.md"}`)},
+		}, llm.ToolCall},
+		{`Let me look. <invoke name="get" ref="0F1WR9C83K"></invoke> <invoke name="search"><parameter name="q">limit</parameter><parameter name="limit">5</parameter></invoke>`, []llm.Block{
+			{Type: llm.ToolUse, ID: "c3_1", Name: "get", Input: json.RawMessage(`{"ref":"0F1WR9C83K"}`)},
+			{Type: llm.ToolUse, ID: "c3_2", Name: "search", Input: json.RawMessage(`{"limit":5,"q":"limit"}`)},
+		}, llm.ToolCall},
+		{"<invoke name=\"read_file\">\n</invoke>", []llm.Block{llm.TextBlock("<invoke name=\"read_file\">\n</invoke>")}, llm.EndTurn},
 	} {
 		blocks, stop := Reply(c.text, 3)
 		if !reflect.DeepEqual(blocks, c.blocks) || stop != c.stop {
