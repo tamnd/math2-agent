@@ -9,8 +9,12 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
+
+	"github.com/tamnd/math2-agent/inventory"
 )
 
 // CensusReportPath is the completeness report of WP4.9.
@@ -89,8 +93,8 @@ func IsItem(o *Object) bool {
 
 // tally is one row of a table of the report.
 type tally struct {
-	inScope, parsed, objects, items, gaps int
-	strength                              map[string]int
+	inScope, parsed, objects, items, gaps, open int
+	strength                                    map[string]int
 }
 
 func (t *tally) add(a *CensusArticle) {
@@ -110,6 +114,59 @@ func (t *tally) add(a *CensusArticle) {
 		t.strength = map[string]int{}
 	}
 	t.strength[a.Census.Strength]++
+}
+
+// OpenRows is the count of the open rows of the inventory (K04) that have a
+// mention of an article in scope. It is the fourth number of WP1.7.
+type OpenRows struct {
+	Commit string // the commit of the math2 tree that has the rows
+	Total  int
+	byPage map[int]int
+}
+
+// CountOpenRows counts the rows that are open on the day and that have a
+// mention of an article in scope. A row with mentions of two articles counts
+// once in the total, and once in each type and each MSC area of the articles.
+func CountOpenRows(rows []inventory.Row, as []*CensusArticle, day time.Time) *OpenRows {
+	inScope := map[int]bool{}
+	for _, a := range as {
+		inScope[a.Page] = true
+	}
+	o := &OpenRows{byPage: map[int]int{}}
+	for i := range rows {
+		if !rows[i].IsOpen(day) {
+			continue
+		}
+		pages := map[int]bool{}
+		for _, m := range rows[i].Mentions {
+			if p := mentionPage(m); inScope[p] {
+				pages[p] = true
+			}
+		}
+		if len(pages) == 0 {
+			continue
+		}
+		o.Total++
+		for p := range pages {
+			o.byPage[p]++
+		}
+	}
+	return o
+}
+
+// mentionPage gives the page id of a Wikipedia mention, as in
+// wikipedia://en/31150#VWC8, and 0 for a mention of another source.
+func mentionPage(m string) int {
+	rest, ok := strings.CutPrefix(m, "wikipedia://en/")
+	if !ok {
+		return 0
+	}
+	rest, _, _ = strings.Cut(rest, "#")
+	p, err := strconv.Atoi(rest)
+	if err != nil {
+		return 0
+	}
+	return p
 }
 
 // useCount is a count of uses and of the articles that have them.
@@ -151,7 +208,10 @@ func bump(m map[string]*useCount, key, title string, n int) {
 const reportRows = 50
 
 // CensusReport writes reports/census.md, the completeness report of WP4.9.
-func CensusReport(w io.Writer, as []*CensusArticle) error {
+//
+// open is the count of the open rows. When it is nil, the report says that
+// the open rows are not measured.
+func CensusReport(w io.Writer, as []*CensusArticle, open *OpenRows) error {
 	bw := bufio.NewWriter(w)
 	all := &tally{}
 	byType := map[string]*tally{}
@@ -172,6 +232,9 @@ func CensusReport(w io.Writer, as []*CensusArticle) error {
 			byType[a.Type] = &tally{}
 		}
 		byType[a.Type].add(a)
+		if open != nil {
+			byType[a.Type].open += open.byPage[a.Page]
+		}
 		if a.Meta != nil {
 			seen := map[string]bool{}
 			for _, code := range a.Meta.MSC {
@@ -181,6 +244,9 @@ func CensusReport(w io.Writer, as []*CensusArticle) error {
 						byMSC[code[:2]] = &tally{}
 					}
 					byMSC[code[:2]].add(a)
+					if open != nil {
+						byMSC[code[:2]].open += open.byPage[a.Page]
+					}
 				}
 			}
 		}
@@ -231,16 +297,23 @@ func CensusReport(w io.Writer, as []*CensusArticle) error {
 	fmt.Fprintf(bw, "| articles in scope that are not parsed or stopped | %d | rule Y01 and rule Y02 |\n", states[StateListed]+states[StateFetched])
 	fmt.Fprintf(bw, "| census gaps: cues and pointers with no object | %d | rule Y03 |\n", all.gaps)
 	fmt.Fprintf(bw, "| items with no outcome | %d | rule Y18 comes with the assembly, so each item counts |\n", all.items)
-	fmt.Fprintf(bw, "| open rows of the inventory | not measured | the inventory of K04 does not read the corpus yet |\n")
+	if open == nil {
+		fmt.Fprintf(bw, "| open rows of the inventory | not measured | give the option -root with a math2 tree to count the rows of K04 |\n")
+	} else {
+		fmt.Fprintf(bw, "| open rows of the inventory | %d | the open rows of K04 with a mention of an article in scope, in tamnd/math2 at %s. A row is open when it has no outcome, or when its deferral has passed |\n", open.Total, open.Commit)
+	}
 
 	fmt.Fprintf(bw, "\n## By article type\n\n")
-	writeTallies(bw, "Type", byType)
+	if open != nil {
+		fmt.Fprintf(bw, "A row with mentions of two articles counts in the type and the area of each article, so the column of the open rows can add up to more than the total.\n\n")
+	}
+	writeTallies(bw, "Type", byType, open != nil)
 	fmt.Fprintf(bw, "\n## By MSC code\n\n")
 	if len(byMSC) == 0 {
 		fmt.Fprintf(bw, "No metadata file has an MSC code yet, so this table is empty.\n")
 	} else {
 		fmt.Fprintf(bw, "An article with codes in two areas counts in each area.\n\n")
-		writeTallies(bw, "MSC", byMSC)
+		writeTallies(bw, "MSC", byMSC, open != nil)
 	}
 
 	fmt.Fprintf(bw, "\n## Census strength\n\n")
@@ -327,11 +400,19 @@ func gapSignals(m map[string]*useCount, a *CensusArticle) {
 	}
 }
 
-func writeTallies(w io.Writer, name string, m map[string]*tally) {
-	fmt.Fprintf(w, "| %s | In scope | Parsed | Objects | Items | Gaps | Strong | Normal | Weak |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n", name)
+func writeTallies(w io.Writer, name string, m map[string]*tally, measured bool) {
+	head, rule := "", ""
+	if measured {
+		head, rule = " Open rows |", "---:|"
+	}
+	fmt.Fprintf(w, "| %s | In scope | Parsed | Objects | Items | Gaps | Strong | Normal | Weak |%s\n|---|---:|---:|---:|---:|---:|---:|---:|---:|%s\n", name, head, rule)
 	for _, k := range sortedKeys(m) {
 		t := m[k]
-		fmt.Fprintf(w, "| %s | %d | %d | %d | %d | %d | %d | %d | %d |\n", k, t.inScope, t.parsed, t.objects, t.items, t.gaps, t.strength[StrengthStrong], t.strength[StrengthNormal], t.strength[StrengthWeak])
+		open := ""
+		if measured {
+			open = " " + strconv.Itoa(t.open) + " |"
+		}
+		fmt.Fprintf(w, "| %s | %d | %d | %d | %d | %d | %d | %d | %d |%s\n", k, t.inScope, t.parsed, t.objects, t.items, t.gaps, t.strength[StrengthStrong], t.strength[StrengthNormal], t.strength[StrengthWeak], open)
 	}
 }
 

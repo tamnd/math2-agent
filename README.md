@@ -747,10 +747,10 @@ When the corpus has the pointers file of an article, `m2 wp extract` and `m2 wp 
 
 The metadata file of each article gives its first type of WP1.5: concept, statement, object, method, problem, field, list or biography. Rules on the title, the short description and the categories give the type. For example, a category "1882 births" gives biography, and the short description "Branch of mathematics" gives field. The type can be wrong, and the model pass `type` of WP07 replaces it. The census report and gold set Y use the type.
 
-`m2 wp census report` writes `reports/census.md`, the completeness report of WP4.9. It gives the states of the articles in scope, the four numbers of WP1.7, the counts for each article type and each MSC code at two digits, the census strength, the gaps of rule Y03 by pattern, the differences of rule Y07 by cause, the unmapped templates and headings, and the gap signals of WP4.7. `m2 wp census diff PAGE` prints the readings W-text and W-html of one article side by side, with the differences and the incoming pointers.
+`m2 wp census report` writes `reports/census.md`, the completeness report of WP4.9. It gives the states of the articles in scope, the four numbers of WP1.7, the counts for each article type and each MSC code at two digits, the census strength, the gaps of rule Y03 by pattern, the differences of rule Y07 by cause, the unmapped templates and headings, and the gap signals of WP4.7. The fourth number of WP1.7 is the count of the open rows of the inventory (K04). `-root DIR` gives a math2 tree, and the report counts each open row that has a mention of an article in scope. A row is open when it has no outcome, or when its deferral has passed. The tables by type and by MSC code then have a column of the open rows. Without `-root`, the report says that the open rows are not measured. `m2 wp census diff PAGE` prints the readings W-text and W-html of one article side by side, with the differences and the incoming pointers.
 
 ```
-$ m2 wp census report -corpus ../wikipedia-math
+$ m2 wp census report -corpus ../wikipedia-math -root ../math2
 $ m2 wp census diff -corpus ../wikipedia-math 18908
 ```
 
