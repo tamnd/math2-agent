@@ -26,7 +26,7 @@ type SourceItem struct {
 }
 
 // SourceItems returns the items of papers that the arxiv sources of the node n name by their mention. arxiv is the checkout of tamnd/arxiv, which gives the text of an open item and the licence; with arxiv "" no item has text.
-func SourceItems(ws *workspace.Workspace, n *node.Node, arxiv string) ([]SourceItem, error) {
+func SourceItems(_ *workspace.Workspace, n *node.Node, arxiv string) ([]SourceItem, error) {
 	srcs, _ := n.Meta["sources"].([]any)
 	var out []SourceItem
 	seen := map[string]bool{}

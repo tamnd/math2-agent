@@ -278,11 +278,11 @@ func (s *shardSpool) read(j int, f func(p string, data []byte)) error {
 		var fields [2][]byte
 		for k := range fields {
 			l, m := binary.Uvarint(data)
-			if m <= 0 || uint64(len(data)-m) < l {
+			if m <= 0 || uint64(len(data)-m) < l { // #nosec G115 -- len(data)-m is not negative.
 				return fmt.Errorf("site: the shard spool %d is damaged", j)
 			}
-			fields[k] = data[m : m+int(l)]
-			data = data[m+int(l):]
+			fields[k] = data[m : m+int(l)] // #nosec G115 -- l is at most len(data)-m.
+			data = data[m+int(l):]         // #nosec G115 -- l is at most len(data)-m.
 		}
 		f(string(fields[0]), fields[1])
 	}

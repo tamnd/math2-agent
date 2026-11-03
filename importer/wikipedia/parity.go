@@ -164,8 +164,8 @@ func WriteParity(root string, items []ParityItem) error {
 		if err != nil {
 			return err
 		}
-		files[s].Write(line)
-		files[s].WriteByte('\n')
+		files[s].Write(line)     // #nosec G104 -- a bytes.Buffer write does not fail.
+		files[s].WriteByte('\n') // #nosec G104 -- a bytes.Buffer write does not fail.
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- record directories are public.
 		return err

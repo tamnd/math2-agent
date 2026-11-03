@@ -238,7 +238,7 @@ func readPages(path string, ms []inventory.Mention) (map[int]bool, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	byTitle := map[string]int{}
 	for _, m := range ms {
 		if m.Source == wpImport.Source && !strings.Contains(m.ID, "#") {
