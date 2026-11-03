@@ -95,6 +95,9 @@ type CategoryTree struct {
 	// for example "mathematicians" for the categories of people.
 	ExcludeWords []string `yaml:"exclude_words"`
 	Keywords     []string `yaml:"keywords"`
+	// MSC maps the words of a category title or of a context phrase to an
+	// MSC code (WP7.3).
+	MSC []MSCRule `yaml:"msc"`
 }
 
 // LoadCategoryTree reads manifests/wikipedia/categories.yaml of the corpus.
@@ -120,6 +123,9 @@ func LoadCategoryTree(root string) (*CategoryTree, error) {
 	}
 	for i, k := range t.Keywords {
 		t.Keywords[i] = strings.ToLower(catTitle(k))
+	}
+	if err := t.checkMSC(); err != nil {
+		return nil, err
 	}
 	return &t, nil
 }
