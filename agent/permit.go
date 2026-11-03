@@ -361,14 +361,14 @@ var curated = []string{"uses", "about", "msc", "name", "aliases"}
 var uncurated = []string{"formal", "same_as", "close_to", "aligned", "retired", "resolved_by"}
 
 // newKinds are the kinds of the nodes that curate adds.
-var newKinds = []string{"statement", "concept", "example", "proof"}
+var newKinds = []string{"statement", "concept", "example", "proof", "exercise"}
 
 // permitCurate allows a new node of a kind of newKinds with no field of uncurated and no explanation, and a change of a node that changes only the fields of curated and adds sources at the end of its sources.
 
 func permitCurate(c workspace.Change, n *node.Node) error {
 	if c.Old == nil {
 		if k := n.Kind(); !slices.Contains(newKinds, k) {
-			return fmt.Errorf("curate adds statement, concept, example and proof nodes, and this node is of the kind %s", k)
+			return fmt.Errorf("curate adds statement, concept, example, proof and exercise nodes, and this node is of the kind %s", k)
 		}
 		for _, k := range uncurated {
 			if n.Meta[k] != nil {

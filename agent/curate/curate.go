@@ -24,6 +24,7 @@ import (
 	"github.com/tamnd/math2-agent/align"
 	"github.com/tamnd/math2-agent/api"
 	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/exercise"
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/llm"
 	"github.com/tamnd/math2-agent/node"
@@ -41,10 +42,62 @@ const (
 )
 
 // kinds maps the kind of a record to the kind of the node that curate makes from it.
-var kinds = map[string]string{"statement": "statement", "definition": "concept", "example": "example", "proof": "proof"}
+var kinds = map[string]string{"statement": "statement", "definition": "concept", "example": "example", "proof": "proof", "exercise": exercise.Kind}
 
 // attachable maps the kind of a record to the kinds of the nodes that exist and can take the record as a source, when they state the same result.
-var attachable = map[string][]string{"statement": {"statement"}, "definition": {"concept", "definition"}, "example": {"example"}, "proof": {"proof"}}
+var attachable = map[string][]string{"statement": {"statement"}, "definition": {"concept", "definition"}, "example": {"example"}, "proof": {"proof"}, "exercise": {exercise.Kind, "example"}}
+
+// nodeKind gives the kind of the node that curate makes from a record of the kind in the tree at dir. An exercise is an example node in a tree at node.v1, because that schema has no kind exercise (corpus K8.7).
+func nodeKind(dir, kind string) string {
+	if kind == "exercise" && schema.Path(dir) == schema.Previous {
+		return "example"
+	}
+	return kinds[kind]
+}
+
+// exerciseProblems returns what is not correct in the form of an exercise node, or nil: the role line or the fields, the task, the answer and the solution in numbered steps (corpus K8.7).
+func exerciseProblems(n *node.Node) []string {
+	e, err := exercise.Parse(n)
+	switch {
+	case err != nil:
+		return []string{err.Error()}
+	case e == nil:
+		return []string{fmt.Sprintf("the node %s is not in the form of an exercise", n.ID)}
+	}
+	var out []string
+	if len(e.About) == 0 {
+		out = append(out, fmt.Sprintf("the exercise %s names no node that it practises in about", n.ID))
+	}
+	if e.Difficulty < 1 || e.Difficulty > 5 {
+		out = append(out, fmt.Sprintf("the difficulty of %s is %d, and it must be from 1 to 5", n.ID, e.Difficulty))
+	}
+	if !slices.Contains(exercise.Groups, e.Group) {
+		out = append(out, fmt.Sprintf("the group of %s is %q, and it must be A, B or C", n.ID, e.Group))
+	}
+	switch {
+	case !slices.Contains(exercise.Checks, e.Check) || e.Check == "lean":
+		out = append(out, fmt.Sprintf("the check of %s is %q, and it must be exact, numeric, choice, cas or none", n.ID, e.Check))
+	case e.Check != "none" && strings.TrimSpace(e.Answer) == "":
+		out = append(out, fmt.Sprintf("the exercise %s has the check %s and no answer", n.ID, e.Check))
+	}
+	if strings.TrimSpace(e.Task) == "" {
+		out = append(out, fmt.Sprintf("the exercise %s has no task", n.ID))
+	}
+	if !steps(e.Solution) {
+		out = append(out, fmt.Sprintf("the solution of %s is not a list of numbered steps that starts with \"1. \"", n.ID))
+	}
+	return out
+}
+
+// steps reports whether the first line of the text that is not empty is the first step of a numbered list.
+func steps(text string) bool {
+	for l := range strings.Lines(text) {
+		if l = strings.TrimSpace(l); l != "" {
+			return strings.HasPrefix(l, "1. ")
+		}
+	}
+	return false
+}
 
 // A Record is a record of the record plane and the source that it comes from.
 type Record struct {
@@ -403,8 +456,13 @@ func Goal(ws *workspace.Workspace, job *agent.Job, rs *Records, m llm.Model, mod
 				}
 				return true, "", nil
 			}
-			if want := kinds[r.Kind]; n.Kind() != want {
+			if want := nodeKind(ws.Dir, r.Kind); n.Kind() != want {
 				return false, fmt.Sprintf("the record is a %s, thus the new node %s is a %s node, and it is a %s node", r.Kind, n.ID, want, n.Kind()), nil
+			}
+			if r.Kind == "exercise" {
+				if ps := exerciseProblems(n); len(ps) > 0 {
+					return false, strings.Join(ps, "; "), nil
+				}
 			}
 			if Copies(n.Body, r) {
 				return false, fmt.Sprintf("the body of %s copies the text of the record. State the result in your own words", n.ID), nil
@@ -443,10 +501,11 @@ func Brief(ws *workspace.Workspace, job *agent.Job, rs *Records) (string, error)
 		if err != nil {
 			return "", err
 		}
-		kind, ok := kinds[r.Kind]
+		_, ok := kinds[r.Kind]
+		kind := nodeKind(ws.Dir, r.Kind)
 		switch {
 		case !ok:
-			return "", fmt.Errorf("curate: the record %s is a %s, and curate makes nodes only of statements, definitions, examples and proofs", r.Ref, cmp.Or(r.Kind, "record with no kind"))
+			return "", fmt.Errorf("curate: the record %s is a %s, and curate makes nodes only of statements, definitions, examples, exercises and proofs", r.Ref, cmp.Or(r.Kind, "record with no kind"))
 		case r.Locator == "":
 			return "", fmt.Errorf("curate: the record %s has no locator", r.Ref)
 		case r.Record.Text == "":
@@ -457,6 +516,12 @@ func Brief(ws *workspace.Workspace, job *agent.Job, rs *Records) (string, error)
 		fmt.Fprintf(&b, "Else write the new node in nodes/~/ with a provisional id: a tilde and eight hex digits that you choose at random, as the name of the file and as the tag. State the result in your own words. Give it a source with the locator %s", r.Locator)
 		fmt.Fprintf(&b, ", for example %s", sourceEntry(r))
 		fmt.Fprintf(&b, ". Link the nodes that the result uses, and give it uses, about and msc when the graph has them.\n")
+		switch {
+		case r.Kind == "exercise" && kind == exercise.Kind:
+			fmt.Fprintf(&b, "\nAn exercise node has the fields about (the nodes that it practises), difficulty (1 to 5), math_group (A, B or C) and check (exact, numeric, choice, cas or none), and the sections Exercise (the task, which a reader can do with no other text), Hint, Answer and Solution (numbered steps, each \"1. claim, by reason\"). Solve the task yourself when the record has no solution.\n")
+		case r.Kind == "exercise":
+			fmt.Fprintf(&b, "\nThe tree is at node.v1, thus an exercise is an example node. The Example section is the task, which a reader can do with no other text. The Remarks section opens with the line \"%s About: TAG. Difficulty: 2. Group: B. Check: exact.\", with the tag of the node that it practises, a difficulty from 1 to 5, a group A, B or C and a check exact, numeric, choice, cas or none. Then it has the headings ### Hint, ### Answer and ### Solution, and the solution is numbered steps, each \"1. claim, by reason\". Solve the task yourself when the record has no solution.\n", exercise.Marker)
+		}
 		if kind == "proof" {
 			fmt.Fprintf(&b, "\nA proof node needs the field proves, with the tag of the statement node that the proof proves. When the graph has no node of that statement, do not add a node, and report that you are stuck.\n")
 		}
