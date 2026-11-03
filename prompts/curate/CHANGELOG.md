@@ -2,7 +2,7 @@
 
 ## 0.3.0
 
-Curate also turns an example of the record plane into an example node and a proof into a proof node. A proof node needs the field proves, and when the graph has no node of the statement, the model reports that it is stuck. The brief and the system prompt no longer give an example provisional id, because the model used the same id in different runs. The model now picks eight random hex digits.
+Curate also turns an example of the record plane into an example node and a proof into a proof node. A proof node needs the field proves, and when the graph has no node of the statement, the model reports that it is stuck. The brief and the system prompt no longer give an example provisional id, because the model used the same id in different runs. The model now picks eight random hex digits. The brief gives the path of the file of a node, because in the batch the model did not find the file of a node that it had to add a source to.
 
 ## 0.2.0
 
