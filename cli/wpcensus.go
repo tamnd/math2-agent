@@ -7,7 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
@@ -16,13 +19,14 @@ import (
 // side by side (WP4.3).
 func runWPCensus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 || (args[0] != "report" && args[0] != "diff") {
-		fmt.Fprintln(stderr, "usage: m2 wp census report [-corpus DIR]\n       m2 wp census diff [-corpus DIR] PAGE")
+		fmt.Fprintln(stderr, "usage: m2 wp census report [-corpus DIR] [-root DIR]\n       m2 wp census diff [-corpus DIR] PAGE")
 		return ExitUsage
 	}
 	sub := args[0]
 	fs := flag.NewFlagSet("m2 wp census "+sub, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	corpus := fs.String("corpus", ".", "the Wikipedia corpus (a clone of tamnd/wikipedia-math)")
+	root := fs.String("root", "", "a math2 tree, to count the open rows of the inventory (K04)")
 	if err := fs.Parse(args[1:]); err != nil {
 		return ExitUsage
 	}
@@ -57,12 +61,27 @@ func runWPCensus(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
+	var open *wpcorpus.OpenRows
+	if *root != "" {
+		rows, err := inventory.ReadRows(*root)
+		if err != nil {
+			return fail(err)
+		}
+		open = wpcorpus.CountOpenRows(rows, as, time.Now().UTC())
+		open.Commit = "an unknown commit"
+		if out, err := git(*root, "rev-parse", "--short=9", "HEAD"); err == nil {
+			open.Commit = strings.TrimSpace(out)
+		}
+	}
 	path := filepath.Join(*corpus, wpcorpus.CensusReportPath)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- the corpus is a public repository
 		return fail(err)
 	}
-	if err := writeAtomic(path, func(w io.Writer) error { return wpcorpus.CensusReport(w, as) }); err != nil {
+	if err := writeAtomic(path, func(w io.Writer) error { return wpcorpus.CensusReport(w, as, open) }); err != nil {
 		return fail(err)
+	}
+	if open != nil {
+		fmt.Fprintf(stdout, "%d open rows\n", open.Total)
 	}
 	fmt.Fprintf(stdout, "%d articles in scope, report %s\n", len(as), wpcorpus.CensusReportPath)
 	return ExitOK

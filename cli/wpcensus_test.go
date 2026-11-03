@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
@@ -34,6 +35,45 @@ func TestWPCensus(t *testing.T) {
 	} {
 		if !strings.Contains(string(report), want) {
 			t.Errorf("the report has no %q:\n%s", want, report)
+		}
+	}
+
+	// The open rows come from a math2 tree. The first row has two mentions of
+	// Widget and one of List of widgets, so it counts once in the total. The
+	// row with an outcome, the row of another source, and the row of an
+	// article that is not in scope do not count. The deferral that has passed
+	// counts.
+	tree := t.TempDir()
+	if err := inventory.WriteRows(tree, []inventory.Row{
+		{ID: "aaa0001", Mentions: []string{"wikipedia://en/12345#AB12", "wikipedia://en/12345#CD34", "wikipedia://en/300#EF56"}, Kind: "definition", Layer: "textbook", Spread: 1},
+		{ID: "aaa0002", Mentions: []string{"wikipedia://en/12345#GH78"}, Kind: "definition", Layer: "textbook", Spread: 1, Outcome: &inventory.Outcome{Value: inventory.OutcomeNode, Target: []string{"T1"}}},
+		{ID: "aaa0003", Mentions: []string{"napkin://ch1#x"}, Kind: "definition", Layer: "textbook", Spread: 1},
+		{ID: "aaa0004", Mentions: []string{"wikipedia://en/999#IJ90"}, Kind: "definition", Layer: "textbook", Spread: 1},
+		{ID: "aaa0005", Mentions: []string{"wikipedia://en/12345#KL12"}, Kind: "statement", Layer: "textbook", Spread: 1, Outcome: &inventory.Outcome{Value: inventory.OutcomeDeferred, Until: "2020-01-01"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr = run("wp", "census", "report", "-corpus", root, "-root", tree)
+	if code != ExitOK || stdout != "2 open rows\n3 articles in scope, report reports/census.md\n" {
+		t.Fatalf("with -root: exit code %d, stderr %q, stdout %q", code, stderr, stdout)
+	}
+	report, err = os.ReadFile(filepath.Join(root, wpcorpus.CensusReportPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"| open rows of the inventory | 2 | the open rows of K04",
+		"| 05 | 1 | 1 |",
+		"| Weak | Open rows |",
+		"| list | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |",
+	} {
+		if !strings.Contains(string(report), want) {
+			t.Errorf("the report with -root has no %q:\n%s", want, report)
+		}
+	}
+	for _, line := range strings.Split(string(report), "\n") {
+		if (strings.HasPrefix(line, "| 05 |") || strings.HasPrefix(line, "| 11 |")) && !strings.HasSuffix(line, "| 2 |") {
+			t.Errorf("the open rows of the area are not 2: %s", line)
 		}
 	}
 
