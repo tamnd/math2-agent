@@ -100,7 +100,7 @@ gh attestation verify m2_v0.1.0_linux_amd64.tar.gz --repo tamnd/math2-agent
 | `m2 align <source>` | Propose crosswalk edges to an external source. `m2 align queue`, `accept`, `reject` and `confirm` show the proposals and record the decision of a person. | written |
 | `m2 bump` | Make a branch that moves Lean and Mathlib to the next release, rebind the renamed declarations and write the bump report. | written |
 | `m2 coverage` | Write the coverage of each MSC2020 code at the levels C0 to C4 to `reports/coverage/`. `-count` asks zbMATH Open for the number of documents in each class. | written |
-| `m2 release` | Cut a release with its manifest, levels and notes, write the release notes, or rebuild a release from its manifest. | written |
+| `m2 release` | Cut a release with its manifest, levels and notes, write the release notes, write the release attribution file, or rebuild a release from its manifest. | written |
 | `m2 search <query>` | Search the knowledge graph with the identifier resolver and the lexical, formula, formal and embedding channels. `m2 search -premises <goal>` ranks the Lean declarations that can help to prove a goal. | written |
 | `m2 serve` | Serve the read API over HTTP with JSON and over gRPC, and the MCP server over HTTP or stdio, from the last build. | written |
 | `m2 compute run\|verify <tag>` | Run a computation in the sandbox, or verify its output and its certificate. | written |
@@ -986,9 +986,11 @@ A release of math2 has a name, `YYYY.MM` for the monthly release or `YYYY.MM.N` 
 
 A cut has two runs of `m2 release cut`:
 
-1. The first run builds the tree, writes the three files and commits them. The name is the month of today, or the next patch release when the month has a release. The manifest must pin one stable Lean toolchain and one Mathlib commit.
+1. The first run builds the tree, writes the three files and `ATTRIBUTION.md`, and commits them. The name is the month of today, or the next patch release when the month has a release. The manifest must pin one stable Lean toolchain and one Mathlib commit.
 2. A person writes the summary of the notes. On a second machine, `m2 release verify -oleans DIR -record RUNNER NAME` rebuilds the graph and the `.olean` files from the commit and writes the result into the manifest. With `-against DIR`, it also lists each `.olean` file that is different, and a person writes the reason of each one.
-3. The second run checks that only the files of the release changed after the commit of the manifest, runs the full audit, and makes the tag when the audit passes. Push the tag with `git push origin NAME`.
+3. The second run checks that only the files of the release and `ATTRIBUTION.md` changed after the commit of the manifest, checks that `ATTRIBUTION.md` is up to date, runs the full audit, and makes the tag when the audit passes. Push the tag with `git push origin NAME`.
+
+`m2 release attribution` writes `ATTRIBUTION.md` at the root of the tree (corpus wikipedia WP9.3). It lists each Wikipedia article whose text a live node adopted or adapted, with the title, the permanent link of each revision, the link to the history page and the licence CC BY-SA 4.0. The YAML header is the machine form, and the body is the text for people. With `-check`, it writes nothing and exits 1 when the file is out of date.
 
 `m2 release notes FROM..TO` writes the notes of TO again and keeps its summary. Without FROM, it uses the release before TO. The notes have these sections: the counts that changed with the cause of each change, the topics whose number of nodes changed, the nodes that moved evidence level, the conjectures and problems that a statement resolves now, the retired nodes with their successors, and the bindings that a Mathlib rename or refactor changed.
 

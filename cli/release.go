@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -15,12 +16,14 @@ import (
 	"github.com/tamnd/math2-agent/audit"
 	"github.com/tamnd/math2-agent/build"
 	"github.com/tamnd/math2-agent/check"
+	"github.com/tamnd/math2-agent/node"
 	"github.com/tamnd/math2-agent/release"
 )
 
 const releaseUsage = `m2 release cut [-root DIR] [-date YYYY-MM-DD] [-no-build] [-cache DIR] [-no-sandbox] [-no-commit] [NAME]
 m2 release notes [-root DIR] [-o FILE] [FROM..]TO
-m2 release verify [-root DIR] [-oleans DIR] [-against DIR] [-record RUNNER] NAME`
+m2 release verify [-root DIR] [-oleans DIR] [-against DIR] [-record RUNNER] NAME
+m2 release attribution [-root DIR] [-check]`
 
 func runRelease(args []string, stdout, stderr io.Writer) int {
 	if len(args) > 0 {
@@ -31,6 +34,8 @@ func runRelease(args []string, stdout, stderr io.Writer) int {
 			return runReleaseNotes(args[1:], stdout, stderr)
 		case "verify":
 			return runReleaseVerify(args[1:], stdout, stderr)
+		case "attribution":
+			return runReleaseAttribution(args[1:], stdout, stderr)
 		}
 	}
 	fmt.Fprintln(stderr, "usage: "+releaseUsage)
@@ -113,7 +118,11 @@ func runReleaseCut(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	files := map[string][]byte{release.ManifestFile(name): data, release.LevelsFile(name): release.LevelsOf(st).Marshal()}
+	attrib, err := attributionFile(opt.Root)
+	if err != nil {
+		return fail(err)
+	}
+	files := map[string][]byte{release.ManifestFile(name): data, release.LevelsFile(name): release.LevelsOf(st).Marshal(), release.AttributionFile: attrib}
 	if err := writeFiles(opt.Root, files); err != nil {
 		return fail(err)
 	}
@@ -125,7 +134,7 @@ func runReleaseCut(args []string, stdout, stderr io.Writer) int {
 		return fail(err)
 	}
 	if !*noCommit {
-		if _, err := git(opt.Root, "add", "--", release.ManifestFile(name), release.LevelsFile(name), release.NotesFile(name)); err != nil {
+		if _, err := git(opt.Root, "add", "--", release.ManifestFile(name), release.LevelsFile(name), release.NotesFile(name), release.AttributionFile); err != nil {
 			return fail(err)
 		}
 		if _, err := git(opt.Root, "commit", "-q", "-m", "Cut the release "+name); err != nil {
@@ -137,7 +146,7 @@ func runReleaseCut(args []string, stdout, stderr io.Writer) int {
 	return ExitOK
 }
 
-// tagRelease is the second run of m2 release cut. It makes the tag when only the files of the release changed after the commit of the manifest and the full audit passes.
+// tagRelease is the second run of m2 release cut. It makes the tag when only the files of the release changed after the commit of the manifest, the release attribution file is up to date, and the full audit passes.
 func tagRelease(root, name string, stdout, stderr io.Writer) int {
 	fail := func(err error) int {
 		fmt.Fprintf(stderr, "m2 release cut: %v\n", err)
@@ -158,9 +167,16 @@ func tagRelease(root, name string, stdout, stderr io.Writer) int {
 		return fail(err)
 	}
 	for f := range strings.SplitSeq(strings.TrimSpace(diff), "\n") {
-		if f != "" && !strings.HasPrefix(f, release.Dir+"/") && !strings.HasPrefix(f, "reports/") {
+		if f != "" && f != release.AttributionFile && !strings.HasPrefix(f, release.Dir+"/") && !strings.HasPrefix(f, "reports/") {
 			return fail(fmt.Errorf("%s changed after the commit %s of the manifest. Cut a new release", f, m.Commit))
 		}
+	}
+	attrib, err := attributionFile(root)
+	if err != nil {
+		return fail(err)
+	}
+	if old, err := os.ReadFile(filepath.Join(root, release.AttributionFile)); err != nil || !bytes.Equal(old, attrib) { // #nosec G304 -- the file is in the working tree that the caller owns.
+		return fail(fmt.Errorf("%s is missing or out of date. Run m2 release attribution and commit the file (corpus wikipedia WP9.3)", release.AttributionFile))
 	}
 	rep, err := audit.Run(root, audit.Options{})
 	if err != nil {
@@ -398,4 +414,49 @@ func report(w io.Writer, artefact, got, want string) {
 		return
 	}
 	fmt.Fprintf(w, "%s: the rebuild gives %s, and the manifest has %q\n", artefact, got, want)
+}
+
+// runReleaseAttribution writes the release attribution file of corpus wikipedia WP9.3 from the sources of the nodes. With -check, it writes nothing and exits 1 when the file is not the same as the file that it would write.
+func runReleaseAttribution(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("m2 release attribution", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	root := flags.String("root", ".", "the math2 working tree")
+	onlyCheck := flags.Bool("check", false, "write nothing, and exit 1 when the file is out of date")
+	if err := flags.Parse(args); err != nil || flags.NArg() > 0 {
+		fmt.Fprintln(stderr, "usage: "+releaseUsage)
+		return ExitUsage
+	}
+	data, err := attributionFile(*root)
+	if err != nil {
+		fmt.Fprintf(stderr, "m2 release attribution: %v\n", err)
+		return ExitFailure
+	}
+	if *onlyCheck {
+		old, err := os.ReadFile(filepath.Join(*root, release.AttributionFile)) // #nosec G304 -- the file is in the working tree that the caller owns.
+		if err != nil && !os.IsNotExist(err) {
+			fmt.Fprintf(stderr, "m2 release attribution: %v\n", err)
+			return ExitFailure
+		}
+		if !bytes.Equal(old, data) {
+			fmt.Fprintf(stdout, "m2 release attribution: %s is out of date. Run m2 release attribution\n", release.AttributionFile)
+			return ExitFailure
+		}
+		fmt.Fprintf(stdout, "m2 release attribution: %s is up to date\n", release.AttributionFile)
+		return ExitOK
+	}
+	if err := writeFiles(*root, map[string][]byte{release.AttributionFile: data}); err != nil {
+		fmt.Fprintf(stderr, "m2 release attribution: %v\n", err)
+		return ExitFailure
+	}
+	fmt.Fprintf(stdout, "m2 release attribution wrote %s\n", release.AttributionFile)
+	return ExitOK
+}
+
+// attributionFile gives the release attribution file of the nodes of the tree.
+func attributionFile(root string) ([]byte, error) {
+	nodes, err := node.Load(root)
+	if err != nil {
+		return nil, err
+	}
+	return release.AttributionMarkdown(release.Attribution(nodes))
 }
