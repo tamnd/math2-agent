@@ -16,7 +16,7 @@ func TestAttribution(t *testing.T) {
 		"nodes/564/564VVAQTNR.md": "---\ntag: 564VVAQTNR\nkind: concept\nname: Coset\nsources:\n  - wikipedia: en:98759@r3\n    locator: Coset, section Definition\n    note: adopted\n---\n\n## Summary\n\nText.\n",
 		"nodes/RXW/RXWA8TF2RM.md": "---\ntag: RXWA8TF2RM\nkind: concept\nname: Cited\nsources:\n  - wikipedia: en:5555@r1\n    note: cited\n---\n\n## Summary\n\nText.\n",
 		"nodes/T0B/T0BWYYR508.md": "---\ntag: T0BWYYR508\nkind: concept\nname: Gone\nretired: {reason: duplicate}\nsources:\n  - wikipedia: en:6666@r1\n    note: adopted\n---\n\n## Summary\n\nText.\n",
-		"nodes/~/~1cb5b3fa.md": "---\ntag: ~1cb5b3fa\nkind: concept\nname: Draft\nsources:\n  - wikipedia: en:7777@r1\n    note: adopted\n---\n\n## Summary\n\nText.\n",
+		"nodes/~/~1cb5b3fa.md":    "---\ntag: ~1cb5b3fa\nkind: concept\nname: Draft\nsources:\n  - wikipedia: en:7777@r1\n    note: adopted\n---\n\n## Summary\n\nText.\n",
 	}
 	var nodes []*node.Node
 	for p, s := range files {
