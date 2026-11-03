@@ -278,10 +278,10 @@ func TestSourcedNodes(t *testing.T) {
 	src := func(loc string) map[string]any { return map[string]any{"locator": loc} }
 	nodes := []*node.Node{
 		{ID: "SEQ00000A", Meta: map[string]any{"sources": []any{src("u1"), src("u2"), src("u1")}}},
-		{ID: "SEQ00000B", Meta: map[string]any{"sources": []any{src("u1"), map[string]any{"title": "no locator"}}}},
+		{ID: "SEQ00000B", Meta: map[string]any{"sources": []any{src("u1"), map[string]any{"title": "no locator"}, map[string]any{"url": "https://x/a#L3", "locator": "a:3"}}}},
 		{ID: "OLD00000A", Meta: map[string]any{"retired": "2026-01-01", "sources": []any{src("u3")}}},
 	}
-	want := map[string][]string{"u1": {"SEQ00000A", "SEQ00000B"}, "u2": {"SEQ00000A"}}
+	want := map[string][]string{"u1": {"SEQ00000A", "SEQ00000B"}, "u2": {"SEQ00000A"}, "https://x/a#L3": {"SEQ00000B"}, "a:3": {"SEQ00000B"}}
 	if got := SourcedNodes(nodes); !maps.EqualFunc(got, want, slices.Equal) {
 		t.Errorf("the sources are %v, want %v", got, want)
 	}

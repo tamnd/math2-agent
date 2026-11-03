@@ -282,7 +282,7 @@ func applyTextbook(r *Row, byID map[string]*Mention, sig Signals, day, by string
 	return false
 }
 
-// SourcedNodes gives the tags of the live nodes that name each locator in their sources, by the locator, for Signals.Sourced.
+// SourcedNodes gives the tags of the live nodes that name each locator or URL in their sources, by the locator or the URL, for Signals.Sourced. A textbook mention has the URL of its record as its locator, and the node source has it as its url.
 func SourcedNodes(nodes []*node.Node) map[string][]string {
 	out := map[string][]string{}
 	for _, n := range nodes {
@@ -292,8 +292,10 @@ func SourcedNodes(nodes []*node.Node) map[string][]string {
 		list, _ := n.Meta["sources"].([]any)
 		for _, s := range list {
 			if m, ok := s.(map[string]any); ok {
-				if loc, _ := m["locator"].(string); loc != "" && !slices.Contains(out[loc], n.ID) {
-					out[loc] = append(out[loc], n.ID)
+				for _, k := range []string{"locator", "url"} {
+					if loc, _ := m[k].(string); loc != "" && !slices.Contains(out[loc], n.ID) {
+						out[loc] = append(out[loc], n.ID)
+					}
 				}
 			}
 		}

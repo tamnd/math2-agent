@@ -43,6 +43,9 @@ const (
 // kinds maps the kind of a record to the kind of the node that curate makes from it.
 var kinds = map[string]string{"statement": "statement", "definition": "concept"}
 
+// attachable maps the kind of a record to the kinds of the nodes that exist and can take the record as a source, when they state the same result.
+var attachable = map[string][]string{"statement": {"statement"}, "definition": {"concept", "definition"}}
+
 // A Record is a record of the record plane and the source that it comes from.
 type Record struct {
 	ingest.Record
@@ -285,6 +288,17 @@ func Copies(body string, r *Record) bool {
 	return k >= 2 && float64(k) >= 0.3*float64(len(p))
 }
 
+// sourceEntry gives the source entry of a node for the record, in the flow form of YAML: the arXiv paper or the URL of the record, when it has one, and its locator.
+func sourceEntry(r *Record) string {
+	if paper := r.Meta["paper"]; paper != "" {
+		return "{arxiv: " + paper + r.Meta["version"] + ", locator: " + r.Locator + "}"
+	}
+	if r.URL == "" {
+		return "{locator: " + r.Locator + "}"
+	}
+	return "{url: " + r.URL + ", locator: " + r.Locator + "}"
+}
+
 // Locates reports whether one of the sources of the node has the locator.
 func Locates(n *node.Node, locator string) bool {
 	list, _ := n.Meta["sources"].([]any)
@@ -366,12 +380,28 @@ func Goal(ws *workspace.Workspace, job *agent.Job, rs *Records, m llm.Model, mod
 			return false, "", err
 		}
 		for _, c := range changes {
-			if c.Old != nil || !strings.HasPrefix(c.Path, "nodes/") {
+			if c.New == nil || !strings.HasPrefix(c.Path, "nodes/") {
 				continue
 			}
 			n, err := node.Parse(c.Path, c.New)
 			if err != nil || !Locates(n, r.Locator) {
 				continue
+			}
+			if c.Old != nil {
+				if o, err := node.Parse(c.Path, c.Old); err != nil || Locates(o, r.Locator) {
+					continue
+				}
+				if !slices.Contains(attachable[r.Kind], n.Kind()) {
+					return false, fmt.Sprintf("the record is a %s, and the node %s that names it in its sources is a %s node", r.Kind, n.ID, n.Kind()), nil
+				}
+				v, err := Judge(ctx, m, model, system, r, c.Path, c.New)
+				if err != nil {
+					return false, "", err
+				}
+				if v.Verdict != Same {
+					return false, fmt.Sprintf("the judge finds that the node %s is %s to the record, not the same: %s. Remove the source, and add a new node or report that you are stuck", n.ID, v.Verdict, strings.TrimSuffix(v.Why, ".")), nil
+				}
+				return true, "", nil
 			}
 			if want := kinds[r.Kind]; n.Kind() != want {
 				return false, fmt.Sprintf("the record is a %s, thus the new node %s is a %s node, and it is a %s node", r.Kind, n.ID, want, n.Kind()), nil
@@ -388,7 +418,7 @@ func Goal(ws *workspace.Workspace, job *agent.Job, rs *Records, m llm.Model, mod
 			}
 			return true, "", nil
 		}
-		return false, fmt.Sprintf("the run has not added a node with a source whose locator is %s yet", r.Locator), nil
+		return false, fmt.Sprintf("the run has not added a source whose locator is %s to a new node or to a node that states the same result yet", r.Locator), nil
 	})
 }
 
@@ -423,11 +453,9 @@ func Brief(ws *workspace.Workspace, job *agent.Job, rs *Records) (string, error)
 			return "", fmt.Errorf("curate: the licence of the record %s does not let math2 store its text, thus curate cannot read the result", r.Ref)
 		}
 		fmt.Fprintf(&b, "Job %s: turn the record %s into a new %s node. The goal of the job: %s.\n\n", job.ID, r.Ref, kind, goal)
-		fmt.Fprintf(&b, "Read the record with the tool record. Then search the graph. When a node states the same result already, do not add a node, and call report_stuck with the tag of the node.\n\n")
-		fmt.Fprintf(&b, "Write the new node in nodes/~/ with a provisional id, for example nodes/~/~1a2b3c4d.md, and state the result in your own words. Give it a source with the locator %s", r.Locator)
-		if paper := r.Meta["paper"]; paper != "" {
-			fmt.Fprintf(&b, ", for example {arxiv: %s%s, locator: %s}", paper, r.Meta["version"], r.Locator)
-		}
+		fmt.Fprintf(&b, "Read the record with the tool record. Then search the graph. When a node of the kind %s states the same result already, do not add a node. Add the source %s at the end of the sources of that node, and change nothing else in it.\n\n", strings.Join(attachable[r.Kind], " or "), sourceEntry(r))
+		fmt.Fprintf(&b, "Else write the new node in nodes/~/ with a provisional id, for example nodes/~/~1a2b3c4d.md, and state the result in your own words. Give it a source with the locator %s", r.Locator)
+		fmt.Fprintf(&b, ", for example %s", sourceEntry(r))
 		fmt.Fprintf(&b, ". Link the nodes that the result uses, and give it uses, about and msc when the graph has them.\n")
 		return b.String(), nil
 	}
