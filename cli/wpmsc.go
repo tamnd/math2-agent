@@ -12,7 +12,7 @@ import (
 
 const wpMSCUsage = "m2 wp msc [-corpus DIR] [-page ID] [-dry-run]"
 
-// runWPMSC gives each article an MSC code from the signals that need no model (WP7.3): the categories, mapped by the msc rules of categories.yaml, and the context phrase of the lead. It writes the codes in the msc field of the metadata files. An article with a tie keeps all the codes of the tie, and an article with no signal keeps no code. The model pass decides these articles later.
+// runWPMSC gives each article an MSC code from the signals that need no model (WP7.3): the categories, mapped by the msc rules of categories.yaml, the context phrase of the lead and, for an article with no code or a tie, the links of the lead. It writes the codes in the msc field of the metadata files. An article with a tie keeps all the codes of the tie, and an article with no signal keeps no code. The model pass decides these articles later.
 func runWPMSC(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 wp msc", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -39,21 +39,50 @@ func runWPMSC(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	var articles, coded, both, catOnly, leadOnly, agree, ties, none, written int
-	classes := map[string]int{}
+	// The first pass reads the categories and the context phrase. The second
+	// pass adds the links of the lead for the articles with no code or a tie,
+	// with the codes of the first pass, so the order of the articles does not
+	// change the result.
+	type article struct {
+		md    *wpcorpus.Metadata
+		lead  string
+		links []int
+		res   wpcorpus.MSCResult
+	}
+	var as []*article
+	first := map[int]string{}
 	for _, md := range mds {
-		if *page != 0 && md.Page != *page {
-			continue
-		}
-		articles++
-		lead, err := wpcorpus.ReadLead(*corpus, md.Page)
+		lead, links, err := wpcorpus.ReadLead(*corpus, md.Page)
 		if err != nil {
 			return fail(err)
 		}
-		res := wpcorpus.ClassifyMSC(tree, md, lead)
+		a := &article{md: md, lead: lead, links: links, res: wpcorpus.ClassifyMSC(tree, md, lead, nil)}
+		if len(a.res.Codes) == 1 {
+			first[md.Page] = a.res.Codes[0]
+		}
+		if *page == 0 || md.Page == *page {
+			as = append(as, a)
+		}
+	}
+	var articles, coded, both, catOnly, leadOnly, agree, fromLinks, ties, none, written int
+	classes := map[string]int{}
+	for _, a := range as {
+		md, res := a.md, a.res
+		if len(res.Codes) != 1 {
+			var linked []string
+			for _, id := range a.links {
+				if c := first[id]; c != "" && id != md.Page {
+					linked = append(linked, c)
+				}
+			}
+			res = wpcorpus.ClassifyMSC(tree, md, a.lead, linked)
+		}
+		articles++
 		switch {
 		case len(res.Codes) == 0:
 			none++
+		case len(res.Links) > 0:
+			fromLinks++
 		case len(res.Categories) > 0 && res.Lead != "":
 			both++
 			if res.Categories[res.Lead] > 0 {
@@ -90,8 +119,8 @@ func runWPMSC(args []string, stdout, stderr io.Writer) int {
 	for _, k := range keys {
 		fmt.Fprintf(stdout, "%s %d\n", k, classes[k])
 	}
-	fmt.Fprintf(stdout, "%d articles, %d with a code, %d from the categories, %d from the lead, %d from both (%d agree), %d with a tie, %d with no signal, %d written\n",
-		articles, coded, catOnly, leadOnly, both, agree, ties, none, written)
+	fmt.Fprintf(stdout, "%d articles, %d with a code, %d from the categories, %d from the lead, %d from both (%d agree), %d with the links of the lead, %d with a tie, %d with no signal, %d written\n",
+		articles, coded, catOnly, leadOnly, both, agree, fromLinks, ties, none, written)
 	if *dry {
 		return ExitOK
 	}

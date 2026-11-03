@@ -91,6 +91,9 @@ func TestLeadParagraph(t *testing.T) {
 	if got := LeadParagraph("# Empty\n\nNo lead.\n"); got != "" {
 		t.Errorf("LeadParagraph with no lead = %q", got)
 	}
+	if got := LeadLinks(md + "[ring](wikipedia://en/3) after the lead\n"); !slices.Equal(got, []int{18831, 2}) {
+		t.Errorf("LeadLinks = %v, want [18831 2]", got)
+	}
 }
 
 func TestClassifyMSC(t *testing.T) {
@@ -99,20 +102,27 @@ func TestClassifyMSC(t *testing.T) {
 		t.Fatal(err)
 	}
 	cases := []struct {
-		cats []string
-		lead string
-		want []string
+		cats   []string
+		lead   string
+		linked []string
+		want   []string
 	}{
-		{[]string{"Algebraic topology", "Homotopy theory", "Living people"}, "", []string{"55-XX"}},
-		{[]string{"Topology"}, "In algebraic topology, a space is a space.", []string{"55-XX"}},
-		{[]string{"Topology", "Group theory"}, "", []string{"20-XX", "54-XX"}},
-		{[]string{"Topology", "Group theory", "Theorems in topology"}, "In mathematics, a thing.", []string{"54-XX"}},
-		{[]string{"Living people"}, "In mathematics, a thing.", nil},
+		{[]string{"Algebraic topology", "Homotopy theory", "Living people"}, "", nil, []string{"55-XX"}},
+		{[]string{"Topology"}, "In algebraic topology, a space is a space.", nil, []string{"55-XX"}},
+		{[]string{"Topology", "Group theory"}, "", nil, []string{"20-XX", "54-XX"}},
+		{[]string{"Topology", "Group theory", "Theorems in topology"}, "In mathematics, a thing.", nil, []string{"54-XX"}},
+		{[]string{"Living people"}, "In mathematics, a thing.", nil, nil},
+		// The links decide a tie, and they cannot add a new area to it.
+		{[]string{"Topology", "Group theory"}, "", []string{"20-XX", "12-XX", "12-XX"}, []string{"20-XX"}},
+		// The links give a code when the other signals give none.
+		{[]string{"Living people"}, "", []string{"55-XX", "54-XX", "55-XX"}, []string{"55-XX"}},
+		// The links do not change a code that the other signals give.
+		{[]string{"Topology"}, "", []string{"55-XX", "55-XX"}, []string{"54-XX"}},
 	}
 	for _, c := range cases {
-		got := ClassifyMSC(tree, &Metadata{Categories: c.cats}, c.lead)
+		got := ClassifyMSC(tree, &Metadata{Categories: c.cats}, c.lead, c.linked)
 		if !slices.Equal(got.Codes, c.want) {
-			t.Errorf("ClassifyMSC(%v, %q) = %v, want %v", c.cats, c.lead, got.Codes, c.want)
+			t.Errorf("ClassifyMSC(%v, %q, %v) = %v, want %v", c.cats, c.lead, c.linked, got.Codes, c.want)
 		}
 	}
 }

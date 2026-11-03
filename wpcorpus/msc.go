@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -60,6 +61,7 @@ func (t *CategoryTree) MSCOf(text string) string {
 
 var (
 	mdLink       = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)
+	leadLink     = regexp.MustCompile(`\]\(wikipedia://en/([0-9]+)\)`)
 	leadContinue = regexp.MustCompile(`(?i)^(more |most )?(specifically|particularly|especially|in particular|notably|namely|in |and in |or in |within )`)
 )
 
@@ -67,6 +69,23 @@ var (
 // rendering (WP3.12), with the links replaced by their text. It gives the
 // empty string when the rendering has no lead block.
 func LeadParagraph(markdown string) string {
+	return strings.ReplaceAll(mdLink.ReplaceAllString(rawLead(markdown), "$1"), "**", "")
+}
+
+// LeadLinks gives the page ids of the articles that the first paragraph of
+// the lead links to, in the order of the text, with no page twice.
+func LeadLinks(markdown string) []int {
+	var out []int
+	for _, m := range leadLink.FindAllStringSubmatch(rawLead(markdown), -1) {
+		if id, err := strconv.Atoi(m[1]); err == nil && !slices.Contains(out, id) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// rawLead gives the first paragraph of the lead block as it is written.
+func rawLead(markdown string) string {
 	lines := strings.Split(markdown, "\n")
 	for i, l := range lines {
 		if !strings.HasPrefix(l, ":::") || !strings.Contains(l, "cue=lead") {
@@ -77,7 +96,7 @@ func LeadParagraph(markdown string) string {
 				if strings.HasPrefix(p, ":::") {
 					return ""
 				}
-				return strings.ReplaceAll(mdLink.ReplaceAllString(p, "$1"), "**", "")
+				return p
 			}
 		}
 	}
@@ -120,14 +139,21 @@ type MSCResult struct {
 	// context phrase gave.
 	Categories map[string]int
 	Lead       string
+	// Links are the votes of the articles that the lead links to. They count
+	// only when the categories and the context phrase give no code or a tie.
+	Links map[string]int
 }
 
-// ClassifyMSC gives the MSC of an article from its categories and the
-// context phrase of its lead (WP7.3). Each category that a rule maps gives
-// one vote, and the context phrase gives two votes, because it names the
-// area of the article and a category can name a side topic.
-func ClassifyMSC(t *CategoryTree, md *Metadata, lead string) MSCResult {
-	res := MSCResult{Categories: map[string]int{}}
+// ClassifyMSC gives the MSC of an article from its categories, the context
+// phrase of its lead and the links of its lead (WP7.3). Each category that a
+// rule maps gives one vote, and the context phrase gives two votes, because
+// it names the area of the article and a category can name a side topic.
+// When these give no code or a tie, each code in linked gives one vote. The
+// caller gives the codes of the articles that the lead links to, one code
+// for each link. With a tie, only the codes of the tie get the votes of the
+// links, so a link cannot add a new area to a tie.
+func ClassifyMSC(t *CategoryTree, md *Metadata, lead string, linked []string) MSCResult {
+	res := MSCResult{Categories: map[string]int{}, Links: map[string]int{}}
 	votes := map[string]int{}
 	for _, c := range md.Categories {
 		if code := t.MSCOf(c); code != "" {
@@ -140,28 +166,50 @@ func ClassifyMSC(t *CategoryTree, md *Metadata, lead string) MSCResult {
 			votes[res.Lead] += 2
 		}
 	}
+	res.Codes = topCodes(votes)
+	if len(res.Codes) == 1 {
+		return res
+	}
+	tie := len(res.Codes) > 1
+	for _, code := range linked {
+		if !tie || slices.Contains(res.Codes, code) {
+			res.Links[code]++
+			votes[code]++
+		}
+	}
+	if len(res.Links) > 0 {
+		res.Codes = topCodes(votes)
+	}
+	return res
+}
+
+// topCodes gives the codes with the most votes, in the order of the
+// classification.
+func topCodes(votes map[string]int) []string {
 	top := 0
 	for _, n := range votes {
 		top = max(top, n)
 	}
+	var out []string
 	for code, n := range votes {
 		if n == top {
-			res.Codes = append(res.Codes, code)
+			out = append(out, code)
 		}
 	}
-	slices.SortFunc(res.Codes, msc.Compare)
-	return res
+	slices.SortFunc(out, msc.Compare)
+	return out
 }
 
-// ReadLead gives the lead paragraph of the Markdown rendering of a page, or
-// the empty string when the page has no rendering.
-func ReadLead(root string, page int) (string, error) {
+// ReadLead gives the lead paragraph of the Markdown rendering of a page and
+// the pages that it links to. It gives nothing when the page has no
+// rendering.
+func ReadLead(root string, page int) (string, []int, error) {
 	data, err := os.ReadFile(filepath.Join(root, MarkdownPath(page))) // #nosec G304 -- the path is in the corpus that the user names
 	if os.IsNotExist(err) {
-		return "", nil
+		return "", nil, nil
 	}
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return LeadParagraph(string(data)), nil
+	return LeadParagraph(string(data)), LeadLinks(string(data)), nil
 }
