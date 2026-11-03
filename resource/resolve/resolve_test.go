@@ -100,6 +100,7 @@ func TestCite(t *testing.T) {
 	cases := []struct{ text, status, at string }{
 		{"W. Rudin, Principles of Mathematical Analysis, 3rd ed., McGraw-Hill, 1976.", Found, "8F2K1QW7ZJ/e3"},
 		{"W. Rudin, Principles of mathematical analysis, McGraw-Hill, 1953.", Found, "8F2K1QW7ZJ"},
+		{"W. Rudin, Principles of mathematical analysis, McGraw-Hill, 1964.", Found, "8F2K1QW7ZJ"}, // a printing far from the date of the catalogue
 		{"A. Lovelace, The zeros of zeta functions, 2023.", Candidates, ""},
 		{"A. Lovelace, A note on knots, 2023.", NotFound, ""},
 		{"A. Weil, Basic Number Theory, 1967. doi:10.1000/z", Found, "9A1B2C3D4E/e2"},

@@ -83,9 +83,16 @@ func CitationOf(f map[string]string) (resresolve.Citation, []string) {
 		if v == "" {
 			continue
 		}
+		// An id in double parentheses is accepted as written: the editor turned off the check of the template on purpose, so it is not a bad id.
+		inner, asWritten := strings.CutPrefix(v, "((")
+		if asWritten {
+			v = strings.TrimSpace(strings.TrimSuffix(inner, "))"))
+		}
 		k, err := resresolve.Key(p.sys + ":" + v)
 		if err != nil {
-			bad = append(bad, p.param+":"+v)
+			if !asWritten {
+				bad = append(bad, p.param+":"+v)
+			}
 			continue
 		}
 		if !slices.Contains(c.IDs, k) {

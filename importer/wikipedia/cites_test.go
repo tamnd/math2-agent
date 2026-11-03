@@ -29,6 +29,9 @@ func TestCitationOf(t *testing.T) {
 	if c.Edition != 0 {
 		t.Errorf("the edition is %d. Revised is not an ordinal, so it must be 0", c.Edition)
 	}
+	if c, bad := CitationOf(map[string]string{"title": "Graphs", "isbn": "((963-7301-38-7))", "doi": "((10.1007/978-0-8176-4532-8))"}); len(bad) != 0 || !slices.Equal(c.IDs, []string{"doi:10.1007/978-0-8176-4532-8"}) {
+		t.Errorf("the ids accepted as written give the ids %q and the bad ids %q", c.IDs, bad)
+	}
 	if c, _ := CitationOf(map[string]string{"title": "Analysis", "edition": "3rd"}); c.Edition != 3 {
 		t.Errorf("the edition of 3rd is %d", c.Edition)
 	}

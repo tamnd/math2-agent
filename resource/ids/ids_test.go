@@ -42,6 +42,7 @@ func TestNormalize(t *testing.T) {
 		{"gutenberg", "https://www.gutenberg.org/ebooks/33283", "33283"},
 		{"gbooks", "4RuWQgAACAAJ", "4RuWQgAACAAJ"},
 		{"handle", "hdl:1721.1/12345", "1721.1/12345"},
+		{"handle", "loc.rbc/General.15133v1.1", "loc.rbc/General.15133v1.1"},
 		{"urn", "URN:NBN:de:101:1-2016", "urn:nbn:de:101:1-2016"},
 		{"course", "042nb2s44:18.06", "042nb2s44:18.06"},
 		{"offering", "042nb2s44:18.06:2010-spring", "042nb2s44:18.06:2010-spring"},
