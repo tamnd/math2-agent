@@ -313,7 +313,7 @@ func TestAgentRunCurate(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit code %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 	}
-	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/curate@0.1.0, 2 turns") || !strings.Contains(stdout, "nodes/~/~0a1b2c3d.md") {
+	if !strings.Contains(stdout, "success, the goal holds") || !strings.Contains(stdout, "m2-agent/curate@0.2.0, 2 turns") || !strings.Contains(stdout, "nodes/~/~0a1b2c3d.md") {
 		t.Errorf("the output is\n%s", stdout)
 	}
 }

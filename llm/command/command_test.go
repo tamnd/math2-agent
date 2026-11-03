@@ -34,7 +34,7 @@ func fake() int {
 	}
 	wd, _ := os.Getwd()
 	entries, _ := os.ReadDir(wd)
-	line, _ := json.Marshal(map[string]any{"name": name, "args": args, "prompt": string(prompt), "key": os.Getenv("ANTHROPIC_API_KEY") + os.Getenv("OPENAI_API_KEY"), "files": len(entries)})
+	line, _ := json.Marshal(map[string]any{"name": name, "args": args, "prompt": string(prompt), "key": os.Getenv("ANTHROPIC_API_KEY") + os.Getenv("OPENAI_API_KEY"), "files": len(entries), "max": os.Getenv("CLAUDE_CODE_MAX_OUTPUT_TOKENS")})
 	f, err := os.OpenFile(os.Getenv("FAKE_LOG"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return 3
@@ -74,6 +74,7 @@ type logLine struct {
 	Prompt string
 	Key    string
 	Files  int
+	Max    string
 }
 
 // fakeModel returns a model on codex and claude that runs the test binary as the fake client, with the modes, and the file of its log.
@@ -235,6 +236,10 @@ func TestFallback(t *testing.T) {
 	}
 	if l[1].Key != "" {
 		t.Error("claude ran with the API key")
+	}
+	// the limit of the request caps the output of claude, and codex gets no limit.
+	if l[1].Max != "1000" || l[0].Max != "" {
+		t.Errorf("the output limits are %q for codex and %q for claude", l[0].Max, l[1].Max)
 	}
 }
 

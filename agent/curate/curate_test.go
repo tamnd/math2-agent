@@ -185,7 +185,7 @@ func TestBrief(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"into a new statement node", "The goal of the job: a node of the theorem.\n", "report_stuck", "{arxiv: 2312.00752v1, locator: " + locator + "}"} {
+	for _, want := range []string{"into a new statement node", "The goal of the job: a node of the theorem.\n", "at the end of the sources of that node", "{arxiv: 2312.00752v1, locator: " + locator + "}"} {
 		if !strings.Contains(brief, want) {
 			t.Errorf("the brief has no %q:\n%s", want, brief)
 		}
@@ -315,5 +315,27 @@ func TestRunNode(t *testing.T) {
 	}, nil)
 	if rec.Outcome != agent.Success {
 		t.Errorf("a change of the aliases gives %s, %q", rec.Outcome, rec.Reason)
+	}
+}
+
+func TestRunRecordAttach(t *testing.T) {
+	src := "sources:\n  - arxiv: 2312.00752v1\n    locator: " + locator + "\n---\n\n## "
+	rec := run(t, ref, []*llm.Response{
+		write(groupPath, strings.Replace(group, "---\n\n## ", src, 1)),
+		write(groupPath, group),
+		write(lagrangePath, strings.Replace(lagrange, "---\n\n## ", "audience: ug1\n"+src, 1)),
+		write(lagrangePath, strings.Replace(lagrange, "---\n\n## ", src, 1)),
+	}, []*llm.Response{verdict(curate.Same, "the node states the result.")})
+	if rec.Outcome != agent.Success || len(rec.Turns) != 4 {
+		t.Fatalf("the run gives %s, %q after %d turns", rec.Outcome, rec.Reason, len(rec.Turns))
+	}
+	for i, want := range []string{"is a concept node", "has not changed the tree", "changes the field audience", ""} {
+		got := rec.Turns[i].Why
+		if i == 2 && len(rec.Turns[i].Results) > 0 {
+			got = rec.Turns[i].Results[0].Content
+		}
+		if want == "" && got != "" || !strings.Contains(got, want) {
+			t.Errorf("after turn %d the goal says %q, and it must say %q", i+1, got, want)
+		}
 	}
 }
