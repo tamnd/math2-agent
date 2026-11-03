@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -169,6 +170,9 @@ func (m *Model) run(ctx context.Context, b Backend, req *llm.Request, prompt str
 	cmd := exec.CommandContext(ctx, cmp.Or(b.Path, b.Name), args...) // #nosec G204 -- the backend is codex or claude, from the configuration of the operator.
 	cmd.Dir = work
 	cmd.Env = environ()
+	if b.Name == Claude && req.MaxTokens > 0 {
+		cmd.Env = append(cmd.Env, "CLAUDE_CODE_MAX_OUTPUT_TOKENS="+strconv.Itoa(req.MaxTokens))
+	}
 	cmd.Stdin = strings.NewReader(prompt)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -269,7 +273,7 @@ func environ() []string {
 	for _, kv := range os.Environ() {
 		k, _, _ := strings.Cut(kv, "=")
 		switch k {
-		case "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "CODEX_API_KEY":
+		case "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "CODEX_API_KEY", "CLAUDE_CODE_MAX_OUTPUT_TOKENS":
 			continue
 		}
 		out = append(out, kv)
