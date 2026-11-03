@@ -72,14 +72,15 @@ func (r Ref) At() string {
 
 // Index holds the ids of the catalogue and the records for the matcher.
 type Index struct {
-	refs  map[string][]Ref
-	res   map[string]*resource.Resource
-	block map[string][]string // the blocks of the matcher: family name and year, or venue, volume and page
+	refs   map[string][]Ref
+	res    map[string]*resource.Resource
+	block  map[string][]string // the blocks of the matcher: family name and year, or venue, volume and page
+	family map[string][]string // the block keys of each family name, so a citation with no year does not scan all the blocks
 }
 
 // Build makes the index of the live resources.
 func Build(rs []resource.Resource) *Index {
-	x := &Index{refs: map[string][]Ref{}, res: map[string]*resource.Resource{}, block: map[string][]string{}}
+	x := &Index{refs: map[string][]Ref{}, res: map[string]*resource.Resource{}, block: map[string][]string{}, family: map[string][]string{}}
 	for i := range rs {
 		r := &rs[i]
 		if !r.Live() {
@@ -91,6 +92,9 @@ func Build(rs []resource.Resource) *Index {
 		}
 		if f, y := first(r); f != "" && y > 0 {
 			k := blockKey(f, y)
+			if len(x.block[k]) == 0 {
+				x.family[f] = append(x.family[f], k)
+			}
 			x.block[k] = append(x.block[k], r.ID)
 		}
 	}
