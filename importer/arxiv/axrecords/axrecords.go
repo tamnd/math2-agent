@@ -75,7 +75,7 @@ func files(root string) (map[string][]byte, error) {
 			if err != nil {
 				return err
 			}
-			data, err := os.ReadFile(p) // #nosec G304 -- the caller owns the tree.
+			data, err := os.ReadFile(p) // #nosec G304 G122 -- the path comes from a walk of a tree that the caller owns.
 			if err != nil {
 				return err
 			}
@@ -377,7 +377,7 @@ func prune(out string, keep map[string]bool) error {
 			return err
 		}
 		if !keep[filepath.ToSlash(rel)] {
-			return os.Remove(p)
+			return os.Remove(p) // #nosec G122 -- the path comes from a walk of the output directory that the caller names.
 		}
 		return nil
 	})
