@@ -12,7 +12,7 @@ import (
 
 const wpMSCUsage = "m2 wp msc [-corpus DIR] [-page ID] [-dry-run]"
 
-// runWPMSC gives each article an MSC code from the signals that need no model (WP7.3): the categories, mapped by the msc rules of categories.yaml, the context phrase of the lead and, for an article with no code or a tie, the links of the lead. It writes the codes in the msc field of the metadata files. An article with a tie keeps all the codes of the tie, and an article with no signal keeps no code. The model pass decides these articles later.
+// runWPMSC gives each article an MSC code (WP7.3) from the categories, mapped by the msc rules of categories.yaml, the context phrase of the lead and, for an article with no code or a tie, the links of the lead. For an article that still has no code or a tie, the decision of the model pass in msc-model.yaml gives the code. It writes the codes in the msc field of the metadata files. An article with a tie and no decision keeps all the codes of the tie, and an article with no signal and no decision keeps no code.
 func runWPMSC(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("m2 wp msc", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -34,6 +34,10 @@ func runWPMSC(args []string, stdout, stderr io.Writer) int {
 	}
 	if len(tree.MSC) == 0 {
 		return fail(fmt.Errorf("categories.yaml has no msc rules"))
+	}
+	model, err := wpcorpus.LoadMSCModel(*corpus)
+	if err != nil {
+		return fail(err)
 	}
 	mds, err := wpcorpus.ReadMetadataFiles(*corpus)
 	if err != nil {
@@ -64,7 +68,7 @@ func runWPMSC(args []string, stdout, stderr io.Writer) int {
 			as = append(as, a)
 		}
 	}
-	var articles, coded, both, catOnly, leadOnly, agree, fromLinks, ties, none, written int
+	var articles, coded, both, catOnly, leadOnly, agree, fromLinks, fromModel, ties, none, written int
 	classes := map[string]int{}
 	for _, a := range as {
 		md, res := a.md, a.res
@@ -77,8 +81,15 @@ func runWPMSC(args []string, stdout, stderr io.Writer) int {
 			}
 			res = wpcorpus.ClassifyMSC(tree, md, a.lead, linked)
 		}
+		d, decided := model[md.Page]
+		decided = decided && len(res.Codes) != 1
+		if decided {
+			res.Codes = []string{d.Code}
+		}
 		articles++
 		switch {
+		case decided:
+			fromModel++
 		case len(res.Codes) == 0:
 			none++
 		case len(res.Links) > 0:
@@ -119,8 +130,8 @@ func runWPMSC(args []string, stdout, stderr io.Writer) int {
 	for _, k := range keys {
 		fmt.Fprintf(stdout, "%s %d\n", k, classes[k])
 	}
-	fmt.Fprintf(stdout, "%d articles, %d with a code, %d from the categories, %d from the lead, %d from both (%d agree), %d with the links of the lead, %d with a tie, %d with no signal, %d written\n",
-		articles, coded, catOnly, leadOnly, both, agree, fromLinks, ties, none, written)
+	fmt.Fprintf(stdout, "%d articles, %d with a code, %d from the categories, %d from the lead, %d from both (%d agree), %d with the links of the lead, %d from the model, %d with a tie, %d with no signal, %d written\n",
+		articles, coded, catOnly, leadOnly, both, agree, fromLinks, fromModel, ties, none, written)
 	if *dry {
 		return ExitOK
 	}

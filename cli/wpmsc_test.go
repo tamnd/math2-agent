@@ -45,7 +45,7 @@ func TestWPMSC(t *testing.T) {
 	if code := runWP([]string{"msc", "-corpus", root, "-dry-run"}, &out, &errb); code != ExitOK {
 		t.Fatalf("dry run: exit %d: %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "4 articles, 3 with a code, 1 from the categories, 0 from the lead, 1 from both (0 agree), 1 with the links of the lead, 1 with a tie, 1 with no signal, 0 written") {
+	if !strings.Contains(out.String(), "4 articles, 3 with a code, 1 from the categories, 0 from the lead, 1 from both (0 agree), 1 with the links of the lead, 0 from the model, 1 with a tie, 1 with no signal, 0 written") {
 		t.Errorf("dry run output:\n%s", out.String())
 	}
 	mds, err := wpcorpus.ReadMetadataFiles(root)
@@ -83,5 +83,29 @@ func TestWPMSC(t *testing.T) {
 	out.Reset()
 	if code := runWP([]string{"msc", "-corpus", root}, &out, &errb); code != ExitOK || !strings.Contains(out.String(), ", 0 written") {
 		t.Errorf("second run: exit %d, output:\n%s", code, out.String())
+	}
+
+	// The model decides the tie of page 2 and the article with no signal. Its
+	// decision for page 1 does not count, because page 1 has one code.
+	decisions := "version: 1\nmodel: test\ndecisions:\n  - {page: 1, code: 01-XX, confidence: 0.9}\n  - {page: 2, code: 20-XX, confidence: 0.8}\n  - {page: 3, code: 01-XX, confidence: 0.95}\n"
+	if err := os.WriteFile(filepath.Join(root, wpcorpus.ManifestDir, wpcorpus.MSCModelFile), []byte(decisions), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if code := runWP([]string{"msc", "-corpus", root}, &out, &errb); code != ExitOK {
+		t.Fatalf("model run: exit %d: %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "4 articles, 4 with a code, 0 from the categories, 0 from the lead, 1 from both (0 agree), 1 with the links of the lead, 2 from the model, 0 with a tie, 0 with no signal, 2 written") {
+		t.Errorf("model run output:\n%s", out.String())
+	}
+	mds, err = wpcorpus.ReadMetadataFiles(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = map[int][]string{1: {"55-XX"}, 2: {"20-XX"}, 3: {"01-XX"}, 4: {"55-XX"}}
+	for _, md := range mds {
+		if !slices.Equal(md.MSC, want[md.Page]) {
+			t.Errorf("model run: page %d: msc %v, want %v", md.Page, md.MSC, want[md.Page])
+		}
 	}
 }

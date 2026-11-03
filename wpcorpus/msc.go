@@ -213,3 +213,46 @@ func ReadLead(root string, page int) (string, []int, error) {
 	}
 	return LeadParagraph(string(data)), LeadLinks(string(data)), nil
 }
+
+// MSCDecision is the class that the model pass of WP7.3 gave to an article
+// with no code or a tie.
+type MSCDecision struct {
+	Page       int     `yaml:"page"`
+	Code       string  `yaml:"code"`
+	Confidence float64 `yaml:"confidence"`
+}
+
+// mscModel is the file manifests/wikipedia/msc-model.yaml.
+type mscModel struct {
+	Version   int           `yaml:"version"`
+	Model     string        `yaml:"model"`
+	Decisions []MSCDecision `yaml:"decisions"`
+}
+
+// MSCModelFile is the name of the file of the model decisions in the
+// manifest directory.
+const MSCModelFile = "msc-model.yaml"
+
+// LoadMSCModel reads the decisions of the model pass, by page id. It gives an
+// empty map when the corpus has no file of decisions.
+func LoadMSCModel(root string) (map[int]MSCDecision, error) {
+	var m mscModel
+	err := readYAML(filepath.Join(root, ManifestDir, MSCModelFile), &m)
+	if os.IsNotExist(err) {
+		return map[int]MSCDecision{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int]MSCDecision, len(m.Decisions))
+	for i, d := range m.Decisions {
+		if d.Page <= 0 || !msc.Valid(d.Code) || d.Confidence < 0 || d.Confidence > 1 {
+			return nil, fmt.Errorf("%s: decision %d needs a page id, a valid MSC code and a confidence from 0 to 1", MSCModelFile, i+1)
+		}
+		if _, ok := out[d.Page]; ok {
+			return nil, fmt.Errorf("%s: page %d has two decisions", MSCModelFile, d.Page)
+		}
+		out[d.Page] = d
+	}
+	return out, nil
+}
