@@ -70,6 +70,7 @@ func records(t *testing.T) string {
 	recs := []ingest.Record{
 		{ID: "2312.00752#3KH2", Kind: "statement", Title: "Theorem 3", URL: "https://arxiv.org/abs/2312.00752v1", Locator: locator, Class: ingest.Open, Text: recordText, Fingerprints: ingest.Fingerprints(recordText), Meta: map[string]string{"paper": "2312.00752", "version": "v1", "role": "theorem", "number": "3"}},
 		{ID: "2312.00752#9QQ1", Kind: "proof", Locator: "ax://paper/2312.00752#9QQ1", Class: ingest.Open, Text: "Proof. Easy."},
+		{ID: "2312.00752#7EXR", Kind: "exercise", Locator: "ax://paper/2312.00752#7EXR", Class: ingest.Open, Text: "Exercise 4. Prove that each group with four elements is abelian."},
 		{ID: "2312.00752#5RMK", Kind: "remark", Locator: "ax://paper/2312.00752#5RMK", Class: ingest.Open, Text: "A remark."},
 		{ID: "2312.00752#0NL0", Kind: "statement", Class: ingest.Open, Text: "A result with no locator."},
 	}
@@ -342,5 +343,19 @@ func TestRunRecordAttach(t *testing.T) {
 		if want == "" && got != "" || !strings.Contains(got, want) {
 			t.Errorf("after turn %d the goal says %q, and it must say %q", i+1, got, want)
 		}
+	}
+}
+
+func TestRunRecordExercise(t *testing.T) {
+	ex := "---\ntag: ~1a2b3c4d\nkind: exercise\nname: Groups of order four\nuses: [G5S1M9]\nabout: [G5S1M9]\ndifficulty: 2\nmath_group: C\ncheck: none\nsources:\n  - url: https://example.com/notes#exercise-4\n    locator: ax://paper/2312.00752#7EXR\n---\n\n## Exercise\n\nShow that a [[group|G5S1M9]] of order $4$ is commutative.\n\n## Solution\n\n"
+	rec := run(t, "arxiv_results:2312.00752#7EXR", []*llm.Response{
+		write(newPath, ex+"The group is cyclic or each element has order two.\n"),
+		write(newPath, ex+"1. An element of the group has order $1$, $2$ or $4$, by Lagrange's theorem.\n2. When an element has order $4$, the group is cyclic, thus commutative.\n3. Else each element has order at most two, and then $ab = (ab)^{-1} = b^{-1}a^{-1} = ba$.\n"),
+	}, []*llm.Response{verdict(curate.Same, "the node asks the same task.")})
+	if rec.Outcome != agent.Success || len(rec.Turns) != 2 {
+		t.Fatalf("the run gives %s, %q after %d turns", rec.Outcome, rec.Reason, len(rec.Turns))
+	}
+	if got := rec.Turns[0].Why; !strings.Contains(got, "is not a list of numbered steps") {
+		t.Errorf("after turn 1 the goal says %q", got)
 	}
 }
