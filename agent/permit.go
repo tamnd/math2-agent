@@ -364,7 +364,6 @@ var uncurated = []string{"formal", "same_as", "close_to", "aligned", "retired", 
 var newKinds = []string{"statement", "concept", "example", "proof"}
 
 // permitCurate allows a new node of a kind of newKinds with no field of uncurated and no explanation, and a change of a node that changes only the fields of curated and adds sources at the end of its sources.
-
 func permitCurate(c workspace.Change, n *node.Node) error {
 	if c.Old == nil {
 		if !tag.IsProvisional(n.ID) || c.Path != "nodes/~/"+n.ID+".md" {
