@@ -29,6 +29,7 @@ type fetchRun struct {
 	resolve wpcorpus.Resolver
 	facts   *wpcorpus.StoreFacts
 	byID    map[int64]*wpcorpus.Candidate
+	prior   map[int]*wpcorpus.Metadata // the metadata before the run, which keeps the fields that the run does not compute
 	dump    string
 	stdout  io.Writer
 	stderr  io.Writer
@@ -303,6 +304,9 @@ func (r *fetchRun) write(p *wpcorpus.Page, sha string, unstable bool, settled *w
 		}
 		if settled != nil && settled.ID != p.Revision {
 			md.Settled, md.SettledTimestamp = settled.ID, settled.Timestamp
+		}
+		if old := r.prior[p.ID]; old != nil {
+			md.MSC = old.MSC
 		}
 		if c != nil {
 			md.Signals, md.Rule, md.Projects, md.Class, md.Importance = c.Signals.String(), c.Rule, c.Projects, c.Class, c.Importance
