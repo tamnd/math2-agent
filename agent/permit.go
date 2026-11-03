@@ -367,6 +367,9 @@ var newKinds = []string{"statement", "concept", "example", "proof", "exercise"}
 
 func permitCurate(c workspace.Change, n *node.Node) error {
 	if c.Old == nil {
+		if !tag.IsProvisional(n.ID) || c.Path != "nodes/~/"+n.ID+".md" {
+			return fmt.Errorf("a new node of curate is in nodes/~/ with a provisional id, and %s is not. To add a source to a node that exists, read its file with read_file and write the same path", c.Path)
+		}
 		if k := n.Kind(); !slices.Contains(newKinds, k) {
 			return fmt.Errorf("curate adds statement, concept, example, proof and exercise nodes, and this node is of the kind %s", k)
 		}
