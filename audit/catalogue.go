@@ -125,7 +125,7 @@ var catalogue = []entry{
 	{Rule{"Y13", Wikipedia, false, "an article in scope whose revision of record is more than 60 days older than its newest settled revision"}, y13},
 	{Rule{"Y14", Wikipedia, false, "a candidate article that two signals name and that the classifier rejects with a confidence below 0.9"}, y14},
 	{Rule{"Y15", Wikipedia, true, "no file, report or tool of math2 writes to a Wikimedia wiki"}, nil},
-	{Rule{"Y16", Wikipedia, false, "a citation with a DOI, ISBN, zbMATH id, MR number or arXiv id that resolves to no source record"}, nil},
+	{Rule{"Y16", Wikipedia, false, "a citation with a DOI, ISBN, zbMATH id, MR number or arXiv id that resolves to no source record"}, y16},
 	{Rule{"Y17", Wikipedia, false, "the prose recall on gold set Y is below 90% for an article type or an MSC code at two digits"}, nil},
 	{Rule{"Y18", Wikipedia, true, "each article in scope has an outcome of the parity report for each of its items"}, y18},
 	{Rule{"H01", Resources, true, "the resource register, the tag register and the inventory register have no value in common"}, h01},
