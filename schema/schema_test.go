@@ -116,9 +116,11 @@ func TestFindings(t *testing.T) {
 }
 
 func TestArxivLicence(t *testing.T) {
-	front := "kind: concept\nname: A node\nsources:\n  - arxiv: 2401.00001v1\n    locator: Definition 1\n    mention: ax://paper/2401.00001#A\n    licence: cc-by\n"
-	if f := Embedded().Validate(parse(t, front)); len(f) != 0 {
-		t.Errorf("an arxiv source with a licence gives %v", f)
+	for _, l := range []string{"cc-by", "arxiv-1.0", "cc0"} {
+		front := "kind: concept\nname: A node\nsources:\n  - arxiv: 2401.00001v1\n    locator: Definition 1\n    mention: ax://paper/2401.00001#A\n    licence: " + l + "\n"
+		if f := Embedded().Validate(parse(t, front)); len(f) != 0 {
+			t.Errorf("an arxiv source with the licence %s gives %v", l, f)
+		}
 	}
 }
 
