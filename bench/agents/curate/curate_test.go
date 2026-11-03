@@ -237,7 +237,7 @@ func attempts(it item) []attempt {
 	out := []attempt{
 		{"reference", []*llm.Response{read, write(it.node(kind, it.locator(), it.Body))}, []*llm.Response{verdict(curate.Same)}, ""},
 		{"copy", []*llm.Response{read, write(it.node(kind, it.locator(), it.Text)), stuck()}, nil, "copies the text of the record"},
-		{"no locator", []*llm.Response{read, write(it.node(kind, "", it.Body)), stuck()}, nil, "has not added a node with a source whose locator is " + it.locator()},
+		{"no locator", []*llm.Response{read, write(it.node(kind, "", it.Body)), stuck()}, nil, "has not added a source whose locator is " + it.locator()},
 		{"wrong kind", []*llm.Response{read, write(it.node(other, it.locator(), it.Body)), stuck()}, nil, "is a " + kind + " node, and it is a " + other + " node"},
 	}
 	for _, w := range it.Wrong {
