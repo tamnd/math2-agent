@@ -1,5 +1,5 @@
 role: curate
-version: 0.2.0
+version: 0.3.0
 tools: [get, neighbours, path, search, resolve, read_file, write_file, record, propose_same]
 ladder:
   - model: claude-sonnet-5-5

@@ -70,6 +70,7 @@ func records(t *testing.T) string {
 	recs := []ingest.Record{
 		{ID: "2312.00752#3KH2", Kind: "statement", Title: "Theorem 3", URL: "https://arxiv.org/abs/2312.00752v1", Locator: locator, Class: ingest.Open, Text: recordText, Fingerprints: ingest.Fingerprints(recordText), Meta: map[string]string{"paper": "2312.00752", "version": "v1", "role": "theorem", "number": "3"}},
 		{ID: "2312.00752#9QQ1", Kind: "proof", Locator: "ax://paper/2312.00752#9QQ1", Class: ingest.Open, Text: "Proof. Easy."},
+		{ID: "2312.00752#5RMK", Kind: "remark", Locator: "ax://paper/2312.00752#5RMK", Class: ingest.Open, Text: "A remark."},
 		{ID: "2312.00752#0NL0", Kind: "statement", Class: ingest.Open, Text: "A result with no locator."},
 	}
 	var b strings.Builder
@@ -185,7 +186,7 @@ func TestBrief(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"into a new statement node", "The goal of the job: a node of the theorem.\n", "at the end of the sources of that node", "{arxiv: 2312.00752v1, locator: " + locator + "}"} {
+	for _, want := range []string{"into a new statement node", "The goal of the job: a node of the theorem.\n", "at the end of the sources of that node", "nodes/3C5/3C53TD.md", "{arxiv: 2312.00752v1, locator: " + locator + "}"} {
 		if !strings.Contains(brief, want) {
 			t.Errorf("the brief has no %q:\n%s", want, brief)
 		}
@@ -193,12 +194,16 @@ func TestBrief(t *testing.T) {
 	if strings.Contains(brief, recordText) {
 		t.Error("the brief has the text of the record, which is untrusted")
 	}
+	brief, err = curate.Brief(ws, &agent.Job{ID: "j-p", Role: "curate", Target: "arxiv_results:2312.00752#9QQ1", Goal: "a node of the proof."}, rs)
+	if err != nil || !strings.Contains(brief, "into a new proof node") || !strings.Contains(brief, "the field proves") || strings.Contains(brief, "~1a2b3c4d") {
+		t.Errorf("the brief of a proof is %q, %v", brief, err)
+	}
 	brief, err = curate.Brief(ws, &agent.Job{ID: "j-2", Role: "curate", Target: "3C53TD", Goal: "fix the uses"}, rs)
 	if err != nil || !strings.Contains(brief, "a statement node") || !strings.Contains(brief, `<data source="nodes/3C5/3C53TD.md"`) {
 		t.Errorf("the brief of a node is %q, %v", brief, err)
 	}
 	for target, want := range map[string]string{
-		"arxiv_results:2312.00752#9QQ1": "is a proof",
+		"arxiv_results:2312.00752#5RMK": "is a remark",
 		"arxiv_results:2312.00752#0NL0": "has no locator",
 		"7K3QX2":                        "no such file",
 		"lean/X":                        "is not a tag",
