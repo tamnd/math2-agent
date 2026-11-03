@@ -9,6 +9,9 @@ import (
 	"image/color"
 	"image/draw"
 	"image/jpeg"
+	"os"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -191,11 +194,78 @@ func socialJPEG(title, subtitle, tag string) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+// socialCardVersion names the directory of the card cache. Change it when socialJPEG draws the cards differently, so that the next build draws every card again.
+const socialCardVersion = "social-1"
+
+// cardCache keeps the social cards between builds, next to the math cache, so that a build draws only the cards of new or renamed nodes. The name of a card holds a hash of its text, so a card in the cache is the card the build would draw.
+type cardCache struct {
+	dir  string
+	mu   sync.Mutex
+	used map[string]bool
+}
+
+func newCardCache(mathCache string) *cardCache {
+	if mathCache == "" {
+		return nil
+	}
+	dir := filepath.Join(filepath.Dir(mathCache), socialCardVersion)
+	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- the cards are public.
+		return nil
+	}
+	return &cardCache{dir: dir, used: map[string]bool{}}
+}
+
+func (c *cardCache) get(p string) []byte {
+	if c == nil {
+		return nil
+	}
+	name := path.Base(p)
+	c.mu.Lock()
+	c.used[name] = true
+	c.mu.Unlock()
+	data, err := os.ReadFile(filepath.Join(c.dir, name)) // #nosec G304 -- the builder makes the name.
+	if err != nil {
+		return nil
+	}
+	return data
+}
+
+func (c *cardCache) put(p string, data []byte) {
+	if c == nil {
+		return
+	}
+	full := filepath.Join(c.dir, path.Base(p))
+	tmp := full + ".tmp"
+	if os.WriteFile(tmp, data, 0o644) == nil { // #nosec G306 -- the cards are public.
+		_ = os.Rename(tmp, full)
+	}
+}
+
+// prune removes the cards that this build did not use, so that the cache does not grow with every rename.
+func (c *cardCache) prune() {
+	if c == nil {
+		return
+	}
+	entries, err := os.ReadDir(c.dir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if !c.used[e.Name()] {
+			_ = os.Remove(filepath.Join(c.dir, e.Name()))
+		}
+	}
+}
+
 func (b *builder) writeSocial(tag, title, subtitle string) (string, error) {
 	p := socialPath(tag, title, subtitle)
-	img, err := socialJPEG(title, subtitle, tag)
-	if err != nil {
-		return "", err
+	img := b.cards.get(p)
+	if img == nil {
+		var err error
+		if img, err = socialJPEG(title, subtitle, tag); err != nil {
+			return "", err
+		}
+		b.cards.put(p, img)
 	}
 	if err := b.write(p, img); err != nil {
 		return "", err
