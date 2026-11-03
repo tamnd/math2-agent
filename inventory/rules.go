@@ -36,6 +36,7 @@ const (
 	ResearchPaper   = "research-paper"
 	ResearchAligned = "research-aligned"
 	ResearchNotItem = "research-not-item"
+	TextbookNode    = "textbook-node"
 )
 
 // applyNotItem gives the outcome out_of_scope to an open row of the research layer when the import no longer makes any of its mentions, because the pass classify gave each item a kind that is not a mention kind, such as remark (corpus arxiv AX5.1 and AX7.2). The row keeps its mentions and its history. It reports whether the outcome of the row changed.
@@ -131,6 +132,9 @@ type Signals struct {
 
 	// Aligned gives the tags of the nodes that have an aligned edge to a record, by the record of the edge: a mention identifier or a locator such as ax://paper/2312.00752#3KH2. It is for the rule research-aligned.
 	Aligned map[string][]string
+
+	// Sourced gives the tags of the nodes that name a locator in their sources, by the locator. It is for the rule textbook-node.
+	Sourced map[string][]string
 }
 
 // withFormal matches a row that has a mention of a formal library and a mention that passes the test. The test sees each mention of the row, so a test of a declaration also sees the mentions of the other sources.
@@ -241,6 +245,55 @@ func AlignedEdges(nodes []*node.Node) map[string][]string {
 			if m, ok := e.(map[string]any); ok {
 				if rec, _ := m["record"].(string); rec != "" && !slices.Contains(out[rec], n.ID) {
 					out[rec] = append(out[rec], n.ID)
+				}
+			}
+		}
+	}
+	return out
+}
+
+// applyTextbook gives the outcome node to a row of the textbook layer when a live node names the locator of a mention of the row in its sources (corpus spec K4.4): the curate role wrote the node from the record, and the merge of the node decided it. The target is the tags of the nodes. The row must be open, or have its outcome from this rule. When no node names the locator now, the row is open again. It reports whether the outcome of the row changed.
+func applyTextbook(r *Row, byID map[string]*Mention, sig Signals, day, by string) bool {
+	if r.Layer != Textbook || r.Outcome != nil && r.Outcome.Rule != TextbookNode {
+		return false
+	}
+	var tags []string
+	for _, m := range mentionsOf(r, byID) {
+		if m.Locator != "" {
+			tags = append(tags, sig.Sourced[m.Locator]...)
+		}
+	}
+	slices.Sort(tags)
+	tags = slices.Compact(tags)
+	was := r.Outcome
+	switch {
+	case len(tags) > 0:
+		if was != nil && slices.Equal(was.Target, tags) {
+			return false
+		}
+		r.Outcome = &Outcome{Value: OutcomeNode, Target: tags, Reason: "a node names the record of the item in its sources (corpus spec K4.4)", Rule: TextbookNode, By: by}
+		r.History = append(r.History, Event{Op: "outcome", At: day, By: by, Note: "node " + strings.Join(tags, ", ")})
+		return true
+	case was != nil:
+		r.Outcome = nil
+		r.History = append(r.History, Event{Op: "outcome", At: day, By: by, Note: "open again, no node names the record now"})
+		return true
+	}
+	return false
+}
+
+// SourcedNodes gives the tags of the live nodes that name each locator in their sources, by the locator, for Signals.Sourced.
+func SourcedNodes(nodes []*node.Node) map[string][]string {
+	out := map[string][]string{}
+	for _, n := range nodes {
+		if _, retired := n.Meta["retired"]; retired {
+			continue
+		}
+		list, _ := n.Meta["sources"].([]any)
+		for _, s := range list {
+			if m, ok := s.(map[string]any); ok {
+				if loc, _ := m["locator"].(string); loc != "" && !slices.Contains(out[loc], n.ID) {
+					out[loc] = append(out[loc], n.ID)
 				}
 			}
 		}
