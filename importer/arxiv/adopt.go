@@ -257,7 +257,13 @@ func draft(id, kind, section, defines string, r *inventory.Row, m *inventory.Men
 		fmt.Fprintf(&b, "defines: %s\n", defines)
 	}
 	b.WriteString("sources:\n")
-	fmt.Fprintf(&b, "  - arxiv: %s\n    locator: %s\n    mention: %s\n    note: the paper that states the item (corpus arxiv AX9.2)\n", scalar(fmt.Sprintf("%sv%d", paper, version)), scalar(cmp.Or(locator, "the paper")), scalar(m.ID))
+	fmt.Fprintf(&b, "  - arxiv: %s\n    locator: %s\n    mention: %s\n", scalar(fmt.Sprintf("%sv%d", paper, version)), scalar(cmp.Or(locator, "the paper")), scalar(m.ID))
+	if meta != nil {
+		if l := meta.Licence(version); l != "" {
+			fmt.Fprintf(&b, "    licence: %s\n", scalar(l))
+		}
+	}
+	b.WriteString("    note: the paper that states the item (corpus arxiv AX9.2)\n")
 	if meta != nil {
 		if who := meta.AuthorNames(); who != "" {
 			fmt.Fprintf(&b, "history:\n  notes: %s\n", scalar(fmt.Sprintf("The source is arXiv:%sv%d (%s), by %s. A paper also restates older results, so this is not the first statement until a person or a later pass confirms it.", paper, version, submitted(paper), who)))
