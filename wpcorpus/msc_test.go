@@ -126,3 +126,34 @@ func TestClassifyMSC(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadMSCModel(t *testing.T) {
+	root := t.TempDir()
+	if m, err := LoadMSCModel(root); err != nil || len(m) != 0 {
+		t.Fatalf("no file: %v, %v", m, err)
+	}
+	dir := filepath.Join(root, ManifestDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(body string) {
+		if err := os.WriteFile(filepath.Join(dir, MSCModelFile), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("version: 1\nmodel: test\ndecisions:\n  - {page: 7, code: 05-XX, confidence: 0.9}\n")
+	if m, err := LoadMSCModel(root); err != nil || m[7].Code != "05-XX" || m[7].Confidence != 0.9 {
+		t.Errorf("LoadMSCModel = %v, %v", m, err)
+	}
+	for _, body := range []string{
+		"decisions:\n  - {page: 7, code: 05, confidence: 0.9}\n",
+		"decisions:\n  - {page: 0, code: 05-XX, confidence: 0.9}\n",
+		"decisions:\n  - {page: 7, code: 05-XX, confidence: 1.5}\n",
+		"decisions:\n  - {page: 7, code: 05-XX, confidence: 0.9}\n  - {page: 7, code: 11-XX, confidence: 0.5}\n",
+	} {
+		write(body)
+		if _, err := LoadMSCModel(root); err == nil {
+			t.Errorf("%q: no error", body)
+		}
+	}
+}
