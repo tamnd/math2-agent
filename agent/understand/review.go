@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-// The review queues of the passes (AX7.4 to AX7.6, rule D11) and the gold sets U and C (AX11.2). A record that a check did not accept carries its queue: prose-review, unfold-review or proof-target. A record whose result was not valid twice carries Failed. People work the queues. They also mark the gold sets, which hold marks and ids, never text of a paper (AX11.1).
+// The review queues of the passes (AX7.4 to AX7.6, rule D11) and the gold sets U and C (AX11.2). A record that a check did not accept carries its queue: prose-review, unfold-review or proof-target. A record whose result was not valid twice carries Failed. People work the queues, and write their decisions in DecisionsFile. They also mark the gold sets, which hold marks and ids, never text of a paper (AX11.1).
 
 // FailedQueue is the queue of the records whose result was not valid twice.
 const FailedQueue = "model-failed"
@@ -55,8 +55,16 @@ type Queue struct {
 	Items []string `json:"items"` // the ids of the records
 }
 
-// Reviews returns the review queues of each pass in the tree at root, in the order of Passes and then of the queue names. A queue with no record is not in the result.
+// Reviews returns the review queues of each pass in the tree at root, in the order of Passes and then of the queue names. A record is in prose-review when one of its prose items is. A record whose queued parts each have a decision in DecisionsFile has left its queue. A queue with no record is not in the result.
 func Reviews(root string) ([]Queue, error) {
+	ds, err := ReadDecisions(root)
+	if err != nil {
+		return nil, err
+	}
+	done := map[string]bool{}
+	for _, d := range ds {
+		done[d.key()] = true
+	}
 	var out []Queue
 	for _, pass := range Passes {
 		rs, err := ReadAll(root, pass)
@@ -65,11 +73,15 @@ func Reviews(root string) ([]Queue, error) {
 		}
 		by := map[string][]string{}
 		for _, r := range rs {
+			q := r.Queue
+			if q == "" && slices.ContainsFunc(r.Prose, func(p ProseItem) bool { return p.Queue != "" }) {
+				q = ProseReview
+			}
 			switch {
 			case r.Failed != "":
 				by[FailedQueue] = append(by[FailedQueue], r.ID)
-			case r.Queue != "":
-				by[r.Queue] = append(by[r.Queue], r.ID)
+			case q != "" && !decided(r, q, done):
+				by[q] = append(by[q], r.ID)
 			}
 		}
 		for _, q := range slices.Sorted(maps.Keys(by)) {
