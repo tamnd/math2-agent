@@ -80,8 +80,34 @@ func FormatMentions(ms []Mention) ([]byte, error) {
 	return encodeLines(ms)
 }
 
-// WriteRows writes the rows to records/inventory/ in the tree at root. It replaces each file, and it removes the shards that have no row now.
+// PackedPins gives, for each source whose records can live in tamnd/math2-records, the pin that names its commit there (corpus arxiv AQ11).
+var PackedPins = map[string]string{"arxiv": "manifests/records-arxiv.yaml"}
+
+// Packed returns the sources whose records the tree at root holds only in tamnd/math2-records: the tree has the pin of the source and no mentions of it. A clustering of such a tree would lose the rows of the source, thus WriteRows refuses it until m2 corpus records unpack puts the records back.
+func Packed(root string) []string {
+	var out []string
+	for source, pin := range PackedPins {
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(pin))); err != nil {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(root, MentionsDir, source)); errors.Is(err, fs.ErrNotExist) {
+			out = append(out, source)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// WriteRows writes the rows to records/inventory/ in the tree at root. It replaces each file, and it removes the shards that have no row now. It refuses a tree whose records of a source are packed (Packed).
 func WriteRows(root string, rows []Row) error {
+	if p := Packed(root); len(p) > 0 {
+		return fmt.Errorf("inventory: the records of %s are in tamnd/math2-records, not in the tree, so new rows would lose their rows. Run m2 corpus records unpack -out DIR first", strings.Join(p, " and "))
+	}
+	return writeRows(root, rows)
+}
+
+// writeRows is WriteRows with no check of Packed.
+func writeRows(root string, rows []Row) error {
 	shards := map[string][]Row{}
 	for _, r := range rows {
 		k := RowShard(r.ID)
@@ -293,3 +319,6 @@ func writeFile(path string, data []byte) error {
 	}
 	return os.Rename(tmp.Name(), path)
 }
+
+// KeepRows writes the rows to records/inventory/ in the tree at root, as WriteRows does, when the records of a source go to or come from tamnd/math2-records. It does not check Packed.
+func KeepRows(root string, rows []Row) error { return writeRows(root, rows) }
