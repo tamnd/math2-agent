@@ -29,7 +29,7 @@ import (
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
 
-const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -source wikipedia -corpus DIR [-type T] [-msc CODE] [-since DATE] [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv|wikipedia [-msc CODE]]\n       m2 corpus link [-root DIR]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus understand review [-root DIR] [-items] [-json]\n       m2 corpus understand gold [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]\n       " + confirmUsage + "\n       " + adoptUsage
+const corpusUsage = "m2 corpus import [-root DIR] [-commit C] [source...]\n       m2 corpus import -source arxiv -corpus DIR [-root DIR] [-commit C]\n       m2 corpus import -source wikipedia -corpus DIR [-type T] [-msc CODE] [-since DATE] [-root DIR] [-commit C]\n       m2 corpus import -plan FILE [-root DIR] [-commit C] [-cache DIR] [-summary FILE]\n       m2 corpus cluster [-root DIR] [-commit C] [-source arxiv|wikipedia [-msc CODE]]\n       m2 corpus link [-root DIR]\n       m2 corpus gold [-root DIR] [-json] [-write]\n       m2 corpus recall [-root DIR] [-json] [-write]\n       m2 corpus index [-root DIR] [-json] [-write] [-missing]\n       m2 corpus status [-root DIR] [-json]\n       m2 corpus status -layer research -corpus DIR [-root DIR] [-json] [-write]\n       m2 corpus queue [-root DIR] [-n N] [-json] [-asked CODES] NAME\n       m2 corpus plan [-root DIR] [-n N] [-json] NAME\n       m2 corpus plan understand -tier T1..T4 [-msc CODE] [-root DIR] [-json]\n       m2 corpus understand review [-root DIR] [-items] [-json]\n       m2 corpus understand gold [-root DIR] [-json]\n       m2 corpus sample -month YYYY-MM -source arxiv [-seed S] [-root DIR] [-write] [-json]\n       m2 corpus report [-root DIR] [-store DIR] [-from YYYY-MM-DD] [-to YYYY-MM-DD] [-json]\n       " + corpusRecordsUsage + "\n       " + confirmUsage + "\n       " + adoptUsage
 
 func runCorpus(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -68,6 +68,8 @@ func runCorpus(args []string, stdout, stderr io.Writer) int {
 		return runCorpusAdopt(args[1:], stdout, stderr)
 	case "parity":
 		return runCorpusParity(args[1:], stdout, stderr)
+	case "records":
+		return runCorpusRecords(args[1:], stdout, stderr)
 	}
 	fmt.Fprintln(stderr, "usage: "+corpusUsage)
 	return ExitUsage
@@ -227,6 +229,10 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 		return importWikipedia(*root, *commit, *corpus, part, stdout, stderr)
 	}
 	if *source != "" {
+		if slices.Contains(inventory.Packed(*root), *source) {
+			fmt.Fprintf(stderr, "%s: the records of %s are in tamnd/math2-records, not in %s. Run m2 corpus records unpack -out DIR first, so that the import keeps the ids of the rows.\n", name, *source, *root)
+			return ExitFailure
+		}
 		// The rows of the last clustering give the named results of the name method (AX6.2).
 		rows, err := inventory.ReadRows(*root)
 		if err != nil {
