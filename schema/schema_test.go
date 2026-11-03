@@ -97,6 +97,7 @@ func TestFindings(t *testing.T) {
 		{"bad nested field", "kind: statement\nrole: lemma\nname: A node\nformal:\n  - system: lean4\n    decl: X\n    match: exact\n    level: E5\n", "S01", 10, `the field "level" is not allowed here`},
 		{"bad enum", "kind: statement\nrole: claim\nname: A node\n", "S01", 4, "role:"},
 		{"bad wikipedia source", "kind: concept\nname: A node\nsources:\n  - wikipedia: Group theory\n    locator: lead section\n", "S01", 6, "sources.0"},
+		{"bad licence", "kind: concept\nname: A node\nsources:\n  - arxiv: 2401.00001v1\n    locator: Definition 1\n    licence: CC BY\n", "S01", 8, "sources.0.licence"},
 		{"two source ids", "kind: concept\nname: A node\nsources:\n  - doi: \"10.1/x\"\n    arxiv: \"2106.09685v2\"\n    locator: p. 3\n", "S01", 6, "sources.0: a source must have exactly one identifier"},
 	}
 	s := Embedded()
@@ -111,6 +112,13 @@ func TestFindings(t *testing.T) {
 		if !found {
 			t.Errorf("%s: want %s on line %d with %q, got %v", c.name, c.rule, c.line, c.msg, got)
 		}
+	}
+}
+
+func TestArxivLicence(t *testing.T) {
+	front := "kind: concept\nname: A node\nsources:\n  - arxiv: 2401.00001v1\n    locator: Definition 1\n    mention: ax://paper/2401.00001#A\n    licence: cc-by\n"
+	if f := Embedded().Validate(parse(t, front)); len(f) != 0 {
+		t.Errorf("an arxiv source with a licence gives %v", f)
 	}
 }
 

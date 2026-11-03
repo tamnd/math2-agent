@@ -1247,6 +1247,11 @@
           "type": "string",
           "minLength": 1
         },
+        "licence": {
+          "description": "The licence of the version of an arXiv source, as tamnd/arxiv gives it, for example cc-by or arxiv-1 (corpus arxiv AX9.6).",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
         "sections": {
           "description": "The sections of the node that the source filled with adopted or adapted text (corpus wikipedia WP9.2 and WP9.3).",
           "type": "array",
