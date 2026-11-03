@@ -20,10 +20,13 @@ type Tier struct {
 // T1 and T4 are measured in the MSC 20 pilot (#256, claude-haiku-5-5, input with the cache):
 // T1 is 22k tokens in and 5k out for each paper, T4 is 11k in and 1k out for each proof.
 // The high cost of T4 stays the estimate for a model of tier 2.
+// T2 and T3 are measured on a sample of the pilot (AX7.8, claude-haiku-5-5 with the check by gpt-6-sol):
+// T2 is 14k tokens in and 3.3k out for each paper (6 papers), T3 is 2k in and 1.7k out for each item (41 items of 3 papers).
+// The run records do not count the tokens of the check, so the high costs of T2 and T3 stay the estimates for a model of tier 2.
 var Tiers = map[string]Tier{
 	"T1": {Name: "T1", Passes: "classify, concepts", Unit: "paper", Est: queue.Estimate{Tier: 1, TokensIn: 22000, TokensOut: 5000, CostLow: 0.005, CostHigh: 0.006, CostKnown: true}},
-	"T2": {Name: "T2", Passes: "prose and its check", Unit: "paper", Est: queue.Estimate{Tier: 2, TokensIn: 35000, TokensOut: 4000, CostLow: 0.05, CostHigh: 0.06, CostKnown: true}}, // #nosec G101 -- Passes names the passes of a tier, not a password
-	"T3": {Name: "T3", Passes: "unfold and its check", Unit: "item", Est: queue.Estimate{Tier: 2, TokensIn: 17000, TokensOut: 900, CostLow: 0.03, CostHigh: 0.03, CostKnown: true}},  // #nosec G101 -- Passes names the passes of a tier, not a password
+	"T2": {Name: "T2", Passes: "prose and its check", Unit: "paper", Est: queue.Estimate{Tier: 2, TokensIn: 14000, TokensOut: 3300, CostLow: 0.004, CostHigh: 0.06, CostKnown: true}}, // #nosec G101 -- Passes names the passes of a tier, not a password
+	"T3": {Name: "T3", Passes: "unfold and its check", Unit: "item", Est: queue.Estimate{Tier: 2, TokensIn: 2000, TokensOut: 1700, CostLow: 0.001, CostHigh: 0.03, CostKnown: true}},  // #nosec G101 -- Passes names the passes of a tier, not a password
 	"T4": {Name: "T4", Passes: "proof, summary", Unit: "proof", Est: queue.Estimate{Tier: 2, TokensIn: 11000, TokensOut: 1000, CostLow: 0.007, CostHigh: 0.1, CostKnown: true}},
 }
 
