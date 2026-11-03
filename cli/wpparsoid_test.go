@@ -106,8 +106,9 @@ func TestWPParsoidWorkers(t *testing.T) {
 		t.Errorf("the run took %v", d)
 	}
 	slices.SortFunc(starts, func(a, b time.Time) int { return a.Compare(b) })
+	// The server records a start after the request crosses the loopback, so the jitter of the scheduler can make a gap a little shorter than 300 ms. A limiter that does not work gives gaps near 0.
 	for i := 1; i < len(starts); i++ {
-		if gap := starts[i].Sub(starts[i-1]); gap < 290*time.Millisecond {
+		if gap := starts[i].Sub(starts[i-1]); gap < 250*time.Millisecond {
 			t.Errorf("request %d started %v after the last one", i, gap)
 		}
 	}
