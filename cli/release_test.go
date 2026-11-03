@@ -78,6 +78,9 @@ func TestReleaseCut(t *testing.T) {
 	if !strings.Contains(string(notes), "This is the first release") || !strings.Contains(string(notes), "| nodes_live | 0 | 2 | +2 | 2 new nodes |") {
 		t.Errorf("the notes are\n%s", notes)
 	}
+	if code, stdout, _ := run("release", "attribution", "-root", root, "-check"); code != ExitOK || !strings.Contains(stdout, "up to date") {
+		t.Errorf("the cut did not write the attribution file: exit code %d, stdout %q", code, stdout)
+	}
 	levels, err := os.ReadFile(filepath.Join(root, "manifests", "releases", "2027.03.levels"))
 	if err != nil || !strings.Contains(string(levels), "3C53TD E1 ") {
 		t.Errorf("the levels are %q, %v", levels, err)
@@ -133,6 +136,7 @@ func TestReleaseUsage(t *testing.T) {
 		{"release", "notes", "-root", root, "2027.03..next"},
 		{"release", "verify", "-root", root, "-record", "ubuntu", "2027.03"},
 		{"release", "verify", "-root", root},
+		{"release", "attribution", "-root", root, "extra"},
 	} {
 		if code, _, _ := run(args...); code != ExitUsage {
 			t.Errorf("m2 %v: exit code %d, and it must be %d", args, code, ExitUsage)
@@ -140,5 +144,32 @@ func TestReleaseUsage(t *testing.T) {
 	}
 	if code, _, stderr := run("release", "cut", "-root", root); code != ExitFailure || !strings.Contains(stderr, "must be a git repository") {
 		t.Errorf("a cut outside git: exit code %d, stderr %q", code, stderr)
+	}
+}
+
+func TestReleaseAttribution(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("nodes/564/564VVAQTNR.md", "---\ntag: 564VVAQTNR\nkind: concept\nname: Coset\nsources:\n  - wikipedia: en:98759@r3\n    locator: Coset, section Definition\n    note: adopted\n---\n\n## Summary\n\nText.\n")
+	if code, stdout, _ := run("release", "attribution", "-root", root, "-check"); code != ExitFailure || !strings.Contains(stdout, "out of date") {
+		t.Errorf("-check with no file: exit code %d, stdout %q", code, stdout)
+	}
+	if code, _, stderr := run("release", "attribution", "-root", root); code != ExitOK {
+		t.Fatalf("m2 release attribution: exit code %d, stderr %q", code, stderr)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "ATTRIBUTION.md"))
+	if err != nil || !strings.Contains(string(data), "## Coset\n") || !strings.Contains(string(data), "page: 98759\n") {
+		t.Fatalf("the file is %q (%v)", data, err)
+	}
+	if code, _, _ := run("release", "attribution", "-root", root, "-check"); code != ExitOK {
+		t.Errorf("-check after the write: exit code %d", code)
 	}
 }
