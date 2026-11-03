@@ -233,6 +233,22 @@ func (r *Resolver) Cite(ctx context.Context, c Citation) (Result, error) {
 			}
 		}
 	}
+	// A reprint or a printing often has a year far from the date of the catalogue, so when the blocks of the year give nothing, the matcher reads all the blocks of each author. The score keeps the year, so this adds candidates and few matches.
+	if len(cands) == 0 && c.Year > 0 && c.Edition <= 1 {
+		for _, a := range c.Authors {
+			for _, k := range r.Index.family[cluster.Family(a)] {
+				for _, id := range r.Index.block[k] {
+					if seen[id] {
+						continue
+					}
+					seen[id] = true
+					if s := Score(&c, r.Index.res[id]); s >= Middle {
+						cands = append(cands, Candidate{Resource: id, Score: round(s)})
+					}
+				}
+			}
+		}
+	}
 	slices.SortFunc(cands, func(a, b Candidate) int {
 		if a.Score != b.Score {
 			if a.Score > b.Score {

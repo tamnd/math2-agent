@@ -82,7 +82,7 @@ var systems = map[string]system{
 	"ia":           {strip: []string{"https://archive.org/details/"}, re: regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)},
 	"gutenberg":    {strip: []string{"https://www.gutenberg.org/ebooks/"}, fold: zeros, re: digits},
 	"gbooks":       {re: regexp.MustCompile(`^[A-Za-z0-9_-]{12}$`)},
-	"handle":       {strip: []string{"https://hdl.handle.net/", "hdl:"}, re: regexp.MustCompile(`^[0-9]+(\.[0-9A-Za-z]+)*/\S+$`)},
+	"handle":       {strip: []string{"https://hdl.handle.net/", "hdl:"}, re: regexp.MustCompile(`^[0-9A-Za-z]+(\.[0-9A-Za-z]+)*/\S+$`)}, // a prefix is a naming authority, numeric (1721.1) or a name of the first registrations (loc.rbc)
 	"urn":          {fold: urn, re: regexp.MustCompile(`^urn:nbn:[a-z]{2}(:[a-z0-9]+)*[:-]\S+$`)},
 	"course":       {re: regexp.MustCompile(`^[^:\s]+:\S+$`), check: course},
 	"offering":     {re: regexp.MustCompile(`^[^:\s]+:\S+:\S+$`), check: offering},
