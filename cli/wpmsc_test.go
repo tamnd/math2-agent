@@ -21,6 +21,7 @@ func TestWPMSC(t *testing.T) {
 		{Page: 1, Title: "Euler class", Revision: 11, Type: "concept", Categories: []string{"Topology"}},
 		{Page: 2, Title: "Simple group", Revision: 21, Type: "concept", Categories: []string{"Group theory", "Topology"}},
 		{Page: 3, Title: "Someone", Revision: 31, Type: "biography", Categories: []string{"Living people"}},
+		{Page: 4, Title: "Euler lemma", Revision: 41, Type: "statement", Categories: []string{"Lemmas"}},
 	} {
 		if err := wpcorpus.WriteMetadata(root, md); err != nil {
 			t.Fatal(err)
@@ -34,12 +35,17 @@ func TestWPMSC(t *testing.T) {
 	if err := os.WriteFile(path, []byte(lead), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	// The lead of page 4 links to page 1 (55-XX) and to page 2 (a tie), so the link to page 1 gives the code.
+	lead4 := "# Euler lemma\n\n::: {#o1 .subject cue=lead name=\"Euler lemma\"}\n\nThe **Euler lemma** is about the [Euler class](wikipedia://en/1) and [simple groups](wikipedia://en/2).\n\n:::\n"
+	if err := os.WriteFile(filepath.Join(root, wpcorpus.MarkdownPath(4)), []byte(lead4), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	var out, errb bytes.Buffer
 	if code := runWP([]string{"msc", "-corpus", root, "-dry-run"}, &out, &errb); code != ExitOK {
 		t.Fatalf("dry run: exit %d: %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "3 articles, 2 with a code, 1 from the categories, 0 from the lead, 1 from both (0 agree), 1 with a tie, 1 with no signal, 0 written") {
+	if !strings.Contains(out.String(), "4 articles, 3 with a code, 1 from the categories, 0 from the lead, 1 from both (0 agree), 1 with the links of the lead, 1 with a tie, 1 with no signal, 0 written") {
 		t.Errorf("dry run output:\n%s", out.String())
 	}
 	mds, err := wpcorpus.ReadMetadataFiles(root)
@@ -56,14 +62,14 @@ func TestWPMSC(t *testing.T) {
 	if code := runWP([]string{"msc", "-corpus", root}, &out, &errb); code != ExitOK {
 		t.Fatalf("exit %d: %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), ", 2 written") || !strings.Contains(out.String(), "55 1\n") {
+	if !strings.Contains(out.String(), ", 3 written") || !strings.Contains(out.String(), "55 2\n") {
 		t.Errorf("output:\n%s", out.String())
 	}
 	mds, err = wpcorpus.ReadMetadataFiles(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[int][]string{1: {"55-XX"}, 2: {"20-XX", "54-XX"}, 3: nil}
+	want := map[int][]string{1: {"55-XX"}, 2: {"20-XX", "54-XX"}, 3: nil, 4: {"55-XX"}}
 	for _, md := range mds {
 		if !slices.Equal(md.MSC, want[md.Page]) {
 			t.Errorf("page %d: msc %v, want %v", md.Page, md.MSC, want[md.Page])
