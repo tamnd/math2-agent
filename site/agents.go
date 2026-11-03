@@ -142,11 +142,37 @@ func (b *builder) writeAgents() error {
 	if err := b.writeJSON("api/spec.json", specs); err != nil {
 		return err
 	}
-	if err := b.write("llms.txt", b.llms(false)); err != nil {
+	head := b.llmsHead()
+	parts := b.llmsParts(llmsPart - len(head))
+	var llms bytes.Buffer
+	llms.Write(head)
+	llms.WriteString("## Optional\n\n")
+	if len(parts) == 1 {
+		fmt.Fprintf(&llms, "- [Full text](%s): the text of each spec document and each node in one file\n", b.abs(llmsName(0)))
+	} else {
+		for i := range parts {
+			fmt.Fprintf(&llms, "- [Full text, part %d of %d](%s): the text of the spec documents and the nodes, in parts of at most %d MB\n", i+1, len(parts), b.abs(llmsName(i)), llmsPart>>20)
+		}
+	}
+	if err := b.write("llms.txt", llms.Bytes()); err != nil {
 		return err
 	}
-	if err := b.write("llms-full.txt", b.llms(true)); err != nil {
-		return err
+	for i, part := range parts {
+		var w bytes.Buffer
+		if i == 0 {
+			w.Write(head)
+			if len(parts) > 1 {
+				fmt.Fprintf(&w, "## Parts\n\nThe full text has %d parts. This file is part 1.\n\n", len(parts))
+				for j := 1; j < len(parts); j++ {
+					fmt.Fprintf(&w, "- [Part %d](%s)\n", j+1, b.abs(llmsName(j)))
+				}
+				w.WriteString("\n")
+			}
+		}
+		w.Write(part)
+		if err := b.write(llmsName(i), w.Bytes()); err != nil {
+			return err
+		}
 	}
 	example := "7K3QX2"
 	if len(b.order) > 0 {
@@ -166,8 +192,19 @@ func (b *builder) writeAgents() error {
 	return b.write(".nojekyll", nil)
 }
 
-// llms writes llms.txt in the form of llmstxt.org. The full form adds the text of each spec document and each node.
-func (b *builder) llms(full bool) []byte {
+// llmsPart is the largest size of one file of the full text. Cloudflare Pages takes files of at most 25 MiB.
+var llmsPart = 20 << 20
+
+// llmsName is the name of part i of the full text: llms-full.txt, then llms-full-2.txt and so on.
+func llmsName(i int) string {
+	if i == 0 {
+		return "llms-full.txt"
+	}
+	return fmt.Sprintf("llms-full-%d.txt", i+1)
+}
+
+// llmsHead writes the start of llms.txt in the form of llmstxt.org: the data, the spec documents and the list of the nodes.
+func (b *builder) llmsHead() []byte {
 	var w bytes.Buffer
 	w.WriteString("# Math 2.0\n\n> Math 2.0 is a versioned knowledge graph of mathematics. Each node is a concept, a definition, a statement, a conjecture, a problem, an example, a counterexample, an object, a proof, a computation, a topic or an exercise. Each node has a permanent tag, sources, typed links to other nodes and a status that the build computes from the evidence.\n\n")
 	fmt.Fprintf(&w, "Each node page has a Markdown copy at node/<TAG>.md and a JSON copy at api/node/<TAG>.json. The URI of a node is m2://<TAG>. The front matter follows the JSON Schema at %s. The site has %d nodes now.\n\n", b.abs(b.schemaFile()), len(b.order))
@@ -196,17 +233,31 @@ func (b *builder) llms(full bool) []byte {
 		}
 		w.WriteString("\n")
 	}
-	if !full {
-		fmt.Fprintf(&w, "## Optional\n\n- [Full text](%s): the text of each spec document and each node in one file\n", b.abs("llms-full.txt"))
-		return w.Bytes()
+	return w.Bytes()
+}
+
+// llmsParts writes the text of each spec document and each node, and splits it into parts of at most llmsPart bytes. The first part has room for first bytes, since it starts with the head.
+func (b *builder) llmsParts(first int) [][]byte {
+	parts := [][]byte{nil}
+	add := func(doc string) {
+		last := len(parts) - 1
+		room := llmsPart
+		if last == 0 {
+			room = first
+		}
+		if len(parts[last]) > 0 && len(parts[last])+len(doc) > room {
+			parts = append(parts, nil)
+			last++
+		}
+		parts[last] = append(parts[last], doc...)
 	}
 	for _, d := range b.specs {
-		fmt.Fprintf(&w, "<document source=%q>\n%s\n</document>\n\n", b.abs("spec/"+d.Slug+".md"), strings.TrimSpace(string(d.Source)))
+		add(fmt.Sprintf("<document source=%q>\n%s\n</document>\n\n", b.abs("spec/"+d.Slug+".md"), strings.TrimSpace(string(d.Source))))
 	}
 	for _, v := range b.order {
-		fmt.Fprintf(&w, "<document source=%q tag=%q kind=%q>\n# %s\n\n%s\n</document>\n\n", b.abs("node/"+v.Tag+".md"), v.Tag, v.Kind, v.Name, strings.TrimSpace(v.Body))
+		add(fmt.Sprintf("<document source=%q tag=%q kind=%q>\n# %s\n\n%s\n</document>\n\n", b.abs("node/"+v.Tag+".md"), v.Tag, v.Kind, v.Name, strings.TrimSpace(v.Body)))
 	}
-	return w.Bytes()
+	return parts
 }
 
 func (b *builder) writeSitemap() error {

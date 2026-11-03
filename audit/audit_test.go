@@ -125,6 +125,8 @@ var options = map[string]func(opt *Options, root string){
 	// D05 reads the analysis plane of a checkout of tamnd/arxiv, which the fixture has in checkout/.
 	"D05": func(opt *Options, root string) { opt.Arxiv = filepath.Join(root, "checkout") },
 	// The Y rules read a checkout of tamnd/wikipedia-math, which the fixture has in wikipedia/.
+	// L04 also runs the copy check of WP9.4 on the Markdown renderings of the checkout.
+	"L04": wikipediaCheckout,
 	"Y01": wikipediaCheckout,
 	"Y02": wikipediaCheckout,
 	"Y03": wikipediaCheckout,
@@ -136,6 +138,7 @@ var options = map[string]func(opt *Options, root string){
 	"Y12": wikipediaCheckout,
 	"Y13": wikipediaCheckout,
 	"Y14": wikipediaCheckout,
+	"Y16": wikipediaCheckout,
 }
 
 func wikipediaCheckout(opt *Options, root string) { opt.Wikipedia = filepath.Join(root, "wikipedia") }

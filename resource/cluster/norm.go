@@ -11,11 +11,14 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-var fold = transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+// A chain of transformers keeps state, so each call of Fold makes its own chain. The resolver calls Fold from many goroutines.
+func newFold() transform.Transformer {
+	return transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+}
 
 // Fold gives the text in lower case, without diacritics, with each run of characters that are not letters or digits as one space.
 func Fold(s string) string {
-	s, _, _ = transform.String(fold, s)
+	s, _, _ = transform.String(newFold(), s)
 	var b strings.Builder
 	space := false
 	for _, r := range strings.ToLower(s) {
