@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 
 	axImport "github.com/tamnd/math2-agent/importer/arxiv"
 	"github.com/tamnd/math2-agent/inventory"
@@ -70,6 +71,24 @@ var (
 	versionRef    = regexp.MustCompile(`^\S+v\d+$`)
 )
 
+// shortRefs reports whether the locator of a cited result is one short reference, as "Theorem 4.1", or a list of at most eight of them with a number each, as "Theorem 4.1, Lemma 4.3, Theorem 8.5".
+func shortRefs(s string) bool {
+	parts := strings.Split(s, ",")
+	if len(parts) == 1 {
+		return shortLocator.MatchString(s)
+	}
+	if len(parts) > 8 {
+		return false
+	}
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" || !shortLocator.MatchString(p) || !strings.ContainsAny(p, "0123456789") {
+			return false
+		}
+	}
+	return true
+}
+
 // d06 checks that no arXiv mention of the class record holds text of the paper (AX5.4). Each string field of such a mention must be an id, a label, a number, a hash or a value from a closed list.
 func d06(a *auditor) outcome {
 	var o outcome
@@ -114,7 +133,7 @@ func d06(a *auditor) outcome {
 			bad("hash", "is not a sha256 hash")
 		}
 		for _, c := range m.CitesResult {
-			if !shortLocator.MatchString(c.Locator) {
+			if !shortRefs(c.Locator) {
 				bad("cites_result", "has a locator that is not a short reference")
 				break
 			}
