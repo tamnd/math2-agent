@@ -26,6 +26,12 @@ const AdoptPath = "reports/adopt/wikipedia.md"
 // AdoptBy is the name of the run in the outcomes and the history of the rows.
 const AdoptBy = "m2 corpus adopt"
 
+// The rules of schema/outcomes.v1.yaml that m2 corpus adopt names in the outcomes that it gives (corpus wikipedia WP9.2). Rule I04 checks that each rule gives one outcome.
+const (
+	NodeRule  = "wikipedia-node"     // a minted node has the text of the item of the row
+	DeferRule = "wikipedia-deferred" // the item of the row waits for the write role or for a person
+)
+
 // The states of an item in the adopt report.
 const (
 	Adopted = "adopted" // the run wrote a node with the text of the item
@@ -160,7 +166,7 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 			if r == nil || r.Outcome != nil || provisional || len(n.Mentions) == 0 {
 				continue
 			}
-			r.Outcome = &inventory.Outcome{Value: inventory.OutcomeNode, Target: []string{n.ID}, Rule: "WP9.2", By: AdoptBy}
+			r.Outcome = &inventory.Outcome{Value: inventory.OutcomeNode, Target: []string{n.ID}, Rule: NodeRule, By: AdoptBy}
 			r.History = append(r.History, inventory.Event{Op: "outcome", At: opt.Day, By: AdoptBy, Note: "node " + n.ID + " has the adopted text"})
 			res.Linked++
 		}
@@ -236,7 +242,7 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 			}
 		}
 		if it.State == Waiting && opt.Until != "" {
-			r.Outcome = &inventory.Outcome{Value: inventory.OutcomeDeferred, Reason: it.Reason, Rule: "WP9.2", Until: opt.Until, By: AdoptBy}
+			r.Outcome = &inventory.Outcome{Value: inventory.OutcomeDeferred, Reason: it.Reason, Rule: DeferRule, Until: opt.Until, By: AdoptBy}
 			r.History = append(r.History, inventory.Event{Op: "outcome", At: opt.Day, By: AdoptBy, Note: "deferred until " + opt.Until})
 			res.Deferred++
 		}

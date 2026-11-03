@@ -203,7 +203,7 @@ func TestAdoptLinksMintedNodes(t *testing.T) {
 		t.Fatalf("got %d linked and %d drafts, want 1 and 0", res.Linked, len(res.Drafts))
 	}
 	o := res.Rows[3].Outcome
-	if o == nil || o.Value != inventory.OutcomeNode || o.Target[0] != "7K3QX2JW1M" || len(res.Rows[3].History) != 1 {
+	if o == nil || o.Value != inventory.OutcomeNode || o.Rule != NodeRule || o.Target[0] != "7K3QX2JW1M" || len(res.Rows[3].History) != 1 {
 		t.Fatalf("the row has the outcome %+v and the history %+v", o, res.Rows[3].History)
 	}
 	for _, it := range res.Items {
@@ -235,7 +235,7 @@ func TestAdoptDefersAndParity(t *testing.T) {
 		t.Fatal("the run deferred no row")
 	}
 	for _, r := range res.Rows {
-		if r.Outcome != nil && r.Outcome.Value == inventory.OutcomeDeferred && (r.Outcome.Until != "2027-05-01" || r.Outcome.Reason == "" || len(r.History) == 0) {
+		if r.Outcome != nil && r.Outcome.Value == inventory.OutcomeDeferred && (r.Outcome.Rule != DeferRule || r.Outcome.Until != "2027-05-01" || r.Outcome.Reason == "" || len(r.History) == 0) {
 			t.Errorf("the deferred row %s has the outcome %+v and the history %+v", r.ID, r.Outcome, r.History)
 		}
 	}
