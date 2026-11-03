@@ -159,8 +159,8 @@ type specDoc struct {
 
 type builder struct {
 	opt         Options
-	base        string            // the URL path of the site, for example /math2
-	shards      map[string][]byte // in a Cloudflare build, the files that go in shards, by path (see ShardDir)
+	base        string      // the URL path of the site, for example /math2
+	spool       *shardSpool // in a Cloudflare build, the files that go in shards (see ShardDir)
 	nodes       map[string]*nodeView
 	order       []*nodeView
 	specs       []*specDoc
@@ -234,7 +234,7 @@ func Build(opt Options) error {
 	}
 	steps := []func() error{b.writeAssets, b.writeNodeSocialCards}
 	if opt.Cloudflare {
-		b.shards = map[string][]byte{}
+		b.spool = &shardSpool{dir: filepath.Join(opt.Out, spoolDir)}
 		steps = append(steps, b.writeSocialPacks)
 	}
 	steps = append(steps, b.writeNodes, b.writeLists, b.writeLearn, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeResources, b.writeLevels, b.writeWikipedia, b.writeFeeds)
@@ -596,9 +596,8 @@ func (b *builder) loadSpecDoc(part, f string) error {
 
 // write writes data to the output path p.
 func (b *builder) write(p string, data []byte) error {
-	if b.shards != nil && sharded.MatchString(p) {
-		b.shards[p] = data
-		return nil
+	if b.spool != nil && len(data) <= maxSharded && sharded.MatchString(p) {
+		return b.spool.add(p, data)
 	}
 	full := filepath.Join(b.opt.Out, filepath.FromSlash(p))
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil { // #nosec G301 -- the site is public.
