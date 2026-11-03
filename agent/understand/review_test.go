@@ -106,3 +106,58 @@ func TestGoldErrors(t *testing.T) {
 		t.Errorf("a kind that classify cannot give gives %v", err)
 	}
 }
+
+func TestDecisions(t *testing.T) {
+	prose := `{"id":"ax://paper/2401.00001#S1",` + rec + `,"pass":"prose","prose":[{"from":1,"to":2,"line":1,"file":"a.tex","kind":"definition","queue":"prose-review"},{"from":4,"to":4,"line":3,"file":"a.tex","kind":"claim","queue":"prose-review"}]}` + "\n"
+	files := map[string]string{
+		"records/understand/arxiv/unfold/AAA.jsonl": unfoldRecord("T3", "h3", "weaker", "unfold-review") + unfoldRecord("T5", "h5", "unsure", "unfold-review"),
+		"records/understand/arxiv/proof/AAA.jsonl": `{"id":"ax://paper/2401.00001#P1",` + rec + `,"pass":"proof","queue":"proof-target","proof":{"steps":[]}}` + "\n" +
+			`{"id":"ax://paper/2401.00001#P2",` + rec + `,"pass":"proof","queue":"proof-target","proof":{"steps":[]}}` + "\n",
+		"records/understand/arxiv/prose/AAA.jsonl": prose,
+		understand.DecisionsFile: `{"record":"ax://paper/2401.00001#P1","queue":"proof-target","decision":"confirm","target":"ax://paper/2401.00001#R1","by":"github:a","on":"2026-11-03"}` + "\n" +
+			`{"record":"ax://paper/2401.00001#T3","queue":"unfold-review","hash":"h3","decision":"weaker","by":"github:a","on":"2026-11-03"}` + "\n" +
+			`{"record":"ax://paper/2401.00001#T5","queue":"unfold-review","hash":"old","decision":"equivalent","by":"github:a","on":"2026-11-03"}` + "\n" +
+			`{"record":"ax://paper/2401.00001#S1","queue":"prose-review","item":"1-2","decision":"accept","by":"github:a","on":"2026-11-03"}` + "\n",
+	}
+	qs, err := understand.Reviews(reviewTree(t, files))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, q := range qs {
+		got = append(got, q.Pass+"/"+q.Name+"="+strings.Join(q.Items, ","))
+	}
+	// P1 and T3 are decided. The decision of T5 is of another form, and S1 has one item with no decision.
+	want := "prose/prose-review=ax://paper/2401.00001#S1 unfold/unfold-review=ax://paper/2401.00001#T5 proof/proof-target=ax://paper/2401.00001#P2"
+	if strings.Join(got, " ") != want {
+		t.Errorf("the queues are %s", strings.Join(got, " "))
+	}
+	files[understand.DecisionsFile] += `{"record":"ax://paper/2401.00001#S1","queue":"prose-review","item":"4-4","decision":"reject","by":"github:a","on":"2026-11-03"}` + "\n"
+	root := reviewTree(t, files)
+	qs, err = understand.Reviews(root)
+	if err != nil || len(qs) != 2 {
+		t.Errorf("with each prose item decided the queues are %v, %v", qs, err)
+	}
+	ds, err := understand.ReadDecisions(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pt := understand.ProofTargets(ds); len(pt) != 1 || pt["ax://paper/2401.00001#P1"] != "ax://paper/2401.00001#R1" {
+		t.Errorf("the proof targets are %v", pt)
+	}
+	for _, bad := range []string{
+		`{"record":"ax://paper/2401.00001#P1","queue":"proof-target","decision":"confirm","by":"github:a","on":"2026-11-03"}`,
+		`{"record":"ax://paper/2401.00001#P1","queue":"proof-target","decision":"none","target":"ax://paper/2401.00001#R1","by":"github:a","on":"2026-11-03"}`,
+		`{"record":"ax://paper/2401.00001#T3","queue":"unfold-review","decision":"weaker","by":"github:a","on":"2026-11-03"}`,
+		`{"record":"ax://paper/2401.00001#T3","queue":"unfold-review","hash":"h3","decision":"unsure","by":"github:a","on":"2026-11-03"}`,
+		`{"record":"ax://paper/2401.00001#S1","queue":"prose-review","item":"2-1","decision":"accept","by":"github:a","on":"2026-11-03"}`,
+		`{"record":"ax://paper/2401.00001#S1","queue":"classify-review","decision":"accept","by":"github:a","on":"2026-11-03"}`,
+		`{"record":"ax://paper/2401.00001#P1","queue":"proof-target","decision":"none","on":"2026-11-03"}`,
+		`{"record":"ax://paper/2401.00001#P1","queue":"proof-target","decision":"none","by":"github:a","on":"2026-11-03","why":"text"}`,
+		`{"record":"ax://paper/2401.00001#P1","queue":"proof-target","decision":"none","by":"github:a","on":"2026-11-03"}` + "\n" + `{"record":"ax://paper/2401.00001#P1","queue":"proof-target","decision":"none","by":"github:b","on":"2026-11-03"}`,
+	} {
+		if _, err := understand.ReadDecisions(reviewTree(t, map[string]string{understand.DecisionsFile: bad + "\n"})); err == nil {
+			t.Errorf("ReadDecisions takes %s", bad)
+		}
+	}
+}

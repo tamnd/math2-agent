@@ -16,6 +16,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/tamnd/math2-agent/agent/understand"
 	axImport "github.com/tamnd/math2-agent/importer/arxiv"
 	wpImport "github.com/tamnd/math2-agent/importer/wikipedia"
 	"github.com/tamnd/math2-agent/ingest"
@@ -243,6 +244,13 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
 			return ExitFailure
 		}
+		// A person confirms the target of an orphan proof in the queue proof-target (AX5.2, AX7.6).
+		ds, err := understand.ReadDecisions(*root)
+		if err != nil {
+			fmt.Fprintf(stderr, "%s: %v\n", name, err)
+			return ExitFailure
+		}
+		targeted := axImport.ApplyTargets(res.Mentions, understand.ProofTargets(ds))
 		linked, err := linkPapers(*root, res.Mentions)
 		if err != nil {
 			fmt.Fprintf(stderr, "%s: %v\n", name, err)
@@ -254,6 +262,9 @@ func runCorpusImport(args []string, stdout, stderr io.Writer) int {
 		}
 		if linked > 0 {
 			fmt.Fprintf(stdout, "%s: %d mentions name their resource\n", *source, linked)
+		}
+		if targeted > 0 {
+			fmt.Fprintf(stdout, "%s: %d orphan proofs take the target that a decision of proof-target gives\n", *source, targeted)
 		}
 		fmt.Fprintf(stdout, "%s: %d mentions from %d papers, %d attached, %d retired, %d restated prints, %d cited results to a mention and %d to a work, %d objects with no tag\n", *source, len(res.Mentions), res.Papers, res.Attached, res.Retired, res.Restated, res.CitedMentions, res.CitedWorks, len(res.Untagged))
 		if len(res.Untagged) > 0 {

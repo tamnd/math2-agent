@@ -696,3 +696,29 @@ func ReadEdges(root, id string) ([]Edge, error) {
 	}
 	return es, err
 }
+
+// ApplyTargets gives each orphan proof of ms, a proof whose mention attaches to unknown, the item that a decision of the queue proof-target gives it, by the id of the proof (AX5.2, AX7.6). A target that is not a mention of the same paper is left out. It returns the count of the proofs that it attaches.
+func ApplyTargets(ms []inventory.Mention, targets map[string]string) int {
+	ids := map[string]bool{}
+	for _, m := range ms {
+		ids[m.ID] = true
+	}
+	n := 0
+	for i := range ms {
+		m := &ms[i]
+		t, ok := targets[m.ID]
+		if !ok || m.Kind != "proof" || m.AttachedTo != "unknown" || !ids[t] || paperOfID(t) != paperOfID(m.ID) {
+			continue
+		}
+		m.AttachedTo = t
+		m.Hints = slices.DeleteFunc(m.Hints, func(h string) bool { return h == "target-not-an-item" })
+		n++
+	}
+	return n
+}
+
+// paperOfID returns the paper of a mention id, ax://paper/ID#TAG.
+func paperOfID(id string) string {
+	p, _, _ := strings.Cut(id, "#")
+	return p
+}
