@@ -51,6 +51,8 @@ type Result struct {
 	Aligned int
 	// NotItems is the number of open rows that got the outcome out_of_scope by the rule research-not-item.
 	NotItems int
+	// Textbook is the number of rows of the textbook layer that got the outcome node by the rule textbook-node, or lost it.
+	Textbook int
 }
 
 // Cluster runs the first two passes of corpus spec K4.3 on the mentions. Pass 1 joins two mentions with the same identifier, or with identifiers that a crosswalk links. It also joins two mentions of one kind and one block with the same content hash, which is the same item copied from paper to paper (corpus arxiv AX8.2). The block of a mention is its MSC codes at two digits (AX8.1), and two mentions with no code are in one block. Pass 2 joins two statements of formal libraries with the same canonical type hash: Lean then proves each from the other with the identity, so they are one statement. Pass 2 never joins definitions, because two definitions with one type, such as two functions from ℕ to ℕ, are not one item. A row that a pass merged names the pass as its rule: identifiers, hash or equivalence. Mentions that a row holds stay in one row, so Cluster never splits a row. Only a curator splits a row. When one group of mentions touches more than one row, Cluster keeps one row and gives the others the outcome merged.
@@ -179,6 +181,9 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 		}
 		if applyAligned(&rows[i], byID, opt.Signals, day, opt.By) {
 			res.Aligned++
+		}
+		if applyTextbook(&rows[i], byID, opt.Signals, day, opt.By) {
+			res.Textbook++
 		}
 	}
 	sortRows(rows)

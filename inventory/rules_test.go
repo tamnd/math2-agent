@@ -234,3 +234,55 @@ func TestResearchKinds(t *testing.T) {
 		t.Errorf("the open counts are %v", s.OpenBy)
 	}
 }
+
+// TestTextbookNode checks that a row of the textbook layer gets the outcome node when a live node names the locator of its mention, and is open again when no node names it.
+func TestTextbookNode(t *testing.T) {
+	loc := "https://github.com/jirilebl/ra/blob/abc/ch-seq-ser.tex#L3014"
+	ms := []Mention{{ID: MentionID("lebl_ra", "ch-seq-ser.tex#defn-9", 1), Source: "lebl_ra", NativeID: "ch-seq-ser.tex#defn-9", Locator: loc, Kind: "definition", By: "lebl_ra/1"}}
+	res, err := Cluster(nil, ms, Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Rows) != 1 || res.Rows[0].Layer != Textbook || res.Rows[0].Outcome != nil || res.Textbook != 0 {
+		t.Fatalf("the first run gave %+v", res.Rows)
+	}
+	sig := Signals{Sourced: map[string][]string{loc: {"SEQ00000B", "SEQ00000A"}}}
+	again, err := Cluster(res.Rows, ms, Options{Day: day, By: "test", Mint: counter(), Signals: sig})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o := again.Rows[0].Outcome; again.Textbook != 1 || o == nil || o.Value != OutcomeNode || o.Rule != TextbookNode || !slices.Equal(o.Target, []string{"SEQ00000A", "SEQ00000B"}) {
+		t.Errorf("the row has the outcome %+v and %d rows changed", o, again.Textbook)
+	}
+	same, err := Cluster(again.Rows, ms, Options{Day: day, By: "test", Mint: counter(), Signals: sig})
+	if err != nil || same.Textbook != 0 {
+		t.Errorf("a run with the same nodes changed %d rows: %v", same.Textbook, err)
+	}
+	back, err := Cluster(again.Rows, ms, Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if back.Textbook != 1 || back.Rows[0].Outcome != nil {
+		t.Errorf("the row has the outcome %+v and %d rows changed", back.Rows[0].Outcome, back.Textbook)
+	}
+
+	// An outcome that a person gave stays.
+	kept := []Row{{ID: back.Rows[0].ID, Mentions: back.Rows[0].Mentions, Layer: Textbook, Outcome: &Outcome{Value: OutcomeOutOfScope, Reason: "not mathematics", By: "tamnd"}}}
+	res, err = Cluster(kept, ms, Options{Day: day, By: "test", Mint: counter(), Signals: sig})
+	if err != nil || res.Textbook != 0 || res.Rows[0].Outcome.Value != OutcomeOutOfScope {
+		t.Errorf("the rule textbook-node changed the outcome %+v: %v", res.Rows[0].Outcome, err)
+	}
+}
+
+func TestSourcedNodes(t *testing.T) {
+	src := func(loc string) map[string]any { return map[string]any{"locator": loc} }
+	nodes := []*node.Node{
+		{ID: "SEQ00000A", Meta: map[string]any{"sources": []any{src("u1"), src("u2"), src("u1")}}},
+		{ID: "SEQ00000B", Meta: map[string]any{"sources": []any{src("u1"), map[string]any{"title": "no locator"}}}},
+		{ID: "OLD00000A", Meta: map[string]any{"retired": "2026-01-01", "sources": []any{src("u3")}}},
+	}
+	want := map[string][]string{"u1": {"SEQ00000A", "SEQ00000B"}, "u2": {"SEQ00000A"}}
+	if got := SourcedNodes(nodes); !maps.EqualFunc(got, want, slices.Equal) {
+		t.Errorf("the sources are %v, want %v", got, want)
+	}
+}

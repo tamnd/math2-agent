@@ -583,7 +583,7 @@ func cluster(root, commit string, stdout io.Writer) (*inventory.Result, error) {
 		Day:      time.Now(),
 		By:       "m2/" + version,
 		Used:     func(id string) bool { return reg[id] || tags[id] },
-		Signals:  inventory.Signals{Aligned: inventory.AlignedEdges(nodes)},
+		Signals:  inventory.Signals{Aligned: inventory.AlignedEdges(nodes), Sourced: inventory.SourcedNodes(nodes)},
 		NotItems: notItems,
 	})
 	if err != nil {
@@ -595,7 +595,7 @@ func cluster(root, commit string, stdout io.Writer) (*inventory.Result, error) {
 	if err := inventory.AppendRegister(root, res.Added, commit); err != nil {
 		return nil, err
 	}
-	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by cited results %d, joined by equal hashes %d, joined by equal formal statements %d, joined by equal names %d, attached with no row %d, changed by the formal rules %d, changed by aligned edges %d, out of scope by the kind of classify %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Cited, res.Hashed, res.Equivalent, res.Named, res.Orphans, res.Formal, res.Aligned, res.NotItems)
+	fmt.Fprintf(stdout, "rows: %d, new %d, with new mentions %d, merged %d, waiting for a source %d, joined by cited results %d, joined by equal hashes %d, joined by equal formal statements %d, joined by equal names %d, attached with no row %d, changed by the formal rules %d, changed by aligned edges %d, out of scope by the kind of classify %d, changed by sourced nodes %d\n", len(res.Rows), len(res.Added), res.Touched, res.Merged, res.Waiting, res.Cited, res.Hashed, res.Equivalent, res.Named, res.Orphans, res.Formal, res.Aligned, res.NotItems, res.Textbook)
 	return res, nil
 }
 
