@@ -41,10 +41,10 @@ const (
 )
 
 // kinds maps the kind of a record to the kind of the node that curate makes from it.
-var kinds = map[string]string{"statement": "statement", "definition": "concept"}
+var kinds = map[string]string{"statement": "statement", "definition": "concept", "example": "example", "proof": "proof"}
 
 // attachable maps the kind of a record to the kinds of the nodes that exist and can take the record as a source, when they state the same result.
-var attachable = map[string][]string{"statement": {"statement"}, "definition": {"concept", "definition"}}
+var attachable = map[string][]string{"statement": {"statement"}, "definition": {"concept", "definition"}, "example": {"example"}, "proof": {"proof"}}
 
 // A Record is a record of the record plane and the source that it comes from.
 type Record struct {
@@ -446,7 +446,7 @@ func Brief(ws *workspace.Workspace, job *agent.Job, rs *Records) (string, error)
 		kind, ok := kinds[r.Kind]
 		switch {
 		case !ok:
-			return "", fmt.Errorf("curate: the record %s is a %s, and curate makes nodes only of statements and definitions", r.Ref, cmp.Or(r.Kind, "record with no kind"))
+			return "", fmt.Errorf("curate: the record %s is a %s, and curate makes nodes only of statements, definitions, examples and proofs", r.Ref, cmp.Or(r.Kind, "record with no kind"))
 		case r.Locator == "":
 			return "", fmt.Errorf("curate: the record %s has no locator", r.Ref)
 		case r.Record.Text == "":
@@ -454,9 +454,12 @@ func Brief(ws *workspace.Workspace, job *agent.Job, rs *Records) (string, error)
 		}
 		fmt.Fprintf(&b, "Job %s: turn the record %s into a new %s node. The goal of the job: %s.\n\n", job.ID, r.Ref, kind, goal)
 		fmt.Fprintf(&b, "Read the record with the tool record. Then search the graph. When a node of the kind %s states the same result already, do not add a node. Add the source %s at the end of the sources of that node, and change nothing else in it.\n\n", strings.Join(attachable[r.Kind], " or "), sourceEntry(r))
-		fmt.Fprintf(&b, "Else write the new node in nodes/~/ with a provisional id, for example nodes/~/~1a2b3c4d.md, and state the result in your own words. Give it a source with the locator %s", r.Locator)
+		fmt.Fprintf(&b, "Else write the new node in nodes/~/ with a provisional id: a tilde and eight hex digits that you choose at random, as the name of the file and as the tag. State the result in your own words. Give it a source with the locator %s", r.Locator)
 		fmt.Fprintf(&b, ", for example %s", sourceEntry(r))
 		fmt.Fprintf(&b, ". Link the nodes that the result uses, and give it uses, about and msc when the graph has them.\n")
+		if kind == "proof" {
+			fmt.Fprintf(&b, "\nA proof node needs the field proves, with the tag of the statement node that the proof proves. When the graph has no node of that statement, do not add a node, and report that you are stuck.\n")
+		}
 		return b.String(), nil
 	}
 	p := tools.NodePath(job.Target)

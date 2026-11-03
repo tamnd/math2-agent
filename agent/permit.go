@@ -360,11 +360,15 @@ var curated = []string{"uses", "about", "msc", "name", "aliases"}
 // uncurated are the fields that a new node of curate does not have: the bindings, which formalize writes, the crosswalk edges, which align writes, and the fields of a retirement, which a curator writes.
 var uncurated = []string{"formal", "same_as", "close_to", "aligned", "retired", "resolved_by"}
 
-// permitCurate allows a new statement or concept node with no field of uncurated and no explanation, and a change of a node that changes only the fields of curated and adds sources at the end of its sources.
+// newKinds are the kinds of the nodes that curate adds.
+var newKinds = []string{"statement", "concept", "example", "proof"}
+
+// permitCurate allows a new node of a kind of newKinds with no field of uncurated and no explanation, and a change of a node that changes only the fields of curated and adds sources at the end of its sources.
+
 func permitCurate(c workspace.Change, n *node.Node) error {
 	if c.Old == nil {
-		if k := n.Kind(); k != "statement" && k != "concept" {
-			return fmt.Errorf("curate adds statement and concept nodes, and this node is of the kind %s", k)
+		if k := n.Kind(); !slices.Contains(newKinds, k) {
+			return fmt.Errorf("curate adds statement, concept, example and proof nodes, and this node is of the kind %s", k)
 		}
 		for _, k := range uncurated {
 			if n.Meta[k] != nil {

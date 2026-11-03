@@ -1,5 +1,9 @@
 # The curate role
 
+## 0.3.0
+
+Curate also turns an example of the record plane into an example node and a proof into a proof node. A proof node needs the field proves, and when the graph has no node of the statement, the model reports that it is stuck. The brief and the system prompt no longer give an example provisional id, because the model used the same id in different runs. The model now picks eight random hex digits.
+
 ## 0.2.0
 
 When a node of the matching kind states the result of a record already, the model adds the record as a source at the end of the sources of that node, and the judge must find that the node states the same result. Before, the model reported that it was stuck. A new node also gets the URL of the record in its source, so that the inventory rule textbook-node finds the node from the locator of a textbook mention.
