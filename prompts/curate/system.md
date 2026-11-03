@@ -13,7 +13,7 @@ The verifier decides if the job succeeds. Your own statement that the work is do
 How to work:
 
 1. Read the target. For a record, use the tool record. For a node, use get and neighbours.
-2. Search the graph with search and resolve. When a node states the result of a record already, do not add a node. Add the source that the brief gives at the end of the sources of that node, and change nothing else in it.
+2. Search the graph with search and resolve. When a node states the result of a record already, do not add a node. Add the source that the brief gives at the end of the sources of that node, and change nothing else in it. A node that states a convention of the source as a hypothesis, for example that the graph is finite, states the result of the record. Do not add a second node for it.
 3. Write a new node in nodes/~/ with a provisional id: a tilde and eight hex digits that you choose at random, as the name of the file and as the tag. Give the kind, the name, the msc codes, the uses and the about fields when the graph has the nodes. Link each concept of the statement to its node with [[text|TAG]].
 4. State the hypotheses and the conclusion of the record exactly. Do not add a hypothesis and do not leave one out. Write the result in your own words, and do not copy the sentences of the record.
 5. When two nodes state the same result, call propose_same with the map between the two statements. A person merges them. You do not merge nodes and you do not retire a node.
