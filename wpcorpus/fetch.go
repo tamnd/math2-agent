@@ -268,3 +268,72 @@ func NewestSettled(hist []Revision, now time.Time) (Revision, bool) {
 	}
 	return Revision{}, false
 }
+
+// Latest is the newest revision of a page, as the refresh of WP2.7 reads it.
+type Latest struct {
+	Revision
+	Missing  bool // the page does not exist now
+	Redirect bool // the page is a redirect now
+}
+
+// LatestOf gives the newest revision of each page, by page id. pages has at most 50 ids, which is the limit of the API for one request.
+func (f *Fetcher) LatestOf(ctx context.Context, pages []int) (map[int]Latest, error) {
+	if len(pages) > 50 {
+		return nil, fmt.Errorf("%d pages in one request, and the limit is 50", len(pages))
+	}
+	ids := make([]string, len(pages))
+	for i, p := range pages {
+		ids[i] = strconv.Itoa(p)
+	}
+	v := url.Values{}
+	v.Set("prop", "revisions|info")
+	v.Set("pageids", strings.Join(ids, "|"))
+	v.Set("rvprop", "ids|timestamp|sha1")
+	var r struct {
+		Error *struct {
+			Code string `json:"code"`
+			Info string `json:"info"`
+		} `json:"error"`
+		Query struct {
+			Pages []struct {
+				PageID    int        `json:"pageid"`
+				Missing   bool       `json:"missing"`
+				Redirect  bool       `json:"redirect"`
+				Revisions []Revision `json:"revisions"`
+			} `json:"pages"`
+		} `json:"query"`
+	}
+	if err := f.get(ctx, v, &r); err != nil {
+		return nil, err
+	}
+	if r.Error != nil {
+		return nil, fmt.Errorf("the API gave the error %s: %s", r.Error.Code, r.Error.Info)
+	}
+	out := make(map[int]Latest, len(pages))
+	for _, p := range r.Query.Pages {
+		l := Latest{Missing: p.Missing, Redirect: p.Redirect}
+		if len(p.Revisions) > 0 {
+			l.Revision = p.Revisions[0]
+		}
+		out[p.PageID] = l
+	}
+	return out, nil
+}
+
+// RedirectTarget gives the page id and the title of the target of a page that is a redirect now.
+func (f *Fetcher) RedirectTarget(ctx context.Context, page int) (int, string, error) {
+	v := url.Values{}
+	v.Set("pageids", strconv.Itoa(page))
+	v.Set("redirects", "1")
+	var r queryResponse
+	if err := f.get(ctx, v, &r); err != nil {
+		return 0, "", fmt.Errorf("page %d: %w", page, err)
+	}
+	if r.Error != nil {
+		return 0, "", fmt.Errorf("page %d: the API gave the error %s: %s", page, r.Error.Code, r.Error.Info)
+	}
+	if len(r.Query.Pages) != 1 || r.Query.Pages[0].Missing || r.Query.Pages[0].PageID == page {
+		return 0, "", fmt.Errorf("page %d: the API gave no target of the redirect", page)
+	}
+	return r.Query.Pages[0].PageID, r.Query.Pages[0].Title, nil
+}

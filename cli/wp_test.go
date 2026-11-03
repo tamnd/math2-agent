@@ -169,8 +169,8 @@ func TestWPUsage(t *testing.T) {
 		{[]string{"wp", "scope"}, ExitUsage, "usage: m2 wp scope -store DB"},
 		{[]string{"wp", "gold"}, ExitUsage, "usage: m2 wp gold draw"},
 		{[]string{"wp", "census"}, ExitUsage, "usage: m2 wp census report"},
+		{[]string{"wp", "refresh", "x"}, ExitUsage, "usage: m2 wp refresh"},
 		{[]string{"wp", "census", "diff", "-corpus", root}, ExitUsage, "give one page id"},
-		{[]string{"wp", "refresh"}, ExitNotWritten, "It arrives in WP-M7, all of the scope."},
 		{[]string{"wp", "extract", "-corpus", root, "-page", "1", "Widget"}, ExitUsage, "give titles or -page, not both"},
 		{[]string{"wp", "extract", "-corpus", t.TempDir()}, ExitFailure, "templates.yaml"},
 	} {
