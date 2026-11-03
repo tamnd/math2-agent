@@ -170,6 +170,7 @@ func TestWPUsage(t *testing.T) {
 		{[]string{"wp", "gold"}, ExitUsage, "usage: m2 wp gold draw"},
 		{[]string{"wp", "census"}, ExitUsage, "usage: m2 wp census report"},
 		{[]string{"wp", "refresh", "x"}, ExitUsage, "usage: m2 wp refresh"},
+		{[]string{"wp", "msc", "x"}, ExitUsage, "usage: m2 wp msc"},
 		{[]string{"wp", "census", "diff", "-corpus", root}, ExitUsage, "give one page id"},
 		{[]string{"wp", "extract", "-corpus", root, "-page", "1", "Widget"}, ExitUsage, "give titles or -page, not both"},
 		{[]string{"wp", "extract", "-corpus", t.TempDir()}, ExitFailure, "templates.yaml"},
