@@ -512,7 +512,7 @@ func Brief(ws *workspace.Workspace, job *agent.Job, rs *Records) (string, error)
 			return "", fmt.Errorf("curate: the licence of the record %s does not let math2 store its text, thus curate cannot read the result", r.Ref)
 		}
 		fmt.Fprintf(&b, "Job %s: turn the record %s into a new %s node. The goal of the job: %s.\n\n", job.ID, r.Ref, kind, goal)
-		fmt.Fprintf(&b, "Read the record with the tool record. Then search the graph. When a node of the kind %s states the same result already, do not add a node. Add the source %s at the end of the sources of that node, and change nothing else in it.\n\n", strings.Join(attachable[r.Kind], " or "), sourceEntry(r))
+		fmt.Fprintf(&b, "Read the record with the tool record. Then search the graph. When a node of the kind %s states the same result already, do not add a node. Add the source %s at the end of the sources of that node, and change nothing else in it. The file of a node is nodes/, the first three characters of its tag, a slash and the tag with .md, for example nodes/3C5/3C53TD.md. Read the file with read_file before you write it.\n\n", strings.Join(attachable[r.Kind], " or "), sourceEntry(r))
 		fmt.Fprintf(&b, "Else write the new node in nodes/~/ with a provisional id: a tilde and eight hex digits that you choose at random, as the name of the file and as the tag. State the result in your own words. Give it a source with the locator %s", r.Locator)
 		fmt.Fprintf(&b, ", for example %s", sourceEntry(r))
 		fmt.Fprintf(&b, ". Link the nodes that the result uses, and give it uses, about and msc when the graph has them.\n")

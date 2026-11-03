@@ -187,7 +187,7 @@ func TestBrief(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"into a new statement node", "The goal of the job: a node of the theorem.\n", "at the end of the sources of that node", "{arxiv: 2312.00752v1, locator: " + locator + "}"} {
+	for _, want := range []string{"into a new statement node", "The goal of the job: a node of the theorem.\n", "at the end of the sources of that node", "nodes/3C5/3C53TD.md", "{arxiv: 2312.00752v1, locator: " + locator + "}"} {
 		if !strings.Contains(brief, want) {
 			t.Errorf("the brief has no %q:\n%s", want, brief)
 		}

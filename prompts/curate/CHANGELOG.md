@@ -2,7 +2,7 @@
 
 ## 0.3.0
 
-Curate also turns an example of the record plane into an example node, an exercise into an exercise node (an example node with the role line in a tree at node.v1, corpus K8.7) and a proof into a proof node. The goal checks the form of an exercise: about, difficulty, group, check, the task, the answer and a solution in numbered steps. A proof node needs the field proves, and when the graph has no node of the statement, the model reports that it is stuck. The brief and the system prompt no longer give an example provisional id, because the model used the same id in different runs. The model now picks eight random hex digits.
+Curate also turns an example of the record plane into an example node, an exercise into an exercise node (an example node with the role line in a tree at node.v1, corpus K8.7) and a proof into a proof node. The goal checks the form of an exercise: about, difficulty, group, check, the task, the answer and a solution in numbered steps. A proof node needs the field proves, and when the graph has no node of the statement, the model reports that it is stuck. The brief and the system prompt no longer give an example provisional id, because the model used the same id in different runs. The model now picks eight random hex digits. The brief gives the path of the file of a node, because in the batch the model did not find the file of a node that it had to add a source to.
 
 ## 0.2.0
 
