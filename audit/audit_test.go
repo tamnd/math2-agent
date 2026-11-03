@@ -138,6 +138,7 @@ var options = map[string]func(opt *Options, root string){
 	"Y12": wikipediaCheckout,
 	"Y13": wikipediaCheckout,
 	"Y14": wikipediaCheckout,
+	"Y16": wikipediaCheckout,
 }
 
 func wikipediaCheckout(opt *Options, root string) { opt.Wikipedia = filepath.Join(root, "wikipedia") }

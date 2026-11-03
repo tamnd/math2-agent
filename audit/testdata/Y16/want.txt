@@ -1,0 +1,2 @@
+analysis/citations/0000/100-r5.md:0:0: Y16: the citation o3 of Widget theorem has an id that is not valid: isbn:978-0-618-51471-8. Correct the id in the article
+analysis/citations/0000/100-r5.md:0:0: Y16: the citation o5 of Widget theorem has an id that the live API does not know: doi:10.9999/widget.1. Check the id in the article
