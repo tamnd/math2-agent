@@ -1,0 +1,19 @@
+{{define "wikipediaarticle"}}
+<header class="page-head">
+  <h1>{{.Title}}</h1>
+  <p class="lead">This page lists the items of the Wikipedia article <a href="{{.URL}}">{{.Title}}</a> in their order, and the nodes of Math 2.0 that have them. The text of the article is not on this site. The items come from <a href="{{.RevisionURL}}">revision {{.Revision}}</a>{{with .Assessed}}, with the assessment {{.}}{{end}}.</p>
+</header>
+<table class="plain">
+  <thead><tr><th scope="col">Outcome</th><th scope="col">Items</th></tr></thead>
+  {{range .Counts}}<tr><td>{{.Name}}</td><td class="num">{{.Candidates}}</td></tr>
+  {{end}}
+</table>
+{{with .Signals}}<p>The gap signals of the article are {{.}}.</p>{{end}}
+{{if .Missing}}<p>{{.Missing}} items have no outcome yet.</p>{{end}}
+<table class="plain">
+  <thead><tr><th scope="col">Item</th><th scope="col">Kind</th><th scope="col">Name</th><th scope="col">Outcome</th><th scope="col">Nodes</th><th scope="col">Reason</th></tr></thead>
+  {{range .Items}}<tr><td>{{.Item}}</td><td>{{.Kind}}</td><td>{{.Name}}</td><td>{{.Outcome}}{{with .Origin}} ({{.}}){{end}}</td><td>{{range $i, $n := .Nodes}}{{if $i}}, {{end}}<a href="{{$n.URL}}">{{$n.Name}}</a>{{end}}</td><td>{{.Reason}}</td></tr>
+  {{end}}
+</table>
+<p>Refer to <a href="{{url "wikipedia/articles/"}}">Wikipedia articles and their nodes</a> for the other articles.</p>
+{{end}}

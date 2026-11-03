@@ -134,6 +134,8 @@ Each page also shows what its node needs and what depends on it. The closure of 
 
 Give `-build DIR` to show the evidence level, the fidelity and the flags of each node from the store of a build in DIR. The bar on each box of a figure shows the evidence level in colour, and the box also gives the level as text. With no `-build` flag, a statement page says that the site has no build data.
 
+When the tree has the parity data of the Wikipedia corpus in `records/parity/wikipedia/`, each article of the data gets an article view at `wikipedia/<slug>/` (corpus wikipedia WP9.8). The view lists the items of the article in their order, with the outcome of each item, the links to its nodes and the gap signals of the article. It holds no text of the article. The page `wikipedia/articles/` lists the views, and the list of the Wikipedia candidates links to the view of each article.
+
 `m2 site serve` serves the site at http://localhost:8000/math2 by default. Give the same `-url` to the build and to the server.
 
 ## The offline archive

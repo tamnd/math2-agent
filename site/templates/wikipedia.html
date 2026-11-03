@@ -13,6 +13,7 @@
   <h2>The articles in scope</h2>
   <ul class="chips">{{range .Letters}}<li><a href="{{.URL}}">{{if eq .Name "#"}}Other{{else}}{{.Name}}{{end}}</a> <span class="count">{{.Count}}</span></li>{{end}}</ul>
   <p>The list is also in <a href="{{.JSON}}">scope.json</a>, for programs.</p>
+  {{if .Views}}<p>{{.Views}} articles have a page that lists their items and the nodes that have them. Refer to <a href="{{url "wikipedia/articles/"}}">Wikipedia articles and their nodes</a>.</p>{{end}}
 </section>
 <section>
   <h2>By rule</h2>

@@ -1,0 +1,11 @@
+{{define "wikipediaarticles"}}
+<header class="page-head">
+  <h1>Wikipedia articles and their nodes</h1>
+  <p class="lead">Each article below has a page that lists its items in their order, with the outcome of each item and the links to its nodes. The {{len .Views}} articles have {{.Items}} items, and {{.Missing}} items have no outcome yet.{{if .Scope}} Refer to <a href="{{url "wikipedia/"}}">Wikipedia scope</a> for all the articles in scope.{{end}}</p>
+</header>
+<table class="plain">
+  <thead><tr><th scope="col">Article</th><th scope="col">Items</th><th scope="col">No outcome</th></tr></thead>
+  {{range .Views}}<tr><td><a href="{{url (print .Dir "/")}}">{{.Title}}</a></td><td class="num">{{len .Items}}</td><td class="num">{{.Missing}}</td></tr>
+  {{end}}
+</table>
+{{end}}

@@ -6,8 +6,8 @@
 <ul class="chips">{{range .Letters}}<li{{if eq .Name $.Letter}} class="here"{{end}}><a href="{{.URL}}">{{if eq .Name "#"}}Other{{else}}{{.Name}}{{end}}</a></li>{{end}}</ul>
 {{with .Pages}}<ul class="chips">{{range .}}<li{{if eq .Name (print $.Page)}} class="here"{{end}}><a href="{{.URL}}">Page {{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}</ul>{{end}}
 <table class="plain">
-  <thead><tr><th scope="col">Article</th><th scope="col">Signals</th><th scope="col">Class</th><th scope="col">Rule</th></tr></thead>
-  {{range .Articles}}<tr><td><a href="{{.URL}}">{{.Title}}</a></td><td>{{.Signals}}</td><td>{{.Class}}</td><td>{{.Rule}}</td></tr>
+  <thead><tr><th scope="col">Article</th><th scope="col">Signals</th><th scope="col">Class</th><th scope="col">Rule</th><th scope="col">Items</th></tr></thead>
+  {{range .Articles}}<tr><td><a href="{{.URL}}">{{.Title}}</a></td><td>{{.Signals}}</td><td>{{.Class}}</td><td>{{.Rule}}</td><td>{{with .View}}<a href="{{.}}">items</a>{{end}}</td></tr>
   {{end}}
 </table>
 {{end}}

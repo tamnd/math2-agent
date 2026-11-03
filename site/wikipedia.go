@@ -2,8 +2,6 @@ package site
 
 import (
 	"cmp"
-	"errors"
-	"io/fs"
 	"maps"
 	"net/url"
 	"os"
@@ -23,6 +21,7 @@ type wpArticle struct {
 	Class   string `json:"class,omitempty"`
 	Rule    string `json:"rule"`
 	URL     string `json:"url"`
+	View    string `json:"view,omitempty"` // the article view on the site, when the parity data has the article
 }
 
 // wpCount is one row of a count table of the Wikipedia pages.
@@ -68,20 +67,26 @@ func countRows(m map[string]*wpCount) []wpCount {
 	return out
 }
 
-// writeWikipedia writes the pages of the scope of the Wikipedia corpus (WP1.2): the counts, a list of the articles in scope for each letter, and api/wikipedia/scope.json. The pages hold the titles and the links, and no article text (WP9.8). With no corpus, or with a corpus that has no candidates.tsv, it writes nothing.
+// writeWikipedia writes the pages of the scope of the Wikipedia corpus (WP1.2): the counts, a list of the articles in scope for each letter, and api/wikipedia/scope.json. The pages hold the titles and the links, and no article text (WP9.8). With no corpus, or with a corpus that has no candidates.tsv, it writes only the article views of the parity data.
 func (b *builder) writeWikipedia() error {
-	if b.opt.Wikipedia == "" {
-		return nil
+	if !b.HasWikipedia() {
+		_, err := b.writeArticleViews(nil)
+		return err
 	}
 	f, err := os.Open(filepath.Join(b.opt.Wikipedia, wpcorpus.CandidatesPath)) // #nosec G304 -- the path is in the corpus
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
-	}
 	if err != nil {
 		return err
 	}
 	cs, err := wpcorpus.ReadCandidates(f)
 	_ = f.Close()
+	if err != nil {
+		return err
+	}
+	sigOf := map[int64]string{}
+	for _, c := range cs {
+		sigOf[c.PageID] = c.Signals.String()
+	}
+	views, err := b.writeArticleViews(sigOf)
 	if err != nil {
 		return err
 	}
@@ -117,7 +122,7 @@ func (b *builder) writeWikipedia() error {
 			class = "(none)"
 		}
 		add(classes, class, true)
-		in = append(in, wpArticle{PageID: c.PageID, Title: strings.ReplaceAll(c.Title, "_", " "), Signals: c.Signals.String(), Class: c.Class, Rule: c.Rule, URL: "https://en.wikipedia.org/wiki/" + url.PathEscape(c.Title)})
+		in = append(in, wpArticle{PageID: c.PageID, Title: strings.ReplaceAll(c.Title, "_", " "), Signals: c.Signals.String(), Class: c.Class, Rule: c.Rule, URL: "https://en.wikipedia.org/wiki/" + url.PathEscape(c.Title), View: views[c.PageID]})
 	}
 	slices.SortFunc(in, func(x, y wpArticle) int {
 		return cmp.Or(cmp.Compare(strings.ToLower(x.Title), strings.ToLower(y.Title)), cmp.Compare(x.PageID, y.PageID))
@@ -142,7 +147,8 @@ func (b *builder) writeWikipedia() error {
 		Rules, Signals, Classes      []wpCount
 		Letters                      []wpLetter
 		JSON                         string
-	}{len(cs), len(in), pending, countRows(rules), sigs, countRows(classes), letters, b.url("api/wikipedia/scope.json")}
+		Views                        int
+	}{len(cs), len(in), pending, countRows(rules), sigs, countRows(classes), letters, b.url("api/wikipedia/scope.json"), len(views)}
 	desc := "The Wikipedia articles that the corpus of Math 2.0 takes from Wikipedia, and why."
 	if err := b.writePage("wikipedia", "wikipedia", d, page{Title: "Wikipedia scope", Description: desc, Section: "wikipedia"}); err != nil {
 		return err
