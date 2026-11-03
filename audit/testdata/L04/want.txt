@@ -1,1 +1,5 @@
 nodes/5ZQ/5ZQ1PM.md:8:1: L04: 4 of the 4 fingerprints of the body are in oeis A000045. Check that the body does not copy the text
+nodes/7D0/7D00F0.md:18:1: L04: the section Proof matches the Wikipedia article Widget theorem, and no source item of the article lists the section. Add the section to sections of the source item, or write the text again
+nodes/7D0/7D01F0.md:20:1: L04: the section Proof matches the Wikipedia article Widget theorem, and the node names the article only by URL. Give the source item the key wikipedia with the revision 5, the note adopted or adapted and the sections (WP9.3), or write the text again
+nodes/7D0/7D02F0.md:14:1: L04: the section Summary matches the Wikipedia article Widget theorem (revision 5), and the node does not attribute the article. Write the text again, or adopt it with the attribution of WP9.3
+nodes/7K3/7K3QX2.md:14:1: L04: the section Statement matches revision 5 of the Wikipedia article Widget theorem, and the node attributes revision 4. Check the text against the revision of record and update the source item

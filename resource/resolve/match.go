@@ -218,12 +218,8 @@ func (r *Resolver) Cite(ctx context.Context, c Citation) (Result, error) {
 		if c.Year > 0 {
 			keys = []string{blockKey(f, c.Year-1), blockKey(f, c.Year), blockKey(f, c.Year+1)}
 		}
-		for k := range r.Index.block {
-			if c.Year == 0 || c.Edition > 1 {
-				if strings.HasPrefix(k, f+":") {
-					keys = append(keys, k)
-				}
-			}
+		if c.Year == 0 || c.Edition > 1 {
+			keys = append(keys, r.Index.family[f]...)
 		}
 		for _, k := range keys {
 			for _, id := range r.Index.block[k] {

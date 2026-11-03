@@ -325,12 +325,15 @@ func l03(a *auditor) outcome {
 	return o
 }
 
-// l04 reports a node body that is similar to the text of an item that the node cites, for a person to check that it is not copied (rule L04).
+// l04 reports a node body that is similar to the text of an item that the node cites, for a person to check that it is not copied (rule L04). With the checkout of tamnd/wikipedia-math, it also runs the copy check of corpus wikipedia WP9.4 (see l04Wikipedia).
 func l04(a *auditor) outcome {
 	var o outcome
+	a.l04Wikipedia(&o)
 	im := a.importsOf()
 	if im.noRecords != "" {
-		o.reason = im.noRecords
+		if o.checked == 0 && len(o.findings) == 0 {
+			o.reason = im.noRecords
+		}
 		return o
 	}
 	g := a.graphOf()

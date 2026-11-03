@@ -182,28 +182,29 @@ func (o *outcome) add(path string, line, col int, format string, args ...any) {
 // auditor holds the tree that a run reads.
 type auditor struct {
 	root      string
-	pr        bool            // the audit is of a pull request
-	base      string          // the revision that the pull request starts from, when pr is true
-	touched   map[string]bool // the shards and the files that changed, when pr is true
-	schema    *schema.Schema  // the schema of the tree
-	macros    check.Macros    // the macros of the tree
-	all       []check.File    // every node file in the tree
-	scope     []check.File    // the node files in scope
-	nodes     []*node.Node    // every node file that parses
-	ix        check.Index     // every node file that parses
-	checkRun  *check.Report   // the run of m2 check on the scope, made when a rule needs it
-	graph     *graph.Graph    // the graph of every node file that parses, made when a rule needs it
-	last      *built          // the files of the last m2 build, read when a rule needs them
-	imp       *imports        // the catalogue, the import manifests and the records, read when a rule needs them
-	comp      *computations   // the computation records, the image manifest and the runs, read when a rule needs them
-	inv       *invTree        // the inventory, read when a rule needs it
-	arxiv     string          // the checkout of tamnd/arxiv for rule D05, or ""
-	wikipedia string          // the checkout of tamnd/wikipedia-math for the Y rules, or ""
-	wpt       *wpTree         // the Wikipedia corpus, read when a rule needs it
-	not       *notTree        // the notation register and the register of conventions, read when a rule needs them
-	res       *resTree        // the catalogue of resources, read when a rule needs it
-	cat       *catFile        // the reader of the files of revisions, started when a rule needs it
-	noCat     bool            // the reader failed, thus blob runs git show
+	pr        bool              // the audit is of a pull request
+	base      string            // the revision that the pull request starts from, when pr is true
+	touched   map[string]bool   // the shards and the files that changed, when pr is true
+	schema    *schema.Schema    // the schema of the tree
+	macros    check.Macros      // the macros of the tree
+	all       []check.File      // every node file in the tree
+	scope     []check.File      // the node files in scope
+	nodes     []*node.Node      // every node file that parses
+	ix        check.Index       // every node file that parses
+	checkRun  *check.Report     // the run of m2 check on the scope, made when a rule needs it
+	graph     *graph.Graph      // the graph of every node file that parses, made when a rule needs it
+	last      *built            // the files of the last m2 build, read when a rule needs them
+	imp       *imports          // the catalogue, the import manifests and the records, read when a rule needs them
+	comp      *computations     // the computation records, the image manifest and the runs, read when a rule needs them
+	inv       *invTree          // the inventory, read when a rule needs it
+	arxiv     string            // the checkout of tamnd/arxiv for rule D05, or ""
+	wikipedia string            // the checkout of tamnd/wikipedia-math for the Y rules, or ""
+	wpt       *wpTree           // the Wikipedia corpus, read when a rule needs it
+	wpTexts   map[int64]*wpText // the Markdown renderings that the copy check of rule L04 read, by page id. nil means that the checkout has no rendering of the page
+	not       *notTree          // the notation register and the register of conventions, read when a rule needs them
+	res       *resTree          // the catalogue of resources, read when a rule needs it
+	cat       *catFile          // the reader of the files of revisions, started when a rule needs it
+	noCat     bool              // the reader failed, thus blob runs git show
 }
 
 func load(root string, opt Options) (*auditor, error) {
