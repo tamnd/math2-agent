@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -374,7 +375,7 @@ type call struct {
 	Input json.RawMessage `json:"input"`
 }
 
-// Reply reads the reply of a client to a request with n messages. It returns the blocks of the reply and the stop reason. A reply that is not an object of the protocol is a text block. The ids of the calls are "c" and n, then "_" and the position of the call.
+// Reply reads the reply of a client to a request with n messages. It returns the blocks of the reply and the stop reason. A client sometimes writes its calls as invoke elements, the tool call form of its own harness, and not as an object of the protocol. Reply reads these calls too. Another reply that is not an object of the protocol is a text block. The ids of the calls are "c" and n, then "_" and the position of the call.
 func Reply(text string, n int) ([]llm.Block, string) {
 	s := strings.TrimSpace(text)
 	if i, j := strings.Index(s, "{"), strings.LastIndex(s, "}"); i >= 0 && j > i {
@@ -382,7 +383,9 @@ func Reply(text string, n int) ([]llm.Block, string) {
 	}
 	var r reply
 	if json.Unmarshal([]byte(s), &r) != nil {
-		return []llm.Block{llm.TextBlock(strings.TrimSpace(text))}, llm.EndTurn
+		if r.Calls = invokes(text); len(r.Calls) == 0 {
+			return []llm.Block{llm.TextBlock(strings.TrimSpace(text))}, llm.EndTurn
+		}
 	}
 	var blocks []llm.Block
 	if t := strings.TrimSpace(r.Text); t != "" {
@@ -399,4 +402,43 @@ func Reply(text string, n int) ([]llm.Block, string) {
 		return blocks, llm.ToolCall
 	}
 	return blocks, llm.EndTurn
+}
+
+var (
+	invokeRe = regexp.MustCompile(`(?s)<invoke\s+name="([^"]+)"([^>]*?)(?:/>|>(.*?)</invoke>)`)
+	paramRe  = regexp.MustCompile(`(?s)<parameter\s+name="([^"]+)"\s*>(.*?)</parameter>`)
+	attrRe   = regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"`)
+)
+
+// invokes reads the calls that the text writes as invoke elements, with the input in parameter elements or in attributes. A value that is valid JSON other than a string, such as a number or a list, stays JSON. An invoke with no input is not a call, because a client writes such an element when it fails to write the call, and a call that the text repeats counts once.
+func invokes(text string) []call {
+	var calls []call
+	for _, m := range invokeRe.FindAllStringSubmatch(text, -1) {
+		in := map[string]json.RawMessage{}
+		for _, a := range attrRe.FindAllStringSubmatch(m[2], -1) {
+			in[a[1]] = value(a[2])
+		}
+		for _, p := range paramRe.FindAllStringSubmatch(m[3], -1) {
+			in[p[1]] = value(p[2])
+		}
+		if len(in) == 0 {
+			continue
+		}
+		data, err := json.Marshal(in)
+		if err != nil || slices.ContainsFunc(calls, func(c call) bool { return c.Name == m[1] && bytes.Equal(c.Input, data) }) {
+			continue
+		}
+		calls = append(calls, call{Name: m[1], Input: data})
+	}
+	return calls
+}
+
+// value gives the JSON of the value of a parameter: the value itself when it is JSON that is not a string, else the value as a JSON string.
+func value(v string) json.RawMessage {
+	t := strings.TrimSpace(v)
+	if t != "" && !strings.HasPrefix(t, `"`) && json.Valid([]byte(t)) {
+		return json.RawMessage(t)
+	}
+	data, _ := json.Marshal(v)
+	return data
 }
