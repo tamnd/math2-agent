@@ -57,6 +57,7 @@ import (
 	_ "github.com/tamnd/math2-agent/resource/adapters/swmath"
 	_ "github.com/tamnd/math2-agent/resource/adapters/thesesfr"
 	_ "github.com/tamnd/math2-agent/resource/adapters/wikidataworks"
+	_ "github.com/tamnd/math2-agent/resource/adapters/zbmathkg"
 )
 
 // Version is set at build time with -ldflags "-X main.Version=v0.1.0".
