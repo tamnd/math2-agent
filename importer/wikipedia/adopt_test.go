@@ -364,7 +364,20 @@ func TestWhyName(t *testing.T) {
 		{"lead", "block", false},
 		{"named-heading", "Principle of least action", false},
 		{"named-heading", "Wilf's conjecture", false},
-		{"term", "π", false},
+		{"term", "π", true},
+		{"lead", "π", false},
+		{"named-heading", "Accuracy of the formula", true},
+		{"named-heading", "An approximation formula given in Wucao suanjing", true},
+		{"named-heading", "Another formula for the circumference of a circle", true},
+		{"named-heading", "Connection to the Pythagorean theorem", true},
+		{"named-heading", "Derivation of the formula", true},
+		{"named-heading", "Equivalent forms of the formula", true},
+		{"named-heading", "From formula mathematics to tensors", true},
+		{"math-theorem", "Theorem (Brahmagupta)", true},
+		{"math-theorem", "Lemma (Brahmagupta)", true},
+		{"term", "Ζ", true},
+		{"named-heading", "Gou Gu (Pythagorean) Theorem", false},
+		{"named-heading", "Fermat's little theorem", false},
 	} {
 		got := whyName(&inventory.Mention{Cue: c.cue, Name: c.name}) != ""
 		if got != c.wait {
