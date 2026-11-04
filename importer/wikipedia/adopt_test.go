@@ -502,6 +502,20 @@ func TestSeeEntry(t *testing.T) {
 	if seeEntry.MatchString("For a graph $G$, the girth is the length of its shortest cycle.") {
 		t.Error("a definition is an entry that points to other entries")
 	}
+	for _, e := range []string{"See transpose.", "Synonym for *degree*.", "A synonym for degeneracy."} {
+		if !seeEntry.MatchString(e) {
+			t.Errorf("%q is not found as an entry that points to other entries", e)
+		}
+	}
+	if seeEntry.MatchString("Seed a graph with one vertex.") {
+		t.Error("a word that starts with see is a pointer")
+	}
+	if !personEntry.MatchString("Julius Petersen (1839–1910), Danish graph theorist.") || !personEntry.MatchString("Henri Meyniel, French graph theorist.") {
+		t.Error("an entry about a person is not found")
+	}
+	if personEntry.MatchString("A source, in a directed graph, is a vertex with no incoming edges.") {
+		t.Error("a definition is an entry about a person")
+	}
 }
 
 func TestURLText(t *testing.T) {
