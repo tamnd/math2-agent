@@ -86,7 +86,7 @@ func Parts(base, page string) ([]string, error) {
 	return out, nil
 }
 
-// Fetch reads the page at req.URL, reads each part of the newest year, and writes the books of mathematics as JSON Lines, compressed with gzip.
+// Fetch reads the page at req.URL, reads each part of the newest year, and writes the books of mathematics as JSON Lines, compressed with gzip. After a read error, it gets the rest of the part with a range request (ingest.Resume).
 func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) error {
 	body, err := req.Get(ctx, req.URL)
 	if err != nil {
@@ -105,15 +105,15 @@ func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) erro
 	enc := json.NewEncoder(zw)
 	enc.SetEscapeHTML(false)
 	for _, u := range us {
-		if err := part(ctx, req.Get, u, enc); err != nil {
+		if err := part(ctx, req, u, enc); err != nil {
 			return fmt.Errorf("loc-marc: %s: %w", u, err)
 		}
 	}
 	return zw.Close()
 }
 
-func part(ctx context.Context, get ingest.Getter, u string, enc *json.Encoder) error {
-	body, err := get(ctx, u)
+func part(ctx context.Context, req *ingest.Request, u string, enc *json.Encoder) error {
+	body, err := ingest.Resume(ctx, req, u)
 	if err != nil {
 		return err
 	}

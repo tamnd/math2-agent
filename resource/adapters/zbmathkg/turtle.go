@@ -248,8 +248,11 @@ func (p *parser) token() (token, error) {
 	switch c {
 	case '<':
 		s, err := p.r.ReadString('>')
-		if err != nil {
+		if errors.Is(err, io.EOF) {
 			return token{}, p.errorf("an IRI has no end")
+		}
+		if err != nil {
+			return token{}, err
 		}
 		return token{kind: tokIRI, val: s[:len(s)-1]}, nil
 	case '"', '\'':
@@ -351,8 +354,11 @@ func (p *parser) literal(q byte) (string, error) {
 	quotes := 0
 	for {
 		c, err := p.read()
-		if err != nil {
+		if errors.Is(err, io.EOF) {
 			return "", p.errorf("a literal has no end")
+		}
+		if err != nil {
+			return "", err
 		}
 		if c == q {
 			if !long {
