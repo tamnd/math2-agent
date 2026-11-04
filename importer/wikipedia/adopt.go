@@ -104,7 +104,7 @@ var genericName = regexp.MustCompile(`(?i)^(theorem|lemma|corollary|proposition|
 var labelName = regexp.MustCompile(`(?i)^(axiom|theorem|lemma|corollary|proposition|claim|conjecture|definition|fact|step|case|rule|property|observation|remark|example|exercise|problem|condition|assumption|hypothesis)s? ([0-9]+[a-z]?|[A-Z]|[IVX]+)(\.[0-9]+)*$`)
 
 // headingPrefix matches a heading that names a part of the text about an item and not the item, such as "Precise statement of the Adyan–Rabin theorem" or "History: the lemma that is not Burnside's".
-var headingPrefix = regexp.MustCompile(`(?i)^(history|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary of|corollaries|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
+var headingPrefix = regexp.MustCompile(`(?i)^(history|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary|corollaries|involving|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
 
 // pluralTail matches a heading that names a group of items, such as "Freudenthal-Hopf theorems".
 var pluralTail = regexp.MustCompile(`(?i)\b(theorems|results|facts|properties|lemmas|formulas|formulae|conjectures|identities|axioms|inequalities|relations|criteria)$`)
@@ -134,6 +134,14 @@ func whyName(m *inventory.Mention) string {
 		return "the heading has a meaning only in its article"
 	}
 	return ""
+}
+
+// proofName gives the name of the proof of a statement. A leading "The" of the name of the statement is in lower case, as in "Proof of the ping-pong lemma".
+func proofName(name string) string {
+	if rest, ok := strings.CutPrefix(name, "The "); ok {
+		name = "the " + rest
+	}
+	return "Proof of " + name
 }
 
 // adoptCues are the cues that give the item a name of its own (WP9.1 reason 2). A plain heading names a section, not an item.
@@ -321,7 +329,7 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 			it.Reason = whyFlag(m, opt.Hold)
 		}
 		if it.State == Waiting && it.Reason == "" {
-			d, why, err := adoptOne(m, "Proof of "+nameOf[target], pages, pageNode, opt, msc[pageNode(m.Page)], target, "")
+			d, why, err := adoptOne(m, proofName(nameOf[target]), pages, pageNode, opt, msc[pageNode(m.Page)], target, "")
 			if err != nil {
 				return nil, err
 			}
