@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -103,6 +104,83 @@ func Mint(root string, r io.Reader, commit string) ([]Minted, error) {
 		return nil, err
 	}
 	slices.SortFunc(minted, func(a, b Minted) int { return cmp.Compare(a.Provisional, b.Provisional) })
+	return minted, nil
+}
+
+// MintSpilled does what Mint does, and keeps in memory only the provisional ids and the resources of one group of shards. It reads the shards twice and writes the resources through a ShardSpill in a new directory in dir, which it removes at the end. A run of m2 res cluster with -spill uses it for the full catalogue.
+func MintSpilled(root, dir string, r io.Reader, commit string) ([]Minted, error) {
+	used, err := Used(root)
+	if err != nil {
+		return nil, err
+	}
+	var minted []Minted
+	seen := map[string]bool{}
+	if err := WalkResources(root, func(_ string, _ int, res Resource) error {
+		if !tag.IsProvisional(res.ID) {
+			return nil
+		}
+		if seen[res.ID] {
+			return fmt.Errorf("resource: two resources have the provisional id %s", res.ID)
+		}
+		seen[res.ID] = true
+		minted = append(minted, Minted{Provisional: res.ID, Kind: res.Kind})
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if len(minted) == 0 {
+		return nil, nil
+	}
+	// The ids are drawn in the order of the provisional ids, as Mint draws them.
+	slices.SortFunc(minted, func(a, b Minted) int { return cmp.Compare(a.Provisional, b.Provisional) })
+	byID := make(map[string]string, len(minted))
+	for i := range minted {
+		id, err := tag.Mint(r, func(s string) bool { return used[s] })
+		if err != nil {
+			return nil, err
+		}
+		used[id] = true
+		minted[i].ID = id
+		byID[minted[i].Provisional] = id
+	}
+	tmp, err := os.MkdirTemp(dir, "mint-")
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = os.RemoveAll(tmp) }()
+	sp, err := NewShardSpill(tmp)
+	if err != nil {
+		return nil, err
+	}
+	if err := WalkResources(root, func(_ string, _ int, res Resource) error {
+		if id, ok := byID[res.ID]; ok {
+			res.ID = id
+		}
+		for j := range res.Relations {
+			res.Relations[j].To = swap(res.Relations[j].To, byID)
+		}
+		if res.Scope != nil {
+			res.Scope.Target = swap(res.Scope.Target, byID)
+		}
+		for _, ref := range append(refs(&res), res.ID) {
+			if tag.IsProvisional(ref) {
+				return fmt.Errorf("resource: %s names the provisional id %s, which no resource has", res.ID, ref)
+			}
+		}
+		return sp.Add(&res)
+	}); err != nil {
+		return nil, err
+	}
+	es := make([]Entry, len(minted))
+	for i, m := range minted {
+		es[i] = Entry{m.ID, commit, m.Kind}
+	}
+	if err := AppendRegister(root, es); err != nil {
+		return nil, err
+	}
+	if _, err := sp.Write(root); err != nil {
+		return nil, err
+	}
 	return minted, nil
 }
 

@@ -1,18 +1,15 @@
 package cluster
 
 import (
-	"bufio"
 	"cmp"
-	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"slices"
 
 	"github.com/tamnd/math2-agent/resource"
+	"github.com/tamnd/math2-agent/resource/spill"
 	"github.com/tamnd/math2-agent/tag"
 )
 
@@ -26,12 +23,9 @@ type Stream struct {
 	Partition *Partition     // the partition, with no Bucket
 }
 
-// groupsOfShards is the number of files that hold the resources of the shards before they are written. The resources of one file are in memory at one time.
-const groupsOfShards = 256
-
-// RunFiles is a partitioned run (RS10.8) that reads the source records from the files and writes the resources to the shards of records/resources/ in the tree at root. The records of in are not used. It writes the records of each bucket and the resources to files in a new directory in spill, and removes the directory at the end. It keeps in memory the keys of the records, the records of one bucket and the resources of one file of shards. The resources and the pairs are those of Run on the records of the files.
-func RunFiles(in Input, files []string, spill string, size int, root string) (*Stream, error) {
-	dir, err := os.MkdirTemp(spill, "cluster-")
+// RunFiles is a partitioned run (RS10.8) that reads the source records from the files and writes the resources to the shards of records/resources/ in the tree at root. The records of in are not used. It writes the records of each bucket and the resources to files in a new directory in tmp, and removes the directory at the end. It keeps in memory the keys of the records, the records of one bucket and the resources of one group of shards. The resources and the pairs are those of Run on the records of the files.
+func RunFiles(in Input, files []string, tmp string, size int, root string) (*Stream, error) {
+	dir, err := os.MkdirTemp(tmp, "cluster-")
 	if err != nil {
 		return nil, err
 	}
@@ -65,9 +59,9 @@ func RunFiles(in Input, files []string, spill string, size int, root string) (*S
 	st := &Stream{Records: len(recs), Joins: map[string]int{}, Skipped: len(p.Large), Partition: p}
 
 	// The records of each bucket.
-	ws := make([]*spillWriter, p.Buckets)
+	ws := make([]*spill.Writer, p.Buckets)
 	for b := range ws {
-		if ws[b], err = createSpill(name("records", b)); err != nil {
+		if ws[b], err = spill.Create(name("records", b)); err != nil {
 			return nil, err
 		}
 	}
@@ -81,14 +75,14 @@ func RunFiles(in Input, files []string, spill string, size int, root string) (*S
 			if n >= len(recs) {
 				return nil, fmt.Errorf("cluster: %s changed in the run", f)
 			}
-			if err := ws[of[recs[n]]].write(&rs[i]); err != nil {
+			if err := ws[of[recs[n]]].Write(&rs[i]); err != nil {
 				return nil, err
 			}
 			n++
 		}
 	}
 	for _, w := range ws {
-		if err := w.close(); err != nil {
+		if err := w.Close(); err != nil {
 			return nil, err
 		}
 	}
@@ -119,7 +113,7 @@ func RunFiles(in Input, files []string, spill string, size int, root string) (*S
 		var fr map[string]string
 		if b < p.Buckets {
 			var rs []Record
-			if err := readSpill(name("records", b), func(line []byte) error {
+			if err := spill.Read(name("records", b), func(line []byte) error {
 				var r Record
 				rs = append(rs, r)
 				return json.Unmarshal(line, &rs[len(rs)-1])
@@ -143,20 +137,20 @@ func RunFiles(in Input, files []string, spill string, size int, root string) (*S
 				out[e.ID] = e
 			}
 		}
-		w, err := createSpill(name("resources", b))
+		w, err := spill.Create(name("resources", b))
 		if err != nil {
 			return nil, err
 		}
 		for k, id := range sortedKeys(out) {
 			r := out[id]
-			if err := w.write(&r); err != nil {
+			if err := w.Write(&r); err != nil {
 				return nil, err
 			}
 			if key, ok := fr[id]; ok {
 				news = append(news, fresh{key: key, bucket: b, n: k})
 			}
 		}
-		if err := w.close(); err != nil {
+		if err := w.Close(); err != nil {
 			return nil, err
 		}
 	}
@@ -173,7 +167,7 @@ func RunFiles(in Input, files []string, spill string, size int, root string) (*S
 		c := 0
 		for b := range p.Buckets + 1 {
 			k := 0
-			if err := readSpill(name("resources", b), func(line []byte) error {
+			if err := spill.Read(name("resources", b), func(line []byte) error {
 				var r resource.Resource
 				if err := json.Unmarshal(line, &r); err != nil {
 					return err
@@ -238,11 +232,9 @@ func RunFiles(in Input, files []string, spill string, size int, root string) (*S
 		return nil, err
 	}
 	need, needLive = nil, nil
-	gs := make([]*spillWriter, groupsOfShards)
-	for i := range gs {
-		if gs[i], err = createSpill(name("shards", i)); err != nil {
-			return nil, err
-		}
+	sp, err := resource.NewShardSpill(dir)
+	if err != nil {
+		return nil, err
 	}
 	if err := each(func(r *resource.Resource) error {
 		offering(r, exprs)
@@ -259,108 +251,15 @@ func RunFiles(in Input, files []string, spill string, size int, root string) (*S
 		if r.Live() {
 			st.Resources++
 		}
-		if len(r.ID) < 3 {
-			return fmt.Errorf("resource: the id %q is too short", r.ID)
-		}
-		return gs[keyHash(resource.Shard(r.ID))%groupsOfShards].write(r)
+		return sp.Add(r)
 	}); err != nil {
 		return nil, err
 	}
-	for _, g := range gs {
-		if err := g.close(); err != nil {
-			return nil, err
-		}
-	}
-
-	// The shards.
-	keep := map[string]bool{}
-	for i := range groupsOfShards {
-		shards := map[string][]resource.Resource{}
-		if err := readSpill(name("shards", i), func(line []byte) error {
-			var r resource.Resource
-			if err := json.Unmarshal(line, &r); err != nil {
-				return err
-			}
-			shards[resource.Shard(r.ID)] = append(shards[resource.Shard(r.ID)], r)
-			return nil
-		}); err != nil {
-			return nil, err
-		}
-		for _, k := range sortedKeys(shards) {
-			if err := resource.WriteShard(root, k, shards[k]); err != nil {
-				return nil, err
-			}
-			keep[k] = true
-		}
-	}
-	if err := resource.RemoveShards(root, keep); err != nil {
+	if _, err := sp.Write(root); err != nil {
 		return nil, err
 	}
 	slices.SortFunc(st.Pairs, func(a, b Pair) int {
 		return cmp.Or(cmp.Compare(a.Pass, b.Pass), cmp.Compare(a.A, b.A), cmp.Compare(a.B, b.B))
 	})
 	return st, nil
-}
-
-// spillWriter writes one JSON value on each line of a file compressed with gzip.
-type spillWriter struct {
-	f *os.File
-	z *gzip.Writer
-	w *bufio.Writer
-}
-
-func createSpill(path string) (*spillWriter, error) {
-	f, err := os.Create(path) // #nosec G304 -- the path is in the spill directory of the run.
-	if err != nil {
-		return nil, err
-	}
-	z, err := gzip.NewWriterLevel(f, gzip.BestSpeed)
-	if err != nil {
-		_ = f.Close()
-		return nil, err
-	}
-	return &spillWriter{f: f, z: z, w: bufio.NewWriter(z)}, nil
-}
-
-func (s *spillWriter) write(v any) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	if _, err := s.w.Write(append(b, '\n')); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *spillWriter) close() error {
-	return errors.Join(s.w.Flush(), s.z.Close(), s.f.Close())
-}
-
-// readSpill calls fn with each line of a file of spillWriter.
-func readSpill(path string, fn func([]byte) error) error {
-	f, err := os.Open(path) // #nosec G304 -- the path is in the spill directory of the run.
-	if err != nil {
-		return err
-	}
-	defer func() { _ = f.Close() }()
-	z, err := gzip.NewReader(f)
-	if err != nil {
-		return err
-	}
-	r := bufio.NewReaderSize(z, 1<<20)
-	for {
-		line, err := r.ReadBytes('\n')
-		if len(line) > 1 {
-			if err := fn(line[:len(line)-1]); err != nil {
-				return err
-			}
-		}
-		if errors.Is(err, io.EOF) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-	}
 }
