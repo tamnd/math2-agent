@@ -179,6 +179,32 @@ func TestMatchTagsNear(t *testing.T) {
 	}
 }
 
+func TestMatchSameRevision(t *testing.T) {
+	old := []Object{
+		{Ref: "o1", Tag: "0AAA", Kind: "citation", Hash: "h1"},
+		{Ref: "o2", Tag: "0BBB", Kind: "citation", Hash: "h1"},
+		{Ref: "o3", Tag: "0CCC", Kind: "statement", Hash: "h2", Name: "Fact"},
+	}
+	cur := []Object{
+		{Ref: "o1", Kind: "citation", Hash: "h1"},
+		{Ref: "o2", Kind: "citation", Hash: "h1"},
+		{Ref: "o3", Kind: "statement", Hash: "h3", Name: "Fact"},
+	}
+	tags, passes := matchSameRevision(old, cur, true)
+	want := []string{"0AAA", "0BBB", "0CCC"}
+	wantPass := []string{PassRef, PassRef, PassName}
+	for j := range cur {
+		if tags[j] != want[j] || passes[j] != wantPass[j] {
+			t.Errorf("object %d: %s %s, want %s %s", j, tags[j], passes[j], want[j], wantPass[j])
+		}
+	}
+	// For another revision, the refs do not count and the two citations stay without a match.
+	tags, _ = matchSameRevision(old, cur, false)
+	if tags[0] != "" || tags[1] != "" {
+		t.Errorf("another revision: %v", tags)
+	}
+}
+
 func TestTagsFileRoundTrip(t *testing.T) {
 	root := t.TempDir()
 	f := &tagsFile{Page: 7, Title: "Widget", Tags: []TagLine{{Tag: "03QK", Ref: "o1"}, {Tag: "Z9Z9", Ref: "o2", Gone: "r5"}}, Runs: []runLine{{To: "r4", Passes: []tagPass{{Tag: "03QK", Pass: PassNew}}}}}
