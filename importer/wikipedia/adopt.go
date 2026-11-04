@@ -109,7 +109,6 @@ var headingPrefix = regexp.MustCompile(`(?i)^(history|accuracy|an? approximation
 // pluralTail matches a heading that names a group of items, such as "Freudenthal-Hopf theorems".
 var pluralTail = regexp.MustCompile(`(?i)\b(theorems|results|facts|properties|lemmas|formulas|formulae|conjectures|identities|axioms|inequalities|relations|criteria|propositions|principles)$`)
 
-// plainTail matches a short heading in lower case that needs its article to have a meaning, such as "Structure theorem" or "Volume formula".
 // kindWord matches a heading that is only the name of a kind of item, such as "Principle".
 var kindWord = regexp.MustCompile(`(?i)^(principle|axiom|theorem|lemma|proposition|statement|definition|formula|identity)$`)
 
@@ -119,14 +118,36 @@ var theTail = regexp.MustCompile(`(?i)\bthe (formula|theorem|lemma|identity|equa
 // sourceLabel matches a name that is a kind of item and its source, such as "Theorem (Brahmagupta)".
 var sourceLabel = regexp.MustCompile(`^(Lemma|Theorem|Proposition|Definition|Axiom|Corollary) \(`)
 
+// plainTail matches a short heading in lower case that needs its article to have a meaning, such as "Structure theorem" or "Volume formula".
 var plainTail = regexp.MustCompile(`^[A-Z][a-z-]* (theorem|formula|lemma|conjecture|identity|inequality|criterion|principle)$`)
+
+// lostPart matches a name that lost a part, such as math, so that it ends with a small word, has two spaces, or has an HTML entity, as "Approximations of" or "Proof that  is irrational".
+var lostPart = regexp.MustCompile(`(?i)\b(of|to|for|with|and|or|the|a|an|by|from|that|is|in|on)$|  |&[a-z]+;`)
+
+// numberedName matches a name with a number of its article, such as "1. Axiom of extensionality", "Axiom of pairing - 4", "Theorem 1. Every valid formula is provable" or "2 theorem".
+var numberedName = regexp.MustCompile(`(?i)^[0-9]+\.\s|\s-\s[0-9]+$|^(theorem|lemma|proposition|propositions|corollary|axiom)\s[0-9IVX]+(\.[0-9A-Z]+)*\b|^[0-9]+ (theorem|lemma)$`)
+
+// actionHead matches a heading that names a step or a part of the text, such as "Using the Chinese remainder theorem", "As a theorem of arithmetic" or "The second theorem".
+var actionHead = regexp.MustCompile(`(?i)^([a-z]+ing|as|by|in|on|for|with|without|cases|role|versions?|similarities|resolutions?|analogs|appeals|implications|objections?|criticism|chronology|software|determination|uniqueness|create|produce|solutions?)\b|^the (first|second|third|fourth|basic|main|general|extra|following|original)\b|\bexamples?\b`)
+
+// abbreviation matches a glossary term that is an abbreviation, such as "GCH". The node takes the full name.
+var abbreviation = regexp.MustCompile(`^[A-Z][A-Z0-9-]{0,5}$`)
 
 // whyName gives the reason why an item waits when its name is not a good name for a node, or "". A heading of a section can name a part of the text, a group of items, or an item that has a meaning only in its article. A person gives the name of such an item.
 func whyName(m *inventory.Mention) string {
 	if r, _ := utf8.DecodeRuneInString(m.Name); !unicode.IsLetter(r) && !unicode.IsDigit(r) {
 		return "the name does not start with a letter or a digit, so the name lost a part, such as math"
 	}
-	if r, _ := utf8.DecodeRuneInString(m.Name); m.Cue != "lead" && r >= 'a' && r <= 'z' {
+	if lostPart.MatchString(m.Name) {
+		return "the name ends with a small word or has a gap, so the name lost a part, such as math"
+	}
+	if numberedName.MatchString(m.Name) {
+		return "the name has a number of its article, and a person gives the name"
+	}
+	if m.Cue == "term" && abbreviation.MatchString(m.Name) {
+		return "the term is an abbreviation, and the node takes the full name"
+	}
+	if r, _ := utf8.DecodeRuneInString(m.Name); m.Cue != "lead" && m.Cue != "term" && r >= 'a' && r <= 'z' {
 		return "the name starts with a lower case letter, so the name is a part of a sentence"
 	}
 	if m.Cue != "lead" && utf8.RuneCountInString(m.Name) == 1 {
@@ -142,6 +163,10 @@ func whyName(m *inventory.Mention) string {
 		return ""
 	}
 	switch {
+	case !strings.Contains(m.Name, " "):
+		return "the heading is one word, so it names a part of the text and not one item"
+	case actionHead.MatchString(m.Name):
+		return "the heading names a step or a part of the text and not one item"
 	case theTail.MatchString(m.Name):
 		return "the heading names an item of its article with \"the\""
 	case kindWord.MatchString(m.Name):
@@ -473,6 +498,9 @@ func adoptNode(m *inventory.Mention, name string, aliases []string, pages *pageC
 	}
 	if strings.HasPrefix(m.Assessment, "Stub") && sentences(text) < 2 {
 		return nil, "the article is a stub with fewer than two sentences about the item (WP9.2)", nil
+	}
+	if sentences(text) == 0 {
+		return nil, "the text of the item has no full sentence, so the write role writes the text (WP9.2)", nil
 	}
 	kind, section := cardSection(m.Kind)
 	id, err := opt.Draw()

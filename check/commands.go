@@ -38,7 +38,7 @@ text textbf textit textrm textsf texttt textnormal mbox hbox rm bf it sf tt cal
 displaystyle textstyle scriptstyle scriptscriptstyle
 quad qquad enspace thinspace medspace thickspace negthinspace negmedspace negthickspace hspace kern mkern mskip hskip phantom hphantom vphantom smash
 dots ldots cdots vdots ddots dotsc dotsb dotsm dotsi dotso
-forall exists nexists neg lnot top bot angle measuredangle sphericalangle triangle square blacksquare lozenge blacklozenge bigstar
+forall exists nexists neg lnot top bot angle measuredangle sphericalangle triangle square blacksquare lozenge blacklozenge bigstar Box Diamond
 diamondsuit heartsuit clubsuit spadesuit flat natural sharp checkmark prime backprime surd S circledS diagup diagdown
 substack begin end hline cr tag notag
 color textcolor boxed cancel bcancel xcancel

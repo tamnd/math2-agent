@@ -360,7 +360,25 @@ func TestWhyName(t *testing.T) {
 		{"named-heading", "Validity of the law of excluded middle", true},
 		{"named-heading", "Theorems proved with the help of computer programs", true},
 		{"named-heading", "An introduction to the notation of \"Section A Mathematical Logic\"", true},
-		{"term", "polygon of 65537 sides", true},
+		{"inline-head", "polygon of 65537 sides", true},
+		{"term", "coanalytic", false},
+		{"term", "GCH", true},
+		{"list-entry", "Approximations of", true},
+		{"list-entry", "Proof that  is irrational", true},
+		{"named-heading", "1. Axiom of extensionality", true},
+		{"named-heading", "Axiom of pairing - 4", true},
+		{"named-heading", "Theorem 1. Every valid formula is provable.", true},
+		{"named-heading", "2 theorem", true},
+		{"named-heading", "Theorem 2. Every formula &phi; is refutable", true},
+		{"named-heading", "Using the Chinese remainder theorem", true},
+		{"named-heading", "As a theorem of arithmetic", true},
+		{"named-heading", "Second example (with variables)", true},
+		{"named-heading", "The second theorem", true},
+		{"named-heading", "Laws", true},
+		{"named-heading", "Cases where the axiom of choice is not needed", true},
+		{"named-heading", "Hume's principle", false},
+		{"named-heading", "The Fundamental Theorem of Proper Forcing", false},
+		{"named-heading", "Ramified forcing", false},
 		{"lead", "block", false},
 		{"named-heading", "Principle of least action", false},
 		{"named-heading", "Wilf's conjecture", false},
@@ -423,5 +441,19 @@ func TestProofName(t *testing.T) {
 	}
 	if got := proofName("Burnside's lemma"); got != "Proof of Burnside's lemma" {
 		t.Errorf("got %q", got)
+	}
+}
+
+func TestSentences(t *testing.T) {
+	for text, want := range map[string]int{
+		"Generalized continuum hypothesis":                  0,
+		"- Brauer's theorem (*number theory*)":              0,
+		"René-Louis Baire\nA subset has the Baire property": 0,
+		"Named for [Paul Gordan](wikipedia://en/1059850).":  1,
+		"A relation R is Euclidean. It is a relation.":      2,
+	} {
+		if got := sentences(text); got != want {
+			t.Errorf("sentences(%q) = %d, want %d", text, got, want)
+		}
 	}
 }
