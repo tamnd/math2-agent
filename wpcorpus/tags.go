@@ -51,9 +51,11 @@ const (
 	PassName   = "name"
 	PassHash   = "hash"
 	PassNear   = "near"
-	// PassRef matches by the ref, only when the objects file of the
-	// revision is lost and the last run was for the same revision. The
-	// extractor gives the same refs for the same revision.
+	// PassRef matches by the ref, only for the same revision: when the
+	// objects file of the revision is lost and the last run was for the
+	// same revision, or when the objects file is for the same revision and
+	// the object has the same hash. The extractor gives the same refs for
+	// the same revision.
 	PassRef  = "ref"
 	PassNew  = "new"
 	PassGone = "gone"
@@ -424,7 +426,7 @@ func AssignTags(root string, r *Result) (*TagRun, error) {
 		return nil, err
 	}
 	run := &TagRun{Page: c.Page, From: from, To: c.Revision, Pass: map[string]string{}}
-	tags, passes := MatchTags(old, r.Objects)
+	tags, passes := matchSameRevision(old, r.Objects, from == c.Revision)
 	if old == nil {
 		if lastRun(tf) == c.Revision {
 			byRef := map[string]string{}
@@ -504,6 +506,49 @@ func AssignTags(root string, r *Result) (*TagRun, error) {
 		return nil, err
 	}
 	return run, nil
+}
+
+// matchSameRevision matches the objects like MatchTags. When the old
+// objects are of the same revision, it first keeps the tag of each object
+// with the same ref and the same hash. Without this pass, two citations of
+// the same source have the same hash and no pass can match them, so an
+// extract of the same revision again gives them new tags.
+func matchSameRevision(old, cur []Object, same bool) (tags, passes []string) {
+	if !same {
+		return MatchTags(old, cur)
+	}
+	tags = make([]string, len(cur))
+	passes = make([]string, len(cur))
+	byRef := map[string]int{}
+	for i := range old {
+		if old[i].Tag != "" && old[i].Ref != "" {
+			byRef[old[i].Ref] = i
+		}
+	}
+	kept := map[int]bool{}
+	var restCur []Object
+	var restIdx []int
+	for j := range cur {
+		i, ok := byRef[cur[j].Ref]
+		if ok && cur[j].Hash != "" && old[i].Hash == cur[j].Hash && kindFamily(old[i].Kind) == kindFamily(cur[j].Kind) {
+			tags[j], passes[j] = old[i].Tag, PassRef
+			kept[i] = true
+			continue
+		}
+		restCur = append(restCur, cur[j])
+		restIdx = append(restIdx, j)
+	}
+	var restOld []Object
+	for i := range old {
+		if !kept[i] {
+			restOld = append(restOld, old[i])
+		}
+	}
+	t, p := MatchTags(restOld, restCur)
+	for k, j := range restIdx {
+		tags[j], passes[j] = t[k], p[k]
+	}
+	return tags, passes
 }
 
 // lastRun gives the new revision of the last run of a tags file, or 0.
