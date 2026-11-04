@@ -95,21 +95,46 @@ func readFile(path string) ([]Record, error) {
 	return out, nil
 }
 
-// WriteRecords writes the records of one source to RecordsDir/<source>/<name>.md in the tree at root, in the order of the native id.
+// ShardSize is the largest number of records in one file of WriteRecords. A source with more records, as the dump of a catalogue, gets more files, so that the codec does not hold the whole source at once.
+const ShardSize = 100000
+
+// WriteRecords writes the records of one source to RecordsDir/<source>/<name>.md in the tree at root, in the order of the native id. When there are more than ShardSize records, it writes the files <name>-0001.md, <name>-0002.md and on, each with at most ShardSize records. It removes the files of name from an earlier write, so the directory holds the records of this write only.
 func WriteRecords(root, source, name string, rs []Record) error {
 	if strings.ContainsAny(source+name, "/\\") || source == "" || name == "" {
 		return fmt.Errorf("cluster: the source %q or the name %q is not a file name", source, name)
 	}
 	slices.SortFunc(rs, func(a, b Record) int { return strings.Compare(a.NativeID, b.NativeID) })
-	recs, err := mdrec.Marshal(rs)
-	if err != nil {
-		return err
-	}
 	dir := filepath.Join(root, RecordsDir, source)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
-	return mdrec.Write(filepath.Join(dir, name+mdrec.Ext), recs)
+	old, err := mdrec.Glob(filepath.Join(dir, name+"-[0-9][0-9][0-9][0-9]"+mdrec.Ext))
+	if err != nil {
+		return err
+	}
+	old = append(old, filepath.Join(dir, name+mdrec.Ext))
+	for _, f := range old {
+		if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	if len(rs) <= ShardSize {
+		recs, err := mdrec.Marshal(rs)
+		if err != nil {
+			return err
+		}
+		return mdrec.Write(filepath.Join(dir, name+mdrec.Ext), recs)
+	}
+	for i := 0; i*ShardSize < len(rs); i++ {
+		recs, err := mdrec.Marshal(rs[i*ShardSize : min((i+1)*ShardSize, len(rs))])
+		if err != nil {
+			return err
+		}
+		if err := mdrec.Write(filepath.Join(dir, fmt.Sprintf("%s-%04d%s", name, i+1, mdrec.Ext)), recs); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // CrosswalksDir holds the links of the crosswalks of the snapshots, one file of records for each crosswalk, one Link in each record.

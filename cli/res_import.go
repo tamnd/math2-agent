@@ -14,7 +14,6 @@ import (
 
 	"github.com/tamnd/math2-agent/ingest"
 	"github.com/tamnd/math2-agent/inventory"
-	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/arxivtext"
 	rescluster "github.com/tamnd/math2-agent/resource/cluster"
@@ -173,7 +172,7 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 	if err := rescluster.WriteRejects(opt.Root, source, rejects); err != nil {
 		return fail(err)
 	}
-	fmt.Fprintf(stdout, "%s: %d source records from the snapshot %s in %s, %d rejected\n", source, len(rs), res.Snapshot.Hash, filepath.Join(rescluster.RecordsDir, source, rescluster.SourceFile+mdrec.Ext), len(rejects))
+	fmt.Fprintf(stdout, "%s: %d source records from the snapshot %s in %s, %d rejected\n", source, len(rs), res.Snapshot.Hash, filepath.Join(rescluster.RecordsDir, source), len(rejects))
 	if !*structure {
 		return ExitOK
 	}
