@@ -502,6 +502,9 @@ func adoptNode(m *inventory.Mention, name string, aliases []string, pages *pageC
 	if sentences(text) == 0 {
 		return nil, "the text of the item has no full sentence, so the write role writes the text (WP9.2)", nil
 	}
+	if listsItems(m.Cue, text) {
+		return nil, "the entry starts with a name and not a sentence, so it lists more than one item", nil
+	}
 	kind, section := cardSection(m.Kind)
 	id, err := opt.Draw()
 	if err != nil {
@@ -598,6 +601,12 @@ func flow(vs []string) string {
 }
 
 var sentenceEnd = regexp.MustCompile(`[.!?](\s|$)`)
+
+// listsItems reports if a glossary entry or a list entry starts with a bare name, such as "Oswald Veblen" or "sharp". Such an entry lists the items that have the name, and it is not one item.
+func listsItems(cue, text string) bool {
+	first, _, _ := strings.Cut(strings.TrimSpace(text), "\n\n")
+	return (cue == "term" || cue == "list-entry") && sentences(first) == 0
+}
 
 func sentences(text string) int { return len(sentenceEnd.FindAllStringIndex(text, -1)) }
 
