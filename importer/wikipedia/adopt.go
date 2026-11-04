@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"go.yaml.in/yaml/v3"
 
@@ -98,6 +99,42 @@ var adoptFlags = []string{"citation-needed", "dubious", "disputed", "informal"}
 
 // genericName matches a name that is a label and not the name of the item, as Theorem (2), Theorem A (groups) or Examples.
 var genericName = regexp.MustCompile(`(?i)^(theorem|lemma|corollary|proposition|claim|fact|definition|definitions|example|examples|remark|proof|statement|statements|properties|facts|notation|applications?|generali[sz]ations?|extensions?|construction|history|overview|motivation|algorithms?|representations?)( \(\d+\))?$|^(theorem|lemma|corollary|proposition) [A-Z]( \([^)]*\))?$`)
+
+// labelName matches a numbered label, such as "Axiom 1" or "Claim 2". The label has a meaning only in its article.
+var labelName = regexp.MustCompile(`(?i)^(axiom|theorem|lemma|corollary|proposition|claim|conjecture|definition|fact|step|case|rule|property|observation|remark|example|exercise|problem|condition|assumption|hypothesis)s? ([0-9]+[a-z]?|[A-Z]|[IVX]+)(\.[0-9]+)*$`)
+
+// headingPrefix matches a heading that names a part of the text about an item and not the item, such as "Precise statement of the Adyan–Rabin theorem" or "History: the lemma that is not Burnside's".
+var headingPrefix = regexp.MustCompile(`(?i)^(history|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary of|corollaries|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
+
+// pluralTail matches a heading that names a group of items, such as "Freudenthal-Hopf theorems".
+var pluralTail = regexp.MustCompile(`(?i)\b(theorems|results|facts|properties|lemmas|formulas|formulae|conjectures|identities|axioms|inequalities|relations|criteria)$`)
+
+// plainTail matches a short heading in lower case that needs its article to have a meaning, such as "Structure theorem" or "Volume formula".
+var plainTail = regexp.MustCompile(`^[A-Z][a-z-]* (theorem|formula|lemma|conjecture|identity|inequality|criterion|principle)$`)
+
+// whyName gives the reason why an item waits when its name is not a good name for a node, or "". A heading of a section can name a part of the text, a group of items, or an item that has a meaning only in its article. A person gives the name of such an item.
+func whyName(m *inventory.Mention) string {
+	if r, _ := utf8.DecodeRuneInString(m.Name); !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+		return "the name does not start with a letter or a digit, so the name lost a part, such as math"
+	}
+	if m.Cue == "lead" || m.Cue == "term" || m.Cue == "list-entry" {
+		if strings.HasPrefix(m.Name, "the ") || strings.HasPrefix(m.Name, "a ") || strings.HasPrefix(m.Name, "an ") {
+			return "the name starts with an article, and a person gives the name"
+		}
+		return ""
+	}
+	switch {
+	case headingPrefix.MatchString(m.Name):
+		return "the heading names a part of the text and not one item"
+	case strings.Contains(m.Name, ": "), strings.Contains(m.Name, " and "), strings.Contains(m.Name, ", "):
+		return "the heading names more than one item"
+	case pluralTail.MatchString(m.Name):
+		return "the heading names a group of items"
+	case plainTail.MatchString(m.Name):
+		return "the heading has a meaning only in its article"
+	}
+	return ""
+}
 
 // adoptCues are the cues that give the item a name of its own (WP9.1 reason 2). A plain heading names a section, not an item.
 var adoptCues = []string{"lead", "math-theorem", "named-heading", "term", "inline-head", "list-entry"}
@@ -339,8 +376,11 @@ func whyWait(m *inventory.Mention, hold map[string]string, subjectOf map[string]
 	if !slices.Contains(adoptCues, m.Cue) {
 		return "the cue " + m.Cue + " names a section and not one item"
 	}
-	if m.Name == "" || genericName.MatchString(m.Name) {
+	if m.Name == "" || genericName.MatchString(m.Name) || labelName.MatchString(m.Name) {
 		return "the item has no name of its own, and the write role names it"
+	}
+	if why := whyName(m); why != "" {
+		return why
 	}
 	if m.ArticleType == "biography" || m.ArticleType == "field" {
 		return "an article of type " + m.ArticleType + " gives a record and not a node (WP9.1)"
@@ -397,7 +437,7 @@ func adoptNode(m *inventory.Mention, name string, aliases []string, pages *pageC
 	if !ok {
 		return nil, "the content Markdown has no block for the item", nil
 	}
-	text := convert(span, pageNode)
+	text := convert(span, pageNode, pf.notes)
 	if text == "" {
 		return nil, "the block of the item has no text", nil
 	}
@@ -448,6 +488,10 @@ func adoptNode(m *inventory.Mention, name string, aliases []string, pages *pageC
 
 // displayName gives the name of the node: the name of the mention, with a capital first letter for a glossary term, as the other node names have. A name that starts with a letter symbol, as p-group, does not change.
 func displayName(m *inventory.Mention) string {
+	// The subject of an article with a qualifier, such as "Block (permutation group theory)", keeps the qualifier, because the name alone has more than one meaning.
+	if m.Cue == "lead" && !strings.Contains(m.ID, "#") && m.NativeID != Name(m.NativeID) && inventory.NameKey(m.Name) == inventory.NameKey(Name(m.NativeID)) {
+		return m.NativeID
+	}
 	if m.Cue != "term" || m.Name == "" {
 		return m.Name
 	}
@@ -504,6 +548,7 @@ type pageFile struct {
 	title   string
 	lines   []string
 	refs    map[string]string // tag to ref
+	notes   map[string]string // footnote mark to the first line of its text
 	subject string            // the ref of the subject block
 }
 
@@ -545,7 +590,12 @@ func (c *pageCache) get(page, rev int) (*pageFile, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", wpcorpus.ObjectsPath(page, rev), err)
 	}
-	pf := &pageFile{title: head.Title, lines: strings.Split(string(md), "\n"), refs: map[string]string{}}
+	pf := &pageFile{title: head.Title, lines: strings.Split(string(md), "\n"), refs: map[string]string{}, notes: map[string]string{}}
+	for _, l := range pf.lines {
+		if g := noteLine.FindStringSubmatch(l); g != nil {
+			pf.notes[g[1]] = strings.TrimSpace(g[2])
+		}
+	}
 	for _, o := range objs {
 		if o.Tag != "" {
 			pf.refs[o.Tag] = o.Ref
@@ -610,14 +660,17 @@ func (pf *pageFile) span(ref string) ([]string, bool) {
 }
 
 var (
-	mdLink    = regexp.MustCompile(`\[((?:[^\[\]]|\\\[|\\\])*)\]\((wikipedia://en/([0-9]+)(?:#[^)]*)?|https?://[^)\s]+)\)`)
-	footnote  = regexp.MustCompile(`\[\^[^\]]+\]`)
+	mdLink   = regexp.MustCompile(`\[((?:[^\[\]]|\\\[|\\\])*)\]\((wikipedia://en/([0-9]+)(?:#[^)]*)?|https?://[^)\s]+)\)`)
+	footnote = regexp.MustCompile(`\[\^[^\]]+\]`)
+	noteLine = regexp.MustCompile(`^\[\^([^\]]+)\]: (.+)$`)
+	// citeWord matches the end of a text where a footnote mark is a part of the sentence, as in "a proof may be found in [^n3].".
+	citeWord  = regexp.MustCompile(`(?i)\b(in|see|by|from|at|of|to|cf\.)\s*$`)
 	heading   = regexp.MustCompile(`^#{1,6} `)
 	boldLabel = regexp.MustCompile(`^\*\*[^*]+\*\*$`)
 )
 
 // convert gives the body text of the item from the lines of its block (WP9.2 step 3). It drops the headings, the images, the label of the item and the footnote marks, and it changes each link to a link to a node, or to its text when the target has no node. The words are not changed.
-func convert(lines []string, pageNode func(int) string) string {
+func convert(lines []string, pageNode func(int) string, notes map[string]string) string {
 	var paras []string
 	var cur []string
 	flush := func() {
@@ -645,7 +698,7 @@ func convert(lines []string, pageNode func(int) string) string {
 		case i <= 1 && boldLabel.MatchString(p) && len(out) == 0:
 			continue
 		}
-		p = footnote.ReplaceAllString(p, "")
+		p = dropNotes(p, notes)
 		p = mdLink.ReplaceAllStringFunc(p, func(s string) string {
 			g := mdLink.FindStringSubmatch(s)
 			text := g[1]
@@ -663,6 +716,28 @@ func convert(lines []string, pageNode func(int) string) string {
 		}
 	}
 	return strings.Join(out, "\n\n")
+}
+
+// dropNotes drops the footnote marks of a paragraph. A mark that is a part of the sentence, after a word such as "in" or "see" and before a punctuation mark or the end, gives the first line of its note in place of the mark, so that the sentence keeps its object.
+func dropNotes(p string, notes map[string]string) string {
+	var b strings.Builder
+	last := 0
+	for _, ix := range footnote.FindAllStringIndex(p, -1) {
+		before := p[last:ix[0]]
+		b.WriteString(before)
+		last = ix[1]
+		note := strings.TrimSuffix(notes[p[ix[0]+2:ix[1]-1]], ".")
+		rest := strings.TrimLeft(p[ix[1]:], " ")
+		if note == "" || !citeWord.MatchString(b.String()) || rest != "" && !strings.ContainsAny(rest[:1], ".,;:)") {
+			continue
+		}
+		if !strings.HasSuffix(b.String(), " ") {
+			b.WriteString(" ")
+		}
+		b.WriteString(note)
+	}
+	b.WriteString(p[last:])
+	return b.String()
 }
 
 // AdoptReport gives the report of the run: a YAML header with the counts, and a table of the items of each article.
