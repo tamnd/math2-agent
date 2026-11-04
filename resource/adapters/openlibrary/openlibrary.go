@@ -44,6 +44,7 @@ func (Adapter) Source() ingest.Source {
 		Home:        "https://openlibrary.org",
 		Licence:     "LicenseRef-unknown",
 		Class:       ingest.RecordOnly,
+		Lineage:     []string{"loc-marc"}, // Open Library took many of its records from the MARC records of the Library of Congress, so the two are one capture (RS11.4.3)
 		Attribution: "Open Library, the Internet Archive, https://openlibrary.org",
 	}
 }
