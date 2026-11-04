@@ -1,6 +1,10 @@
 package openlibrary
 
 import (
+	"bytes"
+	"compress/gzip"
+	"context"
+	"io"
 	"strings"
 	"testing"
 
@@ -63,5 +67,41 @@ func TestMath(t *testing.T) {
 		if got := Math(&c.d); got != c.want {
 			t.Errorf("Math(%+v) = %v", c.d, got)
 		}
+	}
+}
+
+func TestFetch(t *testing.T) {
+	zipped := func(s string) []byte {
+		var b bytes.Buffer
+		zw := gzip.NewWriter(&b)
+		_, _ = zw.Write([]byte(s))
+		_ = zw.Close()
+		return b.Bytes()
+	}
+	works, editions, _ := strings.Cut(dump, "/type/edition")
+	editions = "/type/edition" + editions + "bad line\n/type/edition\t/books/OL4M\t1\t2020-01-01\t{not json\n"
+	files := map[string][]byte{WorksDump: zipped(works), EditionsDump: zipped(editions)}
+	get := func(_ context.Context, u string) (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(files[u])), nil
+	}
+	var buf bytes.Buffer
+	if err := (Adapter{}).Fetch(context.Background(), &ingest.Request{URL: WorksDump, Get: get}, &buf); err != nil {
+		t.Fatal(err)
+	}
+	zr, err := gzip.NewReader(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := io.ReadAll(zr)
+	var keys []string
+	for _, line := range strings.Split(strings.TrimSpace(string(got)), "\n") {
+		keys = append(keys, strings.Split(line, "\t")[1])
+	}
+	if strings.Join(keys, " ") != "/works/OL1W /books/OL1M /books/OL3M" {
+		t.Fatalf("kept %v", keys)
+	}
+	var rs []cluster.Record
+	if err := (Adapter{}).Records(bytes.NewReader(got), func(r cluster.Record) error { rs = append(rs, r); return nil }); err != nil || len(rs) != 3 {
+		t.Errorf("records of the snapshot %d, %v", len(rs), err)
 	}
 }
