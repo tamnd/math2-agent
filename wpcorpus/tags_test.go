@@ -181,18 +181,22 @@ func TestMatchTagsNear(t *testing.T) {
 
 func TestMatchSameRevision(t *testing.T) {
 	old := []Object{
-		{Ref: "o1", Tag: "0AAA", Kind: "citation", Hash: "h1"},
-		{Ref: "o2", Tag: "0BBB", Kind: "citation", Hash: "h1"},
-		{Ref: "o3", Tag: "0CCC", Kind: "statement", Hash: "h2", Name: "Fact"},
+		{Ref: "o1", Tag: "0AAA", Kind: "citation", Hash: "h1", Span: [2]int{10, 20}},
+		{Ref: "o2", Tag: "0BBB", Kind: "citation", Hash: "h1", Span: [2]int{30, 40}},
+		{Ref: "o3", Tag: "0CCC", Kind: "statement", Hash: "h2", Name: "Fact", Span: [2]int{50, 90}},
+		{Ref: "o4", Tag: "0DDD", Kind: "equation", Span: [2]int{100, 120}},
+		{Ref: "o5", Tag: "0EEE", Kind: "example", Name: "Group", Span: [2]int{130, 150}},
 	}
 	cur := []Object{
-		{Ref: "o1", Kind: "citation", Hash: "h1"},
-		{Ref: "o2", Kind: "citation", Hash: "h1"},
-		{Ref: "o3", Kind: "statement", Hash: "h3", Name: "Fact"},
+		{Ref: "o1", Kind: "citation", Hash: "h1", Span: [2]int{10, 20}},
+		{Ref: "o2", Kind: "citation", Hash: "h1", Span: [2]int{30, 40}},
+		{Ref: "o3", Kind: "statement", Hash: "h3", Name: "Fact", Span: [2]int{50, 90}},
+		{Ref: "o4", Kind: "equation", Span: [2]int{100, 120}},
+		{Ref: "o5", Kind: "example", Name: "Group", Span: [2]int{131, 150}},
 	}
 	tags, passes := matchSameRevision(old, cur, true)
-	want := []string{"0AAA", "0BBB", "0CCC"}
-	wantPass := []string{PassRef, PassRef, PassName}
+	want := []string{"0AAA", "0BBB", "0CCC", "0DDD", "0EEE"}
+	wantPass := []string{PassRef, PassRef, PassRef, PassRef, PassName}
 	for j := range cur {
 		if tags[j] != want[j] || passes[j] != wantPass[j] {
 			t.Errorf("object %d: %s %s, want %s %s", j, tags[j], passes[j], want[j], wantPass[j])
