@@ -93,6 +93,8 @@ type Input struct {
 	Decisions  []Decision          // the merge and split decisions of people
 	By         string              // the build and its version, for the history
 	Day        string              // the date of the run, YYYY-MM-DD
+	// Large holds the hashes of the blocks of C4 with more than MaxBlock records in the full set of records, when the records are one bucket of a partitioned run (RS10.8). Pass C4 does not compare these blocks. When it is nil, the pass counts the blocks of the records.
+	Large map[uint64]bool
 }
 
 // Pair is a pair of records for the queue res-cluster: a pair of the middle band of C4, or a join that a guard refused.
@@ -251,6 +253,18 @@ var FillerJoins = []string{"doi", "isbn", "arxiv"}
 
 // Run runs the passes C1 to C5 and builds the resource records.
 func Run(in Input) (*Result, error) {
+	g, skipped := passes(in)
+	res, err := build(in, g)
+	if err != nil {
+		return nil, err
+	}
+	res.Skipped = skipped
+	res.Log = g.log
+	return res, nil
+}
+
+// passes runs the decisions of people and the passes C1 to C5, and puts the records of the fillers on the groups. It gives the groups and the number of blocks of C4 that it did not compare.
+func passes(in Input) (*groups, int) {
 	var fill []Record
 	rs := slices.DeleteFunc(unique(in.Records), func(r Record) bool {
 		if Fillers[r.Source] {
@@ -296,7 +310,7 @@ func Run(in Input) (*Result, error) {
 			}
 		}
 	}
-	skipped := blocked(g)
+	skipped := blocked(g, in.Large)
 	works(g)
 	// A pair of the middle band whose records a later join put in one group is no longer a question.
 	byKey := map[string]int{}
@@ -307,13 +321,7 @@ func Run(in Input) (*Result, error) {
 		return p.Pass == C4 && g.find(byKey[p.A]) == g.find(byKey[p.B])
 	})
 	attach(g, byID, fill)
-	res, err := build(in, g)
-	if err != nil {
-		return nil, err
-	}
-	res.Skipped = skipped
-	res.Log = g.log
-	return res, nil
+	return g, skipped
 }
 
 // attach puts each record of a filler in the group of the first record that has one of its join ids. A record of a filler with no such record is dropped.
@@ -516,7 +524,7 @@ func abs(n int) int {
 }
 
 // blocked runs pass C4. A block is the family name of the first creator with the year, or the venue with the volume and the first page. A record is compared with its block and with the block of the next year.
-func blocked(g *groups) int {
+func blocked(g *groups, large map[uint64]bool) int {
 	blocks := map[string][]int{}
 	for i := range g.rs {
 		r := &g.rs[i]
@@ -553,7 +561,7 @@ func blocked(g *groups) int {
 	}
 	for _, k := range sortedKeys(blocks) {
 		xs := blocks[k]
-		if len(xs) > MaxBlock {
+		if len(xs) > MaxBlock || large[keyHash(k)] {
 			skipped++
 			continue
 		}
@@ -561,7 +569,8 @@ func blocked(g *groups) int {
 		if after, ok := strings.CutPrefix(k, "a:"); ok {
 			i := strings.LastIndexByte(after, ':')
 			y, _ := strconv.Atoi(after[i+1:])
-			if ys := blocks["a:"+after[:i]+":"+strconv.Itoa(y+1)]; len(ys) > 0 && len(ys) <= MaxBlock {
+			next := "a:" + after[:i] + ":" + strconv.Itoa(y+1)
+			if ys := blocks[next]; len(ys) > 0 && len(ys) <= MaxBlock && !large[keyHash(next)] {
 				compare(xs, ys, false)
 			}
 		}
@@ -667,6 +676,12 @@ func lang(s string) string {
 
 // build makes the resource records from the groups. A group keeps the id of the existing resource that has one of its records. A group with the records of two existing resources keeps the older id, and the other resource becomes a duplicate of it (RS10.6).
 func build(in Input, g *groups) (*Result, error) {
+	out, _ := groupResources(in, g, true)
+	return finish(out, g.pairs, g.joins)
+}
+
+// groupResources makes the resource record of each group and keeps the existing resources that no group has. A new group gets a provisional id. It also gives the smallest key of the records of each new group, which a partitioned run uses to give the provisional ids again in the order of the full run. When keep is false, the existing resources that no group has are not in the result, because a partitioned run adds them once.
+func groupResources(in Input, g *groups, keep bool) (map[string]resource.Resource, map[string]string) {
 	members := map[int][]int{}
 	for i := range g.rs {
 		members[g.find(i)] = append(members[g.find(i)], i)
@@ -697,7 +712,7 @@ func build(in Input, g *groups) (*Result, error) {
 	used := map[string]bool{}
 	claimed := map[string]bool{}
 	out := map[string]resource.Resource{}
-	res := &Result{Joins: g.joins}
+	fresh := map[string]string{}
 	roots := slices.Sorted(maps.Keys(members))
 	for _, root := range roots {
 		idx := members[root]
@@ -726,6 +741,7 @@ func build(in Input, g *groups) (*Result, error) {
 			}
 		} else {
 			id = provisional(recs[0].Key(), used)
+			fresh[id] = recs[0].Key()
 		}
 		r := assemble(id, recs, prev)
 		if prev == nil {
@@ -748,17 +764,23 @@ func build(in Input, g *groups) (*Result, error) {
 	}
 	// An existing resource that no group has keeps its record.
 	for id, r := range existing {
-		if _, ok := out[id]; !ok {
+		if _, ok := out[id]; !ok && keep {
 			out[id] = *r
 		}
 	}
+	return out, fresh
+}
+
+// finish runs the steps that read all the resources: the targets of the offerings and of the other edges, the default access, the order of the resources and of the pairs, and the check of each new resource.
+func finish(out map[string]resource.Resource, pairs []Pair, joins map[string]int) (*Result, error) {
+	res := &Result{Joins: joins}
 	offerings(out)
 	defaultAccess(out)
 	for _, id := range sortedKeys(out) {
 		res.Resources = append(res.Resources, out[id])
 	}
 	resolveTargets(res.Resources)
-	res.Pairs = g.pairs
+	res.Pairs = pairs
 	slices.SortFunc(res.Pairs, func(a, b Pair) int {
 		return cmp.Or(cmp.Compare(a.Pass, b.Pass), cmp.Compare(a.A, b.A), cmp.Compare(a.B, b.B))
 	})
