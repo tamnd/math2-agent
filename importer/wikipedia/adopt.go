@@ -553,6 +553,9 @@ func adoptNode(m *inventory.Mention, name string, aliases []string, pages *pageC
 	if m.Cue == "term" && personEntry.MatchString(strings.TrimSpace(text)) {
 		return nil, "the entry tells about a person, and a person gives a record and not a node (WP9.1)", nil
 	}
+	if m.Cue == "term" && modifierEntry(m.Name, text) {
+		return nil, "the entry name is a word that qualifies a noun in the definition, so the name is not the full term", nil
+	}
 	if listsItems(m.Cue, text) {
 		return nil, "the entry starts with a name and not a sentence, so it lists more than one item", nil
 	}
@@ -652,6 +655,52 @@ func flow(vs []string) string {
 }
 
 var sentenceEnd = regexp.MustCompile(`[.!?](\s|$)`)
+
+// bareName matches an entry that is only the name of a person, as "Emil Artin.".
+var bareName = regexp.MustCompile(`^[A-Z]\pL+( [A-Z][\pL.]*)+\.$`)
+
+// nameWord matches the first use of a word in a text, with the word or the "'s" that follows it.
+var nameWord = regexp.MustCompile(`^('s\b|\s+[\p{Ll}-]{3,}\b)`)
+
+// joinWords are the words that can follow the name of a term in its definition, as in "a ring is" or "called admissible if".
+var joinWords = map[string]bool{"is": true, "are": true, "was": true, "were": true, "if": true, "of": true, "in": true, "on": true, "at": true, "to": true, "for": true, "with": true, "and": true, "or": true, "by": true, "that": true, "which": true, "when": true, "where": true, "has": true, "have": true, "means": true, "consists": true, "can": true, "may": true, "over": true, "under": true, "such": true, "as": true, "be": true, "denotes": true, "refers": true, "also": true, "here": true, "there": true}
+
+// modifierEntry reports if a glossary entry has a one-word name that qualifies a noun in the definition, as "Unitary" with "A unitary representation of a group" or "Brauer" with "Brauer's theorem". The full term is the name and the noun, so the entry name is not the name of the item.
+func modifierEntry(name, text string) bool {
+	text = strings.TrimSpace(text)
+	if bareName.MatchString(text) {
+		return true
+	}
+	if strings.ContainsAny(name, " ") {
+		return false
+	}
+	first := text
+	if loc := sentenceEnd.FindStringIndex(text); loc != nil {
+		first = text[:loc[0]]
+	}
+	at := strings.Index(strings.ToLower(first), strings.ToLower(name))
+	for at >= 0 {
+		if at == 0 || !isLetter(first[at-1]) {
+			rest := first[at+len(name):]
+			if rest == "" || !isLetter(rest[0]) {
+				w := nameWord.FindStringSubmatch(rest)
+				if w == nil {
+					return false
+				}
+				word := strings.ToLower(strings.TrimSpace(w[1]))
+				return word == "'s" || !joinWords[word]
+			}
+		}
+		next := strings.Index(strings.ToLower(first[at+1:]), strings.ToLower(name))
+		if next < 0 {
+			break
+		}
+		at += 1 + next
+	}
+	return false
+}
+
+func isLetter(c byte) bool { return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= 0x80 }
 
 // listsItems reports if a glossary entry or a list entry starts with a bare name, such as "Oswald Veblen" or "sharp". Such an entry lists the items that have the name, and it is not one item.
 func listsItems(cue, text string) bool {

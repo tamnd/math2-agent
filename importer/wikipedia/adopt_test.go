@@ -523,6 +523,33 @@ func TestSeeEntry(t *testing.T) {
 	}
 }
 
+func TestModifierEntry(t *testing.T) {
+	for _, c := range [][2]string{
+		{"Unitary", "A unitary representation of a group *G* is a representation."},
+		{"Brauer", "Brauer's theorem on induced characters states that a character is a sum."},
+		{"Adams", "Adams operations."},
+		{"Artin", "Emil Artin."},
+		{"Faithful", "A [[faithful representation|5FW1MD0HNV]] is a representation that is injective."},
+		{"Primitive", "The term \"primitive element\" is an old term for a vector."},
+	} {
+		if !modifierEntry(c[0], c[1]) {
+			t.Errorf("%q with %q is not found as a modifier entry", c[0], c[1])
+		}
+	}
+	for _, c := range [][2]string{
+		{"Ring", "A ring is a set with two operations."},
+		{"Girth", "The girth of a graph is the length of its shortest cycle."},
+		{"Admissible", "A representation is called admissible if it has finite multiplicities."},
+		{"Defined over", "A representation is said to be defined over F if it comes from F."},
+		{"Source", "A vertex with no incoming edges."},
+		{"Ideal", "An ideal I of a ring R is a subgroup."},
+	} {
+		if modifierEntry(c[0], c[1]) {
+			t.Errorf("%q with %q is found as a modifier entry", c[0], c[1])
+		}
+	}
+}
+
 func TestURLText(t *testing.T) {
 	if !urlText.MatchString("Graph Theory, <http://www.math.ucsd.edu/~fan/research/revised.html>):") {
 		t.Error("the URL of a citation is not found")
