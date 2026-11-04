@@ -54,7 +54,7 @@ const (
 	// PassRef matches by the ref, only for the same revision: when the
 	// objects file of the revision is lost and the last run was for the
 	// same revision, or when the objects file is for the same revision and
-	// the object has the same hash. The extractor gives the same refs for
+	// the object has the same span. The extractor gives the same refs for
 	// the same revision.
 	PassRef  = "ref"
 	PassNew  = "new"
@@ -510,9 +510,12 @@ func AssignTags(root string, r *Result) (*TagRun, error) {
 
 // matchSameRevision matches the objects like MatchTags. When the old
 // objects are of the same revision, it first keeps the tag of each object
-// with the same ref and the same hash. Without this pass, two citations of
-// the same source have the same hash and no pass can match them, so an
-// extract of the same revision again gives them new tags.
+// with the same ref, the same kind family and the same span in the source.
+// The source of the revision does not change, so the span tells the object
+// even when a change of the renderer changes its text and hash. Without this
+// pass, two citations of the same source have the same hash, an equation has
+// no hash, and no pass can match them, so an extract of the same revision
+// again gives them new tags.
 func matchSameRevision(old, cur []Object, same bool) (tags, passes []string) {
 	if !same {
 		return MatchTags(old, cur)
@@ -530,7 +533,7 @@ func matchSameRevision(old, cur []Object, same bool) (tags, passes []string) {
 	var restIdx []int
 	for j := range cur {
 		i, ok := byRef[cur[j].Ref]
-		if ok && cur[j].Hash != "" && old[i].Hash == cur[j].Hash && kindFamily(old[i].Kind) == kindFamily(cur[j].Kind) {
+		if ok && old[i].Span == cur[j].Span && kindFamily(old[i].Kind) == kindFamily(cur[j].Kind) {
 			tags[j], passes[j] = old[i].Tag, PassRef
 			kept[i] = true
 			continue
