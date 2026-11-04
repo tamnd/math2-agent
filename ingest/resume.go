@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"time"
 )
 
@@ -60,3 +61,36 @@ func (r *resumer) Read(p []byte) (int, error) {
 }
 
 func (r *resumer) Close() error { return r.body.Close() }
+
+// Spool gets the file at url into a temporary file in req.Cache, with Resume, and returns the file from its start. Close removes the file. A fetch that reads a large dump slowly, as it parses it, keeps the connection open for a long time, and a server can reset it. Spool reads the dump at the speed of the network first.
+func Spool(ctx context.Context, req *Request, url string) (io.ReadCloser, error) {
+	body, err := Resume(ctx, req, url)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = body.Close() }()
+	f, err := os.CreateTemp(req.Cache, "spool-*")
+	if err != nil {
+		return nil, err
+	}
+	s := &spool{f}
+	if _, err := io.Copy(f, body); err != nil {
+		_ = s.Close()
+		return nil, err
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		_ = s.Close()
+		return nil, err
+	}
+	return s, nil
+}
+
+type spool struct{ *os.File }
+
+func (s *spool) Close() error {
+	err := s.File.Close()
+	if rerr := os.Remove(s.Name()); err == nil {
+		err = rerr
+	}
+	return err
+}

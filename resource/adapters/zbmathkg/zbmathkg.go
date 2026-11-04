@@ -90,9 +90,9 @@ type Doc struct {
 	creators []string
 }
 
-// Fetch reads the dump at req.URL as a stream and writes one line of JSON for each document, compressed with gzip. After a read error, it gets the rest of the dump with a range request (ingest.Resume).
+// Fetch reads the dump at req.URL as a stream and writes one line of JSON for each document, compressed with gzip. It gets the dump into the cache first (ingest.Spool), because the server can reset a connection that is read slowly.
 func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) error {
-	body, err := ingest.Resume(ctx, req, req.URL)
+	body, err := ingest.Spool(ctx, req, req.URL)
 	if err != nil {
 		return err
 	}

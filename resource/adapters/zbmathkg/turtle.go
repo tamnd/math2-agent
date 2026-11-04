@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -406,11 +405,11 @@ func (p *parser) literal(q byte) (string, error) {
 					return "", err
 				}
 			}
-			r, err := strconv.ParseUint(string(hex), 16, 32)
-			if err != nil || !utf8.ValidRune(rune(r)) {
+			r, ok := hexRune(hex)
+			if !ok {
 				return "", p.errorf("a bad escape \\%c%s", e, hex)
 			}
-			b.WriteRune(rune(r))
+			b.WriteRune(r)
 		default:
 			b.WriteByte(e)
 		}
@@ -445,4 +444,30 @@ func (p *parser) suffix() error {
 	}
 	p.unread(c)
 	return nil
+}
+
+// hexRune gives the rune of the hexadecimal digits of an escape, and false when a digit is not hexadecimal or the rune is not valid.
+func hexRune(hex []byte) (rune, bool) {
+	var r rune
+	for _, c := range hex {
+		var d rune
+		switch {
+		case c >= '0' && c <= '9':
+			d = rune(c - '0')
+		case c >= 'a' && c <= 'f':
+			d = rune(c-'a') + 10
+		case c >= 'A' && c <= 'F':
+			d = rune(c-'A') + 10
+		default:
+			return 0, false
+		}
+		if r > utf8.MaxRune>>4 {
+			return 0, false
+		}
+		r = r<<4 | d
+	}
+	if !utf8.ValidRune(r) {
+		return 0, false
+	}
+	return r, true
 }

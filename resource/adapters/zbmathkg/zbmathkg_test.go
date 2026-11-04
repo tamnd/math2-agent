@@ -123,6 +123,18 @@ func TestFetch(t *testing.T) {
 	}
 }
 
+func TestHexRune(t *testing.T) {
+	for _, c := range []struct {
+		hex  string
+		want rune
+		ok   bool
+	}{{"00e9", 'é', true}, {"0001F600", '😀', true}, {"00g9", 0, false}, {"0000D800", 0, false}, {"FFFFFFFF", 0, false}} {
+		if r, ok := hexRune([]byte(c.hex)); r != c.want || ok != c.ok {
+			t.Errorf("%s: %q, %v", c.hex, r, ok)
+		}
+	}
+}
+
 func TestParserErrors(t *testing.T) {
 	for _, s := range []string{
 		`zbmath:1 a schema:ScholarlyArticle .`,

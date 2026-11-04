@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
 	"strings"
 	"testing"
 )
@@ -56,5 +57,26 @@ func TestResume(t *testing.T) {
 	r, _ = Resume(context.Background(), req, "https://example.org/dump")
 	if _, err := io.ReadAll(r); err == nil || !strings.Contains(err.Error(), "reset") {
 		t.Errorf("no range getter: %v", err)
+	}
+}
+
+func TestSpool(t *testing.T) {
+	dir := t.TempDir()
+	req := &Request{Cache: dir, Get: func(context.Context, string) (io.ReadCloser, error) {
+		return io.NopCloser(strings.NewReader("dump")), nil
+	}}
+	r, err := Spool(context.Background(), req, "https://example.org/dump")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(r)
+	if err != nil || string(b) != "dump" {
+		t.Fatalf("read %q, %v", b, err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if es, _ := os.ReadDir(dir); len(es) != 0 {
+		t.Errorf("the cache keeps %v", es)
 	}
 }

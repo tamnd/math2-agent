@@ -86,7 +86,7 @@ func Parts(base, page string) ([]string, error) {
 	return out, nil
 }
 
-// Fetch reads the page at req.URL, reads each part of the newest year, and writes the books of mathematics as JSON Lines, compressed with gzip. After a read error, it gets the rest of the part with a range request (ingest.Resume).
+// Fetch reads the page at req.URL, reads each part of the newest year, and writes the books of mathematics as JSON Lines, compressed with gzip. It gets each part into the cache first (ingest.Spool), because the server resets a connection that is read slowly.
 func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) error {
 	body, err := req.Get(ctx, req.URL)
 	if err != nil {
@@ -113,7 +113,7 @@ func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) erro
 }
 
 func part(ctx context.Context, req *ingest.Request, u string, enc *json.Encoder) error {
-	body, err := ingest.Resume(ctx, req, u)
+	body, err := ingest.Spool(ctx, req, u)
 	if err != nil {
 		return err
 	}
