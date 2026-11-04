@@ -353,6 +353,18 @@ func TestWhyName(t *testing.T) {
 		{"list-entry", "-adic numbers", true},
 		{"list-entry", "the Heisenberg group modulo p", true},
 		{"list-entry", "2-groups", false},
+		{"named-heading", "Principle", true},
+		{"named-heading", "Principles", true},
+		{"named-heading", "Primitive propositions", true},
+		{"named-heading", "Relationship with the axiom of choice", true},
+		{"named-heading", "Validity of the law of excluded middle", true},
+		{"named-heading", "Theorems proved with the help of computer programs", true},
+		{"named-heading", "An introduction to the notation of \"Section A Mathematical Logic\"", true},
+		{"term", "polygon of 65537 sides", true},
+		{"lead", "block", false},
+		{"named-heading", "Principle of least action", false},
+		{"named-heading", "Wilf's conjecture", false},
+		{"term", "π", false},
 	} {
 		got := whyName(&inventory.Mention{Cue: c.cue, Name: c.name}) != ""
 		if got != c.wait {
