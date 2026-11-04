@@ -533,3 +533,42 @@ func TestClusterJoinsByName(t *testing.T) {
 		t.Errorf("the second run gives %+v", again.Rows)
 	}
 }
+
+// TestClusterRetiresAttachedRows checks that an open row of an older import whose mentions are all attached is merged into the row of their target, and that a row whose attached mention has no target row stays open.
+func TestClusterRetiresAttachedRows(t *testing.T) {
+	ax := func(id, kind string) Mention {
+		return Mention{ID: "ax://paper/" + id, Source: "arxiv", NativeID: id, Kind: kind, MSC: []string{"20E06"}, Class: "record", By: "m2/arxiv"}
+	}
+	ms := []Mention{ax("2401.00001#S1", "statement"), ax("2401.00001#P1", "proof"), ax("2401.00001#C1", "statement"), ax("2401.00001#P2", "proof")}
+	ms[1].AttachedTo = ms[0].ID
+	ms[2].AttachedTo = ms[1].ID  // a claim inside the proof
+	ms[3].AttachedTo = "unknown" // a proof with no target
+	old := []Row{
+		{ID: "AB00000017", Mentions: []string{ms[0].ID}, Kind: "statement"},
+		{ID: "AB00000025", Mentions: []string{ms[1].ID, ms[2].ID}, Kind: Unknown},
+		{ID: "AB00000033", Mentions: []string{ms[3].ID}, Kind: Unknown},
+	}
+	res, err := Cluster(old, ms, Options{Day: day, By: "test", Mint: counter()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Retired != 1 || len(res.Added) != 0 {
+		t.Fatalf("retired %d rows and added %v, want 1 and none", res.Retired, res.Added)
+	}
+	for _, r := range res.Rows {
+		switch r.ID {
+		case "AB00000017":
+			if !slices.Equal(r.Proofs, []string{ms[1].ID}) || !slices.Equal(r.Local, []string{ms[2].ID}) {
+				t.Errorf("the row of the statement has proofs %v and local %v", r.Proofs, r.Local)
+			}
+		case "AB00000025":
+			if r.Outcome == nil || r.Outcome.Value != OutcomeMerged || r.Outcome.Rule != "attached" || !slices.Equal(r.Outcome.Target, []string{"AB00000017"}) || len(r.Mentions) != 0 {
+				t.Errorf("the row of the proof is %+v", r)
+			}
+		case "AB00000033":
+			if r.Outcome != nil && r.Outcome.Value == OutcomeMerged {
+				t.Errorf("the row of the proof with no target is merged: %+v", r.Outcome)
+			}
+		}
+	}
+}

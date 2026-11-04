@@ -45,6 +45,8 @@ type Result struct {
 	// Named is the number of joins of the name pass: each join puts a mention of the research layer into the group of a mention of another source with its name (corpus arxiv AX8.2 and AX8.4).
 	Named   int
 	Orphans int // the number of attached mentions whose target has no row
+	// Retired is the number of open rows that the run merged into the row of their target, because each of their mentions is attached (rule attached).
+	Retired int
 	// Formal is the number of rows whose outcome the formal rules changed: a new outcome formal_only, or formal_only open again because a test of corpus K4.5 now selects the row.
 	Formal int
 	// Aligned is the number of rows of the research layer that got the outcome aligned, or lost it, because of the aligned edges of the nodes.
@@ -170,6 +172,7 @@ func Cluster(rows []Row, ms []Mention, opt Options) (*Result, error) {
 		applyRules(keep, byID, opt.By)
 	}
 	res.Orphans = attach(rows, ms, byID)
+	res.Retired = retireAttached(rows, byID, day, opt.By)
 	for i := range rows {
 		if applyNotItem(&rows[i], byID, opt.NotItems, day, opt.By) {
 			res.NotItems++
@@ -504,15 +507,7 @@ func attach(rows []Row, ms []Mention, byID map[string]*Mention) int {
 		if !m.Attached() {
 			continue
 		}
-		to := m.AttachedTo
-		for n := 0; n < 8; n++ {
-			t := byID[to]
-			if t == nil || !t.Attached() {
-				break
-			}
-			to = t.AttachedTo
-		}
-		r, ok := rowOf[to]
+		r, ok := rowOf[targetOf(m, byID)]
 		if !ok {
 			orphans++
 			continue
@@ -528,4 +523,58 @@ func attach(rows []Row, ms []Mention, byID map[string]*Mention) int {
 		slices.Sort(rows[i].Local)
 	}
 	return orphans
+}
+
+// targetOf returns the target of an attached mention: what a proof proves, and for a claim inside a proof, the target of that proof.
+func targetOf(m *Mention, byID map[string]*Mention) string {
+	to := m.AttachedTo
+	for n := 0; n < 8; n++ {
+		t := byID[to]
+		if t == nil || !t.Attached() {
+			break
+		}
+		to = t.AttachedTo
+	}
+	return to
+}
+
+// retireAttached merges each open row whose mentions are all attached mentions of this import into the row of their target (rule attached). An import before corpus arxiv AX5.2 gave such a mention a row of its own. Now attach lists it in the row of its target, so the old row holds nothing. It returns the number of rows it merged.
+func retireAttached(rows []Row, byID map[string]*Mention, day, by string) int {
+	rowOf := map[string]string{}
+	for i := range rows {
+		if rows[i].Outcome != nil && rows[i].Outcome.Value == OutcomeMerged {
+			continue
+		}
+		for _, id := range rows[i].Mentions {
+			rowOf[id] = rows[i].ID
+		}
+	}
+	n := 0
+	for i := range rows {
+		r := &rows[i]
+		if r.Outcome != nil || len(r.Mentions) == 0 {
+			continue
+		}
+		to := ""
+		for _, id := range r.Mentions {
+			m := byID[id]
+			t := ""
+			if m != nil && m.Attached() {
+				t = rowOf[targetOf(m, byID)]
+			}
+			if t == "" || t == r.ID || to != "" && t != to {
+				to = ""
+				break
+			}
+			to = t
+		}
+		if to == "" {
+			continue
+		}
+		r.Mentions = nil
+		r.Outcome = &Outcome{Value: OutcomeMerged, Target: []string{to}, Rule: "attached", By: by}
+		r.History = append(r.History, Event{Op: "merge", At: day, By: by, Note: "merged into " + to + ", the row of the target of its attached mentions"})
+		n++
+	}
+	return n
 }
