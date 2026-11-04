@@ -88,10 +88,14 @@ type Tier struct {
 
 // Build computes the report of the tree at root on the day, YYYY-MM-DD.
 func Build(root, day string) (*Report, error) {
-	rs, err := resource.ReadResources(root)
-	if err != nil {
+	var rs []resource.Resource
+	if err := resource.WalkResources(root, func(_ string, _ int, r resource.Resource) error {
+		rs = append(rs, slim(r))
+		return nil
+	}); err != nil {
 		return nil, err
 	}
+	slices.SortFunc(rs, func(a, b resource.Resource) int { return cmp.Compare(a.ID, b.ID) })
 	rep := &Report{Day: day, Open: Open{ByReason: map[string]int{}}}
 	mapped := map[string]bool{} // the keys source:native_id of the records of a resource with an outcome
 	byID := map[string]*resource.Resource{}
@@ -111,10 +115,6 @@ func Build(root, day string) (*Report, error) {
 			rep.Open.ByReason[cmp.Or(r.Scope.Reason, "no reason")]++
 		}
 	}
-	recs, err := cluster.ReadRecords(root)
-	if err != nil {
-		return nil, err
-	}
 	bySource := map[string]*Coverage{}
 	get := func(s string) *Coverage {
 		if bySource[s] == nil {
@@ -122,7 +122,7 @@ func Build(root, day string) (*Report, error) {
 		}
 		return bySource[s]
 	}
-	for _, r := range recs {
+	if err := cluster.WalkRecords(root, func(r *cluster.Record) error {
 		c := get(r.Source)
 		c.Read++
 		c.Snapshot = r.Snapshot
@@ -131,6 +131,9 @@ func Build(root, day string) (*Report, error) {
 		} else if len(c.Missing) < MaxList {
 			c.Missing = append(c.Missing, r.NativeID)
 		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 	rejected, err := filepath.Glob(filepath.Join(root, cluster.RejectedDir, "*.md"))
 	if err != nil {
@@ -231,6 +234,28 @@ func Build(root, day string) (*Report, error) {
 	}
 	rep.Courses = courses.Count(rs, ins)
 	return rep, nil
+}
+
+// slim gives a copy of r with only the fields that the report reads, so that the report of the full catalogue fits in memory. It keeps one creator, one MSC code and the course ids, and of each manifestation only its access.
+func slim(r resource.Resource) resource.Resource {
+	out := resource.Resource{ID: r.ID, Kind: r.Kind, Genre: r.Genre, Title: r.Title, Date: r.Date, Relations: r.Relations, Scope: r.Scope}
+	// A clone, so that the slice does not hold the array of all the creators and codes.
+	out.Creators = slices.Clone(r.Creators[:min(len(r.Creators), 1)])
+	out.MSC = slices.Clone(r.MSC[:min(len(r.MSC), 1)])
+	if cs := r.IDs["course"]; len(cs) > 0 {
+		out.IDs = resource.IDs{"course": cs}
+	}
+	for _, e := range r.Expressions {
+		x := resource.Expression{Key: e.Key, Kind: e.Kind, Language: e.Language, Structure: e.Structure, Access: e.Access}
+		for _, m := range e.Manifestations {
+			x.Manifestations = append(x.Manifestations, resource.Manifestation{Key: m.Key, Kind: m.Kind, Access: m.Access})
+		}
+		out.Expressions = append(out.Expressions, x)
+	}
+	for _, c := range r.Catalogue {
+		out.Catalogue = append(out.Catalogue, resource.CatalogueRecord{Source: c.Source, NativeID: c.NativeID})
+	}
+	return out
 }
 
 func round(f float64) float64 { return float64(int(f*10000+0.5)) / 10000 }

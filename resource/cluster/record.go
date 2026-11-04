@@ -77,6 +77,26 @@ func ReadRecords(root string) ([]Record, error) {
 	return out, nil
 }
 
+// WalkRecords calls fn for each record that ReadRecords reads, in the same order. It keeps the records of one file in memory at one time.
+func WalkRecords(root string, fn func(r *Record) error) error {
+	files, err := RecordFiles(root)
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		rs, err := readFile(f)
+		if err != nil {
+			return err
+		}
+		for i := range rs {
+			if err := fn(&rs[i]); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // RecordFiles gives the files of records that ReadRecords reads, in the order that it reads them.
 func RecordFiles(root string) ([]string, error) {
 	return mdrec.Glob(filepath.Join(root, RecordsDir, "*", "*"+mdrec.Ext))
