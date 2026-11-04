@@ -130,23 +130,10 @@ func WriteRecords(root, source, name string, rs []Record) error {
 
 // WriteEncoded writes the records of one source to RecordsDir/<source>/<name>.md in the tree at root, in the order of the native id. When there are more than ShardSize records, it writes the files <name>-0001.md, <name>-0002.md and on, each with at most ShardSize records. It removes the files of name from an earlier write, so the directory holds the records of this write only.
 func WriteEncoded(root, source, name string, es []Encoded) error {
-	if strings.ContainsAny(source+name, "/\\") || source == "" || name == "" {
-		return fmt.Errorf("cluster: the source %q or the name %q is not a file name", source, name)
-	}
 	slices.SortStableFunc(es, func(a, b Encoded) int { return strings.Compare(a.NativeID, b.NativeID) })
-	dir := filepath.Join(root, RecordsDir, source)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return err
-	}
-	old, err := mdrec.Glob(filepath.Join(dir, name+"-[0-9][0-9][0-9][0-9]"+mdrec.Ext))
+	dir, err := recordsDir(root, source, name)
 	if err != nil {
 		return err
-	}
-	old = append(old, filepath.Join(dir, name+mdrec.Ext))
-	for _, f := range old {
-		if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
-			return err
-		}
 	}
 	shard := func(es []Encoded) [][]byte {
 		recs := make([][]byte, len(es))
@@ -164,6 +151,28 @@ func WriteEncoded(root, source, name string, es []Encoded) error {
 		}
 	}
 	return nil
+}
+
+// recordsDir makes the directory of the records of the source in the tree at root and removes the files of name from an earlier write. It gives the directory.
+func recordsDir(root, source, name string) (string, error) {
+	if strings.ContainsAny(source+name, "/\\") || source == "" || name == "" {
+		return "", fmt.Errorf("cluster: the source %q or the name %q is not a file name", source, name)
+	}
+	dir := filepath.Join(root, RecordsDir, source)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return "", err
+	}
+	old, err := mdrec.Glob(filepath.Join(dir, name+"-[0-9][0-9][0-9][0-9]"+mdrec.Ext))
+	if err != nil {
+		return "", err
+	}
+	old = append(old, filepath.Join(dir, name+mdrec.Ext))
+	for _, f := range old {
+		if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
+			return "", err
+		}
+	}
+	return dir, nil
 }
 
 // CrosswalksDir holds the links of the crosswalks of the snapshots, one file of records for each crosswalk, one Link in each record.

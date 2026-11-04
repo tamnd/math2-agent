@@ -149,7 +149,15 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 			return fail(err)
 		}
 	}
+	// The table of contents of one structurer needs the records in memory. Each other import sorts the records through spill files in TMPDIR, so that a large source fits in memory.
 	var rs []rescluster.Encoded
+	var sorter *rescluster.Sorter
+	if !*structure || !ok {
+		if sorter, err = rescluster.NewSorter(os.TempDir()); err != nil {
+			return fail(err)
+		}
+		defer func() { _ = sorter.Remove() }()
+	}
 	var rejects []rescluster.Reject
 	err = sr.Records(snapshot, func(r rescluster.Record) error {
 		if keep != nil && !keep[r.NativeID] {
@@ -161,19 +169,32 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 			return nil
 		}
 		e, err := rescluster.Encode(&r)
+		if err != nil {
+			return err
+		}
+		if sorter != nil {
+			return sorter.Add(e)
+		}
 		rs = append(rs, e)
-		return err
+		return nil
 	})
 	if err != nil {
 		return fail(fmt.Errorf("%s: %w", source, err))
 	}
-	if err := rescluster.WriteEncoded(opt.Root, source, rescluster.SourceFile, rs); err != nil {
+	n := len(rs)
+	if sorter != nil {
+		n = sorter.Len()
+		err = sorter.Write(opt.Root, source, rescluster.SourceFile)
+	} else {
+		err = rescluster.WriteEncoded(opt.Root, source, rescluster.SourceFile, rs)
+	}
+	if err != nil {
 		return fail(err)
 	}
 	if err := rescluster.WriteRejects(opt.Root, source, rejects); err != nil {
 		return fail(err)
 	}
-	fmt.Fprintf(stdout, "%s: %d source records from the snapshot %s in %s, %d rejected\n", source, len(rs), res.Snapshot.Hash, filepath.Join(rescluster.RecordsDir, source), len(rejects))
+	fmt.Fprintf(stdout, "%s: %d source records from the snapshot %s in %s, %d rejected\n", source, n, res.Snapshot.Hash, filepath.Join(rescluster.RecordsDir, source), len(rejects))
 	if !*structure {
 		return ExitOK
 	}
