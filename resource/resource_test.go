@@ -335,3 +335,30 @@ func TestShardOfJSONLinesMoves(t *testing.T) {
 		t.Fatalf("the shard is not Markdown with a YAML header: %q, %v", b, err)
 	}
 }
+
+func TestFilterShards(t *testing.T) {
+	root := t.TempDir()
+	a, b, c := fixture(t), fixture(t), fixture(t)
+	b.ID, c.ID = "8F2AAAAAA3", "9XYAAAAAAT"
+	if err := WriteResources(root, []Resource{a, b, c}); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(filepath.Join(root, Dir, "8F2.md"))
+	kept, moved, err := FilterShards(root, func(r *Resource) bool { return r.ID != "9XYAAAAAAT" })
+	if err != nil || kept != 2 || moved != 1 {
+		t.Fatalf("kept %d, moved %d, %v", kept, moved, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, Dir, "9XY.md")); !os.IsNotExist(err) {
+		t.Fatal("the shard with no resource is still there")
+	}
+	if after, _ := os.ReadFile(filepath.Join(root, Dir, "8F2.md")); string(after) != string(before) {
+		t.Fatal("a shard with no change was written again")
+	}
+	if _, _, err := FilterShards(root, func(r *Resource) bool { return r.ID == a.ID }); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadResources(root)
+	if err != nil || len(got) != 1 || !reflect.DeepEqual(got[0], a) {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+}

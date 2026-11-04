@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/tamnd/math2-agent/mdrec"
@@ -85,6 +86,24 @@ func (s *ShardSpill) Write(root string) (int, error) {
 
 // EachShard reads each shard of records/resources/ in the tree at root and calls fn with its resources. When fn reports a change, it writes the shard again, as a Markdown file. It keeps one shard in memory at one time. fn must not change an id.
 func EachShard(root string, fn func(rs []Resource) (bool, error)) error {
+	return eachShard(root, func(rs []Resource) ([]Resource, bool, error) {
+		changed, err := fn(rs)
+		return rs, changed, err
+	})
+}
+
+// FilterShards removes from records/resources/ in the tree at root each resource for which keep is false, one shard at a time, and removes a shard with no resource left. It gives the counts of the resources that stay and that go.
+func FilterShards(root string, keep func(r *Resource) bool) (kept, moved int, err error) {
+	err = eachShard(root, func(rs []Resource) ([]Resource, bool, error) {
+		out := slices.DeleteFunc(slices.Clone(rs), func(r Resource) bool { return !keep(&r) })
+		kept, moved = kept+len(out), moved+len(rs)-len(out)
+		return out, len(out) < len(rs), nil
+	})
+	return kept, moved, err
+}
+
+// eachShard calls fn with the resources of each shard, and writes the resources that fn gives when it reports a change. An empty shard is removed.
+func eachShard(root string, fn func(rs []Resource) ([]Resource, bool, error)) error {
 	files, err := mdrec.Glob(filepath.Join(root, Dir, "*"+mdrec.Ext))
 	if err != nil {
 		return err
@@ -104,23 +123,30 @@ func EachShard(root string, fn func(rs []Resource) (bool, error)) error {
 				return fmt.Errorf("%s: record %d: %w", filepath.ToSlash(filepath.Join(Dir, name)), n+1, err)
 			}
 		}
-		changed, err := fn(rs)
+		rs, changed, err := fn(rs)
 		if err != nil {
 			return err
 		}
 		if !changed {
 			continue
 		}
-		data, err := lines(rs)
-		if err != nil {
-			return err
+		rm := []string{strings.TrimSuffix(path, mdrec.Ext) + mdrec.Old}
+		if len(rs) == 0 {
+			rm = append(rm, path)
+		} else {
+			data, err := lines(rs)
+			if err != nil {
+				return err
+			}
+			// Glob gives the Markdown name of a shard that is still JSON Lines, so the write puts the shard into Markdown.
+			if err := writeFile(path, data); err != nil {
+				return err
+			}
 		}
-		// Glob gives the Markdown name of a shard that is still JSON Lines, so the write puts the shard into Markdown.
-		if err := writeFile(path, data); err != nil {
-			return err
-		}
-		if err := os.Remove(strings.TrimSuffix(path, mdrec.Ext) + mdrec.Old); err != nil && !os.IsNotExist(err) {
-			return err
+		for _, f := range rm {
+			if err := os.Remove(f); err != nil && !os.IsNotExist(err) {
+				return err
+			}
 		}
 	}
 	return nil

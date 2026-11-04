@@ -183,17 +183,17 @@ func Keep(root string) (kept, moved int, err error) {
 	if len(tiers) == 0 {
 		return 0, 0, fmt.Errorf("records: %s has no rows. Run m2 res status first", depth.File)
 	}
-	rs, err := resource.ReadResources(root)
+	// One shard at a time, so that the full catalogue does not need to fit in memory.
+	stay := map[string]bool{}
+	kept, moved, err = resource.FilterShards(root, func(r *resource.Resource) bool {
+		ok := slices.Contains(Kept, tiers[r.ID].Tier)
+		if ok {
+			stay[r.ID] = true
+		}
+		return ok
+	})
 	if err != nil {
 		return 0, 0, err
-	}
-	stay := map[string]bool{}
-	var out []resource.Resource
-	for _, r := range rs {
-		if slices.Contains(Kept, tiers[r.ID].Tier) {
-			stay[r.ID] = true
-			out = append(out, r)
-		}
 	}
 	cs, err := resource.ReadCites(root)
 	if err != nil {
@@ -203,13 +203,10 @@ func Keep(root string) (kept, moved int, err error) {
 		id, _, _ := strings.Cut(c.From, "/")
 		return !stay[id]
 	})
-	if err := resource.WriteResources(root, out); err != nil {
-		return 0, 0, err
-	}
 	if err := resource.WriteCites(root, cs); err != nil {
 		return 0, 0, err
 	}
-	return len(out), len(rs) - len(out), nil
+	return kept, moved, nil
 }
 
 // Pin is the pin of the records tree in the math2 tree (PinFile).
