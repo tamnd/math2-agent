@@ -126,15 +126,21 @@ var plainTail = regexp.MustCompile(`^[A-Z][a-z-]* (theorem|formula|lemma|conject
 var lostPart = regexp.MustCompile(`(?i)\b(of|to|for|with|and|or|the|a|an|by|from|that|is|in|on)$|  |&[a-z]+;`)
 
 // numberedName matches a name with a number of its article, such as "1. Axiom of extensionality", "Axiom of pairing - 4", "Theorem 1. Every valid formula is provable" or "2 theorem".
-var numberedName = regexp.MustCompile(`(?i)^[0-9]+\.\s|\s-\s[0-9]+$|^(theorem|lemma|proposition|propositions|corollary|axiom)\s[0-9IVX]+(\.[0-9A-Z]+)*\b|^[0-9]+ (theorem|lemma)$|\btheorem (one|two|three|four|five)$`)
+var numberedName = regexp.MustCompile(`(?i)^[0-9]+\.\s|\s-\s[0-9]+$|^(theorem|lemma|proposition|propositions|corollary|axiom|problem|question|conjecture|exercise)\s[0-9IVX]+(\.[0-9A-Z]+)*\b|^[0-9]+ (theorem|lemma)$|\btheorem (one|two|three|four|five)$`)
 
 // actionHead matches a heading that names a step or a part of the text, such as "Using the Chinese remainder theorem", "As a theorem of arithmetic" or "The second theorem".
 var actionHead = regexp.MustCompile(`(?i)^([a-z]+ing|as|by|in|on|for|with|without|cases|role|versions?|similarities|resolutions?|analogs|appeals|implications|objections?|criticism|chronology|software|determination|uniqueness|create|produce|solutions?)\b|^the (first|second|third|fourth|basic|main|general|extra|following|original)\b|\bexamples?\b`)
 
 // partPhrase matches a heading that names a part of the text about an item inside the heading, such as "Graphon version of counting lemma" or "Bandwidth formulas for some graphs", or a heading with "The" and a word in lower case, such as "The stacking theorem".
-var partPhrase = regexp.MustCompile(`(?i:\b(version of|analogues|for some|in terms of)\b)|^The [a-z]`)
+var partPhrase = regexp.MustCompile(`(?i:\b(version of|analogues|for some|in terms of|laws for|rules for)\b)|^The [a-z]`)
 
 // oddName matches a name that a person must give again, because it has a question mark, a quote, a year, or an open prefix, as "Dirac's Theorem (1952)" or "Co-".
+// otherName matches a heading that gives a second name of the item in brackets, as "Dual of Dilworth's theorem (Mirsky's theorem)".
+var otherName = regexp.MustCompile(`(?i)\([^)]*\b(theorem|lemma|formula|identity|inequality|conjecture)\)$`)
+
+// pluralWord matches a list entry that is one word in the plural, as "Lattices". The entry names a group of items.
+var pluralWord = regexp.MustCompile(`^[A-Z][a-z]+s$`)
+
 var oddName = regexp.MustCompile(`[?"]|\s\([0-9]{4}\)$|-$`)
 
 // questionHead matches a name that is a question, as "How many unit distances".
@@ -188,7 +194,7 @@ func whyName(m *inventory.Mention) string {
 		if m.Cue == "list-entry" && strings.Contains(m.Name, ": ") {
 			return "the entry names more than one item"
 		}
-		if m.Cue == "list-entry" && pluralTail.MatchString(m.Name) {
+		if m.Cue == "list-entry" && (pluralTail.MatchString(m.Name) || pluralWord.MatchString(m.Name)) {
 			return "the entry names a group of items"
 		}
 		return ""
@@ -202,6 +208,8 @@ func whyName(m *inventory.Mention) string {
 		return "the heading names an item of its article with \"the\""
 	case kindWord.MatchString(m.Name):
 		return "the heading names a kind of item and not one item"
+	case otherName.MatchString(m.Name):
+		return "the heading gives a second name of the item in brackets, and a person gives the name"
 	case headingPrefix.MatchString(m.Name), partPhrase.MatchString(m.Name):
 		return "the heading names a part of the text and not one item"
 	case strings.Contains(m.Name, ": "), strings.Contains(m.Name, " and "), strings.Contains(m.Name, ", "):

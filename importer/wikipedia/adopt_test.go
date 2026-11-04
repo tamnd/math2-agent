@@ -337,6 +337,11 @@ func TestWhyName(t *testing.T) {
 	}{
 		{"named-heading", "Grushko decomposition theorem", false},
 		{"named-heading", "A useful corollary", true},
+		{"inline-head", "Problem 1 (Schmidt 1968)", true},
+		{"list-entry", "Lattices", true},
+		{"named-heading", "Distributivity laws for complete lattices", true},
+		{"named-heading", "Dual of Dilworth's theorem (Mirsky's theorem)", true},
+		{"named-heading", "Adjoint functor theorem for posets", false},
 		{"named-heading", "Theorem two", true},
 		{"heading", "Proof of Theorem two", true},
 		{"named-heading", "Theorem for vertex-weighted graphs", true},
