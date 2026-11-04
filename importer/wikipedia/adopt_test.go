@@ -336,6 +336,26 @@ func TestWhyName(t *testing.T) {
 		wait      bool
 	}{
 		{"named-heading", "Grushko decomposition theorem", false},
+		{"named-heading", "A useful corollary", true},
+		{"named-heading", "Theorem two", true},
+		{"heading", "Proof of Theorem two", true},
+		{"named-heading", "Theorem for vertex-weighted graphs", true},
+		{"named-heading", "The stacking theorem", true},
+		{"named-heading", "Importance of inequality", true},
+		{"named-heading", "Graphon version of counting lemma", true},
+		{"named-heading", "Bandwidth formulas for some graphs", true},
+		{"named-heading", "Formula for partition size", true},
+		{"named-heading", "Lovász \"sandwich theorem\"", true},
+		{"math-theorem", "Dirac's Theorem (1952)", true},
+		{"list-entry", "How many unit distances", true},
+		{"list-entry", "Cullen primes", true},
+		{"list-entry", "AEC", true},
+		{"list-entry", "Lyapunov function: Lyapunov's second method for stability", true},
+		{"list-entry", "Erdős–Oler conjecture", false},
+		{"term", "Alpha", true},
+		{"term", "Co-", true},
+		{"term", "Acyclic", false},
+		{"named-heading", "Nordhaus–Gaddum inequality", false},
 		{"named-heading", "Clifford's theorem", false},
 		{"named-heading", "Weil's conjecture on Tamagawa numbers", false},
 		{"named-heading", "History: the lemma that is not Burnside's", true},
@@ -472,6 +492,15 @@ func TestListsItems(t *testing.T) {
 		if got := listsItems(c.cue, c.text); got != c.want {
 			t.Errorf("listsItems(%q, %q) = %v, want %v", c.cue, c.text, got, c.want)
 		}
+	}
+}
+
+func TestSeeEntry(t *testing.T) {
+	if !seeEntry.MatchString("For strong connectivity and strongly connected components of directed graphs, see connected and component.") {
+		t.Error("an entry that points to other entries is not found")
+	}
+	if seeEntry.MatchString("For a graph $G$, the girth is the length of its shortest cycle.") {
+		t.Error("a definition is an entry that points to other entries")
 	}
 }
 
