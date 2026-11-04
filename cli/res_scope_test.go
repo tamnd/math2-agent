@@ -9,7 +9,7 @@ import (
 )
 
 func TestCourseSignal(t *testing.T) {
-	if courseSignal(nil, nil) != nil {
+	if fn, _ := courseSignal(nil, nil); fn != nil {
 		t.Fatal("an empty register gives a signal")
 	}
 	ins, _ := institutions.Build(nil, nil, nil)
@@ -17,7 +17,16 @@ func TestCourseSignal(t *testing.T) {
 		{ID: "C1", Kind: "course", IDs: resource.IDs{"course": {"042nb2s44:18.06"}}, Catalogue: []resource.CatalogueRecord{{Source: "ocw"}}},
 		{ID: "C2", Kind: "course", IDs: resource.IDs{"course": {"042nb2s44:8.01"}}, Catalogue: []resource.CatalogueRecord{{Source: "ocw"}}},
 	}
-	fn := signals(nil, courseSignal(ins, rs))
+	course, err := courseSignal(ins, func(fn func(*resource.Resource)) error {
+		for i := range rs {
+			fn(&rs[i])
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fn := signals(nil, course)
 	for _, c := range []struct {
 		r    resource.Resource
 		want bool

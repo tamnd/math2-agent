@@ -6,7 +6,9 @@ import (
 	"hash/fnv"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource/spill"
 )
 
@@ -79,4 +81,47 @@ func (s *ShardSpill) Write(root string) (int, error) {
 		}
 	}
 	return n, RemoveShards(root, keep)
+}
+
+// EachShard reads each shard of records/resources/ in the tree at root and calls fn with its resources. When fn reports a change, it writes the shard again, as a Markdown file. It keeps one shard in memory at one time. fn must not change an id.
+func EachShard(root string, fn func(rs []Resource) (bool, error)) error {
+	files, err := mdrec.Glob(filepath.Join(root, Dir, "*"+mdrec.Ext))
+	if err != nil {
+		return err
+	}
+	for _, path := range files {
+		name := filepath.Base(path)
+		if !IsShard(name) {
+			continue
+		}
+		recs, err := mdrec.Read(path)
+		if err != nil {
+			return err
+		}
+		rs := make([]Resource, len(recs))
+		for n, rec := range recs {
+			if rs[n], err = Parse(rec); err != nil {
+				return fmt.Errorf("%s: record %d: %w", filepath.ToSlash(filepath.Join(Dir, name)), n+1, err)
+			}
+		}
+		changed, err := fn(rs)
+		if err != nil {
+			return err
+		}
+		if !changed {
+			continue
+		}
+		data, err := lines(rs)
+		if err != nil {
+			return err
+		}
+		// Glob gives the Markdown name of a shard that is still JSON Lines, so the write puts the shard into Markdown.
+		if err := writeFile(path, data); err != nil {
+			return err
+		}
+		if err := os.Remove(strings.TrimSuffix(path, mdrec.Ext) + mdrec.Old); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
 }
