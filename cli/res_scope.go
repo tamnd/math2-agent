@@ -24,7 +24,7 @@ import (
 	"github.com/tamnd/math2-agent/resource/venues"
 )
 
-const resScopeUsage = "m2 res scope [-root DIR] [-env FILE] [-day YYYY-MM-DD] [-fit] [-no-model]"
+const resScopeUsage = "m2 res scope [-root DIR] [-env FILE] [-day YYYY-MM-DD] [-fit] [-no-model] [-stream]"
 
 // ResScopeQueue is the file of the queue res-scope in the tree.
 const ResScopeQueue = "build/resources/queues/res-scope.md"
@@ -37,10 +37,11 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 	day := fs.String("day", time.Now().UTC().Format(time.DateOnly), "the date of the run")
 	fit := fs.Bool("fit", false, "fit the classifier on the resources that a test decides, set its thresholds, and write "+resclassify.ModelFile)
 	noModel := fs.Bool("no-model", false, "do not use the classifier")
+	stream := fs.Bool("stream", false, "read and write one shard of records/resources/ at a time, for the full catalogue. It cannot fit the classifier.")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
-	if fs.NArg() != 0 {
+	if fs.NArg() != 0 || (*stream && *fit) {
 		fmt.Fprintln(stderr, "usage: "+resScopeUsage)
 		return ExitUsage
 	}
@@ -58,9 +59,24 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 	if err := addVenues(*root, &env); err != nil {
 		return fail(err)
 	}
-	rs, err := resource.ReadResources(*root)
-	if err != nil {
-		return fail(err)
+	var rs []resource.Resource
+	walk := func(fn func(*resource.Resource)) error {
+		return resource.WalkResources(*root, func(_ string, _ int, r resource.Resource) error {
+			fn(&r)
+			return nil
+		})
+	}
+	if !*stream {
+		var err error
+		if rs, err = resource.ReadResources(*root); err != nil {
+			return fail(err)
+		}
+		walk = func(fn func(*resource.Resource)) error {
+			for i := range rs {
+				fn(&rs[i])
+			}
+			return nil
+		}
 	}
 	ds, err := resscope.ReadDecisions(*root)
 	if err != nil {
@@ -89,15 +105,33 @@ func runResScope(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
-	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day, Signals: signals(curriculumSignal(texts), openTextSignal(depth.OpenTexts()), courseSignal(ins, rs))}
-	if model != nil && !*noModel {
-		in.Classifier = resclassify.Scope{Model: model}
-	}
-	c, items, err := resscope.Apply(rs, in)
+	course, err := courseSignal(ins, walk)
 	if err != nil {
 		return fail(err)
 	}
-	if err := resource.WriteResources(*root, rs); err != nil {
+	in := resscope.Input{Env: env, Decisions: ds, By: "m2 " + version + " scope/1", Day: *day, Signals: signals(curriculumSignal(texts), openTextSignal(depth.OpenTexts()), course)}
+	if model != nil && !*noModel {
+		in.Classifier = resclassify.Scope{Model: model}
+	}
+	var (
+		c     resscope.Counts
+		items []resscope.Item
+	)
+	if *stream {
+		c.ByValue = map[string]int{}
+		err = resource.EachShard(*root, func(rs []resource.Resource) (bool, error) {
+			sc, it, err := resscope.Apply(rs, in)
+			for k, n := range sc.ByValue {
+				c.ByValue[k] += n
+			}
+			c.Changed, c.Open, c.Classed = c.Changed+sc.Changed, c.Open+sc.Open, c.Classed+sc.Classed
+			items = append(items, it...)
+			return true, err
+		})
+	} else if c, items, err = resscope.Apply(rs, in); err == nil {
+		err = resource.WriteResources(*root, rs)
+	}
+	if err != nil {
 		return fail(err)
 	}
 	var buf bytes.Buffer
@@ -221,11 +255,11 @@ func openTextSignal(open map[string]bool) func(*resource.Resource, *resscope.Rec
 	}
 }
 
-// courseSignal sets the signal of test S6 on each course that a catalogue of the institution register gives as a course of its mathematics unit (RS5.3). A course-material with a part_of relation to such a course, or to an offering of it, gets the signal too, because it is a part of the course. It gives nil when no catalogue names its mathematics unit.
-func courseSignal(ins []institutions.Institution, rs []resource.Resource) func(*resource.Resource, *resscope.Record) {
+// courseSignal sets the signal of test S6 on each course that a catalogue of the institution register gives as a course of its mathematics unit (RS5.3). A course-material with a part_of relation to such a course, or to an offering of it, gets the signal too, because it is a part of the course. It gives nil when no catalogue names its mathematics unit. walk calls its function on each resource, so that the run reads the resources one shard at a time.
+func courseSignal(ins []institutions.Institution, walk func(func(*resource.Resource)) error) (func(*resource.Resource, *resscope.Record), error) {
 	math := institutions.MathCourses(ins)
 	if len(math) == 0 {
-		return nil
+		return nil, nil
 	}
 	isMath := func(r *resource.Resource) bool {
 		if r.Kind != "course" {
@@ -238,10 +272,12 @@ func courseSignal(ins []institutions.Institution, rs []resource.Resource) func(*
 		return slices.ContainsFunc(r.Catalogue, func(c resource.CatalogueRecord) bool { return institutions.MathCourse(math, c.Source, course) })
 	}
 	courses := map[string]bool{}
-	for i := range rs {
-		if isMath(&rs[i]) {
-			courses[rs[i].ID] = true
+	if err := walk(func(r *resource.Resource) {
+		if isMath(r) {
+			courses[r.ID] = true
 		}
+	}); err != nil {
+		return nil, err
 	}
 	return func(r *resource.Resource, rec *resscope.Record) {
 		switch r.Kind {
@@ -256,7 +292,7 @@ func courseSignal(ins []institutions.Institution, rs []resource.Resource) func(*
 				}
 			}
 		}
-	}
+	}, nil
 }
 
 // signals joins the signal functions that are not nil into one. It gives nil when all are nil.

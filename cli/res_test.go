@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -224,5 +225,23 @@ func TestResScope(t *testing.T) {
 	}
 	if code, _, stderr := run("res", "scope", "-root", root, "-fit"); code != ExitFailure || !strings.Contains(stderr, "no examples") {
 		t.Fatalf("a fit with no examples gave exit code %d, stderr %q", code, stderr)
+	}
+	// One shard at a time gives the same counts and the same resources.
+	sroot := t.TempDir()
+	writeFile(t, sroot, "records/resources/8F2.jsonl", string(data))
+	writeFile(t, sroot, "records/resources/decisions.jsonl", `{"id":"8F2K1QW7ZJ","kind":"scope","value":"border","reason":"a test of the decision of a person","by":"tamnd","at":"2026-10-30"}`+"\n")
+	scode, sout, serr := run("res", "scope", "-root", sroot, "-day", "2026-10-30", "-stream")
+	if scode != ExitOK || sout != stdout {
+		t.Fatalf("exit code %d, stdout %q, stderr %q, want stdout %q", scode, sout, serr, stdout)
+	}
+	srs, err := resource.ReadResources(sroot)
+	if err != nil || !reflect.DeepEqual(srs, rs) {
+		t.Fatalf("got %+v, %v, want %+v", srs, err, rs)
+	}
+	if _, err := os.Stat(filepath.Join(sroot, "records/resources/8F2.jsonl")); !os.IsNotExist(err) {
+		t.Fatalf("the old shard is still there: %v", err)
+	}
+	if code, _, _ := run("res", "scope", "-root", sroot, "-stream", "-fit"); code != ExitUsage {
+		t.Fatalf("-stream with -fit gave exit code %d", code)
 	}
 }
