@@ -1,6 +1,9 @@
 package cluster
 
 import (
+	"cmp"
+	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/tamnd/math2-agent/resource"
@@ -34,7 +37,23 @@ func run(t *testing.T, in Input) *Result {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A partitioned run with buckets of one record gives the same result (RS10.8).
+	part, _, err := RunPartitioned(in, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(res.Resources, part.Resources) || !slices.Equal(res.Pairs, part.Pairs) || !reflect.DeepEqual(res.Joins, part.Joins) || res.Skipped != part.Skipped || !reflect.DeepEqual(sortLog(res.Log), sortLog(part.Log)) {
+		t.Fatalf("the partitioned run differs from the run:\nrun:  %+v\npart: %+v", res, part)
+	}
 	return res
+}
+
+func sortLog(log []Join) []Join {
+	log = slices.Clone(log)
+	slices.SortFunc(log, func(a, b Join) int {
+		return cmp.Or(cmp.Compare(a.Pass, b.Pass), cmp.Compare(a.A, b.A), cmp.Compare(a.B, b.B))
+	})
+	return log
 }
 
 func live(res *Result) []resource.Resource {
