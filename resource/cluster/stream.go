@@ -168,7 +168,6 @@ func RunFiles(in Input, files []string, spill string, size int, root string) (*S
 		news[i].id = provisional(news[i].key, used)
 		news[i].key = ""
 	}
-	used = nil
 	slices.SortFunc(news, func(a, b fresh) int { return cmp.Or(cmp.Compare(a.bucket, b.bucket), cmp.Compare(a.n, b.n)) })
 	each := func(fn func(r *resource.Resource) error) error {
 		c := 0
