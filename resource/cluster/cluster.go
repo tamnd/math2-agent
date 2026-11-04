@@ -795,58 +795,78 @@ func finish(out map[string]resource.Resource, pairs []Pair, joins map[string]int
 // defaultAccess gives the access class record to each manifestation of a live resource that has no access. The class record is the default of RS2.6: math2 keeps the metadata and a link, and no text.
 func defaultAccess(out map[string]resource.Resource) {
 	for id, r := range out {
-		if !r.Live() {
-			continue
-		}
-		changed := false
-		for i := range r.Expressions {
-			for j := range r.Expressions[i].Manifestations {
-				if r.Expressions[i].Manifestations[j].Access == nil {
-					if !changed {
-						r.Expressions = slices.Clone(r.Expressions)
-						changed = true
-					}
-					ms := slices.Clone(r.Expressions[i].Manifestations)
-					ms[j].Access = &resource.Access{Class: "record"}
-					r.Expressions[i].Manifestations = ms
-				}
-			}
-		}
-		if changed {
+		if access(&r) {
 			out[id] = r
 		}
 	}
 }
 
+// access gives the access class record to each manifestation of r with no access when r is live, and reports whether it changed r.
+func access(r *resource.Resource) bool {
+	if !r.Live() {
+		return false
+	}
+	changed := false
+	for i := range r.Expressions {
+		for j := range r.Expressions[i].Manifestations {
+			if r.Expressions[i].Manifestations[j].Access == nil {
+				if !changed {
+					r.Expressions = slices.Clone(r.Expressions)
+					changed = true
+				}
+				ms := slices.Clone(r.Expressions[i].Manifestations)
+				ms[j].Access = &resource.Access{Class: "record"}
+				r.Expressions[i].Manifestations = ms
+			}
+		}
+	}
+	return changed
+}
+
 // offerings resolves the target of an edge that names an offering by its id, as offering:042nb2s44:18.06:2010-spring, to the expression of the course with that id. A material of a course has this edge to its offering (RS5.1). An edge with no expression for its target is dropped.
 func offerings(out map[string]resource.Resource) {
 	exprs := map[string]string{}
-	for id, r := range out {
-		for _, e := range r.Expressions {
-			for _, v := range e.IDs["offering"] {
-				exprs["offering:"+v] = id + "/" + e.Key
-			}
-		}
+	for _, r := range out {
+		offeringIndex(exprs, &r)
 	}
 	for id, r := range out {
-		changed := false
-		var rels []resource.Relation
-		for _, rel := range r.Relations {
-			if strings.HasPrefix(rel.To, "offering:") {
-				changed = true
-				to, ok := exprs[rel.To]
-				if !ok || hasRelation(rels, resource.Relation{Kind: rel.Kind, From: rel.From, To: to}) {
-					continue
-				}
-				rel.To = to
-			}
-			rels = append(rels, rel)
-		}
-		if changed {
-			r.Relations = rels
+		if offering(&r, exprs) {
 			out[id] = r
 		}
 	}
+}
+
+// offeringIndex adds the expressions of r with an offering id to exprs. When two resources have one offering id, the smaller id keeps it.
+func offeringIndex(exprs map[string]string, r *resource.Resource) {
+	for _, e := range r.Expressions {
+		for _, v := range e.IDs["offering"] {
+			if cur, ok := exprs["offering:"+v]; ok && strings.Split(cur, "/")[0] <= r.ID {
+				continue
+			}
+			exprs["offering:"+v] = r.ID + "/" + e.Key
+		}
+	}
+}
+
+// offering resolves the edges of r that name an offering, and reports whether it changed r.
+func offering(r *resource.Resource, exprs map[string]string) bool {
+	changed := false
+	var rels []resource.Relation
+	for _, rel := range r.Relations {
+		if strings.HasPrefix(rel.To, "offering:") {
+			changed = true
+			to, ok := exprs[rel.To]
+			if !ok || hasRelation(rels, resource.Relation{Kind: rel.Kind, From: rel.From, To: to}) {
+				continue
+			}
+			rel.To = to
+		}
+		rels = append(rels, rel)
+	}
+	if changed {
+		r.Relations = rels
+	}
+	return changed
 }
 
 // assemble makes one resource from the records of one group. The fields that a person can set (the scope, the relations that no catalogue gives, the history) come from the existing record.
@@ -932,46 +952,63 @@ func assemble(id string, recs []*Record, prev *resource.Resource) resource.Resou
 func resolveTargets(rs []resource.Resource) {
 	byID := map[string][]string{}
 	live := map[string]bool{}
-	add := func(id string, ids resource.IDs) {
-		for sys, vs := range ids {
-			for _, v := range vs {
-				if k := sys + ":" + v; !slices.Contains(byID[k], id) {
-					byID[k] = append(byID[k], id)
-				}
-			}
-		}
-	}
 	for i := range rs {
 		r := &rs[i]
 		if !r.Live() {
 			continue
 		}
 		live[r.ID] = true
-		add(r.ID, r.IDs)
-		for _, e := range r.Expressions {
-			add(r.ID, e.IDs)
-			for _, m := range e.Manifestations {
-				add(r.ID, m.IDs)
+		externalIDs(r, func(k string) {
+			if !slices.Contains(byID[k], r.ID) {
+				byID[k] = append(byID[k], r.ID)
 			}
-		}
+		})
 	}
 	for i := range rs {
-		r := &rs[i]
-		var out []resource.Relation
-		for _, rel := range r.Relations {
-			if target, _, _ := strings.Cut(rel.To, "/"); rel.Source == Version && strings.Contains(rel.To, ":") && !live[target] {
-				to := byID[rel.To]
-				if len(to) != 1 || to[0] == r.ID {
-					continue
-				}
-				rel.To = to[0]
-			}
-			if !hasRelation(out, rel) {
-				out = append(out, rel)
+		resolve(&rs[i], func(id string) bool { return live[id] }, func(k string) []string { return byID[k] })
+	}
+}
+
+// externalIDs calls fn with each id of r at each level, as sys:value.
+func externalIDs(r *resource.Resource, fn func(string)) {
+	add := func(ids resource.IDs) {
+		for sys, vs := range ids {
+			for _, v := range vs {
+				fn(sys + ":" + v)
 			}
 		}
-		r.Relations = out
 	}
+	add(r.IDs)
+	for _, e := range r.Expressions {
+		add(e.IDs)
+		for _, m := range e.Manifestations {
+			add(m.IDs)
+		}
+	}
+}
+
+// target reports whether resolve looks up the edge, and gives the resource of the target when the edge names one.
+func target(rel resource.Relation) (string, bool) {
+	t, _, _ := strings.Cut(rel.To, "/")
+	return t, rel.Source == Version && strings.Contains(rel.To, ":")
+}
+
+// resolve resolves the edges of r with live, which reports a live resource, and with byID, which gives the live resources of an external id.
+func resolve(r *resource.Resource, live func(string) bool, byID func(string) []string) {
+	var out []resource.Relation
+	for _, rel := range r.Relations {
+		if t, ok := target(rel); ok && !live(t) {
+			to := byID(rel.To)
+			if len(to) != 1 || to[0] == r.ID {
+				continue
+			}
+			rel.To = to[0]
+		}
+		if !hasRelation(out, rel) {
+			out = append(out, rel)
+		}
+	}
+	r.Relations = out
 }
 
 func hasRelation(rs []resource.Relation, rel resource.Relation) bool {

@@ -2,10 +2,12 @@ package cluster
 
 import (
 	"cmp"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"testing"
 
+	"github.com/tamnd/math2-agent/mdrec"
 	"github.com/tamnd/math2-agent/resource"
 )
 
@@ -45,7 +47,45 @@ func run(t *testing.T, in Input) *Result {
 	if !reflect.DeepEqual(res.Resources, part.Resources) || !slices.Equal(res.Pairs, part.Pairs) || !reflect.DeepEqual(res.Joins, part.Joins) || res.Skipped != part.Skipped || !reflect.DeepEqual(sortLog(res.Log), sortLog(part.Log)) {
 		t.Fatalf("the partitioned run differs from the run:\nrun:  %+v\npart: %+v", res, part)
 	}
+	stream(t, in, res)
 	return res
+}
+
+// stream checks that RunFiles on the records of in, in files, writes the resources of res and gives its pairs.
+func stream(t *testing.T, in Input, res *Result) {
+	t.Helper()
+	recs, a, b := t.TempDir(), t.TempDir(), t.TempDir()
+	bySource := map[string][]Record{}
+	for _, r := range in.Records {
+		bySource[r.Source] = append(bySource[r.Source], r)
+	}
+	for s, rs := range bySource {
+		if err := WriteRecords(recs, s, "t", rs); err != nil {
+			t.Fatal(err)
+		}
+	}
+	files, err := mdrec.Glob(filepath.Join(recs, RecordsDir, "*", "*"+mdrec.Ext))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := resource.WriteResources(a, res.Resources); err != nil {
+		t.Fatal(err)
+	}
+	st, err := RunFiles(in, files, t.TempDir(), 1, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := resource.ReadResources(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := resource.ReadResources(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, got) || !slices.Equal(res.Pairs, st.Pairs) || !reflect.DeepEqual(res.Joins, st.Joins) || res.Skipped != st.Skipped {
+		t.Fatalf("the run of the files differs from the run:\nrun:    %+v\nstream: %+v %+v", want, got, st)
+	}
 }
 
 func sortLog(log []Join) []Join {

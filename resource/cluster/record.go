@@ -62,7 +62,7 @@ func (r *Record) Year() int {
 
 // ReadRecords reads each file of records (mdrec.Ext) of the directory of each source under RecordsDir in the tree at root. A tree with no directory has no records. A file of JSON Lines that has no Markdown file is read too.
 func ReadRecords(root string) ([]Record, error) {
-	files, err := mdrec.Glob(filepath.Join(root, RecordsDir, "*", "*"+mdrec.Ext))
+	files, err := RecordFiles(root)
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +75,11 @@ func ReadRecords(root string) ([]Record, error) {
 		out = append(out, rs...)
 	}
 	return out, nil
+}
+
+// RecordFiles gives the files of records that ReadRecords reads, in the order that it reads them.
+func RecordFiles(root string) ([]string, error) {
+	return mdrec.Glob(filepath.Join(root, RecordsDir, "*", "*"+mdrec.Ext))
 }
 
 func readFile(path string) ([]Record, error) {

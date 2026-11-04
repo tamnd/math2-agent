@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/tamnd/math2-agent/resource"
 )
@@ -50,79 +51,97 @@ type Partition struct {
 	links      []int           // the bucket of each crosswalk link, or -1
 }
 
-// Partitioned gives the partition of the records of in into buckets of about size records. The records must have one key each, as Run makes them.
-func Partitioned(in Input, size int) *Partition {
-	rs := in.Records
-	nr := len(rs)
-	nodes := nr + len(in.Existing) + len(in.Crosswalks) + len(in.Decisions)
-	var ms []mark
-	add := func(k string, node int, kind uint8) {
-		ms = append(ms, mark{key: keyHash(k), node: int32(node), kind: kind}) // #nosec G115 -- a run has fewer than 2^31 nodes.
-	}
-	for i := range rs {
-		r := &rs[i]
-		add("rec:"+r.Key(), i, join)
-		for sys, vs := range r.IDs {
-			kind := weak
-			if joinSystem(sys) {
-				kind = join
-			}
-			for _, v := range vs {
-				add("id:"+sys+":"+v, i, kind)
-			}
+// partitioner collects the join keys of the nodes of a run. A node is a record, an existing resource, a crosswalk link or a decision of a person.
+type partitioner struct {
+	ms    []mark
+	nodes int32
+}
+
+func (pt *partitioner) next() int32 {
+	pt.nodes++
+	return pt.nodes - 1
+}
+
+func (pt *partitioner) add(k string, node int32, kind uint8) {
+	pt.ms = append(pt.ms, mark{key: keyHash(k), node: node, kind: kind})
+}
+
+// record adds the keys of a record: its key, its ids, its blocks of C4, its key of C5 and the targets of its translation_of edges.
+func (pt *partitioner) record(r *Record) int32 {
+	n := pt.next()
+	pt.add("rec:"+r.Key(), n, join)
+	for sys, vs := range r.IDs {
+		kind := weak
+		if joinSystem(sys) {
+			kind = join
 		}
-		if Fillers[r.Source] {
-			continue
-		}
-		fs := families(r)
-		if len(fs) > 0 && r.Year() > 0 {
-			a := "a:" + fs[0] + ":"
-			ms = append(ms, mark{key: keyHash(a + strconv.Itoa(r.Year())), next: keyHash(a + strconv.Itoa(r.Year()+1)), node: int32(i), kind: block}) // #nosec G115 -- as above.
-		}
-		if r.Venue != "" && r.Volume != "" && r.Page != "" {
-			add("v:"+r.Venue+":"+r.Volume+":"+r.Page, i, block)
-		}
-		if t := WorkTitle(r.Title); len([]rune(t)) >= 12 && len(fs) > 0 {
-			add("w:"+t+"|"+fs[0], i, join)
-		}
-		for _, rel := range r.Relations {
-			if rel.Kind == "translation_of" {
-				add("id:"+rel.To, i, need)
-			}
+		for _, v := range vs {
+			pt.add("id:"+sys+":"+v, n, kind)
 		}
 	}
-	for i := range in.Existing {
-		e := &in.Existing[i]
-		if !e.Live() {
-			continue
-		}
-		add("res:"+e.ID, nr+i, join)
-		for _, c := range e.Catalogue {
-			add("rec:"+c.Source+":"+c.NativeID, nr+i, join)
-		}
+	if Fillers[r.Source] {
+		return n
 	}
-	base := nr + len(in.Existing)
-	for i, l := range in.Crosswalks {
-		add("id:"+l.A, base+i, need)
-		add("id:"+l.B, base+i, need)
+	fs := families(r)
+	if len(fs) > 0 && r.Year() > 0 {
+		a := "a:" + fs[0] + ":"
+		pt.ms = append(pt.ms, mark{key: keyHash(a + strconv.Itoa(r.Year())), next: keyHash(a + strconv.Itoa(r.Year()+1)), node: n, kind: block})
 	}
-	base += len(in.Crosswalks)
-	for i, d := range in.Decisions {
-		for _, x := range []string{d.A, d.B} {
-			k := "res:" + x
-			if slices.Contains([]byte(x), ':') {
-				k = "rec:" + x
-			}
-			add(k, base+i, join)
+	if r.Venue != "" && r.Volume != "" && r.Page != "" {
+		pt.add("v:"+r.Venue+":"+r.Volume+":"+r.Page, n, block)
+	}
+	if t := WorkTitle(r.Title); len([]rune(t)) >= 12 && len(fs) > 0 {
+		pt.add("w:"+t+"|"+fs[0], n, join)
+	}
+	for _, rel := range r.Relations {
+		if rel.Kind == "translation_of" {
+			pt.add("id:"+rel.To, n, need)
 		}
 	}
+	return n
+}
+
+// resource adds the keys of an existing resource: its id and the keys of its records. A resource that is not live has no keys.
+func (pt *partitioner) resource(e *resource.Resource) int32 {
+	n := pt.next()
+	if !e.Live() {
+		return n
+	}
+	pt.add("res:"+e.ID, n, join)
+	for _, c := range e.Catalogue {
+		pt.add("rec:"+c.Source+":"+c.NativeID, n, join)
+	}
+	return n
+}
+
+func (pt *partitioner) link(l Link) int32 {
+	n := pt.next()
+	pt.add("id:"+l.A, n, need)
+	pt.add("id:"+l.B, n, need)
+	return n
+}
+
+func (pt *partitioner) decision(d Decision) int32 {
+	n := pt.next()
+	for _, x := range []string{d.A, d.B} {
+		k := "res:" + x
+		if strings.Contains(x, ":") {
+			k = "rec:" + x
+		}
+		pt.add(k, n, join)
+	}
+	return n
+}
+
+// buckets joins the nodes into components and packs the components of the records into buckets of about size records, in the order of the records. It gives the bucket of each node, -1 for a node whose component has no record, and the partition with no Bucket.
+func (pt *partitioner) buckets(records []int32, size int) ([]int32, *Partition) {
+	ms := pt.ms
 	slices.SortFunc(ms, func(a, b mark) int {
 		return cmp.Or(cmp.Compare(a.key, b.key), cmp.Compare(a.kind, b.kind), cmp.Compare(a.node, b.node))
 	})
-
-	parent := make([]int32, nodes)
+	parent := make([]int32, pt.nodes)
 	for i := range parent {
-		parent[i] = int32(i) // #nosec G115 -- as above.
+		parent[i] = int32(i) // #nosec G115 -- a run has fewer than 2^31 nodes.
 	}
 	find := func(x int32) int32 {
 		for parent[x] != x {
@@ -144,11 +163,12 @@ func Partitioned(in Input, size int) *Partition {
 			j++
 		}
 		run := ms[i:j]
-		if run[0].kind == block {
-			// The blocks of C4 count records, and a record is in a block once.
+		switch {
+		case run[0].kind == block:
+			// A block of C4 counts records, and a record is in a block once.
 			var recs []int32
 			for _, m := range run {
-				if m.kind == block && (len(recs) == 0 || recs[len(recs)-1] != m.node) {
+				if len(recs) == 0 || recs[len(recs)-1] != m.node {
 					recs = append(recs, m.node)
 				}
 			}
@@ -157,15 +177,9 @@ func Partitioned(in Input, size int) *Partition {
 			} else {
 				blocks[run[0].key] = recs
 			}
-		} else {
-			named := false
-			for _, m := range run {
-				named = named || m.kind != weak
-			}
+		case slices.ContainsFunc(run, func(m mark) bool { return m.kind != weak }):
 			for _, m := range run[1:] {
-				if named {
-					union(run[0].node, m.node)
-				}
+				union(run[0].node, m.node)
 			}
 		}
 		i = j
@@ -176,53 +190,74 @@ func Partitioned(in Input, size int) *Partition {
 		}
 	}
 	for _, m := range ms {
-		if m.kind == block && m.next != 0 {
-			if next, ok := blocks[m.next]; ok && blocks[m.key] != nil {
+		if m.kind == block && m.next != 0 && blocks[m.key] != nil {
+			if next, ok := blocks[m.next]; ok {
 				union(m.node, next[0])
 			}
 		}
 	}
+	pt.ms = nil
 
-	// The buckets: the components in the order of their first record, each bucket filled to the size.
 	count := map[int32]int{}
-	for i := range nr {
-		count[find(int32(i))]++ // #nosec G115 -- as above.
+	for _, n := range records {
+		count[find(n)]++
 	}
 	p.Components = len(count)
 	for _, n := range count {
 		p.Largest = max(p.Largest, n)
 	}
-	of := map[int32]int{}
-	p.Bucket = make([]int, nr)
+	of := map[int32]int32{}
 	fill := 0
-	for i := range nr {
-		root := find(int32(i)) // #nosec G115 -- as above.
-		b, ok := of[root]
+	for _, n := range records {
+		root := find(n)
+		if _, ok := of[root]; ok {
+			continue
+		}
+		if p.Buckets == 0 || (fill > 0 && fill+count[root] > size) {
+			p.Buckets++
+			fill = 0
+		}
+		of[root] = int32(p.Buckets - 1) // #nosec G115 -- as above.
+		fill += count[root]
+	}
+	out := make([]int32, pt.nodes)
+	for i := range out {
+		b, ok := of[find(int32(i))] // #nosec G115 -- as above.
 		if !ok {
-			if p.Buckets == 0 || (fill > 0 && fill+count[root] > size) {
-				p.Buckets++
-				fill = 0
-			}
-			b = p.Buckets - 1
-			of[root] = b
-			fill += count[root]
+			b = -1
 		}
-		p.Bucket[i] = b
+		out[i] = b
 	}
-	at := func(node int) int {
-		if b, ok := of[find(int32(node))]; ok { // #nosec G115 -- as above.
-			return b
-		}
-		return -1
+	return out, p
+}
+
+// Partitioned gives the partition of the records of in into buckets of about size records.
+func Partitioned(in Input, size int) *Partition {
+	var pt partitioner
+	recs := make([]int32, len(in.Records))
+	for i := range in.Records {
+		recs[i] = pt.record(&in.Records[i])
 	}
-	p.resources = make([]int, len(in.Existing))
+	res := make([]int32, len(in.Existing))
 	for i := range in.Existing {
-		p.resources[i] = at(nr + i)
+		res[i] = pt.resource(&in.Existing[i])
 	}
-	p.links = make([]int, len(in.Crosswalks))
-	for i := range in.Crosswalks {
-		p.links[i] = at(nr + len(in.Existing) + i)
+	links := make([]int32, len(in.Crosswalks))
+	for i, l := range in.Crosswalks {
+		links[i] = pt.link(l)
 	}
+	for _, d := range in.Decisions {
+		pt.decision(d)
+	}
+	of, p := pt.buckets(recs, size)
+	at := func(ns []int32) []int {
+		out := make([]int, len(ns))
+		for i, n := range ns {
+			out[i] = int(of[n])
+		}
+		return out
+	}
+	p.Bucket, p.resources, p.links = at(recs), at(res), at(links)
 	return p
 }
 

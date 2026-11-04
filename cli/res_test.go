@@ -158,6 +158,10 @@ func TestResCluster(t *testing.T) {
 	if code, stdout, _ := run("res", "cluster", "-root", root, "-commit", "c0ffee2", "-day", "2026-10-31"); code != ExitOK || !strings.Contains(stdout, "0 minted") {
 		t.Fatalf("a second run minted again: %q", stdout)
 	}
+	// A run one bucket at a time keeps the resource.
+	if code, stdout, stderr := run("res", "cluster", "-root", root, "-commit", "c0ffee3", "-day", "2026-10-31", "-spill", t.TempDir(), "-bucket", "1"); code != ExitOK || !strings.Contains(stdout, "1 buckets, 1 components") || !strings.Contains(stdout, "2 source records, 1 resources, 0 minted") {
+		t.Fatalf("exit code %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
 	again, err := resource.ReadResources(root)
 	if err != nil || len(again) != 1 || again[0].ID != rs[0].ID {
 		t.Fatalf("the second run changed the id: %+v", again)
