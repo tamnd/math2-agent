@@ -328,3 +328,64 @@ func TestWhySame(t *testing.T) {
 		}
 	}
 }
+
+func TestWhyName(t *testing.T) {
+	for _, c := range []struct {
+		cue, name string
+		wait      bool
+	}{
+		{"named-heading", "Grushko decomposition theorem", false},
+		{"named-heading", "Clifford's theorem", false},
+		{"named-heading", "Weil's conjecture on Tamagawa numbers", false},
+		{"named-heading", "History: the lemma that is not Burnside's", true},
+		{"named-heading", "Precise statement of the Adyan–Rabin theorem", true},
+		{"named-heading", "Examples of applications of the Švarc–Milnor lemma", true},
+		{"named-heading", "Definition (Class functions)", true},
+		{"named-heading", "Characters, Schur's lemma and the inner product", true},
+		{"named-heading", "Freudenthal-Hopf theorems", true},
+		{"named-heading", "Some theorems", true},
+		{"named-heading", "Structure theorem", true},
+		{"named-heading", "Volume formula", true},
+		{"lead", "Centralizer and normalizer", false},
+		{"lead", "Vector algebra relations", false},
+		{"list-entry", "-adic numbers", true},
+		{"list-entry", "the Heisenberg group modulo p", true},
+		{"list-entry", "2-groups", false},
+	} {
+		got := whyName(&inventory.Mention{Cue: c.cue, Name: c.name}) != ""
+		if got != c.wait {
+			t.Errorf("%s %q: wait %v, want %v", c.cue, c.name, got, c.wait)
+		}
+	}
+	for name, want := range map[string]bool{"Axiom 1": true, "Claim 2": true, "Lemma 3.1": true, "Theorem IV": true, "Axiom of choice": false, "Lemma": false} {
+		if got := labelName.MatchString(name); got != want {
+			t.Errorf("labelName %q: %v, want %v", name, got, want)
+		}
+	}
+}
+
+func TestDisplayNameQualifier(t *testing.T) {
+	m := &inventory.Mention{ID: "wikipedia://en/1", Cue: "lead", Name: "block", NativeID: "Block (permutation group theory)"}
+	if got := displayName(m); got != "Block (permutation group theory)" {
+		t.Errorf("got %q", got)
+	}
+	m = &inventory.Mention{ID: "wikipedia://en/2", Cue: "lead", Name: "Metacyclic group", NativeID: "Metacyclic group"}
+	if got := displayName(m); got != "Metacyclic group" {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestDropNotes(t *testing.T) {
+	notes := map[string]string{"n3": "Serre (1977).", "o6": "See Logic programming."}
+	for in, want := range map[string]string{
+		"A proof may be found in [^n3].":       "A proof may be found in Serre (1977).",
+		"The group is simple.[^o6] It is big.": "The group is simple. It is big.",
+		"See [^n3], page 5.":                   "See Serre (1977), page 5.",
+		"It is in [^n3] and more.":             "It is in  and more.",
+		"A proof is in [^zz].":                 "A proof is in .",
+	} {
+		if got := dropNotes(in, notes); got != want {
+			t.Errorf("%q: got %q, want %q", in, got, want)
+		}
+	}
+}
