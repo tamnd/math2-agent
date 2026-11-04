@@ -143,8 +143,11 @@ var questionHead = regexp.MustCompile(`^(How|Can|Are|Is|Does|Do|What|Which|Why|W
 // greekName matches a glossary term that is the name of a Greek letter, as "Alpha". The entry tells the notation and not one item.
 var greekName = regexp.MustCompile(`(?i)^(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega)$`)
 
-// seeEntry matches a glossary entry that points to other entries and has no definition, as "For strong connectivity, see connected.".
-var seeEntry = regexp.MustCompile(`^For [^.]*, see `)
+// seeEntry matches a glossary entry that points to other entries and has no definition, as "For strong connectivity, see connected.", "See transpose." or "Synonym for induced.".
+var seeEntry = regexp.MustCompile(`(?i)^(For [^.]*, see |See |Synonyms? (for|of) |Same as |An? (synonym|alternative (name|spelling)) for )`)
+
+// personEntry matches a glossary entry about a person, as "Julius Petersen (1839–1910), Danish graph theorist.".
+var personEntry = regexp.MustCompile(`\([0-9]{4}[–-][0-9]{4}\)|^[A-Z][^ ,]+( [A-Z][^ ,]+)+, [^.]*\b(mathematician|theorist|logician|scientist|statistician)\b`)
 
 // abbreviation matches a glossary term that is an abbreviation, such as "GCH". The node takes the full name.
 var abbreviation = regexp.MustCompile(`^[A-Z][A-Z0-9-]{0,5}$`)
@@ -538,6 +541,9 @@ func adoptNode(m *inventory.Mention, name string, aliases []string, pages *pageC
 	}
 	if m.Cue == "term" && seeEntry.MatchString(strings.TrimSpace(text)) {
 		return nil, "the entry points to other entries and has no definition", nil
+	}
+	if m.Cue == "term" && personEntry.MatchString(strings.TrimSpace(text)) {
+		return nil, "the entry tells about a person, and a person gives a record and not a node (WP9.1)", nil
 	}
 	if listsItems(m.Cue, text) {
 		return nil, "the entry starts with a name and not a sentence, so it lists more than one item", nil
