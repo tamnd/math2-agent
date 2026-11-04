@@ -104,18 +104,24 @@ var genericName = regexp.MustCompile(`(?i)^(theorem|lemma|corollary|proposition|
 var labelName = regexp.MustCompile(`(?i)^(axiom|theorem|lemma|corollary|proposition|claim|conjecture|definition|fact|step|case|rule|property|observation|remark|example|exercise|problem|condition|assumption|hypothesis)s? ([0-9]+[a-z]?|[A-Z]|[IVX]+)(\.[0-9]+)*$`)
 
 // headingPrefix matches a heading that names a part of the text about an item and not the item, such as "Precise statement of the Adyan–Rabin theorem" or "History: the lemma that is not Burnside's".
-var headingPrefix = regexp.MustCompile(`(?i)^(history|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary|corollaries|involving|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
+var headingPrefix = regexp.MustCompile(`(?i)^(history|relationship|relation to|validity|an introduction|theorems proved|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary|corollaries|involving|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
 
 // pluralTail matches a heading that names a group of items, such as "Freudenthal-Hopf theorems".
-var pluralTail = regexp.MustCompile(`(?i)\b(theorems|results|facts|properties|lemmas|formulas|formulae|conjectures|identities|axioms|inequalities|relations|criteria)$`)
+var pluralTail = regexp.MustCompile(`(?i)\b(theorems|results|facts|properties|lemmas|formulas|formulae|conjectures|identities|axioms|inequalities|relations|criteria|propositions|principles)$`)
 
 // plainTail matches a short heading in lower case that needs its article to have a meaning, such as "Structure theorem" or "Volume formula".
+// kindWord matches a heading that is only the name of a kind of item, such as "Principle".
+var kindWord = regexp.MustCompile(`(?i)^(principle|axiom|theorem|lemma|proposition|statement|definition|formula|identity)$`)
+
 var plainTail = regexp.MustCompile(`^[A-Z][a-z-]* (theorem|formula|lemma|conjecture|identity|inequality|criterion|principle)$`)
 
 // whyName gives the reason why an item waits when its name is not a good name for a node, or "". A heading of a section can name a part of the text, a group of items, or an item that has a meaning only in its article. A person gives the name of such an item.
 func whyName(m *inventory.Mention) string {
 	if r, _ := utf8.DecodeRuneInString(m.Name); !unicode.IsLetter(r) && !unicode.IsDigit(r) {
 		return "the name does not start with a letter or a digit, so the name lost a part, such as math"
+	}
+	if r, _ := utf8.DecodeRuneInString(m.Name); m.Cue != "lead" && r >= 'a' && r <= 'z' {
+		return "the name starts with a lower case letter, so the name is a part of a sentence"
 	}
 	if m.Cue == "lead" || m.Cue == "term" || m.Cue == "list-entry" {
 		if strings.HasPrefix(m.Name, "the ") || strings.HasPrefix(m.Name, "a ") || strings.HasPrefix(m.Name, "an ") {
@@ -124,6 +130,8 @@ func whyName(m *inventory.Mention) string {
 		return ""
 	}
 	switch {
+	case kindWord.MatchString(m.Name):
+		return "the heading names a kind of item and not one item"
 	case headingPrefix.MatchString(m.Name):
 		return "the heading names a part of the text and not one item"
 	case strings.Contains(m.Name, ": "), strings.Contains(m.Name, " and "), strings.Contains(m.Name, ", "):
