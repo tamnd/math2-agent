@@ -457,3 +457,19 @@ func TestSentences(t *testing.T) {
 		}
 	}
 }
+
+func TestListsItems(t *testing.T) {
+	for _, c := range []struct {
+		cue, text string
+		want      bool
+	}{
+		{"term", "Oswald Veblen\n\nThe Veblen hierarchy is a family of ordinal valued functions.", true},
+		{"term", "sharp\n\nNumber of elements: the cardinality of a set.\n\nsharp\n\nPrimorial.", true},
+		{"term", "Relating to types; for example, typically ambiguous.", false},
+		{"named-heading", "$$x = y$$\n\nThe equation holds.", false},
+	} {
+		if got := listsItems(c.cue, c.text); got != c.want {
+			t.Errorf("listsItems(%q, %q) = %v, want %v", c.cue, c.text, got, c.want)
+		}
+	}
+}
