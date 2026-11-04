@@ -149,7 +149,7 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 			return fail(err)
 		}
 	}
-	var rs []rescluster.Record
+	var rs []rescluster.Encoded
 	var rejects []rescluster.Reject
 	err = sr.Records(snapshot, func(r rescluster.Record) error {
 		if keep != nil && !keep[r.NativeID] {
@@ -160,13 +160,14 @@ func runResImport(args []string, stdout, stderr io.Writer) int {
 			rejects = append(rejects, rescluster.Reject{NativeID: r.NativeID, Snapshot: r.Snapshot, Reason: why})
 			return nil
 		}
-		rs = append(rs, r)
-		return nil
+		e, err := rescluster.Encode(&r)
+		rs = append(rs, e)
+		return err
 	})
 	if err != nil {
 		return fail(fmt.Errorf("%s: %w", source, err))
 	}
-	if err := rescluster.WriteRecords(opt.Root, source, rescluster.SourceFile, rs); err != nil {
+	if err := rescluster.WriteEncoded(opt.Root, source, rescluster.SourceFile, rs); err != nil {
 		return fail(err)
 	}
 	if err := rescluster.WriteRejects(opt.Root, source, rejects); err != nil {
@@ -220,7 +221,7 @@ func heldPapers(root, source string) (map[string]bool, error) {
 }
 
 // writeStructure reads the table of contents of the snapshot at path and writes it to the first expression of the resource that groups the source records rs. The resource gets an expression e1 when it has no expression. It gives the path of the structure file, relative to records/resources/structure/, and the number of top nodes. It fails when no resource, or more than one resource, groups the records, because then m2 res cluster must run first.
-func writeStructure(root, source, path, hash string, st structurer, rs []rescluster.Record) (string, int, error) {
+func writeStructure(root, source, path, hash string, st structurer, rs []rescluster.Encoded) (string, int, error) {
 	f, err := os.Open(path) // #nosec G304 -- the path is in the snapshot cache.
 	if err != nil {
 		return "", 0, err
