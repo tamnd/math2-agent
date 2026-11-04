@@ -310,3 +310,21 @@ func TestAdoptSkipsMintedProof(t *testing.T) {
 		}
 	}
 }
+
+func TestWhySame(t *testing.T) {
+	bySame := map[string]string{"wikidata:Q7111377": "7Z5ZS7KNXS", "wikipedia:Riesz potential": "1V2N8MFSHC"}
+	for _, c := range []struct {
+		m     inventory.Mention
+		title string
+		want  string
+	}{
+		{inventory.Mention{ID: "wikipedia://en/12747184", Same: map[string][]string{"wikidata": {"Q7111377"}}}, "Out(Fn)", "node 7Z5ZS7KNXS has the same Wikidata item Q7111377, and a person decides if they are one item"},
+		{inventory.Mention{ID: "wikipedia://en/5"}, "Riesz potential", "node 1V2N8MFSHC has the same article in same_as, and a person decides if they are one item"},
+		{inventory.Mention{ID: "wikipedia://en/6", Same: map[string][]string{"wikidata": {"Q1"}}}, "Group", ""},
+		{inventory.Mention{ID: "wikipedia://en/12747184#AB12", Same: map[string][]string{"wikidata": {"Q7111377"}}}, "Out(Fn)", ""},
+	} {
+		if got := whySame(&c.m, c.title, bySame); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.m.ID, got, c.want)
+		}
+	}
+}

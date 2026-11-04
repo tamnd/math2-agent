@@ -48,7 +48,8 @@ type AdoptNode struct {
 	MSC       []string
 	Inventory []string
 	Proves    string
-	Mentions  []string // the mention of each wikipedia source of the node
+	Mentions  []string          // the mention of each wikipedia source of the node
+	SameAs    map[string]string // the ids of same_as, as wikidata: Q1 and wikipedia: Title
 	Retired   bool
 }
 
@@ -137,6 +138,7 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 
 	// The nodes that the tree has.
 	byName := map[string]string{}
+	bySame := map[string]string{}
 	nameOf := map[string]string{}
 	proved := map[string]bool{}
 	done := map[string]string{}
@@ -150,6 +152,11 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 				if _, ok := byName[k]; !ok {
 					byName[k] = n.ID
 				}
+			}
+		}
+		for k, v := range n.SameAs {
+			if _, ok := bySame[k+":"+v]; !ok && v != "" {
+				bySame[k+":"+v] = n.ID
 			}
 		}
 		if n.Proves != "" {
@@ -227,6 +234,9 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 		}
 		it.State = Waiting
 		it.Reason = whyWait(m, opt.Hold, subjectOf, byName)
+		if it.Reason == "" {
+			it.Reason = whySame(m, title[m.Page], bySame)
+		}
 		if it.Reason == "" {
 			d, why, err := adoptNode(m, displayName(m), freeAliases(m, byName), pages, pageNode, opt, msc[pageNode(m.Page)], "", r.ID)
 			if err != nil {
@@ -344,6 +354,24 @@ func whyWait(m *inventory.Mention, hold map[string]string, subjectOf map[string]
 	}
 	if id, ok := byName[k]; ok {
 		return "node " + id + " has the same name, and a person decides if they are one item"
+	}
+	return ""
+}
+
+// whySame gives the reason why the subject of an article waits when a node has
+// the same Wikidata item or the same article in same_as, or "". The names of
+// the two can be different, as Out(Fn) and Out(F_n).
+func whySame(m *inventory.Mention, title string, bySame map[string]string) string {
+	if strings.Contains(m.ID, "#") {
+		return ""
+	}
+	for _, q := range m.Same["wikidata"] {
+		if id, ok := bySame["wikidata:"+q]; ok {
+			return "node " + id + " has the same Wikidata item " + q + ", and a person decides if they are one item"
+		}
+	}
+	if id, ok := bySame["wikipedia:"+title]; ok && title != "" {
+		return "node " + id + " has the same article in same_as, and a person decides if they are one item"
 	}
 	return ""
 }

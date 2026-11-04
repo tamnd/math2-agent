@@ -1091,7 +1091,7 @@ func writeMath(b *strings.Builder, tex string, display bool) {
 		b.WriteString("\n$$" + tex + "$$\n")
 		return
 	}
-	b.WriteString("$" + tex + "$")
+	b.WriteString("$" + mathText(tex) + "$")
 }
 
 var otherNamespaces = map[string]bool{
