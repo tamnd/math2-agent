@@ -346,6 +346,8 @@ func TestWhyName(t *testing.T) {
 		{"named-heading", "Some theorems", true},
 		{"named-heading", "Structure theorem", true},
 		{"named-heading", "Volume formula", true},
+		{"math-theorem", "Corollary (Maschke's theorem)", true},
+		{"named-heading", "Involving the binomial theorem", true},
 		{"lead", "Centralizer and normalizer", false},
 		{"lead", "Vector algebra relations", false},
 		{"list-entry", "-adic numbers", true},
@@ -387,5 +389,14 @@ func TestDropNotes(t *testing.T) {
 		if got := dropNotes(in, notes); got != want {
 			t.Errorf("%q: got %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestProofName(t *testing.T) {
+	if got := proofName("The normal forms theorem"); got != "Proof of the normal forms theorem" {
+		t.Errorf("got %q", got)
+	}
+	if got := proofName("Burnside's lemma"); got != "Proof of Burnside's lemma" {
+		t.Errorf("got %q", got)
 	}
 }
