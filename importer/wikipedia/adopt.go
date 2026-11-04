@@ -104,7 +104,7 @@ var genericName = regexp.MustCompile(`(?i)^(theorem|lemma|corollary|proposition|
 var labelName = regexp.MustCompile(`(?i)^(axiom|theorem|lemma|corollary|proposition|claim|conjecture|definition|fact|step|case|rule|property|observation|remark|example|exercise|problem|condition|assumption|hypothesis)s? ([0-9]+[a-z]?|[A-Z]|[IVX]+)(\.[0-9]+)*$`)
 
 // headingPrefix matches a heading that names a part of the text about an item and not the item, such as "Precise statement of the Adyan–Rabin theorem" or "History: the lemma that is not Burnside's".
-var headingPrefix = regexp.MustCompile(`(?i)^(history|relationship|relation to|validity|an introduction|theorems proved|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary|corollaries|involving|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
+var headingPrefix = regexp.MustCompile(`(?i)^(history|accuracy|an? approximation|another|alternative|connection|derivation|equivalent forms|from|comparison|relationship|relation to|validity|an introduction|theorems proved|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary|corollaries|involving|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
 
 // pluralTail matches a heading that names a group of items, such as "Freudenthal-Hopf theorems".
 var pluralTail = regexp.MustCompile(`(?i)\b(theorems|results|facts|properties|lemmas|formulas|formulae|conjectures|identities|axioms|inequalities|relations|criteria|propositions|principles)$`)
@@ -112,6 +112,12 @@ var pluralTail = regexp.MustCompile(`(?i)\b(theorems|results|facts|properties|le
 // plainTail matches a short heading in lower case that needs its article to have a meaning, such as "Structure theorem" or "Volume formula".
 // kindWord matches a heading that is only the name of a kind of item, such as "Principle".
 var kindWord = regexp.MustCompile(`(?i)^(principle|axiom|theorem|lemma|proposition|statement|definition|formula|identity)$`)
+
+// theTail matches a heading that names an item of its article with "the", such as "Derivation of the formula".
+var theTail = regexp.MustCompile(`(?i)\bthe (formula|theorem|lemma|identity|equation|method|result|proof|series|inequality)$`)
+
+// sourceLabel matches a name that is a kind of item and its source, such as "Theorem (Brahmagupta)".
+var sourceLabel = regexp.MustCompile(`^(Lemma|Theorem|Proposition|Definition|Axiom|Corollary) \(`)
 
 var plainTail = regexp.MustCompile(`^[A-Z][a-z-]* (theorem|formula|lemma|conjecture|identity|inequality|criterion|principle)$`)
 
@@ -123,6 +129,12 @@ func whyName(m *inventory.Mention) string {
 	if r, _ := utf8.DecodeRuneInString(m.Name); m.Cue != "lead" && r >= 'a' && r <= 'z' {
 		return "the name starts with a lower case letter, so the name is a part of a sentence"
 	}
+	if m.Cue != "lead" && utf8.RuneCountInString(m.Name) == 1 {
+		return "the name is one character, so a person gives the name"
+	}
+	if sourceLabel.MatchString(m.Name) {
+		return "the name is a kind of item and its source, and not the name of the item"
+	}
 	if m.Cue == "lead" || m.Cue == "term" || m.Cue == "list-entry" {
 		if strings.HasPrefix(m.Name, "the ") || strings.HasPrefix(m.Name, "a ") || strings.HasPrefix(m.Name, "an ") {
 			return "the name starts with an article, and a person gives the name"
@@ -130,6 +142,8 @@ func whyName(m *inventory.Mention) string {
 		return ""
 	}
 	switch {
+	case theTail.MatchString(m.Name):
+		return "the heading names an item of its article with \"the\""
 	case kindWord.MatchString(m.Name):
 		return "the heading names a kind of item and not one item"
 	case headingPrefix.MatchString(m.Name):
