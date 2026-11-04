@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/tamnd/math2-agent/resource"
 	"github.com/tamnd/math2-agent/resource/cluster"
+	"github.com/tamnd/math2-agent/resource/depth"
 )
 
 func tree(t *testing.T) string {
@@ -121,5 +123,26 @@ func TestBuildEmpty(t *testing.T) {
 	}
 	if !strings.Contains(string(rep.Markdown()), "no source records") {
 		t.Error("the report of an empty tree does not say that it has no source records")
+	}
+}
+
+// The slim copy gives each resource the same tier and depth as the full record.
+func TestSlim(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "testdata", "rudin.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var r resource.Resource
+	if err := json.Unmarshal(data, &r); err != nil {
+		t.Fatal(err)
+	}
+	r.Scope = &resource.Scope{Value: resource.In, By: "b"}
+	full := depth.Compute(depth.Input{Resources: []resource.Resource{r}})
+	got := depth.Compute(depth.Input{Resources: []resource.Resource{slim(r)}})
+	if len(full) != 1 || !reflect.DeepEqual(got, full) {
+		t.Fatalf("got %+v, want %+v", got, full)
+	}
+	if s := slim(r); len(s.Creators) > 1 || len(s.MSC) > 1 || len(s.History) > 0 || s.TitleEn != "" {
+		t.Fatalf("the slim copy has fields that the report does not read: %+v", s)
 	}
 }
