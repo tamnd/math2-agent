@@ -184,6 +184,41 @@ func lines[T any](vs []T) ([]byte, error) {
 	return mdrec.EncodeAuto(recs)
 }
 
+// WriteShard writes the resources of one shard to records/resources/ in the tree at root, in the order of the id. Each resource must have an id of the shard, and no two resources can have one id.
+func WriteShard(root, shard string, rs []Resource) error {
+	slices.SortFunc(rs, func(a, b Resource) int { return cmp.Compare(a.ID, b.ID) })
+	for i, r := range rs {
+		if len(r.ID) < 3 || Shard(r.ID) != shard {
+			return fmt.Errorf("resource: the id %q is not in the shard %s", r.ID, shard)
+		}
+		if i > 0 && rs[i-1].ID == r.ID {
+			return fmt.Errorf("resource: two resources have the id %s", r.ID)
+		}
+	}
+	data, err := lines(rs)
+	if err != nil {
+		return err
+	}
+	return writeFile(filepath.Join(root, Dir, shard+mdrec.Ext), data)
+}
+
+// RemoveShards removes each shard file of records/resources/ in the tree at root whose shard is not in keep, and each shard of JSON Lines.
+func RemoveShards(root string, keep map[string]bool) error {
+	entries, err := os.ReadDir(filepath.Join(root, Dir))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	for _, e := range entries {
+		base, ok := strings.CutSuffix(e.Name(), mdrec.Ext)
+		if !e.IsDir() && IsShard(e.Name()) && (!ok || !keep[base]) {
+			if err := os.Remove(filepath.Join(root, Dir, e.Name())); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // replaceShards writes the files to dir and removes the other shard files of dir, and each shard of JSON Lines. It does not touch the subdirectories.
 func replaceShards(dir string, files map[string][]byte) error {
 	entries, err := os.ReadDir(dir)

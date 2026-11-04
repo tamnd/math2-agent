@@ -17,7 +17,7 @@ import (
 	resscope "github.com/tamnd/math2-agent/resource/scope"
 )
 
-const resClusterUsage = "m2 res cluster [-root DIR] [-day YYYY-MM-DD] [-commit C] [-no-mint]"
+const resClusterUsage = "m2 res cluster [-root DIR] [-day YYYY-MM-DD] [-commit C] [-no-mint] [-spill DIR] [-bucket N]"
 
 // ResClusterQueue is the file of the queue res-cluster in the tree.
 const ResClusterQueue = "build/resources/queues/res-cluster.md"
@@ -29,6 +29,8 @@ func runResCluster(args []string, stdout, stderr io.Writer) int {
 	day := fs.String("day", time.Now().UTC().Format(time.DateOnly), "the date of the run, for the history")
 	commit := fs.String("commit", "", "the commit that goes into registers/resources/. Empty means the HEAD commit of the working tree.")
 	noMint := fs.Bool("no-mint", false, "keep the provisional ids of the new resources")
+	spill := fs.String("spill", "", "run the passes on one bucket of records at a time and keep the spill files in this directory (RS10.8). Empty means one run in memory.")
+	bucket := fs.Int("bucket", rescluster.BucketSize, "the records of one bucket, with -spill")
 	if err := fs.Parse(args); err != nil {
 		return ExitUsage
 	}
@@ -43,10 +45,6 @@ func runResCluster(args []string, stdout, stderr io.Writer) int {
 	fail := func(err error) int {
 		fmt.Fprintf(stderr, "m2 res cluster: %v\n", err)
 		return ExitFailure
-	}
-	recs, err := rescluster.ReadRecords(*root)
-	if err != nil {
-		return fail(err)
 	}
 	links, err := rescluster.ReadCrosswalks(*root)
 	if err != nil {
@@ -74,15 +72,45 @@ func runResCluster(args []string, stdout, stderr io.Writer) int {
 			decisions = append(decisions, rescluster.Decision{Kind: d.Kind, A: d.ID, B: d.Target})
 		}
 	}
-	res, err := rescluster.Run(rescluster.Input{Records: recs, Crosswalks: links, Existing: existing, Order: order, Decisions: decisions, By: "m2 " + version + " " + rescluster.Version, Day: *day})
-	if err != nil {
-		return fail(err)
-	}
-	if err := resource.WriteResources(*root, res.Resources); err != nil {
-		return fail(err)
+	in := rescluster.Input{Crosswalks: links, Existing: existing, Order: order, Decisions: decisions, By: "m2 " + version + " " + rescluster.Version, Day: *day}
+	var (
+		records, live, skipped int
+		pairs                  []rescluster.Pair
+		joins                  map[string]int
+	)
+	if *spill != "" {
+		files, err := rescluster.RecordFiles(*root)
+		if err != nil {
+			return fail(err)
+		}
+		st, err := rescluster.RunFiles(in, files, *spill, *bucket, *root)
+		if err != nil {
+			return fail(err)
+		}
+		records, live, skipped, pairs, joins = st.Records, st.Resources, st.Skipped, st.Pairs, st.Joins
+		fmt.Fprintf(stdout, "%d buckets, %d components, the largest with %d records\n", st.Partition.Buckets, st.Partition.Components, st.Partition.Largest)
+	} else {
+		recs, err := rescluster.ReadRecords(*root)
+		if err != nil {
+			return fail(err)
+		}
+		in.Records = recs
+		res, err := rescluster.Run(in)
+		if err != nil {
+			return fail(err)
+		}
+		if err := resource.WriteResources(*root, res.Resources); err != nil {
+			return fail(err)
+		}
+		records, skipped, pairs, joins = len(recs), res.Skipped, res.Pairs, res.Joins
+		for i := range res.Resources {
+			if res.Resources[i].Live() {
+				live++
+			}
+		}
 	}
 	var buf bytes.Buffer
-	for _, p := range res.Pairs {
+	for _, p := range pairs {
 		goal := "the pair " + p.A + " and " + p.B + " is one resource or two"
 		if p.Pass != rescluster.C4 {
 			goal = "a person confirms that " + p.A + " and " + p.B + " are two resources"
@@ -112,15 +140,9 @@ func runResCluster(args []string, stdout, stderr io.Writer) int {
 		}
 		minted = len(ms)
 	}
-	live := 0
-	for i := range res.Resources {
-		if res.Resources[i].Live() {
-			live++
-		}
-	}
-	fmt.Fprintf(stdout, "%d source records, %d resources, %d minted, %d pairs in the queue, %d blocks too large\n", len(recs), live, minted, len(res.Pairs), res.Skipped)
+	fmt.Fprintf(stdout, "%d source records, %d resources, %d minted, %d pairs in the queue, %d blocks too large\n", records, live, minted, len(pairs), skipped)
 	for _, p := range []string{rescluster.C1, rescluster.C2, rescluster.C3, rescluster.C4, rescluster.C5} {
-		fmt.Fprintf(stdout, "%s: %d joins\n", p, res.Joins[p])
+		fmt.Fprintf(stdout, "%s: %d joins\n", p, joins[p])
 	}
 	return ExitOK
 }
