@@ -2,6 +2,7 @@ package resource
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +26,21 @@ func draws(t *testing.T, seed []byte, n int) []string {
 	return out
 }
 
-func TestMint(t *testing.T) {
+type minter func(root string, r io.Reader, commit string) ([]Minted, error)
+
+// mints runs a test with Mint and with MintSpilled.
+func mints(t *testing.T, test func(t *testing.T, mint minter)) {
+	t.Run("memory", func(t *testing.T) { test(t, Mint) })
+	t.Run("spilled", func(t *testing.T) {
+		test(t, func(root string, r io.Reader, commit string) ([]Minted, error) {
+			return MintSpilled(root, t.TempDir(), r, commit)
+		})
+	})
+}
+
+func TestMint(t *testing.T) { mints(t, testMint) }
+
+func testMint(t *testing.T, mint minter) {
 	root := t.TempDir()
 	seed := bytes.Repeat([]byte{0x5a, 0x13, 0xc7, 0x91, 0x2e, 0xb4, 0x08, 0x6f, 0xd3, 0x47, 0xa1}, 64)
 	ids := draws(t, seed, 4)
@@ -50,7 +65,7 @@ func TestMint(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	minted, err := Mint(root, bytes.NewReader(seed), "c1")
+	minted, err := mint(root, bytes.NewReader(seed), "c1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,12 +93,14 @@ func TestMint(t *testing.T) {
 	}
 
 	// A second run has nothing to mint.
-	if again, err := Mint(root, nil, "c2"); err != nil || len(again) != 0 {
+	if again, err := mint(root, nil, "c2"); err != nil || len(again) != 0 {
 		t.Fatalf("got %v, %v", again, err)
 	}
 }
 
-func TestMintUnknownProvisional(t *testing.T) {
+func TestMintUnknownProvisional(t *testing.T) { mints(t, testMintUnknownProvisional) }
+
+func testMintUnknownProvisional(t *testing.T, mint minter) {
 	root := t.TempDir()
 	a := fixture(t)
 	a.ID = "~0000000a"
@@ -91,7 +108,7 @@ func TestMintUnknownProvisional(t *testing.T) {
 	if err := WriteResources(root, []Resource{a}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Mint(root, nil, "c1"); err == nil {
+	if _, err := mint(root, nil, "c1"); err == nil {
 		t.Fatal("a reference to a provisional id that no resource has must fail")
 	}
 	if have, _ := Registered(root); len(have) != 0 {

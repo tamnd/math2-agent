@@ -134,7 +134,13 @@ func runResCluster(args []string, stdout, stderr io.Writer) int {
 			}
 			*commit = strings.TrimSpace(string(out))
 		}
-		ms, err := resource.Mint(*root, nil, *commit)
+		mint := resource.Mint
+		if *spill != "" {
+			mint = func(root string, r io.Reader, commit string) ([]resource.Minted, error) {
+				return resource.MintSpilled(root, *spill, r, commit)
+			}
+		}
+		ms, err := mint(*root, nil, *commit)
 		if err != nil {
 			return fail(err)
 		}
