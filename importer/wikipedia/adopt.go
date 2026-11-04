@@ -15,6 +15,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
+	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/site"
 	"github.com/tamnd/math2-agent/wpcorpus"
@@ -502,6 +503,9 @@ func adoptNode(m *inventory.Mention, name string, aliases []string, pages *pageC
 	if sentences(text) == 0 {
 		return nil, "the text of the item has no full sentence, so the write role writes the text (WP9.2)", nil
 	}
+	if _, sec := cardSection(m.Kind); urlText.MatchString(text) && slices.Contains(check.StatementSections(), sec) {
+		return nil, "the text has a URL, and a statement section has no URLs (B02)", nil
+	}
 	if listsItems(m.Cue, text) {
 		return nil, "the entry starts with a name and not a sentence, so it lists more than one item", nil
 	}
@@ -607,6 +611,9 @@ func listsItems(cue, text string) bool {
 	first, _, _ := strings.Cut(strings.TrimSpace(text), "\n\n")
 	return (cue == "term" || cue == "list-entry") && sentences(first) == 0
 }
+
+// urlText matches a URL in the converted text, such as the link of a citation.
+var urlText = regexp.MustCompile(`https?://`)
 
 func sentences(text string) int { return len(sentenceEnd.FindAllStringIndex(text, -1)) }
 

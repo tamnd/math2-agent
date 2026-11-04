@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tamnd/math2-agent/check"
 	"github.com/tamnd/math2-agent/inventory"
 	"github.com/tamnd/math2-agent/wpcorpus"
 )
@@ -471,5 +472,17 @@ func TestListsItems(t *testing.T) {
 		if got := listsItems(c.cue, c.text); got != c.want {
 			t.Errorf("listsItems(%q, %q) = %v, want %v", c.cue, c.text, got, c.want)
 		}
+	}
+}
+
+func TestURLText(t *testing.T) {
+	if !urlText.MatchString("Graph Theory, <http://www.math.ucsd.edu/~fan/research/revised.html>):") {
+		t.Error("the URL of a citation is not found")
+	}
+	if urlText.MatchString("See [[cardinality|0G0ASKNA6Z]].") {
+		t.Error("a node link is a URL")
+	}
+	if !slices.Contains(check.StatementSections(), "Statement") {
+		t.Error("Statement is not a statement section")
 	}
 }
