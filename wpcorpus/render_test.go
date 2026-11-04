@@ -114,6 +114,10 @@ func TestRenderInline(t *testing.T) {
 		{"A {{unknown|kept}} word.\n", "A kept word."},
 		{"See [https://example.org the site].\n", "See [the site](https://example.org)."},
 		{"<code>a_b</code> and <sup>2</sup>.\n", "`a_b` and <sup>2</sup>."},
+		{"A group <math>A\\ </math> is closed.\n", "A group $A$ is closed."},
+		{"A break <math>a \\\\</math> stays.\n", `A break $a \\$ stays.`},
+		{"See {{Slink||Formal definition}}.\n", "See § Formal definition."},
+		{"See {{Section link|Group (mathematics)|Definition}}.\n", "See Group (mathematics) § Definition."},
 	} {
 		if md := render(t, c.src); !strings.Contains(md, c.want) {
 			t.Errorf("%q: the rendering has no %q:\n%s", c.src, c.want, md)

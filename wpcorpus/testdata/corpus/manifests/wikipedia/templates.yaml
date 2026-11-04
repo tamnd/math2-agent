@@ -52,6 +52,12 @@ templates:
     params: {title: title, 1: title}
   collapse bottom:
     class: layout
+  slink:
+    class: layout
+    params: {1: link, 2: link}
+  section link:
+    class: layout
+    params: {1: link, 2: link}
   sfn:
     class: citation
   efn:

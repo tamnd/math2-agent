@@ -216,6 +216,14 @@ func adoptNodes(nodes []*node.Node) []wpImport.AdoptNode {
 	for _, n := range nodes {
 		a := wpImport.AdoptNode{ID: n.ID, Name: n.Get("name"), Aliases: n.List("aliases"), MSC: n.List("msc"), Inventory: n.List("inventory"), Proves: n.Get("proves")}
 		_, a.Retired = n.Meta["retired"]
+		if same, ok := n.Meta["same_as"].(map[string]any); ok {
+			a.SameAs = map[string]string{}
+			for k, v := range same {
+				if s, ok := v.(string); ok {
+					a.SameAs[k] = s
+				}
+			}
+		}
 		if srcs, ok := n.Meta["sources"].([]any); ok {
 			for _, s := range srcs {
 				m, _ := s.(map[string]any)

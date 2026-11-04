@@ -399,7 +399,7 @@ func (p *para) tag(n *parse.Node) {
 }
 
 func (p *para) math(n *parse.Node, tex string, display bool) {
-	tex = strings.Join(strings.Fields(tex), " ")
+	tex = mathText(tex)
 	if tex == "" {
 		return
 	}
@@ -408,6 +408,17 @@ func (p *para) math(n *parse.Node, tex string, display bool) {
 		return
 	}
 	p.b.WriteString("$" + tex + "$")
+}
+
+// mathText gives the TeX of a formula on one line. A control space at the end,
+// as in <math>A\ </math>, is dropped, because the backslash that is left would
+// escape the closing dollar. A line break \\ at the end stays.
+func mathText(tex string) string {
+	tex = strings.Join(strings.Fields(tex), " ")
+	for strings.HasSuffix(tex, `\`) && !strings.HasSuffix(tex, `\\`) {
+		tex = strings.TrimSpace(tex[:len(tex)-1])
+	}
+	return tex
 }
 
 // note writes the note of a <ref> and gives its mark. A named ref that is
@@ -473,6 +484,12 @@ func (rd *renderer) layout(n *parse.Node, key string) (string, bool) {
 		return text("1"), true
 	case "convert":
 		return strings.TrimSpace(text("1") + " " + text("2")), true
+	case "slink", "section link":
+		var secs []string
+		for i := 2; text(strconv.Itoa(i)) != ""; i++ {
+			secs = append(secs, "§ "+text(strconv.Itoa(i)))
+		}
+		return strings.TrimSpace(text("1") + " " + strings.Join(secs, ", ")), true
 	case "circa":
 		return strings.TrimSpace("c. " + text("1")), true
 	case "birth date", "death date", "birth date and age", "death date and age":
