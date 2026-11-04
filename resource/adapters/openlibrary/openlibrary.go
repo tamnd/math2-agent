@@ -9,6 +9,7 @@ package openlibrary
 
 import (
 	"bufio"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -53,24 +54,73 @@ func (Adapter) Version() string { return "openlibrary/1" }
 // Dump returns the URL of the dump of the works.
 func (Adapter) Dump() string { return WorksDump }
 
-// Fetch writes the dump at req.URL. For the dump of the works, it writes the dump of the editions after it. Each dump is compressed with gzip, and two gzip members one after the other are one gzip stream.
+// Fetch reads the dump at req.URL as a stream and writes the lines of the works and editions of mathematics, compressed with gzip. For the dump of the works, it reads the dump of the editions after it, so that each work of mathematics is known before its editions. The full dumps are too large to keep, and the snapshot keeps only the lines that Records reads. A line that is not a record of five fields, or whose JSON does not parse, is left out.
 func (Adapter) Fetch(ctx context.Context, req *ingest.Request, w io.Writer) error {
 	urls := []string{req.URL}
 	if req.URL == WorksDump {
 		urls = append(urls, EditionsDump)
 	}
+	zw := gzip.NewWriter(w)
+	works := map[string]bool{}
 	for _, u := range urls {
-		body, err := req.Get(ctx, u)
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(w, body)
-		_ = body.Close()
-		if err != nil {
+		if err := keep(ctx, req.Get, u, works, zw); err != nil {
 			return fmt.Errorf("%s: %w", u, err)
 		}
 	}
-	return nil
+	return zw.Close()
+}
+
+// keep reads the dump at u, compressed with gzip, and writes each line of a work or an edition of mathematics to w. It adds the key of each work of mathematics to works.
+func keep(ctx context.Context, get ingest.Getter, u string, works map[string]bool, w io.Writer) error {
+	body, err := get(ctx, u)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = body.Close() }()
+	zr, err := gzip.NewReader(body)
+	if err != nil {
+		return err
+	}
+	sc := bufio.NewScanner(zr)
+	sc.Buffer(nil, 64<<20)
+	for n := 0; sc.Scan(); n++ {
+		if n%100000 == 0 {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+		}
+		line := sc.Text()
+		f := strings.SplitN(line, "\t", 5)
+		if len(f) != 5 || (f[0] != "/type/work" && f[0] != "/type/edition") {
+			continue
+		}
+		var d Doc
+		if json.Unmarshal([]byte(f[4]), &d) != nil {
+			continue
+		}
+		if d.Key == "" {
+			d.Key = f[1]
+		}
+		if !math(f[0], &d, works) {
+			continue
+		}
+		if _, err := io.WriteString(w, line+"\n"); err != nil {
+			return err
+		}
+	}
+	return sc.Err()
+}
+
+// math reports whether a work or an edition is of mathematics. An edition is also of mathematics when one of its works is in works. It adds the key of a work of mathematics to works.
+func math(typ string, d *Doc, works map[string]bool) bool {
+	switch {
+	case typ == "/type/work" && Math(d):
+		works[d.Key] = true
+		return true
+	case typ == "/type/edition":
+		return Math(d) || slices.ContainsFunc(d.Works, func(k keyRef) bool { return works[k.Key] })
+	}
+	return false
 }
 
 type keyRef struct {
@@ -165,11 +215,7 @@ func each(r io.Reader, fn func(typ string, d *Doc) error) error {
 		if d.Key == "" {
 			d.Key = f[1]
 		}
-		switch {
-		case typ == "/type/work" && Math(&d):
-			works[d.Key] = true
-		case typ == "/type/edition" && (Math(&d) || slices.ContainsFunc(d.Works, func(k keyRef) bool { return works[k.Key] })):
-		default:
+		if !math(typ, &d, works) {
 			continue
 		}
 		if err := fn(typ, &d); err != nil {
