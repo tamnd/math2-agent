@@ -81,7 +81,7 @@ func dump(t *testing.T) []byte {
 
 func TestFetch(t *testing.T) {
 	data := dump(t)
-	get := func(_ context.Context, u string) (io.ReadCloser, error) {
+	get := func(context.Context, string) (io.ReadCloser, error) {
 		return io.NopCloser(bytes.NewReader(data)), nil
 	}
 	var out bytes.Buffer
