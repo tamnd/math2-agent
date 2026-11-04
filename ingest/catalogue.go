@@ -289,6 +289,14 @@ func (c *Catalogue) Write(root string) error {
 
 // writeFile writes data to path. It makes the directory first, and it replaces the file in one step.
 func writeFile(path string, data []byte) error {
+	return writeWith(path, func(w io.Writer) error {
+		_, err := w.Write(data)
+		return err
+	})
+}
+
+// writeWith writes the bytes that write gives to a new file beside path, and then renames the file to path. A large file of records does not have to be in memory.
+func writeWith(path string, write func(io.Writer) error) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
@@ -296,7 +304,7 @@ func writeFile(path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	if _, err := tmp.Write(data); err != nil {
+	if err := write(tmp); err != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmp.Name())
 		return err

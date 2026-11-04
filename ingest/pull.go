@@ -1,7 +1,6 @@
 package ingest
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -111,12 +110,11 @@ func Pull(ctx context.Context, a Adapter, opt Options) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	var buf bytes.Buffer
-	hash, err := WriteRecords(&buf, recs)
-	if err != nil {
-		return nil, err
-	}
-	if err := writeFile(filepath.Join(opt.Root, RecordsDir, id+".jsonl"), buf.Bytes()); err != nil {
+	var hash string
+	if err := writeWith(filepath.Join(opt.Root, RecordsDir, id+".jsonl"), func(w io.Writer) (err error) {
+		hash, err = WriteRecords(w, recs)
+		return err
+	}); err != nil {
 		return nil, err
 	}
 	m := &Manifest{Source: id, Adapter: a.Version(), Snapshot: res.Snapshot.Hash, Records: len(recs), Hash: hash, Classes: map[Class]int{}}
