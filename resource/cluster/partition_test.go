@@ -27,3 +27,32 @@ func TestPartitionLargeBlock(t *testing.T) {
 		t.Fatalf("buckets = %d, want 5", p.Buckets)
 	}
 }
+
+// The records of one block of C4 with low scores stay in separate components, and a pair with a high score is one component, in memory and with spill files.
+func TestPartitionBlockPairs(t *testing.T) {
+	in := Input{Records: []Record{
+		{Source: "crossref", NativeID: "a", Kind: "article", Title: "Spectral gaps for random regular graphs", Creators: author("Ann Smith"), Date: "2000"},
+		{Source: "openalex", NativeID: "W1", Kind: "article", Title: "Spectral gaps for random regular graphs", Creators: author("Ann Smith"), Date: "2001"},
+		{Source: "crossref", NativeID: "b", Kind: "article", Title: "The cohomology of finite groups of Lie type", Creators: author("Ann Smith"), Date: "2000"},
+		{Source: "crossref", NativeID: "c", Kind: "article", Title: "Boundary layers in viscous fluids", Creators: author("Ann Smith"), Date: "2001"},
+	}}
+	p := Partitioned(in, 1)
+	if p.Components != 3 || p.Largest != 2 {
+		t.Fatalf("components = %d, largest = %d, want 3 and 2", p.Components, p.Largest)
+	}
+	if p.Bucket[0] != p.Bucket[1] || p.Bucket[0] == p.Bucket[2] || p.Bucket[2] == p.Bucket[3] {
+		t.Fatalf("buckets = %v", p.Bucket)
+	}
+	pt := partitioner{blocks: newBlockSet(t.TempDir())}
+	var recs []int32
+	for i := range in.Records {
+		recs = append(recs, pt.record(&in.Records[i]))
+	}
+	_, q, err := pt.buckets(recs, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if q.Components != 3 || q.Largest != 2 {
+		t.Fatalf("with spill files: components = %d, largest = %d, want 3 and 2", q.Components, q.Largest)
+	}
+}
