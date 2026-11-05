@@ -339,6 +339,7 @@ func TestWhyName(t *testing.T) {
 		{"named-heading", "A useful corollary", true},
 		{"inline-head", "Problem 1 (Schmidt 1968)", true},
 		{"list-entry", "Lattices", true},
+		{"named-heading", "Identity / neutral elements", true},
 		{"named-heading", "Distributivity laws for complete lattices", true},
 		{"named-heading", "Dual of Dilworth's theorem (Mirsky's theorem)", true},
 		{"named-heading", "Adjoint functor theorem for posets", false},
@@ -531,6 +532,11 @@ func TestModifierEntry(t *testing.T) {
 		{"Artin", "Emil Artin."},
 		{"Faithful", "A [[faithful representation|5FW1MD0HNV]] is a representation that is injective."},
 		{"Primitive", "The term \"primitive element\" is an old term for a vector."},
+		{"Artin", "Emil Artin.\n\nArtin's theorem on induced characters states a result."},
+		{"Positive-energy representation", "positive-energy representation."},
+		{"Dominant", "The representations are indexed by their highest weight. These *dominant weights* form a lattice."},
+		{"Admissible", "A representation is called admissible if it has finite multiplicities."},
+		{"Defined over", "A representation is said to be defined over *F* if it comes from F."},
 	} {
 		if !modifierEntry(c[0], c[1]) {
 			t.Errorf("%q with %q is not found as a modifier entry", c[0], c[1])
@@ -539,8 +545,6 @@ func TestModifierEntry(t *testing.T) {
 	for _, c := range [][2]string{
 		{"Ring", "A ring is a set with two operations."},
 		{"Girth", "The girth of a graph is the length of its shortest cycle."},
-		{"Admissible", "A representation is called admissible if it has finite multiplicities."},
-		{"Defined over", "A representation is said to be defined over F if it comes from F."},
 		{"Source", "A vertex with no incoming edges."},
 		{"Ideal", "An ideal I of a ring R is a subgroup."},
 	} {

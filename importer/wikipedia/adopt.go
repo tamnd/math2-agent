@@ -141,7 +141,7 @@ var otherName = regexp.MustCompile(`(?i)\([^)]*\b(theorem|lemma|formula|identity
 // pluralWord matches a list entry that is one word in the plural, as "Lattices". The entry names a group of items.
 var pluralWord = regexp.MustCompile(`^[A-Z][a-z]+s$`)
 
-var oddName = regexp.MustCompile(`[?"]|\s\([0-9]{4}\)$|-$`)
+var oddName = regexp.MustCompile(`[?"]|\s\([0-9]{4}\)$|-$| / `)
 
 // questionHead matches a name that is a question, as "How many unit distances".
 var questionHead = regexp.MustCompile(`^(How|Can|Are|Is|Does|Do|What|Which|Why|When)\b`)
@@ -665,18 +665,17 @@ var nameWord = regexp.MustCompile(`^('s\b|\s+[\p{Ll}-]{3,}\b)`)
 // joinWords are the words that can follow the name of a term in its definition, as in "a ring is" or "called admissible if".
 var joinWords = map[string]bool{"is": true, "are": true, "was": true, "were": true, "if": true, "of": true, "in": true, "on": true, "at": true, "to": true, "for": true, "with": true, "and": true, "or": true, "by": true, "that": true, "which": true, "when": true, "where": true, "has": true, "have": true, "means": true, "consists": true, "can": true, "may": true, "over": true, "under": true, "such": true, "as": true, "be": true, "denotes": true, "refers": true, "also": true, "here": true, "there": true}
 
-// modifierEntry reports if a glossary entry has a one-word name that qualifies a noun in the definition, as "Unitary" with "A unitary representation of a group" or "Brauer" with "Brauer's theorem". The full term is the name and the noun, so the entry name is not the name of the item.
+// modifierEntry reports if a glossary entry has a one-word name that qualifies a noun in the definition, as "Unitary" with "A unitary representation of a group" or "Brauer" with "Brauer's theorem". The full term is the name and the noun, so the entry name is not the name of the item. It also reports an entry whose first paragraph is only a name, as "Emil Artin." or the entry name again, and an entry that defines the name as a property, as "is called admissible if".
 func modifierEntry(name, text string) bool {
-	text = strings.TrimSpace(text)
-	if bareName.MatchString(text) {
+	first, _, _ := strings.Cut(strings.TrimSpace(text), "\n\n")
+	if bareName.MatchString(first) || strings.EqualFold(strings.TrimSuffix(first, "."), name) {
+		return true
+	}
+	if regexp.MustCompile(`(?i)\b(called|said to be) \*?` + regexp.QuoteMeta(name) + `\b[^.]{0,12}?\s(if|when)\b`).MatchString(first) {
 		return true
 	}
 	if strings.ContainsAny(name, " ") {
 		return false
-	}
-	first := text
-	if loc := sentenceEnd.FindStringIndex(text); loc != nil {
-		first = text[:loc[0]]
 	}
 	at := strings.Index(strings.ToLower(first), strings.ToLower(name))
 	for at >= 0 {
