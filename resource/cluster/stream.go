@@ -14,6 +14,15 @@ import (
 	"github.com/tamnd/math2-agent/tag"
 )
 
+// groupFiles is the most files of the records of the buckets that RunFiles writes at one time. The tests make it small, so that a file holds more than one bucket.
+var groupFiles = 64
+
+// bucketed is a record in a file of the records of the buckets, with its bucket.
+type bucketed struct {
+	B int32   `json:"b"`
+	R *Record `json:"r"`
+}
+
 // Stream is the summary of RunFiles.
 type Stream struct {
 	Records   int            // the source records of the files
@@ -66,10 +75,11 @@ func RunFiles(in Input, files []string, tmp string, size int, root string, log i
 	st := &Stream{Records: len(recs), Joins: map[string]int{}, Skipped: len(p.Large), Partition: p}
 	_, _ = fmt.Fprintf(log, "cluster: %d records in %d buckets, %d components, the largest with %d records\n", len(recs), p.Buckets, p.Components, p.Largest)
 
-	// The records of each bucket.
-	ws := make([]*spill.Writer, p.Buckets)
-	for b := range ws {
-		if ws[b], err = spill.Create(name("records", b)); err != nil {
+	// The records of each bucket. A file holds the records of per buckets that follow, so that at most groupFiles files are open, each with the buffers of its compressor.
+	per := max(1, (p.Buckets+groupFiles-1)/groupFiles)
+	ws := make([]*spill.Writer, (p.Buckets+per-1)/per)
+	for g := range ws {
+		if ws[g], err = spill.Create(name("records", g)); err != nil {
 			return nil, err
 		}
 	}
@@ -83,7 +93,8 @@ func RunFiles(in Input, files []string, tmp string, size int, root string, log i
 			if n >= len(recs) {
 				return nil, fmt.Errorf("cluster: %s changed in the run", f)
 			}
-			if err := ws[of[recs[n]]].Write(&rs[i]); err != nil {
+			b := of[recs[n]]
+			if err := ws[int(b)/per].Write(bucketed{B: b, R: &rs[i]}); err != nil {
 				return nil, err
 			}
 			n++
@@ -116,18 +127,28 @@ func RunFiles(in Input, files []string, tmp string, size int, root string, log i
 		id        string
 	}
 	var news []fresh
+	byBucket := map[int32][]Record{}
 	for b := range p.Buckets + 1 {
 		out := map[string]resource.Resource{}
 		var fr map[string]string
 		if b < p.Buckets {
-			var rs []Record
-			if err := spill.Read(name("records", b), func(line []byte) error {
-				var r Record
-				rs = append(rs, r)
-				return json.Unmarshal(line, &rs[len(rs)-1])
-			}); err != nil {
-				return nil, err
+			if b%per == 0 {
+				if err := spill.Read(name("records", b/per), func(line []byte) error {
+					var r bucketed
+					if err := json.Unmarshal(line, &r); err != nil {
+						return err
+					}
+					byBucket[r.B] = append(byBucket[r.B], *r.R)
+					return nil
+				}); err != nil {
+					return nil, err
+				}
+				if err := os.Remove(name("records", b/per)); err != nil {
+					return nil, err
+				}
 			}
+			rs := byBucket[int32(b)] // #nosec G115 -- a run has fewer than 2^31 buckets.
+			delete(byBucket, int32(b))
 			if len(rs) > 10*size || b%100 == 0 {
 				_, _ = fmt.Fprintf(log, "cluster: the bucket %d of %d has %d records\n", b+1, p.Buckets, len(rs))
 			}
@@ -139,9 +160,6 @@ func RunFiles(in Input, files []string, tmp string, size int, root string, log i
 				st.Joins[k] += n
 			}
 			st.Pairs = append(st.Pairs, g.pairs...)
-			if err := os.Remove(name("records", b)); err != nil {
-				return nil, err
-			}
 		}
 		for _, e := range existBy[b] {
 			if _, ok := out[e.ID]; !ok {
