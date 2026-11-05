@@ -51,6 +51,9 @@ func run(t *testing.T, in Input) *Result {
 	return res
 }
 
+// A file of the records of the buckets holds two buckets or more in the runs of the tests.
+func init() { groupFiles = 2 }
+
 // stream checks that RunFiles on the records of in, in files, writes the resources of res and gives its pairs.
 func stream(t *testing.T, in Input, res *Result) {
 	t.Helper()
