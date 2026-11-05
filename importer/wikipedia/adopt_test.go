@@ -561,6 +561,18 @@ func TestModifierEntry(t *testing.T) {
 		{"Dominant", "The representations are indexed by their highest weight. These *dominant weights* form a lattice."},
 		{"Admissible", "A representation is called admissible if it has finite multiplicities."},
 		{"Defined over", "A representation is said to be defined over *F* if it comes from F."},
+		{"Quasi", "A quasi-excellent ring is a Grothendieck ring such that the singular points form a closed subset."},
+		{"Reflexive", "A module *M* is reflexive if the canonical map is an isomorphism."},
+		{"Dominate", "A local ring *B* is said to dominate a local ring *A* if it contains *A*."},
+		{"Irreducible", "An element of a ring is called [[irreducible|052SDEPZH7]] if it cannot be written as a product."},
+		{"Universally", "A property is said to hold universally if it holds for various base changes."},
+		{"Big", "The word \"big\" when applied to a module emphasizes that the module is not finitely generated."},
+		{"Stanley", "Named after Richard P. Stanley A Stanley–Reisner ring is a quotient of a polynomial algebra."},
+		{"Separated", "An alternative term for Hausdorff, usually applied to a topology on a ring."},
+		{"Neat", "Occasionally used to mean \"unramified\"."},
+		{"Hull", "An injective hull (or envelope) of a module is a minimal injective module containing it."},
+		{"Regularity", "Castelnuovo–Mumford regularity is an invariant of a graded module."},
+		{"Semi-local", "A semilocal ring is a ring with only a finite number of maximal ideals."},
 	} {
 		if !modifierEntry(c[0], c[1]) {
 			t.Errorf("%q with %q is not found as a modifier entry", c[0], c[1])
@@ -571,6 +583,9 @@ func TestModifierEntry(t *testing.T) {
 		{"Girth", "The girth of a graph is the length of its shortest cycle."},
 		{"Source", "A vertex with no incoming edges."},
 		{"Ideal", "An ideal I of a ring R is a subgroup."},
+		{"Syzygy", "A syzygy of a module is an element of the kernel of a map."},
+		{"Completion", "The completion of a ring at an ideal is the inverse limit."},
+		{"Girth", "The length of the shortest cycle of a graph."},
 	} {
 		if modifierEntry(c[0], c[1]) {
 			t.Errorf("%q with %q is found as a modifier entry", c[0], c[1])
