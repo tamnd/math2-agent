@@ -185,6 +185,17 @@ var (
 	bareURL      = regexp.MustCompile(`(?i)\b(?:https?|ftp)://[^\s)>\]]+|\bwww\.[^\s)>\]]+`)
 )
 
+// mathSpan matches inline math and display math on one line, as $\mathbb{Z}[[q]]$.
+var mathSpan = regexp.MustCompile(`\$\$[^$]+\$\$|\$[^$]+\$`)
+
+// maskMath changes the math spans of a line to spaces, so that the brackets of a formal power series ring, as $R[[x]]$, are not a link. The offsets stay the same.
+func maskMath(l string) string {
+	if !strings.Contains(l, "$") {
+		return l
+	}
+	return mathSpan.ReplaceAllStringFunc(l, blank)
+}
+
 // isURL reports whether s is a URL and not a tag or a path in the site.
 func isURL(s string) bool {
 	s = strings.ToLower(s)
@@ -200,7 +211,7 @@ func (r *run) links(n *node.Node, b *body) {
 			r.checked["B02"]++
 		}
 		inStatement = sec
-		for _, m := range wikiLink.FindAllStringSubmatchIndex(l, -1) {
+		for _, m := range wikiLink.FindAllStringSubmatchIndex(maskMath(l), -1) {
 			r.checked["B02"]++
 			line, col := b.place(i, m[0])
 			if msg := r.linkProblem(l[m[2]:m[3]]); msg != "" {
