@@ -105,7 +105,7 @@ var genericName = regexp.MustCompile(`(?i)^(theorem|lemma|corollary|proposition|
 var labelName = regexp.MustCompile(`(?i)^(axiom|theorem|lemma|corollary|proposition|claim|conjecture|definition|fact|step|case|rule|property|observation|remark|example|exercise|problem|condition|assumption|hypothesis)s? ([0-9]+[a-z]?|[A-Z]|[IVX]+)(\.[0-9]+)*$`)
 
 // headingPrefix matches a heading that names a part of the text about an item and not the item, such as "Precise statement of the Adyan–Rabin theorem" or "History: the lemma that is not Burnside's".
-var headingPrefix = regexp.MustCompile(`(?i)^(history|accuracy|an?|theorems?|importance|sharpness|via|equivalence|connections|explicit|formulas?|identity group|another|alternative|connection|derivation|equivalent forms|from|comparison|relationship|relation to|validity|an introduction|theorems proved|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary|corollaries|involving|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
+var headingPrefix = regexp.MustCompile(`(?i)^(proof of|disproof of|disproved|variants? of|interpretations? (of|via)|relations? (with|to)|extensions? (to|of)|extension to include|incompatibility with|modern approach|general formulas|general statement|particular values|analytic criteria|geometry of|conjectures? (on|of)|criterion for|degree of|classical integral|extended|weaker|stronger|original|history|accuracy|an?|theorems?|importance|sharpness|via|equivalence|connections|explicit|formulas?|identity group|another|alternative|connection|derivation|equivalent forms|from|comparison|relationship|relation to|validity|an introduction|theorems proved|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary|corollaries|involving|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
 
 // pluralTail matches a heading that names a group of items, such as "Freudenthal-Hopf theorems".
 var pluralTail = regexp.MustCompile(`(?i)\b(theorems|results|facts|properties|lemmas|formulas|formulae|conjectures|identities|axioms|inequalities|relations|criteria|propositions|principles|primes|graphs)$`)
@@ -126,13 +126,13 @@ var plainTail = regexp.MustCompile(`^[A-Z][a-z-]* (theorem|formula|lemma|conject
 var lostPart = regexp.MustCompile(`(?i)\b(of|to|for|with|and|or|the|a|an|by|from|that|is|in|on)$|  |&[a-z]+;`)
 
 // numberedName matches a name with a number of its article, such as "1. Axiom of extensionality", "Axiom of pairing - 4", "Theorem 1. Every valid formula is provable" or "2 theorem".
-var numberedName = regexp.MustCompile(`(?i)^[0-9]+\.\s|\s-\s[0-9]+$|^(theorem|lemma|proposition|propositions|corollary|axiom|problem|question|conjecture|exercise)\s[0-9IVX]+(\.[0-9A-Z]+)*\b|^[0-9]+ (theorem|lemma)$|\btheorem (one|two|three|four|five)$`)
+var numberedName = regexp.MustCompile(`(?i)^[0-9]+\.\s|\s-\s[0-9]+$|^(theorem|lemma|proposition|propositions|corollary|axiom|problem|question|conjecture|exercise)\s[0-9IVX]+(\.[0-9A-Z]+)*\b|^[0-9]+ (theorem|lemma)$|\btheorem (one|two|three|four|five)$|^(theorem|lemma|proposition|corollary) [A-Z]\.?$`)
 
 // actionHead matches a heading that names a step or a part of the text, such as "Using the Chinese remainder theorem", "As a theorem of arithmetic" or "The second theorem".
 var actionHead = regexp.MustCompile(`(?i)^([a-z]+ing|as|by|in|on|for|with|without|cases|role|versions?|similarities|resolutions?|analogs|appeals|implications|objections?|criticism|chronology|software|determination|uniqueness|create|produce|solutions?)\b|^the (first|second|third|fourth|basic|main|general|extra|following|original)\b|\bexamples?\b`)
 
 // partPhrase matches a heading that names a part of the text about an item inside the heading, such as "Graphon version of counting lemma" or "Bandwidth formulas for some graphs", or a heading with "The" and a word in lower case, such as "The stacking theorem".
-var partPhrase = regexp.MustCompile(`(?i:\b(version of|analogues|for some|in terms of|laws for|rules for)\b)|^The [a-z]`)
+var partPhrase = regexp.MustCompile(`(?i:\b(version of|analogues|for some|in terms of|laws for|rules for|approach to|formulation of|in other bases|as functors|for other groups)\b)|^The [a-z]`)
 
 // oddName matches a name that a person must give again, because it has a question mark, a quote, a year, or an open prefix, as "Dirac's Theorem (1952)" or "Co-".
 // otherName matches a heading that gives a second name of the item in brackets, as "Dual of Dilworth's theorem (Mirsky's theorem)".
@@ -141,7 +141,7 @@ var otherName = regexp.MustCompile(`(?i)\([^)]*\b(theorem|lemma|formula|identity
 // pluralWord matches a list entry that is one word in the plural, as "Lattices". The entry names a group of items.
 var pluralWord = regexp.MustCompile(`^[A-Z][a-z]+s$`)
 
-var oddName = regexp.MustCompile(`[?"]|\s\([0-9]{4}\)$|-$| / `)
+var oddName = regexp.MustCompile(`[?"#]|^'|'$|\s\([0-9]{4}\)$|\s\([A-Z]{2,6}\)$|-$| / `)
 
 // questionHead matches a name that is a question, as "How many unit distances".
 var questionHead = regexp.MustCompile(`^(How|Can|Are|Is|Does|Do|What|Which|Why|When)\b`)
@@ -153,7 +153,7 @@ var greekName = regexp.MustCompile(`(?i)^(alpha|beta|gamma|delta|epsilon|zeta|et
 var seeEntry = regexp.MustCompile(`(?i)^(For [^.]*, see |See |Synonyms? (for|of) |Same as |An? (synonym|alternative (name|spelling)) for )`)
 
 // personEntry matches a glossary entry about a person, as "Julius Petersen (1839–1910), Danish graph theorist.".
-var personEntry = regexp.MustCompile(`\([0-9]{4}[–-][0-9]{4}\)|^[A-Z][^ ,]+( [A-Z][^ ,]+)+, [^.]*\b(mathematician|theorist|logician|scientist|statistician)\b`)
+var personEntry = regexp.MustCompile(`\([0-9]{4}[–-][0-9]{4}\)|\(c\. ?[0-9]{1,4}( BCE| BC)?[–-]|\([0-9]{1,4} (BCE|BC)[–-]|^[A-Z][^ ,]+( [A-Z][^ ,]+)+, [^.]*\b(mathematician|theorist|logician|scientist|statistician)\b`)
 
 // abbreviation matches a glossary term that is an abbreviation, such as "GCH". The node takes the full name.
 var abbreviation = regexp.MustCompile(`^[A-Z][A-Z0-9-]{0,5}$`)
@@ -220,6 +220,23 @@ func whyName(m *inventory.Mention) string {
 		return "the heading has a meaning only in its article"
 	}
 	return ""
+}
+
+// fieldName matches the name of a field of study, as "Classical differential geometry" or "Single operator theory".
+var fieldName = regexp.MustCompile(`(?i)\b(geometry|theory|mathematics|trigonometry|topology|calculus)$`)
+
+// caseFor matches the word that joins the name of an item and a case of it, as in "Local Langlands conjectures for GL2".
+var caseFor = regexp.MustCompile(` (for|over) `)
+
+// caseOf reports if a name is the name of the subject of the article on the page and a case of it, as "Local Langlands conjectures for GL2" in the article "Local Langlands conjectures".
+func caseOf(name string, page int, subjectOf map[string]int) bool {
+	loc := caseFor.FindStringIndex(name)
+	if loc == nil {
+		return false
+	}
+	head := strings.TrimPrefix(name[:loc[0]], "The ")
+	p, ok := subjectOf[inventory.NameKey(head)]
+	return ok && p == page
 }
 
 // proofName gives the name of the proof of a statement. A leading "The" of the name of the statement is in lower case, as in "Proof of the ping-pong lemma".
@@ -412,6 +429,8 @@ func Adopt(rows []inventory.Row, ms []inventory.Mention, nodes []AdoptNode, opt 
 			it.Reason = "the proof is attached to an item that is not a statement"
 		case nameOf[target] == "":
 			it.Reason = "node " + target + " has no name"
+		case strings.HasPrefix(nameOf[target], "Proof "):
+			it.Reason = "node " + target + " has the name of a proof, and a person gives the name of the statement"
 		case proved[target]:
 			it.Reason = "node " + target + " has a proof node"
 		default:
@@ -482,6 +501,12 @@ func whyWait(m *inventory.Mention, hold map[string]string, subjectOf map[string]
 	if m.ArticleType == "biography" || m.ArticleType == "field" {
 		return "an article of type " + m.ArticleType + " gives a record and not a node (WP9.1)"
 	}
+	if m.Cue == "term" && fieldName.MatchString(m.Name) {
+		return "the term names a field of study, and a field gives a record and not a node (WP9.1)"
+	}
+	if m.Cue != "lead" && caseOf(m.Name, m.Page, subjectOf) {
+		return "the heading names a case of the subject of its article, and the case goes in the node of the subject"
+	}
 	k := inventory.NameKey(m.Name)
 	if p, ok := subjectOf[k]; ok && strings.Contains(m.ID, "#") {
 		if p == m.Page {
@@ -550,7 +575,7 @@ func adoptNode(m *inventory.Mention, name string, aliases []string, pages *pageC
 	if m.Cue == "term" && seeEntry.MatchString(strings.TrimSpace(text)) {
 		return nil, "the entry points to other entries and has no definition", nil
 	}
-	if m.Cue == "term" && personEntry.MatchString(strings.TrimSpace(text)) {
+	if (m.Cue == "term" || m.Cue == "list-entry") && personEntry.MatchString(strings.TrimSpace(text)) {
 		return nil, "the entry tells about a person, and a person gives a record and not a node (WP9.1)", nil
 	}
 	if m.Cue == "term" && modifierEntry(m.Name, text) {

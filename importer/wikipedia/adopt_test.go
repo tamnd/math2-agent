@@ -340,6 +340,16 @@ func TestWhyName(t *testing.T) {
 		{"inline-head", "Problem 1 (Schmidt 1968)", true},
 		{"list-entry", "Lattices", true},
 		{"named-heading", "Identity / neutral elements", true},
+		{"named-heading", "Variants of Wilson's theorem", true},
+		{"named-heading", "Bhargava's approach to the composition law", true},
+		{"named-heading", "Interpretation via the Chinese Remainder Theorem", true},
+		{"named-heading", "Extension to include the Goldbach conjecture", true},
+		{"named-heading", "Conjectures on the boundedness of ranks", true},
+		{"named-heading", "Generalized Riemann hypothesis (GRH)", true},
+		{"inline-head", "'Problem #6 at IMO 1988'", true},
+		{"math-theorem", "Lemma A.", true},
+		{"named-heading", "Hensel's lemma for p-adic numbers", false},
+		{"named-heading", "Skowronski–Weyman theorem", false},
 		{"named-heading", "Distributivity laws for complete lattices", true},
 		{"named-heading", "Dual of Dilworth's theorem (Mirsky's theorem)", true},
 		{"named-heading", "Adjoint functor theorem for posets", false},
@@ -551,6 +561,22 @@ func TestModifierEntry(t *testing.T) {
 		if modifierEntry(c[0], c[1]) {
 			t.Errorf("%q with %q is found as a modifier entry", c[0], c[1])
 		}
+	}
+}
+
+func TestCaseOf(t *testing.T) {
+	subjectOf := map[string]int{inventory.NameKey("Local Langlands conjectures"): 7, inventory.NameKey("Ramanujan–Petersson conjecture"): 8}
+	if !caseOf("Local Langlands conjectures for GL2", 7, subjectOf) || !caseOf("The Ramanujan–Petersson conjecture over global function fields", 8, subjectOf) {
+		t.Error("a case of the subject of the article is not found")
+	}
+	if caseOf("Local Langlands conjectures for GL2", 9, subjectOf) || caseOf("Prime number theorem for arithmetic progressions", 7, subjectOf) {
+		t.Error("a heading of another article is a case of the subject")
+	}
+	if !fieldName.MatchString("Classical differential geometry") || fieldName.MatchString("Lie algebra") {
+		t.Error("fieldName does not find a field of study")
+	}
+	if !personEntry.MatchString("- Akṣapada Gautama(c. 600 BCE–200 CE)") || personEntry.MatchString("See the equations (1–2) above.") {
+		t.Error("personEntry does not find a person with an old date")
 	}
 }
 
