@@ -71,7 +71,7 @@ func stream(t *testing.T, in Input, res *Result) {
 	if err := resource.WriteResources(a, res.Resources); err != nil {
 		t.Fatal(err)
 	}
-	st, err := RunFiles(in, files, t.TempDir(), 1, b)
+	st, err := RunFiles(in, files, t.TempDir(), 1, b, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -83,7 +83,7 @@ func runResCluster(args []string, stdout, stderr io.Writer) int {
 		if err != nil {
 			return fail(err)
 		}
-		st, err := rescluster.RunFiles(in, files, *spill, *bucket, *root)
+		st, err := rescluster.RunFiles(in, files, *spill, *bucket, *root, stderr)
 		if err != nil {
 			return fail(err)
 		}

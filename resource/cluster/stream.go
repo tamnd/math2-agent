@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -23,8 +24,11 @@ type Stream struct {
 	Partition *Partition     // the partition, with no Bucket
 }
 
-// RunFiles is a partitioned run (RS10.8) that reads the source records from the files and writes the resources to the shards of records/resources/ in the tree at root. The records of in are not used. It writes the records of each bucket and the resources to files in a new directory in tmp, and removes the directory at the end. It keeps in memory the keys of the records, the records of one bucket and the resources of one group of shards. The resources and the pairs are those of Run on the records of the files.
-func RunFiles(in Input, files []string, tmp string, size int, root string) (*Stream, error) {
+// RunFiles is a partitioned run (RS10.8) that reads the source records from the files and writes the resources to the shards of records/resources/ in the tree at root. The records of in are not used. When log is not nil, RunFiles writes the progress of each step to it. It writes the records of each bucket and the resources to files in a new directory in tmp, and removes the directory at the end. It keeps in memory the keys of the records, the records of one bucket and the resources of one group of shards. The resources and the pairs are those of Run on the records of the files.
+func RunFiles(in Input, files []string, tmp string, size int, root string, log io.Writer) (*Stream, error) {
+	if log == nil {
+		log = io.Discard
+	}
 	dir, err := os.MkdirTemp(tmp, "cluster-")
 	if err != nil {
 		return nil, err
@@ -57,6 +61,7 @@ func RunFiles(in Input, files []string, tmp string, size int, root string) (*Str
 	}
 	of, p := pt.buckets(recs, size)
 	st := &Stream{Records: len(recs), Joins: map[string]int{}, Skipped: len(p.Large), Partition: p}
+	_, _ = fmt.Fprintf(log, "cluster: %d records in %d buckets, %d components, the largest with %d records\n", len(recs), p.Buckets, p.Components, p.Largest)
 
 	// The records of each bucket.
 	ws := make([]*spill.Writer, p.Buckets)
@@ -119,6 +124,9 @@ func RunFiles(in Input, files []string, tmp string, size int, root string) (*Str
 				return json.Unmarshal(line, &rs[len(rs)-1])
 			}); err != nil {
 				return nil, err
+			}
+			if len(rs) > 10*size || b%100 == 0 {
+				_, _ = fmt.Fprintf(log, "cluster: the bucket %d of %d has %d records\n", b+1, p.Buckets, len(rs))
 			}
 			bin := in
 			bin.Records, bin.Existing, bin.Crosswalks, bin.Large = rs, existBy[b], linkBy[b], p.Large
@@ -186,6 +194,7 @@ func RunFiles(in Input, files []string, tmp string, size int, root string) (*Str
 	}
 
 	// The steps that read all the resources, as finish runs them.
+	_, _ = fmt.Fprintf(log, "cluster: the passes are done, %d new resources\n", len(news))
 	exprs := map[string]string{}
 	if err := each(func(r *resource.Resource) error {
 		offeringIndex(exprs, r)
@@ -255,6 +264,7 @@ func RunFiles(in Input, files []string, tmp string, size int, root string) (*Str
 	}); err != nil {
 		return nil, err
 	}
+	_, _ = fmt.Fprintf(log, "cluster: writing %d live resources\n", st.Resources)
 	if _, err := sp.Write(root); err != nil {
 		return nil, err
 	}
