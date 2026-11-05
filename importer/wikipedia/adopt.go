@@ -688,6 +688,9 @@ var sentenceEnd = regexp.MustCompile(`[.!?](\s|$)`)
 // bareName matches an entry that is only the name of a person, as "Emil Artin.".
 var bareName = regexp.MustCompile(`^[A-Z]\pL+( [A-Z][\pL.]*)+\.$`)
 
+// usageEntry matches a glossary entry that tells how a word is used and does not define one item, as `The word "big" when applied to a module` or "Named after Richard P. Stanley".
+var usageEntry = regexp.MustCompile(`^(The (word|term|prefix|adjective|adverb) |This (often |usually )?(refers|means)|Named after |(Occasionally|Often|Usually|Sometimes) used|An? (alternative|other|older) (term|name) for |(Usually|Often) means )`)
+
 // nameWord matches the first use of a word in a text, with the word or the "'s" that follows it.
 var nameWord = regexp.MustCompile(`^('s\b|\s+[\p{Ll}-]{3,}\b)`)
 
@@ -700,16 +703,35 @@ func modifierEntry(name, text string) bool {
 	if bareName.MatchString(first) || strings.EqualFold(strings.TrimSuffix(first, "."), name) {
 		return true
 	}
-	if regexp.MustCompile(`(?i)\b(called|said to be) \*?` + regexp.QuoteMeta(name) + `\b[^.]{0,12}?\s(if|when)\b`).MatchString(first) {
+	if usageEntry.MatchString(first) {
+		return true
+	}
+	q := regexp.QuoteMeta(name)
+	if regexp.MustCompile(`(?i)\b(called|said to( be| hold)?) [*\[]{0,2}` + q + `\b|\bis \*{0,2}` + q + `\*{0,2} (if|when)\b`).MatchString(first) {
 		return true
 	}
 	if strings.ContainsAny(name, " ") {
 		return false
 	}
+	// The name is the head noun of a longer term, as "Hull" in "An injective hull" or "Regularity" in "Castelnuovo–Mumford regularity".
+	if w := strings.Fields(first); len(w) > 2 {
+		if w[0] == "A" || w[0] == "An" || w[0] == "The" {
+			w = w[1:]
+		}
+		if !strings.EqualFold(w[0], name) && strings.EqualFold(strings.Trim(w[1], ".,;:*"), name) {
+			return true
+		}
+	}
+	if strings.Contains(name, "-") && !strings.Contains(strings.ToLower(first), strings.ToLower(name)) {
+		name = strings.ReplaceAll(name, "-", "")
+	}
 	at := strings.Index(strings.ToLower(first), strings.ToLower(name))
 	for at >= 0 {
 		if at == 0 || !isLetter(first[at-1]) {
 			rest := first[at+len(name):]
+			if len(rest) > 1 && rest[0] == '-' && isLetter(rest[1]) {
+				return true
+			}
 			if rest == "" || !isLetter(rest[0]) {
 				w := nameWord.FindStringSubmatch(rest)
 				if w == nil {
