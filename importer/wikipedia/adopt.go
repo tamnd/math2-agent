@@ -105,7 +105,7 @@ var genericName = regexp.MustCompile(`(?i)^(theorem|lemma|corollary|proposition|
 var labelName = regexp.MustCompile(`(?i)^(axiom|theorem|lemma|corollary|proposition|claim|conjecture|definition|fact|step|case|rule|property|observation|remark|example|exercise|problem|condition|assumption|hypothesis)s? ([0-9]+[a-z]?|[A-Z]|[IVX]+)(\.[0-9]+)*$`)
 
 // headingPrefix matches a heading that names a part of the text about an item and not the item, such as "Precise statement of the Adyan–Rabin theorem" or "History: the lemma that is not Burnside's".
-var headingPrefix = regexp.MustCompile(`(?i)^(proof of|disproof of|disproved|variants? of|interpretations? (of|via)|relations? (with|to)|extension to include|incompatibility with|modern approach|general formulas|general statement|particular values|analytic criteria|geometry of|conjectures? (on|of)|criterion for|degree of|classical integral|extended|weaker|stronger|original|history|accuracy|an?|theorems?|importance|sharpness|via|equivalence|connections|explicit|formulas?|identity group|another|alternative|connection|derivation|equivalent forms|from|comparison|relationship|relation to|validity|an introduction|theorems proved|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary|corollaries|involving|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
+var headingPrefix = regexp.MustCompile(`(?i)^(characteri[sz]ations?|equivalent formulations|proof of|disproof of|disproved|variants? of|interpretations? (of|via)|relations? (with|to)|extension to include|incompatibility with|modern approach|general formulas|general statement|particular values|analytic criteria|geometry of|conjectures? (on|of)|criterion for|degree of|classical integral|extended|weaker|stronger|original|history|accuracy|an?|theorems?|importance|sharpness|via|equivalence|connections|explicit|formulas?|identity group|another|alternative|connection|derivation|equivalent forms|from|comparison|relationship|relation to|validity|an introduction|theorems proved|precise statement|formal statement|statements?|definitions?|examples?|applications?|consequences|corollary|corollaries|involving|proofs?|outline|sketch|overview|generali[sz]ations?|properties|results|facts|motivation|background|introduction|some|other|further|basic|main|key)\b`)
 
 // pluralTail matches a heading that names a group of items, such as "Freudenthal-Hopf theorems".
 var pluralTail = regexp.MustCompile(`(?i)\b(theorems|results|facts|properties|lemmas|formulas|formulae|conjectures|identities|axioms|inequalities|relations|criteria|propositions|principles|primes|graphs)$`)
@@ -141,7 +141,7 @@ var otherName = regexp.MustCompile(`(?i)\([^)]*\b(theorem|lemma|formula|identity
 // pluralWord matches a list entry that is one word in the plural, as "Lattices". The entry names a group of items.
 var pluralWord = regexp.MustCompile(`^[A-Z][a-z]+s$`)
 
-var oddName = regexp.MustCompile(`[?"#]|^'|'$|\s\([0-9]{4}\)$|\s\([A-Z]{2,6}\)$|-$| / `)
+var oddName = regexp.MustCompile(`\(or |[?"#]|^'|'$|\s\([0-9]{4}\)$|\s\([A-Z]{2,6}\)$|-$| / `)
 
 // questionHead matches a name that is a question, as "How many unit distances".
 var questionHead = regexp.MustCompile(`^(How|Can|Are|Is|Does|Do|What|Which|Why|When)\b`)
@@ -631,6 +631,10 @@ func displayName(m *inventory.Mention) string {
 	// The subject of an article with a qualifier, such as "Block (permutation group theory)", keeps the qualifier, because the name alone has more than one meaning.
 	if m.Cue == "lead" && !strings.Contains(m.ID, "#") && m.NativeID != Name(m.NativeID) && inventory.NameKey(m.Name) == inventory.NameKey(Name(m.NativeID)) {
 		return m.NativeID
+	}
+	// A heading such as "The Routh criterion" names the item with "The", and the node takes "Routh criterion".
+	if rest, ok := strings.CutPrefix(m.Name, "The "); ok && m.Cue != "lead" && m.Cue != "term" && rest != "" && unicode.IsUpper([]rune(rest)[0]) {
+		return rest
 	}
 	if m.Cue != "term" || m.Name == "" {
 		return m.Name

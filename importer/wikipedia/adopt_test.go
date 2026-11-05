@@ -341,6 +341,9 @@ func TestWhyName(t *testing.T) {
 		{"list-entry", "Lattices", true},
 		{"named-heading", "Identity / neutral elements", true},
 		{"named-heading", "Variants of Wilson's theorem", true},
+		{"named-heading", "Characterization by a convolution identity", true},
+		{"named-heading", "Equivalent formulations of locality axiom", true},
+		{"list-entry", "Root (or zero) of a polynomial", true},
 		{"named-heading", "Bhargava's approach to the composition law", true},
 		{"named-heading", "Interpretation via the Chinese Remainder Theorem", true},
 		{"named-heading", "Extension to include the Goldbach conjecture", true},
@@ -453,6 +456,17 @@ func TestDisplayNameQualifier(t *testing.T) {
 	}
 	m = &inventory.Mention{ID: "wikipedia://en/2", Cue: "lead", Name: "Metacyclic group", NativeID: "Metacyclic group"}
 	if got := displayName(m); got != "Metacyclic group" {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestDisplayNameThe(t *testing.T) {
+	m := &inventory.Mention{ID: "wikipedia://en/3#o4", Cue: "named-heading", Name: "The Routh criterion"}
+	if got := displayName(m); got != "Routh criterion" {
+		t.Errorf("got %q", got)
+	}
+	m = &inventory.Mention{ID: "wikipedia://en/4", Cue: "lead", Name: "The Pirates of Penzance"}
+	if got := displayName(m); got != "The Pirates of Penzance" {
 		t.Errorf("got %q", got)
 	}
 }
