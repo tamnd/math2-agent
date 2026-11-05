@@ -40,6 +40,8 @@ func TestBody(t *testing.T) {
 		{"\n## Summary\n\nThe math $x\\$ is open.\n", "B01:10:10"},
 		{"\n## Summary\n\nSee [[the old claim|5FK5AA]].\n", "B02:10:5"},
 		{"\n## Summary\n\nSee [[a dead tag|W96C20]].\n", "B02:10:5"},
+		{"\n## Summary\n\nThe ring $\\mathbb{Z}[[q]]$ of formal power series.\n", ""},
+		{"\n## Summary\n\nThe ring [[q]] of series.\n", "B02:10:10"},
 		{"\n## Summary\n\nSee https://example.org, which is fine outside a statement section.\n", ""},
 		{"\n## Remarks\n\nText.\n\n## Summary\n\nText.\n", "B03:12:1"},
 		{"\n## Summary\n\nText.\n\n## Summary\n\nText.\n", "B03:12:1"},
