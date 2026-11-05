@@ -111,7 +111,7 @@ func adoptFixture(t *testing.T) (string, []inventory.Row, []inventory.Mention) {
 }
 
 func TestGenericName(t *testing.T) {
-	for name, want := range map[string]bool{"Theorem (2)": true, "Theorem A (groups)": true, "Lemma B": true, "Examples": true, "Extension of Lagrange's theorem": false, "Theorem of Lagrange": false, "Uniqueness of identity element": false} {
+	for name, want := range map[string]bool{"Theorem (2)": true, "Theorem A (groups)": true, "Lemma B": true, "Examples": true, "The Criterion": true, "Main theorem": true, "Criterion of Cartier": false, "Extension of Lagrange's theorem": false, "Theorem of Lagrange": false, "Uniqueness of identity element": false} {
 		if got := genericName.MatchString(name); got != want {
 			t.Errorf("%q: got %v, want %v", name, got, want)
 		}
@@ -358,6 +358,8 @@ func TestWhyName(t *testing.T) {
 		{"named-heading", "Adjoint functor theorem for posets", false},
 		{"named-heading", "Theorem two", true},
 		{"heading", "Proof of Theorem two", true},
+		{"named-heading", "Miracle flatness or Hironaka's criterion", true},
+		{"named-heading", "Grauert–Remmert–de Jong Criterion", false},
 		{"named-heading", "Theorem for vertex-weighted graphs", true},
 		{"named-heading", "The stacking theorem", true},
 		{"named-heading", "Importance of inequality", true},
@@ -572,6 +574,7 @@ func TestModifierEntry(t *testing.T) {
 		{"Neat", "Occasionally used to mean \"unramified\"."},
 		{"Hull", "An injective hull (or envelope) of a module is a minimal injective module containing it."},
 		{"Regularity", "Castelnuovo–Mumford regularity is an invariant of a graded module."},
+		{"Eakin", "The Eakin–Nagata theorem states: given a finite ring extension, A is Noetherian if and only if B is Noetherian."},
 		{"Semi-local", "A semilocal ring is a ring with only a finite number of maximal ideals."},
 	} {
 		if !modifierEntry(c[0], c[1]) {
