@@ -99,7 +99,7 @@ type AdoptResult struct {
 var adoptFlags = []string{"citation-needed", "dubious", "disputed", "informal"}
 
 // genericName matches a name that is a label and not the name of the item, as Theorem (2), Theorem A (groups), Examples or The Criterion.
-var genericName = regexp.MustCompile(`(?i)^(the |main |the main )?(theorem|lemma|corollary|proposition|criterion|result|formula|conjecture|identity|inequality|claim|fact|definition|definitions|example|examples|remark|proof|statement|statements|properties|facts|notation|applications?|generali[sz]ations?|extensions?|construction|history|overview|motivation|algorithms?|representations?)( \(\d+\))?$|^(theorem|lemma|corollary|proposition) [A-Z]( \([^)]*\))?$`)
+var genericName = regexp.MustCompile(`(?i)^(the |main |the main )?(theorem|lemma|corollary|proposition|criterion|result|formula|conjecture|identity|inequality|claim|fact|definition|definitions|example|examples|remark|proof|statement|statements|properties|facts|notation|applications?|generali[sz]ations?|extensions?|construction|history|overview|motivation|algorithms?|representations?)( \(\d+\))?$|^(theorem|lemma|corollary|proposition|conjecture)( [A-Z])?( \([^)]*\))?$`)
 
 // labelName matches a numbered label, such as "Axiom 1" or "Claim 2". The label has a meaning only in its article.
 var labelName = regexp.MustCompile(`(?i)^(axiom|theorem|lemma|corollary|proposition|claim|conjecture|definition|fact|step|case|rule|property|observation|remark|example|exercise|problem|condition|assumption|hypothesis)s? ([0-9]+[a-z]?|[A-Z]|[IVX]+)(\.[0-9]+)*$`)
@@ -132,7 +132,7 @@ var numberedName = regexp.MustCompile(`(?i)^[0-9]+\.\s|\s-\s[0-9]+$|^(theorem|le
 var actionHead = regexp.MustCompile(`(?i)^([a-z]+ing|as|by|in|on|for|with|without|cases|role|versions?|similarities|resolutions?|analogs|appeals|implications|objections?|criticism|chronology|software|determination|uniqueness|create|produce|solutions?)\b|^the (first|second|third|fourth|basic|main|general|extra|following|original)\b|\bexamples?\b`)
 
 // partPhrase matches a heading that names a part of the text about an item inside the heading, such as "Graphon version of counting lemma" or "Bandwidth formulas for some graphs", or a heading with "The" and a word in lower case, such as "The stacking theorem".
-var partPhrase = regexp.MustCompile(`(?i:\b(version of|analogues|for some|in terms of|laws for|rules for|approach to|formulation of|in other bases|as functors|for other groups)\b)|^The [a-z]`)
+var partPhrase = regexp.MustCompile(`(?i:\b(version of|analogues|for some|in terms of|laws for|rules for|approach to|formulation of|in other bases|as functors|for other groups|in other)\b)|^The [a-z]`)
 
 // oddName matches a name that a person must give again, because it has a question mark, a quote, a year, an open prefix or two names, as "Dirac's Theorem (1952)" or "Co-".
 // otherName matches a heading that gives a second name of the item in brackets, as "Dual of Dilworth's theorem (Mirsky's theorem)".
@@ -141,7 +141,7 @@ var otherName = regexp.MustCompile(`(?i)\([^)]*\b(theorem|lemma|formula|identity
 // pluralWord matches a list entry that is one word in the plural, as "Lattices". The entry names a group of items.
 var pluralWord = regexp.MustCompile(`^[A-Z][a-z]+s$`)
 
-var oddName = regexp.MustCompile(`\(or |[?"#]|^'|'$|\s\([0-9]{4}\)$|\s\([A-Z]{2,6}\)$|-$| / | or `)
+var oddName = regexp.MustCompile(`\(or |[?"#]|^'|'$|\s\([0-9]{4}\)$|\s\([A-Z]{2,6}\)$|-$| / | or |\.$|\\|, [a-z]`)
 
 // questionHead matches a name that is a question, as "How many unit distances".
 var questionHead = regexp.MustCompile(`^(How|Can|Are|Is|Does|Do|What|Which|Why|When)\b`)
@@ -689,7 +689,7 @@ var sentenceEnd = regexp.MustCompile(`[.!?](\s|$)`)
 var bareName = regexp.MustCompile(`^[A-Z]\pL+( [A-Z][\pL.]*)+\.$`)
 
 // usageEntry matches a glossary entry that tells how a word is used and does not define one item, as `The word "big" when applied to a module` or "Named after Richard P. Stanley".
-var usageEntry = regexp.MustCompile(`^(The (word|term|prefix|adjective|adverb) |This (often |usually )?(refers|means)|Named after |(Occasionally|Often|Usually|Sometimes) used|An? (alternative|other|older) (term|name) for |(Usually|Often) means )`)
+var usageEntry = regexp.MustCompile(`^(The (word|term|prefix|adjective|adverb) |This (often |usually )?(refers|means)|Named after |(Occasionally|Often|Usually|Sometimes) used|An? (alternative|other|older) (term|name) for |(Usually|Often) means |.*\b[Nn]ow called )`)
 
 // nameWord matches the first use of a word in a text, with the word or the "'s" that follows it.
 var nameWord = regexp.MustCompile(`^('s\b|\s+[\p{Ll}-]{3,}\b)`)
@@ -698,12 +698,19 @@ var nameWord = regexp.MustCompile(`^('s\b|\s+[\p{Ll}-]{3,}\b)`)
 var joinWords = map[string]bool{"is": true, "are": true, "was": true, "were": true, "if": true, "of": true, "in": true, "on": true, "at": true, "to": true, "for": true, "with": true, "and": true, "or": true, "by": true, "that": true, "which": true, "when": true, "where": true, "has": true, "have": true, "means": true, "consists": true, "can": true, "may": true, "over": true, "under": true, "such": true, "as": true, "be": true, "denotes": true, "refers": true, "also": true, "here": true, "there": true}
 
 // modifierEntry reports if a glossary entry has a one-word name that qualifies a noun in the definition, as "Unitary" with "A unitary representation of a group" or "Brauer" with "Brauer's theorem". The full term is the name and the noun, so the entry name is not the name of the item. It also reports an entry whose first paragraph is only a name, as "Emil Artin." or the entry name again, and an entry that defines the name as a property, as "is called admissible if".
+// afterBracket matches a bracket after a name, as " (or improper)" in "An accidental (or improper) double point".
+var afterBracket = regexp.MustCompile(`^\s*\([^)]*\)`)
+
 func modifierEntry(name, text string) bool {
 	first, _, _ := strings.Cut(strings.TrimSpace(text), "\n\n")
 	if bareName.MatchString(first) || strings.EqualFold(strings.TrimSuffix(first, "."), name) {
 		return true
 	}
 	if usageEntry.MatchString(first) {
+		return true
+	}
+	// A definition of three words or less, as "A set.", gives a synonym and not a new item.
+	if len(strings.Fields(first)) <= 3 {
 		return true
 	}
 	q := regexp.QuoteMeta(name)
@@ -728,7 +735,7 @@ func modifierEntry(name, text string) bool {
 	at := strings.Index(strings.ToLower(first), strings.ToLower(name))
 	for at >= 0 {
 		if at == 0 || !isLetter(first[at-1]) {
-			rest := first[at+len(name):]
+			rest := afterBracket.ReplaceAllString(first[at+len(name):], "")
 			if len(rest) > 1 && rest[0] == '-' && isLetter(rest[1]) || strings.HasPrefix(rest, "–") && len(rest) > 3 && isLetter(rest[3]) {
 				return true
 			}
