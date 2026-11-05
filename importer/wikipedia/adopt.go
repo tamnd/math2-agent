@@ -98,8 +98,8 @@ type AdoptResult struct {
 // adoptFlags are the flags of WP9.2 that stop the adoption of an item.
 var adoptFlags = []string{"citation-needed", "dubious", "disputed", "informal"}
 
-// genericName matches a name that is a label and not the name of the item, as Theorem (2), Theorem A (groups) or Examples.
-var genericName = regexp.MustCompile(`(?i)^(theorem|lemma|corollary|proposition|claim|fact|definition|definitions|example|examples|remark|proof|statement|statements|properties|facts|notation|applications?|generali[sz]ations?|extensions?|construction|history|overview|motivation|algorithms?|representations?)( \(\d+\))?$|^(theorem|lemma|corollary|proposition) [A-Z]( \([^)]*\))?$`)
+// genericName matches a name that is a label and not the name of the item, as Theorem (2), Theorem A (groups), Examples or The Criterion.
+var genericName = regexp.MustCompile(`(?i)^(the |main |the main )?(theorem|lemma|corollary|proposition|criterion|result|formula|conjecture|identity|inequality|claim|fact|definition|definitions|example|examples|remark|proof|statement|statements|properties|facts|notation|applications?|generali[sz]ations?|extensions?|construction|history|overview|motivation|algorithms?|representations?)( \(\d+\))?$|^(theorem|lemma|corollary|proposition) [A-Z]( \([^)]*\))?$`)
 
 // labelName matches a numbered label, such as "Axiom 1" or "Claim 2". The label has a meaning only in its article.
 var labelName = regexp.MustCompile(`(?i)^(axiom|theorem|lemma|corollary|proposition|claim|conjecture|definition|fact|step|case|rule|property|observation|remark|example|exercise|problem|condition|assumption|hypothesis)s? ([0-9]+[a-z]?|[A-Z]|[IVX]+)(\.[0-9]+)*$`)
@@ -134,14 +134,14 @@ var actionHead = regexp.MustCompile(`(?i)^([a-z]+ing|as|by|in|on|for|with|withou
 // partPhrase matches a heading that names a part of the text about an item inside the heading, such as "Graphon version of counting lemma" or "Bandwidth formulas for some graphs", or a heading with "The" and a word in lower case, such as "The stacking theorem".
 var partPhrase = regexp.MustCompile(`(?i:\b(version of|analogues|for some|in terms of|laws for|rules for|approach to|formulation of|in other bases|as functors|for other groups)\b)|^The [a-z]`)
 
-// oddName matches a name that a person must give again, because it has a question mark, a quote, a year, or an open prefix, as "Dirac's Theorem (1952)" or "Co-".
+// oddName matches a name that a person must give again, because it has a question mark, a quote, a year, an open prefix or two names, as "Dirac's Theorem (1952)" or "Co-".
 // otherName matches a heading that gives a second name of the item in brackets, as "Dual of Dilworth's theorem (Mirsky's theorem)".
 var otherName = regexp.MustCompile(`(?i)\([^)]*\b(theorem|lemma|formula|identity|inequality|conjecture)\)$`)
 
 // pluralWord matches a list entry that is one word in the plural, as "Lattices". The entry names a group of items.
 var pluralWord = regexp.MustCompile(`^[A-Z][a-z]+s$`)
 
-var oddName = regexp.MustCompile(`\(or |[?"#]|^'|'$|\s\([0-9]{4}\)$|\s\([A-Z]{2,6}\)$|-$| / `)
+var oddName = regexp.MustCompile(`\(or |[?"#]|^'|'$|\s\([0-9]{4}\)$|\s\([A-Z]{2,6}\)$|-$| / | or `)
 
 // questionHead matches a name that is a question, as "How many unit distances".
 var questionHead = regexp.MustCompile(`^(How|Can|Are|Is|Does|Do|What|Which|Why|When)\b`)
@@ -729,7 +729,7 @@ func modifierEntry(name, text string) bool {
 	for at >= 0 {
 		if at == 0 || !isLetter(first[at-1]) {
 			rest := first[at+len(name):]
-			if len(rest) > 1 && rest[0] == '-' && isLetter(rest[1]) {
+			if len(rest) > 1 && rest[0] == '-' && isLetter(rest[1]) || strings.HasPrefix(rest, "–") && len(rest) > 3 && isLetter(rest[3]) {
 				return true
 			}
 			if rest == "" || !isLetter(rest[0]) {
