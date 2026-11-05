@@ -37,7 +37,7 @@ func RunFiles(in Input, files []string, tmp string, size int, root string, log i
 	name := func(kind string, n int) string { return filepath.Join(dir, fmt.Sprintf("%s-%04d.gz", kind, n)) }
 
 	// The keys of the nodes, and the partition.
-	var pt partitioner
+	pt := partitioner{blocks: newBlockSet(dir)}
 	exist := make([]int32, len(in.Existing))
 	for i := range in.Existing {
 		exist[i] = pt.resource(&in.Existing[i])
@@ -59,7 +59,10 @@ func RunFiles(in Input, files []string, tmp string, size int, root string, log i
 			recs = append(recs, pt.record(&rs[i]))
 		}
 	}
-	of, p := pt.buckets(recs, size)
+	of, p, err := pt.buckets(recs, size)
+	if err != nil {
+		return nil, err
+	}
 	st := &Stream{Records: len(recs), Joins: map[string]int{}, Skipped: len(p.Large), Partition: p}
 	_, _ = fmt.Fprintf(log, "cluster: %d records in %d buckets, %d components, the largest with %d records\n", len(recs), p.Buckets, p.Components, p.Largest)
 

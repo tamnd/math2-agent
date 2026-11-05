@@ -23,16 +23,14 @@ func keyHash(k string) uint64 {
 // mark is one join key of one node. A node is a record, an existing resource, a crosswalk link or a decision of a person.
 type mark struct {
 	key  uint64
-	next uint64 // of a block of an author: the block of the next year
 	node int32
 	kind uint8
 }
 
 const (
-	join  uint8 = iota // a key that joins all the nodes that have it
-	weak               // an id that joins its nodes only when a crosswalk or a translation_of edge names it
-	need               // a crosswalk or a translation_of edge that names an id
-	block              // a block of C4
+	join uint8 = iota // a key that joins all the nodes that have it
+	weak              // an id that joins its nodes only when a crosswalk or a translation_of edge names it
+	need              // a crosswalk or a translation_of edge that names an id
 )
 
 // joinSystem reports whether a shared value of the system can join two records in a pass: a strong id of C1, an ISBN of C3, an Open Library work id of C5 or an id that puts a filler on a group.
@@ -53,8 +51,10 @@ type Partition struct {
 
 // partitioner collects the join keys of the nodes of a run. A node is a record, an existing resource, a crosswalk link or a decision of a person.
 type partitioner struct {
-	ms    []mark
-	nodes int32
+	ms     []mark
+	nodes  int32
+	blocks *blockSet
+	edges  [][2]int32 // the pairs of C4 that can join or go to the queue
 }
 
 func (pt *partitioner) next() int32 {
@@ -84,11 +84,11 @@ func (pt *partitioner) record(r *Record) int32 {
 	}
 	fs := families(r)
 	if len(fs) > 0 && r.Year() > 0 {
-		a := "a:" + fs[0] + ":"
-		pt.ms = append(pt.ms, mark{key: keyHash(a + strconv.Itoa(r.Year())), next: keyHash(a + strconv.Itoa(r.Year()+1)), node: n, kind: block})
+		pt.blocks.add(n, "a:"+fs[0], "a:"+fs[0]+":"+strconv.Itoa(r.Year()), r)
 	}
 	if r.Venue != "" && r.Volume != "" && r.Page != "" {
-		pt.add("v:"+r.Venue+":"+r.Volume+":"+r.Page, n, block)
+		k := "v:" + r.Venue + ":" + r.Volume + ":" + r.Page
+		pt.blocks.add(n, k, k, r)
 	}
 	if t := WorkTitle(r.Title); len([]rune(t)) >= 12 && len(fs) > 0 {
 		pt.add("w:"+t+"|"+fs[0], n, join)
@@ -134,7 +134,11 @@ func (pt *partitioner) decision(d Decision) int32 {
 }
 
 // buckets joins the nodes into components and packs the components of the records into buckets of about size records, in the order of the records. It gives the bucket of each node, -1 for a node whose component has no record, and the partition with no Bucket.
-func (pt *partitioner) buckets(records []int32, size int) ([]int32, *Partition) {
+func (pt *partitioner) buckets(records []int32, size int) ([]int32, *Partition, error) {
+	large, err := pt.blocks.pairs(func(x, y int32) { pt.edges = append(pt.edges, [2]int32{x, y}) })
+	if err != nil {
+		return nil, nil, err
+	}
 	ms := pt.ms
 	slices.SortFunc(ms, func(a, b mark) int {
 		return cmp.Or(cmp.Compare(a.key, b.key), cmp.Compare(a.kind, b.kind), cmp.Compare(a.node, b.node))
@@ -155,48 +159,23 @@ func (pt *partitioner) buckets(records []int32, size int) ([]int32, *Partition) 
 			parent[max(x, y)] = min(x, y)
 		}
 	}
-	p := &Partition{Large: map[uint64]bool{}}
-	blocks := map[uint64][]int32{}
+	p := &Partition{Large: large}
 	for i := 0; i < len(ms); {
 		j := i
 		for j < len(ms) && ms[j].key == ms[i].key {
 			j++
 		}
-		run := ms[i:j]
-		switch {
-		case run[0].kind == block:
-			// A block of C4 counts records, and a record is in a block once.
-			var recs []int32
-			for _, m := range run {
-				if len(recs) == 0 || recs[len(recs)-1] != m.node {
-					recs = append(recs, m.node)
-				}
-			}
-			if len(recs) > MaxBlock {
-				p.Large[run[0].key] = true
-			} else {
-				blocks[run[0].key] = recs
-			}
-		case slices.ContainsFunc(run, func(m mark) bool { return m.kind != weak }):
+		if run := ms[i:j]; slices.ContainsFunc(run, func(m mark) bool { return m.kind != weak }) {
 			for _, m := range run[1:] {
 				union(run[0].node, m.node)
 			}
 		}
 		i = j
 	}
-	for _, recs := range blocks {
-		for _, n := range recs[1:] {
-			union(recs[0], n)
-		}
+	for _, e := range pt.edges {
+		union(e[0], e[1])
 	}
-	for _, m := range ms {
-		if m.kind == block && m.next != 0 && blocks[m.key] != nil {
-			if next, ok := blocks[m.next]; ok {
-				union(m.node, next[0])
-			}
-		}
-	}
-	pt.ms = nil
+	pt.ms, pt.edges = nil, nil
 
 	count := map[int32]int{}
 	for _, n := range records {
@@ -228,12 +207,12 @@ func (pt *partitioner) buckets(records []int32, size int) ([]int32, *Partition) 
 		}
 		out[i] = b
 	}
-	return out, p
+	return out, p, nil
 }
 
 // Partitioned gives the partition of the records of in into buckets of about size records.
 func Partitioned(in Input, size int) *Partition {
-	var pt partitioner
+	pt := partitioner{blocks: newBlockSet("")}
 	recs := make([]int32, len(in.Records))
 	for i := range in.Records {
 		recs[i] = pt.record(&in.Records[i])
@@ -249,7 +228,7 @@ func Partitioned(in Input, size int) *Partition {
 	for _, d := range in.Decisions {
 		pt.decision(d)
 	}
-	of, p := pt.buckets(recs, size)
+	of, p, _ := pt.buckets(recs, size) // the blocks are in memory, so there is no error
 	at := func(ns []int32) []int {
 		out := make([]int, len(ns))
 		for i, n := range ns {
