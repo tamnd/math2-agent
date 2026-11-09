@@ -279,7 +279,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
       - name: build M2Extract
-        uses: leanprover/lean-action@24581d74d674803a25a81b10b059c5c0cdd344c6 # v1.6.2
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1.7.0
         with:
           lake-package-directory: lean
           use-mathlib-cache: false
@@ -287,7 +287,7 @@ jobs:
           test: false
           lint: false
       - name: get Mathlib for the math2 Lean package
-        uses: leanprover/lean-action@24581d74d674803a25a81b10b059c5c0cdd344c6 # v1.6.2
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1.7.0
         with:
           lake-package-directory: math2/lean
           use-mathlib-cache: true
@@ -318,7 +318,7 @@ jobs:
       - name: actionlint
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
       - name: zizmor
-        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
         with:
           version: 1.31.1
           advanced-security: false

@@ -73,7 +73,7 @@ jobs:
           cp "$RUNNER_TEMP/report/site-report.md" dist/
       # The fidelity report is the confusion matrix of the F1 battery on the suite of bench/fidelity (spec 17.3.1). The suite uses only the Lean core library.
       - name: install Lean for the fidelity suite
-        uses: leanprover/lean-action@24581d74d674803a25a81b10b059c5c0cdd344c6 # v1.6.2
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1.7.0
         with:
           lake-package-directory: bench/fidelity/lean
           use-mathlib-cache: false
