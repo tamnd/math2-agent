@@ -1,0 +1,21 @@
+{{define "areas"}}
+<header class="page-head">
+  <h1>Areas</h1>
+  <p class="lead">Pick an area of mathematics, and then one of its sub-areas. Each sub-area page lists its ideas.</p>
+</header>
+{{if .Areas}}<ul class="tiles">
+{{range .Areas}}<li style="--hue: {{hue .Code}}"><a href="#{{.Topic.Slug}}"><span class="tile-name">{{.Topic.Name}}</span><span class="tile-count">{{len .Subs}} sub-areas, {{.Count}} {{if eq .Count 1}}idea{{else}}ideas{{end}}</span></a></li>
+{{end}}
+</ul>
+{{range .Areas}}<section class="area-section" id="{{.Topic.Slug}}">
+  <h2><a href="{{.Topic.URL}}">{{.Topic.Name}}</a></h2>
+  {{with .Topic.Excerpt}}<div class="area-lead">{{.}}</div>{{end}}
+  <ol class="sub-areas">{{range .Subs}}<li><a href="{{.Topic.URL}}">{{.Topic.Name}}</a>{{if .Count}} <span class="count">{{.Count}}</span>{{end}}</li>{{end}}</ol>
+</section>
+{{end}}{{else}}<p>No area has a topic page yet.</p>{{end}}
+{{with .Others}}<section class="area-section">
+  <h2>Other topics</h2>
+  <ul class="name-list">{{range .}}<li><a href="{{.URL}}">{{.Name}}</a></li>{{end}}</ul>
+</section>
+{{end}}
+{{end}}

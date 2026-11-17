@@ -1,7 +1,7 @@
 {{define "node"}}
 <article class="node" style="--hue: {{hue .SubjectCode}}">
 <header class="node-head">
-  <p class="crumbs">{{with .SubjectCode}}<a href="{{url (print "msc/" . "/")}}">{{mscName .}}</a> <span aria-hidden="true">/</span> {{end}}{{with area .}}<a href="{{.URL}}">{{.Title}}</a> <span aria-hidden="true">/</span> {{end}}<a href="{{url (print "kind/" .Kind "/")}}">{{.Label}}</a></p>
+  <p class="crumbs">{{with topicPath .}}<a href="{{url "areas/"}}">Areas</a> <span aria-hidden="true">/</span> {{range .}}<a href="{{.URL}}">{{.Name}}</a> <span aria-hidden="true">/</span> {{end}}{{else}}{{with .SubjectCode}}<a href="{{url (print "msc/" . "/")}}">{{mscName .}}</a> <span aria-hidden="true">/</span> {{end}}{{with area .}}<a href="{{.URL}}">{{.Title}}</a> <span aria-hidden="true">/</span> {{end}}{{end}}<a href="{{url (print "kind/" .Kind "/")}}">{{.Label}}</a></p>
   <h1>{{.Name}}</h1>
   <p class="node-share"><button class="button" type="button" data-share="{{.URL}}" data-title="{{.Name}}">Share this page</button></p>
   {{with .Uses}}<p class="builds"><span>Builds on</span> {{range $i, $l := .}}<a href="{{$l.URL}}"{{if $l.Missing}} class="missing" title="This page does not exist yet"{{end}}>{{$l.Text}}</a>{{end}}</p>{{end}}

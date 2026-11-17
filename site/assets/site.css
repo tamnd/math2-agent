@@ -484,3 +484,11 @@ ul.bare, .bare > ul { list-style: none; padding-left: 0; }
 .step-course { font-weight: 600; }
 .step-prev { margin-left: auto; }
 .button { display: inline-block; padding: 0.5rem 1rem; background: hsl(var(--hue, 250) 60% 28%); color: #fff; text-decoration: none; font-weight: 600; border-radius: 4px; }
+.area-section { margin-top: 2.2rem; scroll-margin-top: 4rem; }
+.area-section h2 a { text-decoration: none; }
+.area-section h2 a:hover { text-decoration: underline; }
+.area-lead { color: var(--muted); max-width: 46rem; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.sub-areas { columns: 2 22rem; column-gap: 2.5rem; padding-left: 1.6rem; margin: 0.6rem 0 0; }
+.sub-areas li { break-inside: avoid; padding: 0.22rem 0; }
+.sub-areas a { text-decoration: none; }
+.sub-areas a:hover { text-decoration: underline; }

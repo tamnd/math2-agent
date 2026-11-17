@@ -238,7 +238,7 @@ func Build(opt Options) error {
 		b.spool = &shardSpool{dir: filepath.Join(opt.Out, spoolDir)}
 		steps = append(steps, b.writeSocialPacks)
 	}
-	steps = append(steps, b.writeNodes, b.writeLists, b.writeLearn, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeResources, b.writeLevels, b.writeWikipedia, b.writeFeeds)
+	steps = append(steps, b.writeNodes, b.writeLists, b.writeAreas, b.writeLearn, b.writeExplore, b.writeSpec, b.writeDocs, b.writeHome, b.writeReviewers, b.writeProjects, b.writeAgents, b.writeInventory, b.writeResources, b.writeLevels, b.writeWikipedia, b.writeFeeds)
 	if opt.Cloudflare {
 		steps = append(steps, b.writeWorker)
 	}
