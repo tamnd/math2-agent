@@ -337,7 +337,7 @@ func (b *builder) writeDocs() error {
 	if err := b.writePage("search", "search", nil, page{Title: "Search", Description: "Search the nodes of Math 2.0.", Section: "search"}); err != nil {
 		return err
 	}
-	return b.writePage("404", "notfound", nil, page{Title: "Page not found", Section: ""})
+	return b.writePage("404", "notfound", b.opt.Cloudflare, page{Title: "Page not found", Section: ""})
 }
 
 type homeData struct {
