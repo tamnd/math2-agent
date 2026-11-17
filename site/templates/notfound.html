@@ -1,4 +1,7 @@
 {{define "notfound"}}
+{{if .}}<style>.m2-fallback #not-found { visibility: hidden; }</style>
+<script src="{{url "fallback.js"}}"></script>{{end}}
+<div id="not-found">
 <header class="page-head">
   <h1>Page not found</h1>
 </header>
@@ -7,4 +10,5 @@
   <input type="search" name="q" placeholder="Search" aria-label="Search">
 </form>
 <p><a href="{{url ""}}">Go to the main page.</a></p>
+</div>
 {{end}}

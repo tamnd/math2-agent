@@ -160,6 +160,79 @@ export default {
 };
 `
 
+// FallbackFile is the script of the 404 page of a Cloudflare build.
+const FallbackFile = "fallback.js"
+
+// fallback is the script of the 404 page of a Cloudflare build. BASE is the URL path of the site and SHARDS the count of shards.
+// When the worker does not run, for example when the account has used its daily requests of Workers, Pages serves the static files only, and a request for node/TAG/ or for a sharded file gets the 404 page.
+// The script then does the work of the worker in the browser: it sends node/TAG/ to the page of the node, and it gets a sharded file from its shard and shows it.
+const fallback = `// The fallback of Math 2.0 for when the worker does not run. m2 site build -cloudflare writes this file, and the 404 page runs it.
+(function () {
+  const base = BASE;
+  const shards = SHARDS;
+  const sharded = /^(?:(?:wiki|res|inventory)\/.+|node\/[0-9A-Za-z~]+\.md|api\/node\/[0-9A-Za-z~]+\.json)$/;
+  const root = document.documentElement;
+
+  // shardOf is the FNV-1a hash of the path modulo the count of shards, as in the build and the worker.
+  function shardOf(p) {
+    let h = 0x811c9dc5;
+    for (const c of new TextEncoder().encode(p)) {
+      h ^= c;
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h % shards;
+  }
+
+  async function run(path) {
+    const m = path.match(/^node\/([0-9A-Z]+)\/?$/);
+    if (m) {
+      const r = await fetch(base + "/` + LinksFile + `");
+      if (!r.ok) return false;
+      const to = (await r.json())[m[1]];
+      if (!to) return false;
+      location.replace(base + "/" + to + location.search + location.hash);
+      return true;
+    }
+    if (!sharded.test(path)) return false;
+    let p = path;
+    let slash = false;
+    if (p.endsWith("/")) p += "index.html";
+    else if (!/\.(md|json|html)$/.test(p)) {
+      p += "/index.html";
+      slash = true;
+    }
+    const r = await fetch(base + "/` + ShardDir + `/" + shardOf(p) + ".json");
+    if (!r.ok) return false;
+    const body = (await r.json())[p];
+    if (body === undefined) return false;
+    if (slash) history.replaceState(null, "", location.pathname + "/" + location.search + location.hash);
+    if (p.endsWith(".html")) {
+      document.open();
+      document.write(body);
+      document.close();
+    } else {
+      const pre = document.createElement("pre");
+      pre.textContent = body;
+      document.body.replaceChildren(pre);
+    }
+    return true;
+  }
+
+  let path;
+  try {
+    path = decodeURIComponent(location.pathname.slice(base.length).replace(/^\/+/, ""));
+  } catch (_) {
+    return;
+  }
+  if (!/^node\//.test(path) && !sharded.test(path)) return;
+  root.classList.add("m2-fallback");
+  run(path).then(
+    (ok) => { if (!ok) root.classList.remove("m2-fallback"); },
+    () => root.classList.remove("m2-fallback"),
+  );
+})();
+`
+
 // writeWorker writes the files that a Cloudflare build has in place of the page of each short link and of each sharded file: the links map, the shards, the worker and its routes.
 // The routes run the worker only for the short links and the sharded sections, so that the other requests do not count against the limits of Workers.
 func (b *builder) writeWorker() error {
@@ -187,6 +260,11 @@ func (b *builder) writeWorker() error {
 	w = strings.Replace(w, "CACHE_VERSION", string(version), 1)
 	w = strings.Replace(w, "SOCIAL_PACKS", "true", 1)
 	if err := b.write("_worker.js", []byte(w)); err != nil {
+		return err
+	}
+	f := strings.Replace(fallback, "BASE", string(base), 1)
+	f = strings.Replace(f, "SHARDS", strconv.Itoa(n), 1)
+	if err := b.write(FallbackFile, []byte(f)); err != nil {
 		return err
 	}
 	if err := b.write("_headers", []byte("/social/*\n  Cache-Control: public, max-age=31536000, immutable\n/assets/*\n  Cache-Control: public, max-age=3600, stale-while-revalidate=86400\n")); err != nil {
