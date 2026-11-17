@@ -31,6 +31,7 @@ func parseTemplates(b *builder) (*template.Template, error) {
 		"hue":          hue,
 		"steps":        b.Steps,
 		"area":         b.Area,
+		"topicPath":    b.TopicPath,
 		"skeleton":     func(code string) *learnPath { return b.skeletons[code] },
 		"top": func(code string) string {
 			if len(code) < 2 {
