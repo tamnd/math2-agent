@@ -29,3 +29,22 @@ func TestAreas(t *testing.T) {
 		t.Error("the crumbs of a node do not show its area and sub-area")
 	}
 }
+
+func TestAreaOrder(t *testing.T) {
+	content := newContent(t)
+	area := func(tag, sub, name, msc string) {
+		writeFile(t, content, "nodes/"+tag[:3]+"/"+tag+".md", "---\ntag: "+tag+"\nkind: topic\nname: "+name+"\nmsc: [\""+msc+"\"]\n---\n## Summary\n\n"+name+" is an area.\n\n## Remarks\n\n1. [[Part of "+name+"|"+sub+"]]\n")
+		writeFile(t, content, "nodes/"+sub[:3]+"/"+sub+".md", "---\ntag: "+sub+"\nkind: topic\nname: Part of "+name+"\nmsc: [\""+msc+"\"]\ntopics: ["+tag+"]\n---\n## Summary\n\nA part.\n")
+	}
+	area("AAAAAA", "BBBBBB", "Algebra", "20-XX")
+	area("CCCCCC", "DDDDDD", "Logic", "03-XX")
+	area("EEEEEE", "FFFFFF", "Analysis", "26-XX")
+	writeFile(t, content, "topics/areas.yaml", "areas:\n  - AAAAAA # Algebra\n  - EEEEEE # Analysis\n")
+	out := buildSite(t, content, "")
+
+	page := readFile(t, out, "areas/index.html")
+	alg, ana, log := strings.Index(page, ">Algebra</a>"), strings.Index(page, ">Analysis</a>"), strings.Index(page, ">Logic</a>")
+	if alg < 0 || ana < 0 || log < 0 || alg > ana || ana > log {
+		t.Errorf("the areas are not in the order of topics/areas.yaml, then by MSC: Algebra %d, Analysis %d, Logic %d", alg, ana, log)
+	}
+}

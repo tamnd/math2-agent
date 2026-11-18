@@ -1,12 +1,45 @@
 package site
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
+
+	"go.yaml.in/yaml/v3"
 )
 
 // The areas of the site come from the topic nodes. An area is a topic with no parent topic and at least one child topic. Its sub-areas are its child topics, in the order of the links in the body of the area, and then by name.
+// The areas are in the order of the file topics/areas.yaml of the content, the list of the tags of the area topics in the order of the area plan. The areas that the file does not list come after them, by MSC code.
+
+// AreasFile is the file of the content that gives the order of the areas.
+const AreasFile = "topics/areas.yaml"
+
+// areaOrder reads AreasFile and returns the position of each tag in it. A content with no such file gives an empty map.
+func (b *builder) areaOrder() (map[string]int, error) {
+	data, err := os.ReadFile(filepath.Join(b.opt.Content, filepath.FromSlash(AreasFile)))
+	if os.IsNotExist(err) {
+		return map[string]int{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var f struct {
+		Areas []string `yaml:"areas"`
+	}
+	if err := yaml.Unmarshal(data, &f); err != nil {
+		return nil, fmt.Errorf("%s: %w", AreasFile, err)
+	}
+	pos := make(map[string]int, len(f.Areas))
+	for i, t := range f.Areas {
+		if _, ok := pos[t]; !ok {
+			pos[t] = i
+		}
+	}
+	return pos, nil
+}
 
 // areaView is one area on the Areas page.
 type areaView struct {
@@ -39,8 +72,8 @@ func (b *builder) parentTopics(v *nodeView) []*nodeView {
 	return out
 }
 
-// areas returns the areas of the site, the areas with the most specific MSC code first, and the other topics.
-func (b *builder) topicAreas() areasData {
+// topicAreas returns the areas of the site, in the order of order and then by MSC code, and the other topics.
+func (b *builder) topicAreas(order map[string]int) areasData {
 	children := map[*nodeView][]*nodeView{}
 	members := map[*nodeView]int{}
 	var roots []*nodeView
@@ -95,7 +128,19 @@ func (b *builder) topicAreas() areasData {
 		}
 		d.Areas = append(d.Areas, a)
 	}
-	slices.SortStableFunc(d.Areas, func(x, y *areaView) int { return compareMSC(x.Topic, y.Topic) })
+	slices.SortStableFunc(d.Areas, func(x, y *areaView) int {
+		px, okx := order[x.Topic.Tag]
+		py, oky := order[y.Topic.Tag]
+		switch {
+		case okx && oky:
+			return px - py
+		case okx:
+			return -1
+		case oky:
+			return 1
+		}
+		return compareMSC(x.Topic, y.Topic)
+	})
 	slices.SortStableFunc(d.Others, compareMSC)
 	return d
 }
@@ -132,7 +177,11 @@ func (b *builder) TopicPath(v *nodeView) []*nodeView {
 }
 
 func (b *builder) writeAreas() error {
-	return b.writePage("areas", "areas", b.topicAreas(), page{Title: "Areas", Description: "The areas of mathematics in Math 2.0, each with its sub-areas.", Section: "areas"})
+	order, err := b.areaOrder()
+	if err != nil {
+		return err
+	}
+	return b.writePage("areas", "areas", b.topicAreas(order), page{Title: "Areas", Description: "The areas of mathematics in Math 2.0, each with its sub-areas.", Section: "areas"})
 }
 
 // Code returns the top level MSC class of the area, for its colour, or "".
